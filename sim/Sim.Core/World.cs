@@ -97,6 +97,14 @@ public sealed class PlayerState
     /// <summary>XP earned this match (kills, reactions, revives); the client
     /// banks it into the local profile at match end.</summary>
     public int MatchXp;
+
+    // Match contribution. Tracked per player so the end-of-match screen can
+    // say who did what — the sim already attributes damage and kills to a
+    // player id, this just keeps the running totals.
+    public int Kills;
+    public float DamageDealt;
+    public int TowersBuilt;
+    public int Revives;
     public Vec3 Pos;
     public float Hp = Balance.PlayerMaxHp;
     public bool Downed;

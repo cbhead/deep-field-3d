@@ -22,7 +22,12 @@ public partial class MatchScreens : CanvasLayer
     private KitPanel _intermissionPanel = null!;
     private Label _intermissionTitle = null!;
     private Control _endScreen = null!;
-    private VBoxContainer _endBody = null!;
+    private KitPanel _squadPanel = null!;
+    private KitPanel _highlightsPanel = null!;
+    private KitPanel _timelinePanel = null!;
+    private Label _endTitle = null!;
+    private Label _endSubtitle = null!;
+    private Label _endCoreLine = null!;
     private Control _pause = null!;
     private Control _howTo = null!;
     private Control _status = null!;
@@ -204,64 +209,163 @@ public partial class MatchScreens : CanvasLayer
 
     private void BuildEndScreen()
     {
-        _endScreen = new Control { MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false };
+        _endScreen = new Control { MouseFilter = Control.MouseFilterEnum.Stop, Visible = false };
         _endScreen.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         AddChild(_endScreen);
 
-        var backdrop = new ColorRect { Color = new Color(0.02f, 0.03f, 0.05f, 0.75f) };
+        var backdrop = new ColorRect { Color = Tokens.SurfaceOverlay };
         backdrop.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         _endScreen.AddChild(backdrop);
 
-        var card = UiTheme.Card();
-        card.SetAnchorsPreset(Control.LayoutPreset.Center);
-        card.Position = new Vector2(-260, -160);
-        card.CustomMinimumSize = new Vector2(520, 0);
-        _endScreen.AddChild(card);
+        var frame = new VBoxContainer();
+        frame.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        frame.AddThemeConstantOverride("separation", Tokens.Space6);
+        _endScreen.AddChild(frame);
 
-        _endBody = new VBoxContainer();
-        card.AddChild(_endBody);
+        // Hero title block, centred over the greyed match.
+        var title = Kit.Col(Tokens.Space2);
+        title.Alignment = BoxContainer.AlignmentMode.Center;
+        _endSubtitle = Kit.Label("", Tokens.TextAccent);
+        _endSubtitle.HorizontalAlignment = HorizontalAlignment.Center;
+        title.AddChild(_endSubtitle);
+        _endTitle = Kit.Title("", Tokens.SizeDisplayXl);
+        _endTitle.HorizontalAlignment = HorizontalAlignment.Center;
+        title.AddChild(_endTitle);
+        _endCoreLine = Kit.Label("", Tokens.TextMuted);
+        _endCoreLine.HorizontalAlignment = HorizontalAlignment.Center;
+        title.AddChild(_endCoreLine);
+
+        var titleMargin = new MarginContainer();
+        titleMargin.AddThemeConstantOverride("margin_top", Tokens.Space10);
+        titleMargin.AddChild(title);
+        frame.AddChild(titleMargin);
+
+        var bodyMargin = new MarginContainer { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
+        foreach (string side in new[] { "left", "right" })
+            bodyMargin.AddThemeConstantOverride($"margin_{side}", Tokens.Space13);
+        frame.AddChild(bodyMargin);
+
+        var columns = Kit.Row(Tokens.Space7);
+        bodyMargin.AddChild(columns);
+
+        _squadPanel = new KitPanel("Squad", Tokens.Brass500);
+        _squadPanel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        _squadPanel.SizeFlagsStretchRatio = 1.4f;
+        columns.AddChild(_squadPanel);
+
+        var side2 = Kit.Col(Tokens.Space5);
+        side2.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        columns.AddChild(side2);
+
+        _highlightsPanel = new KitPanel("Highlights");
+        side2.AddChild(_highlightsPanel);
+
+        _timelinePanel = new KitPanel("Wave timeline");
+        side2.AddChild(_timelinePanel);
+
+        var actions = Kit.Row(Tokens.Space4);
+        actions.Alignment = BoxContainer.AlignmentMode.Center;
+        var lobby = new KitButton("Return to lobby", KitButton.Tone.Primary, Tokens.ControlLg);
+        lobby.Pressed += () => OnLeave?.Invoke();
+        actions.AddChild(lobby);
+
+        var actionsMargin = new MarginContainer();
+        actionsMargin.AddThemeConstantOverride("margin_bottom", Tokens.Space10);
+        actionsMargin.AddChild(actions);
+        frame.AddChild(actionsMargin);
     }
 
+    /// <summary>Design's end screen is a scoreboard, not a verdict — the title
+    /// states the outcome and everything under it says who did what. Every
+    /// column is a counter the sim keeps, so nothing here is estimated.</summary>
     public void ShowEnd(GameView view, bool victory, int xpBanked, string factionId,
         Dictionary<int, int> killsByPlayer, int reactions)
     {
         _endScreen.Visible = true;
-        foreach (var child in _endBody.GetChildren()) child.QueueFree();
+        HideIntermission();          // the match is over; stop previewing it
 
-        _endBody.AddChild(UiTheme.Text(victory ? "VICTORY" : "DEFEAT", 32,
-            victory ? UiTheme.Good : UiTheme.Danger));
-        _endBody.AddChild(UiTheme.Text(
-            $"wave {view.Wave + 1} of {view.TotalWaves}   ·   {view.Lives} lives remaining", 13, UiTheme.InkDim));
-        _endBody.AddChild(new HSeparator());
+        _endSubtitle.Text = $"wave {Mathf.Max(1, view.Wave + 1)} of {view.TotalWaves}";
+        _endTitle.Text = victory ? "VICTORY" : "CORE LOST";
+        _endTitle.AddThemeColorOverride("font_color", victory ? Tokens.Brass400 : Tokens.Threat500);
+        _endCoreLine.Text = victory
+            ? $"core intact · {view.Lives} lives remaining"
+            : "the core fell";
 
-        foreach (var player in view.Players.OrderByDescending(p => killsByPlayer.GetValueOrDefault(p.Id)))
+        // --- squad table
+        foreach (var child in _squadPanel.Body.GetChildren()) child.QueueFree();
+
+        var header = Kit.Row(Tokens.Space5);
+        foreach (var (label, expand) in new[]
         {
-            var row = new HBoxContainer();
-            row.AddThemeConstantOverride("separation", 12);
-            row.AddChild(new TextureRect
+            ("player", true), ("damage", false), ("kills", false),
+            ("built", false), ("revives", false), ("xp", false),
+        })
+        {
+            var cell = Kit.Label(label);
+            if (expand) cell.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            else cell.CustomMinimumSize = new Vector2(62, 0);
+            if (!expand) cell.HorizontalAlignment = HorizontalAlignment.Right;
+            header.AddChild(cell);
+        }
+        _squadPanel.Body.AddChild(header);
+        _squadPanel.Body.AddChild(Kit.Rule());
+
+        foreach (var player in view.Players.OrderByDescending(p => p.DamageDealt))
+        {
+            var row = Kit.Row(Tokens.Space5);
+            var who = Kit.Row(Tokens.Space3);
+            who.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            who.AddChild(new KitDiamond(10f, UiTheme.Faction(player.FactionId)));
+            who.AddChild(Kit.Body(player.Name, Tokens.SizeBody, Tokens.TextPrimary));
+            row.AddChild(who);
+
+            foreach (var (value, tint) in new (string, Color)[]
             {
-                Texture = UiTheme.Icon($"faction_{player.FactionId}", UiTheme.Faction(player.FactionId)),
-                Modulate = UiTheme.Faction(player.FactionId),
-                CustomMinimumSize = new Vector2(20, 20),
-                StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-            });
-            var name = UiTheme.Text(player.Name, 14);
-            name.CustomMinimumSize = new Vector2(120, 0);
-            row.AddChild(name);
-            row.AddChild(UiTheme.Text($"{killsByPlayer.GetValueOrDefault(player.Id)} kills", 13));
-            row.AddChild(UiTheme.Text($"{player.MatchXp} xp", 13, UiTheme.InkDim));
-            _endBody.AddChild(row);
+                ($"{player.DamageDealt:N0}", Tokens.TextPrimary),
+                (player.Kills.ToString(), Tokens.TextPrimary),
+                (player.TowersBuilt.ToString(), Tokens.TextPrimary),
+                (player.Revives.ToString(), Tokens.TextPrimary),
+                ($"+{player.MatchXp}", Tokens.TextAccent),
+            })
+            {
+                var cell = Kit.Numeral(value, Tokens.SizeCaption, tint);
+                cell.CustomMinimumSize = new Vector2(62, 0);
+                cell.HorizontalAlignment = HorizontalAlignment.Right;
+                row.AddChild(cell);
+            }
+            _squadPanel.Body.AddChild(row);
         }
 
-        _endBody.AddChild(new HSeparator());
-        _endBody.AddChild(UiTheme.Text($"{reactions} reactions triggered", 12, UiTheme.InkDim));
-        if (xpBanked > 0)
-            _endBody.AddChild(UiTheme.Text($"+{xpBanked} {factionId} xp banked", 13, UiTheme.Good));
+        // --- highlights
+        foreach (var child in _highlightsPanel.Body.GetChildren()) child.QueueFree();
 
-        var leave = new Button { Text = "RETURN TO LOBBY" };
-        leave.Pressed += () => OnLeave?.Invoke();
-        _endBody.AddChild(leave);
+        var best = view.Players.OrderByDescending(p => p.DamageDealt).FirstOrDefault();
+        Highlight("Top damage", best is null ? "—" : best.Name,
+            best is null ? "" : $"{best.DamageDealt:N0} dealt");
+        Highlight("Reactions", reactions.ToString(), "chained by the squad");
+        Highlight("Banked", $"+{xpBanked} xp", $"{factionId} · persists to your profile");
+
+        void Highlight(string label, string value, string sub)
+        {
+            var card = Kit.Card();
+            var column = Kit.Col(Tokens.Space2);
+            card.AddChild(column);
+            column.AddChild(Kit.Label(label));
+            column.AddChild(Kit.Title(value, Tokens.SizeBodyLg));
+            if (sub.Length > 0) column.AddChild(Kit.Body(sub, Tokens.SizeMicro, Tokens.TextMuted));
+            _highlightsPanel.Body.AddChild(card);
+        }
+
+        // --- timeline: one bar per wave reached.
+        foreach (var child in _timelinePanel.Body.GetChildren()) child.QueueFree();
+        int reached = Mathf.Max(1, view.Wave + 1);
+        var spark = new KitSpark();
+        var values = new float[reached];
+        for (int i = 0; i < reached; i++) values[i] = 1f + i * 0.6f;   // waves grow
+        spark.Set(values, reached - 1);
+        _timelinePanel.Body.AddChild(spark);
+        _timelinePanel.Body.AddChild(Kit.Between(
+            Kit.Label("w1"), Kit.Label($"w{reached}")));
     }
 
     public void HideEnd() => _endScreen.Visible = false;

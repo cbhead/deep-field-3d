@@ -221,6 +221,12 @@ public partial class NetworkManager : Node
                 ["abilityCd"] = p.AbilityCooldown,
                 ["scrap"] = ScrapDict(p.Scrap),
                 ["xp"] = p.MatchXp,
+                // Contribution, so a client's end-of-match screen is the same
+                // screen the host sees rather than a blank column.
+                ["kills"] = p.Kills,
+                ["dmg"] = p.DamageDealt,
+                ["built"] = p.TowersBuilt,
+                ["rev"] = p.Revives,
                 ["factionLevel"] = p.FactionLevel,
             });
         }

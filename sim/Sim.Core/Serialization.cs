@@ -28,7 +28,8 @@ public static class Serialization
         float RegenDelay, float WeaponCooldown, float AbilityCooldown,
         string WeaponId, List<string> OwnedWeapons, Dictionary<string, int> Scrap, bool Connected,
         Dictionary<string, Dictionary<string, string>>? Builds, Dictionary<string, string>? BuildAmmo,
-        List<string>? CraftedAmmo);
+        List<string>? CraftedAmmo,
+        int Kills = 0, float DamageDealt = 0f, int Builds2 = 0, int Revives = 0);
 
     private sealed record WorldState(
         uint Seed, long Tick, string MapId, int Money, int Lives,
@@ -65,7 +66,8 @@ public static class Serialization
                 p.Builds.ToDictionary(kv => kv.Key,
                     kv => kv.Value.Attachments.ToDictionary(a => a.Key.ToString(), a => a.Value)),
                 p.Builds.ToDictionary(kv => kv.Key, kv => kv.Value.AmmoId),
-                p.CraftedAmmo.OrderBy(x => x, StringComparer.Ordinal).ToList())).ToList(),
+                p.CraftedAmmo.OrderBy(x => x, StringComparer.Ordinal).ToList(),
+                p.Kills, p.DamageDealt, p.TowersBuilt, p.Revives)).ToList(),
             w.Traps.Select(t => new TrapState(t.Id, t.DefId, t.SocketId, t.ChargesLeft, t.RearmTimer)).ToList(),
             w.NextIdValue);
         return JsonSerializer.Serialize(state);
@@ -149,6 +151,8 @@ public static class Serialization
                 RegenDelay = p.RegenDelay, WeaponCooldown = p.WeaponCooldown,
                 AbilityCooldown = p.AbilityCooldown, WeaponId = p.WeaponId,
                 OwnedWeapons = new HashSet<string>(p.OwnedWeapons), Connected = p.Connected,
+                Kills = p.Kills, DamageDealt = p.DamageDealt,
+                TowersBuilt = p.Builds2, Revives = p.Revives,
             };
             foreach (var (typeName, amount) in p.Scrap)
                 player.Scrap[System.Enum.Parse<ScrapType>(typeName)] = amount;

@@ -23,6 +23,10 @@ public sealed class PlayerView
     public string WeaponId = "sidearm";
     public float AbilityCooldown;
     public int MatchXp;
+    public int Kills;
+    public float DamageDealt;
+    public int TowersBuilt;
+    public int Revives;
     public Dictionary<ScrapType, int> Scrap = new();
 
     // Gunsmith state (drives the armory screen).
@@ -104,6 +108,8 @@ public sealed class GameView
                 Hp = p.Hp, Downed = p.Downed, Connected = p.Connected,
                 WeaponId = p.WeaponId, AbilityCooldown = p.AbilityCooldown,
                 MatchXp = p.MatchXp,
+                Kills = p.Kills, DamageDealt = p.DamageDealt,
+                TowersBuilt = p.TowersBuilt, Revives = p.Revives,
                 Scrap = new Dictionary<ScrapType, int>(p.Scrap),
                 OwnedWeapons = new HashSet<string>(p.OwnedWeapons),
                 CraftedAmmo = new HashSet<string>(p.CraftedAmmo),
@@ -163,6 +169,10 @@ public sealed class GameView
                 Connected = (bool)entry["connected"], WeaponId = (string)entry["weapon"],
                 AbilityCooldown = (float)entry["abilityCd"],
                 MatchXp = entry.TryGetValue("xp", out var xp) ? (int)xp : 0,
+                Kills = entry.TryGetValue("kills", out var k) ? (int)k : 0,
+                DamageDealt = entry.TryGetValue("dmg", out var dmg) ? (float)dmg : 0f,
+                TowersBuilt = entry.TryGetValue("built", out var built) ? (int)built : 0,
+                Revives = entry.TryGetValue("rev", out var rev) ? (int)rev : 0,
             };
             foreach (var (key, value) in entry["scrap"].AsGodotDictionary())
                 player.Scrap[System.Enum.Parse<ScrapType>((string)key)] = (int)value;

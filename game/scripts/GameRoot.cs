@@ -169,6 +169,22 @@ public partial class GameRoot : Node3D
         _shotPath = null;
 
         // Surface shots: open the UI being reviewed, then capture next frame.
+        if (_shotView == "endmatch" && _world is not null)
+        {
+            _shotPath = path;
+            _shotView = "eye";
+            _shotCountdown = 4;
+            _hud.Visible = false;
+            // Real counters on a real world — the screen renders what the sim
+            // recorded, so a wrong column here is a wrong column in a match.
+            var me = _world.Players[LocalPlayerId];
+            me.Kills = 37; me.DamageDealt = 18420f; me.TowersBuilt = 6; me.Revives = 2;
+            RebuildView();
+            _screens.ShowEnd(_view, victory: true, 140, me.FactionId,
+                new Dictionary<int, int>(), 41);
+            return;
+        }
+
         if (_shotView is "armory" or "wheel" or "upgrade")
         {
             string surface = _shotView;

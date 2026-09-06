@@ -181,6 +181,7 @@ public static class Step
             PathLevels = new int[def.UpgradePaths.Count],
         };
         w.Towers.Add(tower);
+        if (w.Players.TryGetValue(place.PlayerId, out var builder)) builder.TowersBuilt += 1;
         w.Emit(new SimEvent.TowerPlaced(tower.Id, def.Id, socket.Id, place.PlayerId));
     }
 
@@ -462,6 +463,7 @@ public static class Step
             target.ReviveProgress = 0f;
             target.Hp = Balance.PlayerMaxHp * 0.5f;
             reviver.MatchXp += 5;
+            reviver.Revives += 1;
             w.Emit(new SimEvent.PlayerRevived(target.Id, reviver.Id));
         }
     }
@@ -1254,6 +1256,9 @@ public static class Step
         enemy.Hp -= amount;
         w.Emit(new SimEvent.EnemyDamaged(enemy.Id, total, source));
 
+        if (playerId is int dealer && w.Players.TryGetValue(dealer, out var dealerState))
+            dealerState.DamageDealt += total;
+
         if (applies is not null)
         {
             foreach (var statusId in applies)
@@ -1272,7 +1277,10 @@ public static class Step
 
             // Faction XP: kills bank into the profile at match end.
             if (playerId is int killer && w.Players.TryGetValue(killer, out var killerState))
+            {
                 killerState.MatchXp += 1;
+                killerState.Kills += 1;
+            }
         }
     }
 
