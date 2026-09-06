@@ -30,6 +30,11 @@ the gap gets written down rather than faked.
 
 Known gaps of that kind:
 
+- **Specter's `weakPoints` passive** is defined on the faction and does nothing.
+  It is a client rendering feature — highlight an enemy's weak point, which
+  today only the Aegis has — and no code draws it. Recorded here rather than
+  quietly shipped, because the lobby offers the faction and states the passive.
+
 - **Magazine / reserve counts** in the loadout cluster. The sim has no ammo
   pool; weapons fire on a cooldown. Waiting on the ammo-quantity system.
 - **Per-tower kills / uptime / coverage** in the upgrade panel. The sim tracks

@@ -49,6 +49,12 @@ public static class Balance
     /// <summary>Tempest passive: weapon fire-rate factor.</summary>
     public const float TempestRateFactor = 1.12f;
 
+    /// <summary>Glacier passive: this player hits chilled targets harder. Reads
+    /// the movement channel rather than the chill status by name, so tar and
+    /// any future slow count too — the same channel-not-status rule conditions
+    /// follow.</summary>
+    public const float GlacierChilledDamageFactor = 1.25f;
+
     public const int SellRefundPercent = 70;
 
     // ---- M2: shields, cc-resist, burrowing --------------------------------

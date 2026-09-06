@@ -43,6 +43,14 @@ public static class UiTheme
         "forge" => Hex("C89B3C"),
         "ember" => Hex("E8622B"),
         "tempest" => Hex("5B76E8"),
+        // Design's palette names three factions and states the rule the other
+        // three follow: a faction's accent is the hue of the status its ability
+        // applies (Ember is burn, and says so). Glacier applies chill, Specter
+        // applies reveal, so these are derived from design's own spec rather
+        // than picked — but they are marked provisional in docs/PALETTE.md
+        // because deriving a rule is not the same as being given the answer.
+        "glacier" => Hex("4FC0E8"),   // = chill
+        "specter" => Hex("7FE65A"),   // = reveal
         _ => Accent,
     };
 

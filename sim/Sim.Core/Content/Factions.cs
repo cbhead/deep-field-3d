@@ -38,12 +38,34 @@ public static class Factions
         Magnitude: 6f,     // burst damage per enemy struck
         Passive: "reloadSpeed"); // +12% weapon fire rate (see Balance)
 
+    /// <summary>M3 — Cryo Field: a chill dome over the aim point. The builder's
+    /// Singularity does this passively in one small sphere; Glacier does it on
+    /// demand, anywhere, which makes it the half of Thermal Shock and Flash
+    /// Freeze that can be aimed at the problem rather than built next to it.</summary>
+    public static readonly FactionDef Glacier = new(
+        Id: "glacier", AbilityId: "cryoField",
+        CooldownSeconds: 24f, RadiusMeters: 8f, DurationSeconds: 0f,
+        Magnitude: 1f,     // chill application strength (level curve dial)
+        Passive: "chilledBonus"); // +25% of this player's damage to chilled targets
+
+    /// <summary>M3 — Reveal Pulse: map-wide detection for a moment. Deliberately
+    /// not a Detector substitute — it is instantaneous where the tower is
+    /// permanent, so it answers "where is it right now" and never "cover this
+    /// approach". A Specter still wants Detectors built.</summary>
+    public static readonly FactionDef Specter = new(
+        Id: "specter", AbilityId: "revealPulse",
+        CooldownSeconds: 34f, RadiusMeters: 0f, DurationSeconds: 0f,
+        Magnitude: 1f,
+        Passive: "weakPoints"); // sees enemy weak points highlighted (client-side)
+
     public static readonly IReadOnlyDictionary<string, FactionDef> All =
         new Dictionary<string, FactionDef>
         {
             [Forge.Id] = Forge,
             [Ember.Id] = Ember,
             [Tempest.Id] = Tempest,
+            [Glacier.Id] = Glacier,
+            [Specter.Id] = Specter,
         };
 
     // ---- Persistent leveling (profile XP → level, applied at Join) ---------

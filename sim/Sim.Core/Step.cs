@@ -319,8 +319,16 @@ public static class Step
         if (player.FactionId == Factions.Tempest.Id) rate *= Balance.TempestRateFactor;
         player.WeaponCooldown = 1f / rate;
 
+        float damage = weapon.Damage * build.DamageFactor(armored);
+        // Glacier passive: slowed things take more from this player. Checked on
+        // the channel, not the status id, so tar counts and so will anything
+        // that lands in the movement slot later.
+        if (player.FactionId == Factions.Glacier.Id
+            && enemy.Statuses[(int)Channel.Movement].Active)
+            damage *= Balance.GlacierChilledDamageFactor;
+
         var applies = weapon.Applies.Concat(build.ExtraApplies()).ToList();
-        Damage(w, enemy, weapon.Damage * build.DamageFactor(armored),
+        Damage(w, enemy, damage,
             $"player{hit.PlayerId}", player.Pos, applies, hit.PlayerId,
             ignoreFlatArmor: build.IgnoresFlatArmor);
     }
@@ -451,6 +459,27 @@ public static class Step
                 {
                     if (!enemy.Dead && !enemy.Burrowed && enemy.Pos.DistanceTo(ability.TargetPos) <= radius)
                         ApplyStatus(w, enemy, Statuses.Burn.Id, $"player{player.Id}", player.Id);
+                }
+                break;
+
+            case "cryoField":
+                foreach (var enemy in w.Enemies)
+                {
+                    if (!enemy.Dead && !enemy.Burrowed && enemy.Pos.DistanceTo(ability.TargetPos) <= radius)
+                        ApplyStatus(w, enemy, Statuses.Chill.Id, $"player{player.Id}", player.Id);
+                }
+                break;
+
+            case "revealPulse":
+                // Map-wide on purpose: radius is 0 on the def because there is
+                // no radius, and reading it as "reveals nothing" would be the
+                // easy bug. Burrowed enemies are excluded — being underground
+                // is not stealth, and the Mole's window is a timing question
+                // that reveal has no business answering.
+                foreach (var enemy in w.Enemies)
+                {
+                    if (!enemy.Dead && !enemy.Burrowed)
+                        ApplyStatus(w, enemy, Statuses.Reveal.Id, $"player{player.Id}", player.Id);
                 }
                 break;
 

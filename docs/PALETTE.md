@@ -11,6 +11,12 @@ hp #7BC043 → hp-low #C93B28 · shield #2FB4BE · armor #7D8BA3 · currency #C8
 - Forge — accent #C89B3C, Overdrive #FF6F1A (shared with Overclock buff)
 - Ember — accent #E8622B, Ignition Wave same hue (= burn)
 - Tempest — accent #5B76E8, Chainsurge same hue (not Arc magenta)
+- Glacier — accent #4FC0E8 *(provisional)*, Cryo Field same hue (= chill)
+- Specter — accent #7FE65A *(provisional)*, Reveal Pulse same hue (= reveal)
+
+The two provisional entries are derived from the rule the three specced
+factions follow — accent = the hue of the status the ability applies — not
+chosen. They stand until design says otherwise; design decides, code adopts.
 
 ## Scrap
 alloy #A6B2C6 · flux #2FB4BE · plating #C89B3C · gravium #9B5BE8 · primecore #F4DCA4

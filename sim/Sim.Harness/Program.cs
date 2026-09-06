@@ -450,6 +450,58 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
         $"apCrafted {apCrafted}, reachable {reachable}");
 }
 
+// --- Gate 32 (M3): every faction's ability changes the world when used.
+//
+// Written after the third instance of the same bug class in one milestone:
+// shred that nothing applied, weapon range that nothing read, and an ability
+// switch statement whose cases are matched on a string. A faction whose
+// AbilityId has no case in that switch costs its cooldown and does nothing at
+// all, silently, forever — and the lobby would still offer it as a choice.
+{
+    var inert = new List<string>();
+    foreach (var faction in Factions.All.Values)
+    {
+        var world = new World(Seed, Maps.Foundry);
+        world.Money = 3000;
+        world.Enqueue(new Command.Join(1, "p1", faction.Id));
+        world.Enqueue(new Command.PlaceTower(0, "lance", "g4"));
+        Step.Advance(world);
+
+        // Something for every ability to act on: a tower to buff, an enemy to
+        // burn, shock, chill or reveal.
+        var enemy = new Enemy
+        {
+            Id = world.NextId(), DefId = "drifter", Hp = 400f, MaxHp = 400f,
+            Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1,
+            RouteIndex = 0, Leg = 3, LegProgress = 14f,
+        };
+        world.Enemies.Add(enemy);
+        Step.Advance(world);
+
+        var player = world.Players[1];
+        player.Pos = enemy.Pos;
+        var before = (
+            hp: enemy.Hp,
+            statuses: enemy.Statuses.Count(s => s.Active),
+            buffed: world.Towers.Count(x => x.BuffFactor > 1f));
+
+        world.Enqueue(new Command.PlayerSync(1, player.Pos));
+        world.Enqueue(new Command.UseAbility(1, enemy.Pos));
+        Step.Advance(world);
+
+        bool didSomething = enemy.Hp < before.hp
+            || enemy.Statuses.Count(s => s.Active) > before.statuses
+            || world.Towers.Count(x => x.BuffFactor > 1f) > before.buffed;
+
+        if (!didSomething) inert.Add($"{faction.Id}/{faction.AbilityId}");
+    }
+
+    Gate("factions: every ability does something when it fires",
+        inert.Count == 0,
+        inert.Count == 0 ? $"{Factions.All.Count} factions all act"
+                         : "inert: " + string.Join(", ", inert));
+}
+
 // --- Gate 30 (M3): no condition may blind a tower outright.
 //
 // Conditions are specified as factors over the swept baseline, and the whole
