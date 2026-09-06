@@ -38,11 +38,15 @@ JOIN field. Each player picks a different faction — the sim refuses duplicates
 
 ## 3. Play
 
-- **E** on a socket builds (wall sockets auto-pick Skywatch), **U** upgrades the
-  damage path, **F** starts the wave early, **Q** faction ability, **R** (held)
-  revives, keys **1–4** buy/swap weapons at the armory block.
-- Traversal: ladder on the deck's south face (W climbs), purple pad launches
-  onto the deck, **E** in the zipline volume rides it down to the core gate.
+- **Hold E** at a socket opens the build wheel — mouse steers, release builds.
+  The wheel only offers what that socket accepts and greys out what you can't
+  afford. **Hold U** at a placed structure to level a path (1–3) or **hold X**
+  to sell.
+- **F** starts a wave early, **Q** is your faction ability, **hold R** revives a
+  downed teammate (their beacon shows through walls), **Tab** opens the armory
+  and gunsmith, **Esc** is the menu.
+- Traversal: ladders (W climbs), the launcher pad flings you onto the deck, and
+  **E** inside a zipline volume rides it down to the core gate.
 
 ## 4. Teardown
 

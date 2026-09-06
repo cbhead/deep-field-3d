@@ -4,12 +4,52 @@ First-person co-op tower defense (1–4 players, self-hosted over Tailscale).
 The 3D rebuild of [deep-field-td](https://github.com/cbhead/deep-field-td):
 Bloons-depth counters and machine-swept balance, Sanctum-style build-and-shoot.
 
-**Status: M0 walking skeleton.** One enemy, one tower, one weapon, one graybox
-lane — but the whole pipeline is real: deterministic 30 Hz headless sim, harness
-gates with a PlayerBot, serialization resume, and an in-process Godot client.
+**Status: M2.5 — two maps, eight enemies, six towers, three factions, and a
+full build/gunsmith UI, all in graybox.** Art is in production against
+[docs/DESIGN-BRIEF.md](docs/DESIGN-BRIEF.md); the code picks assets up as they
+land. 22 harness gates + 19 unit tests green.
 
-- `make check` — sim build, unit tests, harness gates, game build
-- `make run` — play the graybox (WASD/mouse, **E** build on a socket, **F** start wave, **LMB** fire)
+## Play
+
+```sh
+./play                                   # windowed
+./play --headless -- --server            # dedicated server (add --map switchyard)
+```
+
+`./play` is self-contained (absolute paths to dotnet + Godot) and works from any
+shell. `make run` does the same if your PATH is set up — see
+[docs/INSTALL.md](docs/INSTALL.md).
+
+### Controls
+
+| | |
+|---|---|
+| WASD / Shift / Space | move, sprint, jump |
+| **hold E** at a socket | build wheel — steer with the mouse, release to build |
+| **hold U** at a structure | upgrade paths (1–3), **hold X** to sell |
+| LMB | fire · **Q** faction ability · **hold R** revive |
+| **Tab** | armory + gunsmith · **F** start wave early · **Esc** menu |
+| E on a zipline, W on a ladder | traversal |
+
+## What's in it
+
+- **Sim** (`sim/Sim.Core`) — pure C#, zero Godot references (CI enforces it):
+  deterministic 30 Hz tick, seeded wave plans, status channels with reactions,
+  scrap economy, faction abilities, full-world serialization.
+- **Harness** (`sim/Sim.Harness`) — the gate suite and PlayerBot sweeps. No
+  engine boot, so a full campaign runs in milliseconds.
+- **Client** (`game/`) — Godot 4.7 + C#: FPS controller, four run modes
+  (solo/host/dedicated/client), ENet netcode with drop-in join, and the UI in
+  `game/scripts/ui/`.
+
+## Verify
+
+```sh
+make check    # sim build + unit tests + harness gates + game build
+```
+
+CI additionally exports the game headless and runs two smoke lanes: a dedicated
+server with a client joining it, and a real solo match on each map.
 
 The full build plan (architecture, netcode, milestones M0–M5) lives in the
-project plan; `docs/INSTALL.md` tracks setup per milestone.
+project plan; `docs/RUNBOOK-match-night.md` covers hosting.

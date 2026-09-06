@@ -39,8 +39,9 @@ intermission with catch-up scrap.
 4. Clone and verify:
    ```sh
    git clone <repo> deepfield-3d && cd deepfield-3d
-   make check    # sim build + unit tests + harness gates + game build
-   ./play        # windowed game: WASD/mouse, E build on socket, F start wave, LMB fire
+   make check           # sim build + unit tests + harness gates + game build
+   ./play               # windowed game (controls in the README)
+   ./play --headless -- --solo foundry   # headless match, for smoke-testing
    ```
 
 `./play` is self-contained (absolute paths to dotnet + Godot) and works from any

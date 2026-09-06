@@ -49,3 +49,13 @@ jobs:
           kill $SERVER_PID || true
           grep -q '"app":"deepfield-3d"' info.json
           grep -q "\[client\] joined seat" client.log
+
+      # A real solo match on each map: drives the sim, every UI surface, and
+      # the view/event plumbing that only runs once a world exists.
+      - name: Solo match smoke (both maps)
+        run: |
+          for MAP in foundry switchyard; do
+            godot --headless --path game --quit-after 1800 -- --solo $MAP > solo-$MAP.log 2>&1
+            grep -q "\[solo\] started on $MAP" solo-$MAP.log
+            ! grep -qiE "^ERROR|SCRIPT ERROR|Unhandled exception" solo-$MAP.log
+          done
