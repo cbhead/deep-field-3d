@@ -22,7 +22,9 @@ public static class Placeholders
     private static readonly Color Amber = new(0.90f, 0.72f, 0.30f);
     private static readonly Color Timber = new(0.60f, 0.45f, 0.30f);
     private static readonly Color Tarry = new(0.16f, 0.20f, 0.16f);
-    private static readonly Color Bone = new(0.90f, 0.80f, 0.70f);
+    // Design's enemy base albedo, so a graybox and a shipped model respond to
+    // the hp lerp identically (PALETTE.md §Enemies).
+    private static readonly Color Bone = new("7D8BA3");
 
     // =====================================================================
     // Enemies

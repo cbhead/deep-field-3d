@@ -188,3 +188,40 @@ tower_singularity_rate_s*	structures	yes
 tower_skywatch_damage_s*	structures	yes
 tower_skywatch_range_s*	structures	yes
 tower_skywatch_rate_s*	structures	yes
+
+# Beyond the brief: extras Claude Design shipped in the first delivery.
+# wired=yes here means the integration already consumes them.
+foundry_skybox	maps	yes
+foundry_terrain_scatter	maps	yes
+hero_ember_downed	heroes	yes
+hero_ember_revive	heroes	no
+hero_forge_downed	heroes	yes
+hero_forge_revive	heroes	no
+hero_tempest_downed	heroes	yes
+hero_tempest_revive	heroes	no
+proj_lance_bolt_t2	vfx	no
+proj_lance_bolt_t3	vfx	no
+proj_nova_shell_t2	vfx	no
+proj_nova_shell_t3	vfx	no
+proj_skywatch_bolt_t2	vfx	no
+proj_skywatch_bolt_t3	vfx	no
+switchyard_column	maps	yes
+switchyard_path_ground	maps	yes
+switchyard_skybox	maps	yes
+switchyard_terrain_scatter	maps	yes
+tower_detector_analysis_s*	structures	no
+tower_detector_field_s*	structures	no
+tower_filament_optics_s*	structures	no
+tower_filament_peak_s*	structures	no
+tower_filament_ramp_s*	structures	no
+tower_overclock_efficiency_s*	structures	no
+tower_overclock_network_s*	structures	no
+tower_overclock_potency_s*	structures	no
+vfx_impact_arc	vfx	no
+vfx_impact_lance	vfx	no
+vfx_impact_nova	vfx	no
+vfx_impact_skywatch	vfx	no
+vfx_muzzle_arc	vfx	no
+vfx_muzzle_lance	vfx	no
+vfx_muzzle_nova	vfx	no
+vfx_muzzle_skywatch	vfx	no

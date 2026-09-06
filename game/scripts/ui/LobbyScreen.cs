@@ -157,6 +157,7 @@ public partial class LobbyScreen : Control
             header.AddChild(new TextureRect
             {
                 Texture = UiTheme.Icon($"faction_{faction.Id}", accent),
+                Modulate = accent,
                 CustomMinimumSize = new Vector2(24, 24),
                 StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
             });

@@ -6,53 +6,86 @@ namespace DeepField.Game.Ui;
 
 /// <summary>Shared visual language for every UI surface.
 ///
-/// DESIGN OWNS THE PALETTE. The colors here are neutral placeholders that keep
-/// the game readable until Claude Design delivers its palette spec (see
-/// docs/DESIGN-BRIEF.md §1). When that lands, replace the values in this file
-/// and in GameRoot.TintEnemy — nothing else hardcodes color.
+/// DESIGN OWNS THE PALETTE. Every value below is transcribed from Claude
+/// Design's spec (docs/PALETTE.md, machine-readable twin docs/palette.json) —
+/// this file adopts design's decisions, it does not make them. If a colour
+/// needs to change, it changes in the spec first.
 ///
-/// Icons resolve from res://assets/ui/icon_&lt;id&gt;.png the moment design ships
-/// them; until then Placeholder() draws a labeled chip so every surface is
-/// usable and correctly laid out in the meantime.</summary>
+/// Icons resolve from res://assets/ui/icon_&lt;id&gt;.svg (or .png); Placeholder()
+/// draws a labeled chip for anything not yet delivered.</summary>
 public static class UiTheme
 {
-    // ---- Placeholder palette (design replaces) ---------------------------
+    private static Color Hex(string rgb) => new(rgb);
+
+    // ---- Semantics (PALETTE.md §Semantics) --------------------------------
+    public static readonly Color Danger = Hex("C93B28");
+    public static readonly Color Warn = Hex("E8862B");
+    public static readonly Color Good = Hex("7BC043");
+    public static readonly Color Accent = Hex("2FB4BE");      // info
+    public static readonly Color Hp = Hex("7BC043");
+    public static readonly Color HpLow = Hex("C93B28");
+    public static readonly Color Shield = Hex("2FB4BE");
+    public static readonly Color Armor = Hex("7D8BA3");
+    public static readonly Color Currency = Hex("C89B3C");
+    public static readonly Color Elite = Hex("9B5BE8");
+
+    // Chrome the spec doesn't legislate — kept neutral so design's accents
+    // carry the identity rather than competing with a coloured panel.
     public static readonly Color Ink = new(0.93f, 0.95f, 0.98f);
     public static readonly Color InkDim = new(0.62f, 0.66f, 0.72f);
     public static readonly Color Panel = new(0.07f, 0.08f, 0.10f, 0.88f);
     public static readonly Color PanelRaised = new(0.13f, 0.15f, 0.18f, 0.95f);
-    public static readonly Color Accent = new(0.45f, 0.72f, 0.95f);
-    public static readonly Color Good = new(0.42f, 0.82f, 0.48f);
-    public static readonly Color Warn = new(0.95f, 0.75f, 0.30f);
-    public static readonly Color Danger = new(0.92f, 0.36f, 0.32f);
-    public static readonly Color Disabled = new(0.38f, 0.40f, 0.44f);
+    public static readonly Color Disabled = new(0.49f, 0.55f, 0.64f);
 
     public static Color Faction(string id) => id switch
     {
-        "forge" => new Color(0.95f, 0.60f, 0.25f),
-        "ember" => new Color(0.93f, 0.35f, 0.22f),
-        "tempest" => new Color(0.60f, 0.50f, 0.95f),
+        "forge" => Hex("C89B3C"),
+        "ember" => Hex("E8622B"),
+        "tempest" => Hex("5B76E8"),
         _ => Accent,
     };
 
     public static Color Scrap(ScrapType type) => type switch
     {
-        ScrapType.Alloy => new Color(0.70f, 0.72f, 0.76f),
-        ScrapType.Flux => new Color(0.35f, 0.85f, 0.90f),
-        ScrapType.Plating => new Color(0.80f, 0.55f, 0.30f),
-        ScrapType.Gravium => new Color(0.66f, 0.42f, 0.90f),
-        _ => Ink,
+        ScrapType.Alloy => Hex("A6B2C6"),
+        ScrapType.Flux => Hex("2FB4BE"),
+        ScrapType.Plating => Hex("C89B3C"),
+        ScrapType.Gravium => Hex("9B5BE8"),
+        _ => Hex("F4DCA4"),   // prime core
     };
 
     public static Color Status(string statusId) => statusId switch
     {
-        "burn" => new Color(1.00f, 0.45f, 0.10f),
-        "chill" => new Color(0.50f, 0.75f, 1.00f),
-        "mark" => new Color(1.00f, 0.90f, 0.20f),
-        "shock" => new Color(0.70f, 0.45f, 1.00f),
-        "freeze" => new Color(0.75f, 0.92f, 1.00f),
-        "shred" => new Color(1.00f, 0.62f, 0.35f),
+        "burn" => Hex("E8622B"),
+        "chill" => Hex("4FC0E8"),
+        "freeze" => Hex("A8F0F4"),
+        "shock" => Hex("F05AE6"),
+        "shred" => Hex("E9614C"),
+        "mark" => Hex("E3BC66"),
+        "reveal" => Hex("7FE65A"),
+        "tar" => Hex("1B2233"),
         _ => Ink,
+    };
+
+    /// <summary>Statuses the spec renders as emissive only — the silhouette
+    /// keeps its own colour and gains a glow instead of being repainted.</summary>
+    public static bool StatusIsEmissiveOnly(string statusId)
+        => statusId is "mark" or "reveal";
+
+    /// <summary>One energy hue per tower; its projectile, muzzle flash and
+    /// impact all inherit it, which is what makes fire legible at range.</summary>
+    public static Color TowerEnergy(string towerId) => towerId switch
+    {
+        "lance" => Hex("2B5CFF"),
+        "skywatch" => Hex("22D3EE"),
+        "detector" => Hex("7FE65A"),
+        "nova" => Hex("F0C83A"),
+        "overclock" => Hex("FF6F1A"),
+        "filament" => Hex("FF2E4A"),
+        "arc" => Hex("F05AE6"),
+        "singularity" => Hex("9B5BE8"),
+        "barricade" => Hex("F0C83A"),
+        _ => Accent,
     };
 
     // ---- Icons ------------------------------------------------------------
@@ -65,9 +98,12 @@ public static class UiTheme
     {
         if (IconCache.TryGetValue(id, out var cached)) return cached;
 
-        string path = $"res://assets/ui/icon_{id}.png";
-        Texture2D texture = ResourceLoader.Exists(path)
-            ? GD.Load<Texture2D>(path)
+        // Design ships SVG (Godot rasterises it to a CompressedTexture2D on
+        // import); PNG is accepted too so either delivery format just works.
+        string svg = $"res://assets/ui/icon_{id}.svg";
+        string png = $"res://assets/ui/icon_{id}.png";
+        Texture2D texture = ResourceLoader.Exists(svg) ? GD.Load<Texture2D>(svg)
+            : ResourceLoader.Exists(png) ? GD.Load<Texture2D>(png)
             : Placeholder(id, tint ?? Accent);
 
         IconCache[id] = texture;
@@ -163,6 +199,7 @@ public static class UiTheme
         row.AddChild(new TextureRect
         {
             Texture = Icon(iconId, color),
+            Modulate = color,
             CustomMinimumSize = new Vector2(16, 16),
             StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
             TooltipText = iconId,

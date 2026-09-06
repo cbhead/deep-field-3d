@@ -383,6 +383,7 @@ public partial class HudRoot : CanvasLayer
             _abilityText.AddThemeColorOverride("font_color",
                 local.AbilityCooldown <= 0f ? UiTheme.Good : UiTheme.InkDim);
             _abilityIcon.Texture = UiTheme.Icon($"faction_{local.FactionId}", UiTheme.Faction(local.FactionId));
+            _abilityIcon.Modulate = UiTheme.Faction(local.FactionId);
             _abilityIcon.CustomMinimumSize = new Vector2(26, 26);
             _abilityCooldown.QueueRedraw();
         }
@@ -448,6 +449,7 @@ public partial class HudRoot : CanvasLayer
             row.AddChild(new TextureRect
             {
                 Texture = UiTheme.Icon($"faction_{player.FactionId}", UiTheme.Faction(player.FactionId)),
+                Modulate = UiTheme.Faction(player.FactionId),
                 CustomMinimumSize = new Vector2(18, 18),
                 StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
             });

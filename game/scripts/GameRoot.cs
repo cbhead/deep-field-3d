@@ -34,6 +34,10 @@ public partial class GameRoot : Node3D
     private readonly Dictionary<int, Node3D> _enemyViews = new();
     private readonly Dictionary<int, Node3D> _projectileViews = new();
     private readonly Dictionary<int, Node3D> _towerViews = new();
+    private string? _shotPath;
+    private int _shotCountdown;
+    private readonly Dictionary<string, StaticBody3D> _socketBodies = new();
+    private readonly Dictionary<string, SocketTag> _socketTags = new();
     private readonly Dictionary<int, Node3D> _avatarViews = new();
 
     // UI surfaces (M2.5). GameRoot owns state; these are views that raise
@@ -106,6 +110,18 @@ public partial class GameRoot : Node3D
                 GD.Print($"[solo] started on {_map.Id}");
                 return;
             }
+            // --shot <map> <path>: solo match, settle, save a frame, quit.
+            // Needs a real renderer, so run it windowed. This is how art
+            // changes get reviewed without anyone playing the game.
+            if (args[i] == "--shot" && i + 2 < args.Length)
+            {
+                if (Maps.All.TryGetValue(args[i + 1], out var shotMap)) _map = shotMap;
+                _playerName = "shot";
+                _shotPath = args[i + 2];
+                _shotCountdown = 90;
+                StartSolo("ember");
+                return;
+            }
             if (args[i] == "--asset-audit")
             {
                 AuditAssets();
@@ -123,41 +139,53 @@ public partial class GameRoot : Node3D
     /// walks the tables directly, so a def whose view construction throws — or
     /// a model whose name doesn't match what the code asks for — fails CI
     /// instead of failing in front of a player.</summary>
+    private void CaptureShot()
+    {
+        string path = _shotPath!;
+        _shotPath = null;
+        var image = GetViewport().GetTexture().GetImage();
+        image.SavePng(path);
+        GD.Print($"[shot] wrote {path}  ({image.GetWidth()}x{image.GetHeight()})");
+        GetTree().Quit();
+    }
+
     private void AuditAssets()
     {
         _map = Maps.All["foundry"];
-        int views = 0;
+        var built = new List<Node>();
 
         foreach (var def in Enemies.All.Values)
-        {
-            SpawnEnemyView(views++, def.Id);
-        }
+            built.Add(SpawnEnemyView(built.Count, def.Id));
 
         foreach (var def in Towers.All.Values)
         {
-            var view = SpawnStructureView(def.Id, Vector3.Zero);
-            for (int p = 0; p < def.UpgradePaths.Count; p++)
-                for (int level = 1; level <= 10; level++)
-                    StackPathModule(view, def.Id, def.UpgradePaths[p].Id, p, level);
-            SpawnProjectileView(def.Id);
-            views++;
+            // Every path at every level, which is also the only exercise the
+            // rig-merge gets outside a real match.
+            for (int level = 0; level <= 10; level++)
+            {
+                var levels = new int[def.UpgradePaths.Count];
+                for (int p = 0; p < levels.Length; p++) levels[p] = level;
+                built.Add(SpawnStructureView(def.Id, Vector3.Zero, levels));
+            }
+            built.Add(SpawnProjectileView(def.Id));
         }
 
         foreach (var def in Traps.All.Values)
-        {
-            SpawnStructureView(def.Id, Vector3.Zero);
-            views++;
-        }
+            built.Add(SpawnStructureView(def.Id, Vector3.Zero, null));
 
         foreach (var def in Factions.All.Values)
         {
-            AssetLibrary.Instantiate($"hero_{def.Id}", () => Placeholders.Hero(def.Id));
-            views++;
+            built.Add(AssetLibrary.Instantiate($"hero_{def.Id}", () => Placeholders.Hero(def.Id)));
+            built.Add(AssetLibrary.Instantiate($"hero_{def.Id}_downed", () => Placeholders.Hero(def.Id)));
         }
 
-        GD.Print($"[asset-audit] built {views} views over {AssetLibrary.Requested.Count} asset names");
+        GD.Print($"[asset-audit] built {built.Count} views over {AssetLibrary.Requested.Count} asset names");
         foreach (string name in AssetLibrary.Missing)
             GD.Print($"[asset-audit] placeholder: {name} -> {AssetLibrary.PathFor(name)}");
+
+        // Free eagerly: quitting with 600 live meshes makes the headless
+        // renderer complain about leaked RIDs, which reads as a failure.
+        foreach (var node in built) node.Free();
     }
 
     private static int ParsePort(string[] args)
@@ -306,6 +334,8 @@ public partial class GameRoot : Node3D
 
     public override void _Process(double delta)
     {
+        if (_shotPath is not null && --_shotCountdown <= 0) CaptureShot();
+
         switch (Mode)
         {
             case RunMode.Lobby:
@@ -525,7 +555,7 @@ public partial class GameRoot : Node3D
                     OnTowerUpgraded(upgraded.TowerId, upgraded.PathId, upgraded.NewLevel);
                     break;
                 case SimEvent.TowerSold sold:
-                    if (_towerViews.Remove(sold.TowerId, out var view)) view.QueueFree();
+                    ReleaseStructureView(sold.TowerId);
                     break;
 
                 // Refusals answer at the surface that caused them, not only in
@@ -612,7 +642,7 @@ public partial class GameRoot : Node3D
             case "towerPlaced": OnTowerPlaced(int.Parse(p[2]), p[3], p[4]); break;
             case "towerUpgraded": OnTowerUpgraded(int.Parse(p[2]), p[3], int.Parse(p[4])); break;
             case "towerSold":
-                if (_towerViews.Remove(int.Parse(p[2]), out var view)) view.QueueFree();
+                ReleaseStructureView(int.Parse(p[2]));
                 break;
             case "buildRejected":
                 _wheel.ShowRefusal(Explain(p[5]));
@@ -756,44 +786,97 @@ public partial class GameRoot : Node3D
     {
         var socket = _map.Sockets.FirstOrDefault(s => s.Id == socketId);
         if (socket is null) return;
-        if (_towerViews.Remove(towerId, out var existing)) existing.QueueFree();
+        if (_towerViews.Remove(towerId, out var existing))
+        {
+            RemoveChild(existing);
+            existing.QueueFree();
+        }
 
-        var view = SpawnStructureView(defId, ToGd(socket.Pos));
+        int levelCount = Towers.All.TryGetValue(defId, out var towerDef)
+            ? towerDef.UpgradePaths.Count : 0;
+        int[] levels = pathLevels ?? new int[levelCount];
+
+        var view = SpawnStructureView(defId, ToGd(socket.Pos), levels);
         view.SetMeta("socket_id", socketId);
         view.SetMeta("def_id", defId);
+        view.SetMeta("levels", levels);
         _towerViews[towerId] = view;
-
-        // A restored save or a late join arrives with levels already spent.
-        if (pathLevels is null || !Towers.All.TryGetValue(defId, out var def)) return;
-        for (int i = 0; i < pathLevels.Length && i < def.UpgradePaths.Count; i++)
-            if (pathLevels[i] > 0)
-                StackPathModule(view, defId, def.UpgradePaths[i].Id, i, pathLevels[i]);
+        RefreshSocketArt(socketId, occupied: true);
     }
 
     /// <summary>Every tower, trap and barricade in the game comes from here —
-    /// design's model if it has shipped, the graybox otherwise. Named per
-    /// docs/DESIGN-BRIEF.md; traps request their armed state, which is the one
-    /// they spend most of their life in.</summary>
-    private Node3D SpawnStructureView(string defId, Vector3 pos)
+    /// design's model if it has shipped, the graybox otherwise. Traps request
+    /// their armed state, the one they spend most of their life in.
+    ///
+    /// A tower is chassis + one cumulative stage module per upgraded path.
+    /// Design's chassis already *is* the level-1 state and `_s1` is
+    /// deliberately empty, so the sim's path level N (0 = unupgraded) asks for
+    /// stage N+1.</summary>
+    private Node3D SpawnStructureView(string defId, Vector3 pos, int[]? levels)
     {
         var root = new Node3D { Position = pos };
-        var body = AssetLibrary.Instantiate(
+        var chassis = AssetLibrary.Instantiate(
             AssetLibrary.StructureAsset(defId), () => Placeholders.Structure(defId));
-        body.Name = "Body";
-        root.AddChild(body);
+        chassis.Name = "Body";
+        root.AddChild(chassis);
         AddChild(root);
+
+        if (levels is null || !Towers.All.TryGetValue(defId, out var def)) return root;
+        for (int i = 0; i < levels.Length && i < def.UpgradePaths.Count; i++)
+        {
+            if (levels[i] <= 0) continue;
+            string pathId = def.UpgradePaths[i].Id;
+            int stage = Mathf.Clamp(levels[i] + 1, 1, 10);
+
+            var module = AssetLibrary.TryInstantiate($"tower_{defId}_{pathId}_s{stage}");
+            if (module is null)
+            {
+                var stand = Placeholders.TowerModule(pathId, i, levels[i]);
+                stand.Name = $"path_{pathId}";
+                root.AddChild(stand);
+                continue;
+            }
+
+            // Design's modules mirror the chassis rig skeleton so a part that
+            // must swing with the barrel sits under the same-named node; move
+            // the parts across and drop the now-empty scaffold.
+            root.AddChild(module);
+            MergeRig(module, chassis);
+            root.RemoveChild(module);
+            module.QueueFree();
+        }
         return root;
     }
 
+    /// <summary>Moves a module's parts onto the chassis nodes of the same name,
+    /// descending through matching rig empties so pitch parts land under pitch
+    /// (game/assets/structures/README-towers.md).</summary>
+    private static void MergeRig(Node module, Node chassis)
+    {
+        foreach (var child in module.GetChildren())
+        {
+            var match = chassis.GetNodeOrNull<Node3D>(child.Name.ToString());
+            if (match is not null)
+            {
+                MergeRig(child, match);      // rig node: keep descending
+                continue;
+            }
+            module.RemoveChild(child);       // real part: the chassis adopts it
+            chassis.AddChild(child);
+        }
+    }
+
     /// <summary>Upgrades were invisible before this: a level-5 Lance looked
-    /// exactly like the one you just paid 75 for. Towers are composed as a
-    /// chassis plus one stage module per upgrade path, which is also the shape
-    /// the design brief asks for — so a shipped tower_lance_damage_s7.glb
-    /// simply appears in place of the graybox block.</summary>
+    /// exactly like the one you just paid 75 for.
+    ///
+    /// The whole view is rebuilt rather than patched, because stage modules are
+    /// cumulative and their parts get reparented into the chassis — there is no
+    /// single node left to swap out.</summary>
     private void OnTowerUpgraded(int towerId, string pathId, int newLevel)
     {
         if (!_towerViews.TryGetValue(towerId, out var view)) return;
         string defId = (string)view.GetMeta("def_id", "");
+        string socketId = (string)view.GetMeta("socket_id", "");
         if (defId.Length == 0 || !Towers.All.TryGetValue(defId, out var def)) return;
 
         int index = -1;
@@ -801,26 +884,13 @@ public partial class GameRoot : Node3D
             if (def.UpgradePaths[i].Id == pathId) index = i;
         if (index < 0) return;
 
-        StackPathModule(view, defId, pathId, index, newLevel);
-    }
+        int[] levels = view.HasMeta("levels")
+            ? (int[])view.GetMeta("levels")
+            : new int[def.UpgradePaths.Count];
+        if (index >= levels.Length) return;
+        levels[index] = newLevel;
 
-    private static void StackPathModule(Node3D view, string defId, string pathId, int pathIndex, int level)
-    {
-        // Remove before adding: QueueFree is deferred, so the old node would
-        // still own the name and Godot would silently rename the new module.
-        string slot = $"path_{pathId}";
-        if (view.HasNode(slot))
-        {
-            var stale = view.GetNode<Node3D>(slot);
-            view.RemoveChild(stale);
-            stale.QueueFree();
-        }
-
-        var module = AssetLibrary.Instantiate(
-            $"tower_{defId}_{pathId}_s{level}",
-            () => Placeholders.TowerModule(pathId, pathIndex, level));
-        module.Name = slot;
-        view.AddChild(module);
+        OnTowerPlaced(towerId, defId, socketId, levels);
     }
 
     // =====================================================================
@@ -963,14 +1033,33 @@ public partial class GameRoot : Node3D
             var body = AssetLibrary.Instantiate($"hero_{factionId}", () => Placeholders.Hero(factionId));
             body.Name = "Body";
             view.AddChild(body);
+
+            // Design ships a posed downed model per faction; falling back to
+            // tipping the standing one over keeps the graybox readable.
+            var floored = AssetLibrary.TryInstantiate($"hero_{factionId}_downed");
+            if (floored is not null)
+            {
+                floored.Name = "Downed";
+                floored.Visible = false;
+                view.AddChild(floored);
+            }
+
             AddChild(view);
             _avatarViews[playerId] = view;
         }
         // Smooth the 8 Hz meta rate.
         view.Position = view.Position.Lerp(pos, 0.35f);
-        // Downed pose. Design ships a real one; tipping the model over is the
-        // stand-in, and it works on a shipped mesh as well as on the capsule.
-        view.GetNode<Node3D>("Body").RotationDegrees = downed ? new Vector3(0, 0, 90) : Vector3.Zero;
+
+        var upright = view.GetNode<Node3D>("Body");
+        if (view.GetNodeOrNull<Node3D>("Downed") is { } pose)
+        {
+            upright.Visible = !downed;
+            pose.Visible = downed;
+        }
+        else
+        {
+            upright.RotationDegrees = downed ? new Vector3(0, 0, 90) : Vector3.Zero;
+        }
     }
 
     private static void SweepViews(Dictionary<int, Node3D> views, IEnumerable<int> liveIds)
@@ -985,7 +1074,8 @@ public partial class GameRoot : Node3D
     }
 
     /// <summary>Status and damage as a modulation of whatever the model
-    /// shipped with — never a replacement. See TintableView for why.</summary>
+    /// shipped with — never a replacement. Colours and the hp behaviour come
+    /// from design's spec (docs/PALETTE.md §Statuses, §Enemies).</summary>
     private static void TintEnemy(Node3D view, float hpFraction, byte statusBits)
     {
         if (view is not TintableView tintable) return;
@@ -993,18 +1083,22 @@ public partial class GameRoot : Node3D
         bool chilled = (statusBits & (1 << (int)Channel.Movement)) != 0;
         bool burning = (statusBits & (1 << (int)Channel.Thermal)) != 0;
         bool marked = (statusBits & (1 << (int)Channel.Vulnerability)) != 0;
+        // Shock and freeze share the control channel, so the packed snapshot
+        // can't tell them apart; the overhead icons make the same call.
+        bool controlled = (statusBits & (1 << (int)Channel.Control)) != 0;
 
-        // Thermal reads over movement: a burning enemy is the more urgent fact.
-        Color? blend = burning ? UiTheme.Status("burn")
-            : chilled ? UiTheme.Status("chill")
+        // Hard control reads over everything, then thermal, then movement.
+        string? tint = controlled ? "freeze" : burning ? "burn" : chilled ? "chill" : null;
+        Color? blend = tint is null ? null : UiTheme.Status(tint);
+
+        // Burn glows; mark is emissive-only, so it never repaints a silhouette
+        // and can coexist with a status tint.
+        Color? emission = tint == "burn" ? UiTheme.Status("burn")
+            : marked ? UiTheme.Status("mark")
             : null;
 
-        // Damage darkens and pushes warm, so wounded reads at a glance without
-        // discarding the unit's own colour.
-        float darken = 0.55f + 0.45f * hpFraction;
-        Color? emission = marked ? UiTheme.Status("mark") : null;
-
-        tintable.Apply(blend, blend is null ? 0f : 0.7f, darken, emission);
+        tintable.Apply(blend, blend is null ? 0f : 0.7f,
+            UiTheme.HpLow, 1f - hpFraction, emission);
     }
 
     /// <summary>Shows the state variant that matches the sim: shield bubble
@@ -1025,10 +1119,17 @@ public partial class GameRoot : Node3D
 
     private void BuildLevel(MapDef map)
     {
-        BuildEnvironment();
+        BuildEnvironment(map);
 
-        // Ground slab.
-        AddStaticBox(new Vector3(0, -0.5f, 0), new Vector3(110, 1, 80), new Color(0.35f, 0.38f, 0.4f), layer: 1);
+        // Ground slab — one collider, dressed with the 20 m terrain tiles.
+        var ground = AddStaticBox(new Vector3(0, -0.5f, 0), new Vector3(110, 1, 80), new Color(0.35f, 0.38f, 0.4f), layer: 1);
+        if (AssetLibrary.Has($"{map.Id}_terrain"))
+        {
+            MapKit.HideBox(ground);
+            for (float x = -50f; x <= 50f; x += 20f)
+                for (float z = -35f; z <= 35f; z += 20f)
+                    MapKit.Prop(ground, $"{map.Id}_terrain", new Vector3(x, MapKit.GroundLocal(ground), z));
+        }
 
         // Route ribbons (ground solid, air translucent).
         foreach (var route in map.Routes)
@@ -1043,10 +1144,25 @@ public partial class GameRoot : Node3D
                 var box = AddStaticBox(mid, new Vector3((b - a).Length(), air ? 0.15f : 0.1f, air ? 1.2f : 3.4f), color, layer: 0, transparent: air);
                 var horizontal = b - a;
                 box.Rotation = new Vector3(0, Mathf.Atan2(-horizontal.Z, horizontal.X), 0);
+
+                // The ground lane becomes real roadway; the air lane gets nav
+                // pylons so the Skiff route still reads without a debug ribbon.
+                if (!air)
+                    MapKit.MountRun(box, $"{map.Id}_path_ground", (b - a).Length(), 4f,
+                        alongX: true, MapKit.GroundLocal(box));
+                else if (AssetLibrary.Has("shared_airlane_pylon"))
+                {
+                    MapKit.HideBox(box);
+                    MapKit.MountRun(box, "shared_airlane_pylon", (b - a).Length(), 12f,
+                        alongX: true, MapKit.GroundLocal(box));
+                }
             }
-            // Spawn + goal markers per route.
-            AddStaticBox(ToGd(route.Waypoints[0]) + new Vector3(0, 1.5f, 0), new Vector3(3f, 3f, 3f), new Color(0.75f, 0.45f, 0.15f), layer: 0);
-            AddStaticBox(ToGd(route.Waypoints[^1]) + new Vector3(0, 1.5f, 0), new Vector3(3f, 3f, 3f), new Color(0.2f, 0.55f, 0.85f), layer: 0);
+
+            // Spawn portal and the core the lane ends at.
+            var spawn = AddStaticBox(ToGd(route.Waypoints[0]) + new Vector3(0, 1.5f, 0), new Vector3(3f, 3f, 3f), new Color(0.75f, 0.45f, 0.15f), layer: 0);
+            MapKit.Mount(spawn, "shared_spawn_portal", MapKit.GroundLocal(spawn));
+            var goal = AddStaticBox(ToGd(route.Waypoints[^1]) + new Vector3(0, 1.5f, 0), new Vector3(3f, 3f, 3f), new Color(0.2f, 0.55f, 0.85f), layer: 0);
+            if (!air) MapKit.Mount(goal, "shared_core", MapKit.GroundLocal(goal));
         }
 
         // Sockets.
@@ -1071,6 +1187,12 @@ public partial class GameRoot : Node3D
             body.Position = ToGd(socket.Pos) + new Vector3(0, 0.12f, 0);
             body.SetMeta("socket_id", socket.Id);
             AddChild(body);
+
+            // Empty vs occupied are different models; RefreshSocketArt swaps
+            // them as towers come and go.
+            _socketBodies[socket.Id] = body;
+            _socketTags[socket.Id] = socket.Tag;
+            RefreshSocketArt(socket.Id, occupied: false);
         }
 
         if (map.Id == "foundry") BuildFoundryStructures();
@@ -1080,6 +1202,48 @@ public partial class GameRoot : Node3D
         var armory = AddStaticBox(ToGd(map.ArmoryPos) + new Vector3(0, 1.25f, 0),
             new Vector3(2.5f, 2.5f, 2.5f), new Color(0.8f, 0.7f, 0.2f), layer: 1);
         armory.AddChild(MakeArea("armory", new BoxShape3D { Size = new Vector3(7, 4, 7) }));
+        MapKit.Mount(armory, "shared_armory_kiosk", MapKit.GroundLocal(armory) + 2.1f);
+    }
+
+    /// <summary>Tears down a sold structure and hands its socket back to the
+    /// empty-pad art.</summary>
+    private void ReleaseStructureView(int towerId)
+    {
+        if (!_towerViews.Remove(towerId, out var view)) return;
+        string socketId = (string)view.GetMeta("socket_id", "");
+        RemoveChild(view);
+        view.QueueFree();
+        if (socketId.Length > 0) RefreshSocketArt(socketId, occupied: false);
+    }
+
+    /// <summary>Shows the empty-socket marker or the occupied base plate. The
+    /// pad is the only thing telling a player where they may build, so it has
+    /// to change the moment something lands on it.</summary>
+    private void RefreshSocketArt(string socketId, bool occupied)
+    {
+        if (!_socketBodies.TryGetValue(socketId, out var body) || !IsInstanceValid(body)) return;
+        if (!_socketTags.TryGetValue(socketId, out var tag)) return;
+
+        string family = tag switch
+        {
+            SocketTag.Wall => "wall",
+            SocketTag.Trap => "trap",
+            SocketTag.Barricade => "barricade",
+            _ => "ground",
+        };
+        // Only ground and wall sockets have a distinct occupied plate.
+        string asset = occupied && family is "ground" or "wall"
+            ? $"socket_{family}_base"
+            : $"socket_{family}_empty";
+        if (!AssetLibrary.Has(asset)) return;
+
+        if (body.GetNodeOrNull<Node3D>("SocketArt") is { } stale)
+        {
+            body.RemoveChild(stale);
+            stale.QueueFree();
+        }
+        var art = MapKit.Mount(body, asset, MapKit.GroundLocal(body));
+        if (art && body.GetChild(body.GetChildCount() - 1) is Node3D placed) placed.Name = "SocketArt";
     }
 
     /// <summary>Upper deck + traversal: ladder, zipline, launcher, vent, control
@@ -1087,22 +1251,28 @@ public partial class GameRoot : Node3D
     private void BuildFoundryStructures()
     {
         // Upper deck platform (walkable).
-        AddStaticBox(new Vector3(2, 5.8f, -17), new Vector3(28, 0.4f, 10), new Color(0.45f, 0.48f, 0.55f), layer: 1);
+        var deck = AddStaticBox(new Vector3(2, 5.8f, -17), new Vector3(28, 0.4f, 10), new Color(0.45f, 0.48f, 0.55f), layer: 1);
+        MapKit.MountRun(deck, "foundry_deck", 28f, 4f, alongX: true, MapKit.GroundLocal(deck));
         // Deck guard rail (visual).
-        AddStaticBox(new Vector3(2, 6.6f, -12.2f), new Vector3(28, 1.0f, 0.2f), new Color(0.5f, 0.53f, 0.6f), layer: 0);
+        var rail = AddStaticBox(new Vector3(2, 6.6f, -12.2f), new Vector3(28, 1.0f, 0.2f), new Color(0.5f, 0.53f, 0.6f), layer: 0);
+        MapKit.MountRun(rail, "foundry_deck_rail", 28f, 4f, alongX: true, MapKit.GroundLocal(rail) + 6.0f);
         // Deck support pillars.
-        AddStaticBox(new Vector3(-10, 2.9f, -17), new Vector3(1.2f, 5.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
-        AddStaticBox(new Vector3(14, 2.9f, -17), new Vector3(1.2f, 5.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
+        var pillarWest = AddStaticBox(new Vector3(-10, 2.9f, -17), new Vector3(1.2f, 5.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
+        MapKit.Mount(pillarWest, "foundry_pillar", MapKit.GroundLocal(pillarWest));
+        var pillarEast = AddStaticBox(new Vector3(14, 2.9f, -17), new Vector3(1.2f, 5.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
+        MapKit.Mount(pillarEast, "foundry_pillar", MapKit.GroundLocal(pillarEast));
 
         // Ladder up the deck's south face: an Area3D volume Player climbs inside.
         var ladderVisual = AddStaticBox(new Vector3(-8f, 3f, -12.4f), new Vector3(1.2f, 6f, 0.15f), new Color(0.7f, 0.6f, 0.3f), layer: 0);
         ladderVisual.AddChild(MakeArea("ladder", new BoxShape3D { Size = new Vector3(1.6f, 6.4f, 1.4f) }));
+        MapKit.Mount(ladderVisual, "shared_ladder", MapKit.GroundLocal(ladderVisual));
 
         // Hero launcher: pad in the spawn yard that flings you onto the deck.
         var launcher = AddStaticBox(new Vector3(-14, 0.15f, -20), new Vector3(2.2f, 0.3f, 2.2f), new Color(0.9f, 0.5f, 0.9f), layer: 1);
         var launchArea = MakeArea("launcher", new BoxShape3D { Size = new Vector3(2.2f, 1.2f, 2.2f) });
         launchArea.SetMeta("launch_velocity", new Vector3(11f, 12f, 2.5f)); // arcs onto the deck
         launcher.AddChild(launchArea);
+        MapKit.Mount(launcher, "shared_launcher_idle", MapKit.GroundLocal(launcher));
 
         // Zipline: deck east edge down to the core gate. Player rides on interact.
         var zipStart = new Vector3(14f, 6.8f, -14f);
@@ -1115,16 +1285,83 @@ public partial class GameRoot : Node3D
         var zipArea = MakeArea("zipline", new BoxShape3D { Size = new Vector3(2.5f, 2.5f, 2.5f) });
         zipArea.SetMeta("zip_end", zipEnd);
         zipAnchor.AddChild(zipArea);
+        DressZipline(zipAnchor, cable, zipStart, zipEnd);
 
         // Vent tunnel under the deck: spawn yard → mid-lane shortcut (hero-only).
-        AddStaticBox(new Vector3(0, 1.4f, -6.5f), new Vector3(3.0f, 0.25f, 14f), new Color(0.3f, 0.32f, 0.36f), layer: 1); // tunnel roof
-        AddStaticBox(new Vector3(-1.8f, 0.7f, -6.5f), new Vector3(0.25f, 1.4f, 14f), new Color(0.3f, 0.32f, 0.36f), layer: 1);
-        AddStaticBox(new Vector3(1.8f, 0.7f, -6.5f), new Vector3(0.25f, 1.4f, 14f), new Color(0.3f, 0.32f, 0.36f), layer: 1);
+        var ventRoof = AddStaticBox(new Vector3(0, 1.4f, -6.5f), new Vector3(3.0f, 0.25f, 14f), new Color(0.3f, 0.32f, 0.36f), layer: 1);
+        var ventWest = AddStaticBox(new Vector3(-1.8f, 0.7f, -6.5f), new Vector3(0.25f, 1.4f, 14f), new Color(0.3f, 0.32f, 0.36f), layer: 1);
+        var ventEast = AddStaticBox(new Vector3(1.8f, 0.7f, -6.5f), new Vector3(0.25f, 1.4f, 14f), new Color(0.3f, 0.32f, 0.36f), layer: 1);
+        // One tunnel model covers all three colliders, so the other two just
+        // stop drawing.
+        if (MapKit.Mount(ventRoof, "foundry_vent_tunnel", MapKit.GroundLocal(ventRoof)))
+        {
+            MapKit.HideBox(ventWest);
+            MapKit.HideBox(ventEast);
+        }
 
         // Control point: stand on it to open the bonus wall socket sightline
         // (sim hookup lands at M2 with operated elements; sweepInert visual now).
         var controlPad = AddStaticBox(new Vector3(26, 0.1f, -6), new Vector3(3f, 0.2f, 3f), new Color(0.3f, 0.9f, 0.6f), layer: 1);
         controlPad.AddChild(MakeArea("controlPoint", new BoxShape3D { Size = new Vector3(3f, 1.5f, 3f) }));
+        MapKit.Mount(controlPad, "shared_controlpoint_neutral", MapKit.GroundLocal(controlPad));
+
+        // Perimeter and dressing. Everything here is layer 0 and sits off the
+        // lane — the brief's rule is that scenery never blocks a socket's line
+        // to the route, because the harness's coverage math is the truth.
+        BuildBoundary("foundry_wall_boundary", 52f, 38f);
+        MapKit.Prop(this, "foundry_dress_crucible", new Vector3(-30, 0, 8), 20f);
+        MapKit.Prop(this, "foundry_dress_gantry", new Vector3(6, 0, -30));
+        MapKit.Prop(this, "foundry_dress_pipes", new Vector3(-34, 0, -14), 90f);
+        MapKit.Prop(this, "foundry_dress_pipes", new Vector3(36, 0, -20), -90f);
+        MapKit.Prop(this, "foundry_dress_lightrig", new Vector3(-20, 0, 22));
+        MapKit.Prop(this, "foundry_dress_lightrig", new Vector3(24, 0, 24));
+        MapKit.Prop(this, "foundry_dress_steamvent", new Vector3(-24, 0, -2));
+        MapKit.Prop(this, "foundry_dress_steamvent", new Vector3(32, 0, 14));
+        ScatterTerrain("foundry_terrain_scatter");
+    }
+
+    /// <summary>Anchor at each end plus the stretched cable. The graybox cable
+    /// box is a rotated sliver, which the model would inherit, so the span is
+    /// mounted in world space instead.</summary>
+    private void DressZipline(Node3D anchorBody, Node3D cableBody, Vector3 from, Vector3 to)
+    {
+        if (!AssetLibrary.Has("shared_zipline_anchor")) return;
+        MapKit.Mount(anchorBody, "shared_zipline_anchor", MapKit.GroundLocal(anchorBody) + from.Y);
+        MapKit.Prop(this, "shared_zipline_anchor", new Vector3(to.X, to.Y, to.Z));
+        MapKit.HideBox(cableBody);
+        MapKit.MountSpan(this, "shared_zipline_cable", from, to);
+        MapKit.Prop(this, "shared_zipline_trolley", from + (to - from) * 0.06f);
+    }
+
+    /// <summary>Boundary wall run around the play area, from the same 10.8 m
+    /// segment on all four sides.</summary>
+    private void BuildBoundary(string asset, float halfX, float halfZ)
+    {
+        if (!AssetLibrary.Has(asset)) return;
+        for (float x = -halfX; x <= halfX; x += 10.8f)
+        {
+            MapKit.Prop(this, asset, new Vector3(x, 0, -halfZ), 0f);
+            MapKit.Prop(this, asset, new Vector3(x, 0, halfZ), 180f);
+        }
+        for (float z = -halfZ; z <= halfZ; z += 10.8f)
+        {
+            MapKit.Prop(this, asset, new Vector3(-halfX, 0, z), 90f);
+            MapKit.Prop(this, asset, new Vector3(halfX, 0, z), -90f);
+        }
+    }
+
+    /// <summary>Ground clutter on a fixed lattice — deterministic placement so
+    /// two clients render the same world without syncing anything.</summary>
+    private void ScatterTerrain(string asset)
+    {
+        if (!AssetLibrary.Has(asset)) return;
+        for (int i = 0; i < 14; i++)
+        {
+            float x = -44f + (i * 37 % 89);
+            float z = -30f + (i * 53 % 61);
+            if (Mathf.Abs(z) < 8f) z += 16f;            // keep the lane clear
+            MapKit.Prop(this, asset, new Vector3(x, 0, z), i * 47f);
+        }
     }
 
     /// <summary>Three tiers: mid deck over the yard, catwalk over the air lane.
@@ -1132,25 +1369,33 @@ public partial class GameRoot : Node3D
     private void BuildSwitchyardStructures()
     {
         // Mid deck (y=5) with its wall sockets w1/w2.
-        AddStaticBox(new Vector3(-6, 4.8f, -18), new Vector3(24, 0.4f, 8), new Color(0.45f, 0.48f, 0.55f), layer: 1);
-        AddStaticBox(new Vector3(-6, 2.4f, -18), new Vector3(1.2f, 4.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
+        var midDeck = AddStaticBox(new Vector3(-6, 4.8f, -18), new Vector3(24, 0.4f, 8), new Color(0.45f, 0.48f, 0.55f), layer: 1);
+        MapKit.MountRun(midDeck, "switchyard_middeck", 24f, 4f, alongX: true, MapKit.GroundLocal(midDeck));
+        var midColumn = AddStaticBox(new Vector3(-6, 2.4f, -18), new Vector3(1.2f, 4.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
+        MapKit.Mount(midColumn, "switchyard_column", MapKit.GroundLocal(midColumn));
 
         // Upper catwalk (y=10) carrying w3/w4 over the air lane.
-        AddStaticBox(new Vector3(3, 9.8f, 3), new Vector3(22, 0.4f, 5), new Color(0.5f, 0.52f, 0.6f), layer: 1);
-        AddStaticBox(new Vector3(-6, 4.9f, 3), new Vector3(1.2f, 9.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
-        AddStaticBox(new Vector3(12, 4.9f, 3), new Vector3(1.2f, 9.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
+        var catwalk = AddStaticBox(new Vector3(3, 9.8f, 3), new Vector3(22, 0.4f, 5), new Color(0.5f, 0.52f, 0.6f), layer: 1);
+        MapKit.MountRun(catwalk, "switchyard_catwalk", 22f, 4f, alongX: true, MapKit.GroundLocal(catwalk));
+        var columnWest = AddStaticBox(new Vector3(-6, 4.9f, 3), new Vector3(1.2f, 9.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
+        MapKit.Mount(columnWest, "switchyard_column", MapKit.GroundLocal(columnWest));
+        var columnEast = AddStaticBox(new Vector3(12, 4.9f, 3), new Vector3(1.2f, 9.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
+        MapKit.Mount(columnEast, "switchyard_column", MapKit.GroundLocal(columnEast));
 
         // Ladders: yard → mid deck, mid deck → catwalk.
         var ladder1 = AddStaticBox(new Vector3(-14f, 2.5f, -14.2f), new Vector3(1.2f, 5f, 0.15f), new Color(0.7f, 0.6f, 0.3f), layer: 0);
         ladder1.AddChild(MakeArea("ladder", new BoxShape3D { Size = new Vector3(1.6f, 5.6f, 1.4f) }));
+        MapKit.Mount(ladder1, "shared_ladder", MapKit.GroundLocal(ladder1));
         var ladder2 = AddStaticBox(new Vector3(-4f, 7.5f, 1.2f), new Vector3(1.2f, 5.4f, 0.15f), new Color(0.7f, 0.6f, 0.3f), layer: 0);
         ladder2.AddChild(MakeArea("ladder", new BoxShape3D { Size = new Vector3(1.6f, 6.2f, 1.4f) }));
+        MapKit.Mount(ladder2, "shared_ladder", MapKit.GroundLocal(ladder2) + 4.8f);
 
         // Launcher pad: spawn yard straight onto the mid deck.
         var launcher = AddStaticBox(new Vector3(8, 0.15f, -22), new Vector3(2.2f, 0.3f, 2.2f), new Color(0.9f, 0.5f, 0.9f), layer: 1);
         var launchArea = MakeArea("launcher", new BoxShape3D { Size = new Vector3(2.2f, 1.2f, 2.2f) });
         launchArea.SetMeta("launch_velocity", new Vector3(-8f, 11f, 3f));
         launcher.AddChild(launchArea);
+        MapKit.Mount(launcher, "shared_launcher_idle", MapKit.GroundLocal(launcher));
 
         // Zipline: catwalk down to the core gate.
         var zipStart = new Vector3(12f, 10.6f, 4f);
@@ -1159,6 +1404,26 @@ public partial class GameRoot : Node3D
         var zipArea = MakeArea("zipline", new BoxShape3D { Size = new Vector3(2.5f, 2.5f, 2.5f) });
         zipArea.SetMeta("zip_end", zipEnd);
         anchor.AddChild(zipArea);
+        if (AssetLibrary.Has("shared_zipline_anchor"))
+        {
+            MapKit.Mount(anchor, "shared_zipline_anchor", MapKit.GroundLocal(anchor) + zipStart.Y);
+            MapKit.Prop(this, "shared_zipline_anchor", zipEnd);
+            MapKit.MountSpan(this, "shared_zipline_cable", zipStart, zipEnd);
+            MapKit.Prop(this, "shared_zipline_trolley", zipStart + (zipEnd - zipStart) * 0.06f);
+        }
+
+        // Rail-yard identity: the freight cut, retaining walls and rolling stock.
+        MapKit.Prop(this, "switchyard_cut_channel", new Vector3(0, 0, 12));
+        MapKit.Prop(this, "switchyard_retainingwall", new Vector3(-26, 0, -8), 90f);
+        MapKit.Prop(this, "switchyard_retainingwall", new Vector3(28, 0, -8), -90f);
+        BuildBoundary("foundry_wall_boundary", 52f, 38f);
+        MapKit.Prop(this, "switchyard_dress_railcar", new Vector3(-32, 0, 20));
+        MapKit.Prop(this, "switchyard_dress_railcar", new Vector3(30, 0, 26), 12f);
+        MapKit.Prop(this, "switchyard_dress_container", new Vector3(-38, 0, -20), 30f);
+        MapKit.Prop(this, "switchyard_dress_container", new Vector3(38, 0, 4), -15f);
+        MapKit.Prop(this, "switchyard_dress_signaltower", new Vector3(-20, 0, 26));
+        MapKit.Prop(this, "switchyard_dress_buffer", new Vector3(40, 0, -14), -90f);
+        ScatterTerrain("switchyard_terrain_scatter");
     }
 
     private static Area3D MakeArea(string kind, Shape3D shape)
@@ -1169,7 +1434,7 @@ public partial class GameRoot : Node3D
         return area;
     }
 
-    private void BuildEnvironment()
+    private void BuildEnvironment(MapDef map)
     {
         var sun = new DirectionalLight3D { ShadowEnabled = true };
         sun.RotationDegrees = new Vector3(-55, -30, 0);
@@ -1184,6 +1449,12 @@ public partial class GameRoot : Node3D
                 AmbientLightEnergy = 0.6f,
             },
         });
+
+        // Design's skybox is real geometry, not a cubemap — a 400 m dome that
+        // gives each map its own horizon. The procedural sky stays underneath
+        // as the ambient light source.
+        if (MapKit.Prop(this, $"{map.Id}_skybox", Vector3.Zero) is { } dome)
+            MapKit.NoShadow(dome);
     }
 
     private StaticBody3D AddStaticBox(Vector3 position, Vector3 size, Color color, uint layer, bool transparent = false)

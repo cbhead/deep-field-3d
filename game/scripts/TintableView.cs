@@ -80,18 +80,18 @@ public partial class TintableView : Node3D
         }
     }
 
-    /// <summary>Modulate every surface. <paramref name="blendToward"/> with
-    /// <paramref name="weight"/> carries status; <paramref name="darken"/>
-    /// carries damage; <paramref name="emission"/> overrides the model's glow
-    /// (null restores whatever it shipped with).</summary>
-    public void Apply(Color? blendToward, float weight, float darken, Color? emission)
+    /// <summary>Modulate every surface: status blend first, then the damage
+    /// lerp on top of it, then emission (null restores the model's own glow).
+    /// Both stages are lerps over design's albedo rather than replacements —
+    /// PALETTE.md specifies "base albedo lerps to #C93B28 as hp falls".</summary>
+    public void Apply(Color? status, float statusWeight, Color damage, float damageWeight, Color? emission)
     {
         foreach (var slot in _slots)
         {
-            Color albedo = blendToward is { } target
-                ? slot.Albedo.Lerp(target, weight)
+            Color albedo = status is { } tint
+                ? slot.Albedo.Lerp(tint, statusWeight)
                 : slot.Albedo;
-            albedo = new Color(albedo.R * darken, albedo.G * darken, albedo.B * darken, albedo.A);
+            if (damageWeight > 0f) albedo = albedo.Lerp(damage, damageWeight);
             slot.Material.AlbedoColor = albedo;
 
             if (emission is { } glow)

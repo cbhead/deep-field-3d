@@ -81,6 +81,8 @@ public partial class BuildGhost : Node3D
             child.QueueFree();
         }
 
+        // Chassis only — the ghost previews what you're about to buy, which is
+        // always the base tower.
         var model = AssetLibrary.Instantiate(
             AssetLibrary.StructureAsset(defId), () => Placeholders.Structure(defId));
         _body.AddChild(model);

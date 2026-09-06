@@ -86,7 +86,29 @@ and drop that in instead. No code change either way.
 ## Icons
 
 Same contract, different loader: `UiTheme.Icon(id)` resolves
-`res://assets/ui/icon_<id>.png` and draws a labelled chip until it exists. Every
-tower, trap, enemy, status, reaction, scrap type, ammo type, attachment,
-weapon, ability and condition needs one — a model without its icon can't enter
-the build wheel or the armory.
+`res://assets/ui/icon_<id>.svg` (or `.png`) and draws a labelled chip until it
+exists. Every tower, trap, enemy, status, reaction, scrap type, ammo type,
+attachment, weapon, ability and condition needs one — a model without its icon
+can't enter the build wheel or the armory.
+
+**Run `./tools/prepare-icons.sh` after any icon delivery.** Design's icons are
+stroke line-art using `currentColor`, which is correct — they are meant to take
+the colour of whatever draws them. Godot's SVG rasteriser has no CSS context
+and resolves `currentColor` to black, so every icon lands as a black silhouette
+on a black panel. The script rewrites it to white; the UI then tints at draw
+time, which is what `currentColor` was asking for.
+
+## Gotchas found during the first integration
+
+Recorded so the next delivery doesn't rediscover them:
+
+- **`godot --headless --import game` silently does nothing** on 4.7. The
+  working form is `godot --headless --path game --import`. Symptom: assets stay
+  unimported and every lookup falls back to a placeholder.
+- **The skybox is real geometry**, a 400 m dome. With a shadow-casting sun
+  inside it, it puts the entire map in shade. `MapKit.NoShadow` turns off
+  shadow casting for it.
+- **Map kits are modular tiles at local origin**, authored at true world
+  height — a deck segment's mesh already sits at y≈6. They mount at world
+  y = 0 wherever the graybox collider's centre happens to be, which is what
+  `MapKit.GroundLocal` computes.

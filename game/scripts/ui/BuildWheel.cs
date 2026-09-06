@@ -181,8 +181,11 @@ public partial class BuildWheel : Control
             // Icon chip (design's art when present, placeholder chip until then).
             var icon = UiTheme.Icon(option.IconId, affordable ? UiTheme.Accent : UiTheme.Disabled);
             var iconSize = new Vector2(34, 34);
+            // Design's icons are white line art; the modulate colour is what
+            // makes affordable vs unaffordable read.
+            var iconTint = affordable ? UiTheme.Ink : UiTheme.Disabled;
             DrawTextureRect(icon, new Rect2(seat - iconSize * 0.5f - new Vector2(0, 14), iconSize), false,
-                new Color(1, 1, 1, affordable ? 1f : 0.5f));
+                iconTint with { A = affordable ? 1f : 0.5f });
 
             DrawString(ThemeDB.FallbackFont, seat + new Vector2(-38, 16), option.Label,
                 HorizontalAlignment.Center, 76, 13, ink);

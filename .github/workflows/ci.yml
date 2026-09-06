@@ -37,7 +37,9 @@ jobs:
           include-templates: false
       - name: Import + build
         run: |
-          godot --headless --import game
+          # --path X --import, not --import X: the latter silently no-ops on
+          # 4.7 and every asset stays unimported.
+          godot --headless --path game --import
           godot --headless --path game --build-solutions --quit || true
       - name: Server + client join smoke
         run: |

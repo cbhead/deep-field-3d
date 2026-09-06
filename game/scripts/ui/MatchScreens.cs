@@ -93,6 +93,7 @@ public partial class MatchScreens : CanvasLayer
                 chip.AddChild(new TextureRect
                 {
                     Texture = UiTheme.Icon($"enemy_{group.Key}", UiTheme.Accent),
+                    Modulate = UiTheme.Ink,
                     CustomMinimumSize = new Vector2(22, 22),
                     StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
                     TooltipText = group.Key,
@@ -178,6 +179,7 @@ public partial class MatchScreens : CanvasLayer
             row.AddChild(new TextureRect
             {
                 Texture = UiTheme.Icon($"faction_{player.FactionId}", UiTheme.Faction(player.FactionId)),
+                Modulate = UiTheme.Faction(player.FactionId),
                 CustomMinimumSize = new Vector2(20, 20),
                 StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
             });
