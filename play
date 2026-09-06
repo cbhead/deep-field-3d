@@ -10,5 +10,11 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 [ -x "$DOTNET" ] || { echo "missing .NET SDK at $DOTNET — see docs/INSTALL.md"; exit 1; }
 [ -x "$GODOT" ]  || { echo "missing Godot at $GODOT — see docs/INSTALL.md"; exit 1; }
 
+# Godot's mono module locates hostfxr by running `dotnet` and reading
+# DOTNET_ROOT — both must point at the user-local install or the engine
+# boots without C# ("Failed to load hostfxr").
+export DOTNET_ROOT="$HOME/.dotnet"
+export PATH="$HOME/.dotnet:$PATH"
+
 "$DOTNET" build "$HERE/game/DeepField.Game.csproj" -v quiet
 exec "$GODOT" --path "$HERE/game" "$@"
