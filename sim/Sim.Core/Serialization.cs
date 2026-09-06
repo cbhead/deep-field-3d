@@ -17,6 +17,7 @@ public static class Serialization
     private sealed record TowerState(
         int Id, string DefId, string SocketId, float Cooldown, int Spent, int Kills,
         float DamageDealt, int[] PathLevels, float BuffTimer, float BuffFactor);
+    private sealed record TrapState(int Id, string DefId, string SocketId, int ChargesLeft, float RearmTimer);
     private sealed record ProjectileState(
         int Id, int FiredBy, int TargetId, float X, float Y, float Z,
         float Speed, float Damage, float SplashRadius, float SplashFalloff);
@@ -32,7 +33,8 @@ public static class Serialization
         Dictionary<string, int> TeamScrap,
         int Phase, float PhaseTimer, int WaveIndex, long WaveStartTick,
         List<EnemyState> Enemies, List<TowerState> Towers, List<ProjectileState> Projectiles,
-        List<SpawnState> PendingSpawns, List<PlayerStateDto> Players, int NextId);
+        List<SpawnState> PendingSpawns, List<PlayerStateDto> Players,
+        List<TrapState>? Traps, int NextId);
 
     public static string Serialize(World w)
     {
@@ -58,6 +60,7 @@ public static class Serialization
                 p.RegenDelay, p.WeaponCooldown, p.AbilityCooldown,
                 p.WeaponId, p.OwnedWeapons.OrderBy(x => x, StringComparer.Ordinal).ToList(),
                 p.Scrap.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value), p.Connected)).ToList(),
+            w.Traps.Select(t => new TrapState(t.Id, t.DefId, t.SocketId, t.ChargesLeft, t.RearmTimer)).ToList(),
             w.NextIdValue);
         return JsonSerializer.Serialize(state);
     }
@@ -143,6 +146,16 @@ public static class Serialization
             foreach (var (typeName, amount) in p.Scrap)
                 player.Scrap[System.Enum.Parse<ScrapType>(typeName)] = amount;
             world.Players[p.Id] = player;
+        }
+
+        foreach (var t in state.Traps ?? new List<TrapState>())
+        {
+            var socket = world.Map.Sockets.First(s => s.Id == t.SocketId);
+            world.Traps.Add(new Trap
+            {
+                Id = t.Id, DefId = t.DefId, SocketId = t.SocketId, Pos = socket.Pos,
+                ChargesLeft = t.ChargesLeft, RearmTimer = t.RearmTimer,
+            });
         }
 
         world.EnsureNextIdAtLeast(state.NextId);

@@ -32,6 +32,7 @@ public sealed record EnemyDef(
     float RearWeakFactor,         // damage multiplier from directly behind (Aegis reward)
     float Shield,                 // Warden: regenerating pool that soaks damage first
     float FlatArmor,              // per-hit flat reduction (shred strips it)
+    float Mass,                   // knockback divisor (heavy = barely moves)
     bool Burrower,                // Mole: cycles untargetable underground
     string? SplitInto,            // Cluster: child def id spawned on death
     int SplitCount,
@@ -49,6 +50,8 @@ public enum TowerKind
     Mortar,     // arcing splash, ground-only, min range (Nova)
     ChillAura,  // no damage; applies chill to everything in range (Singularity)
     Flak,       // fast bolts, air-only (Skywatch)
+    Tesla,      // instant chain arc, jumps between nearby targets (Arc)
+    Barricade,  // no weapon: closes its route gate while alive
 }
 
 public sealed record TowerDef(
@@ -62,9 +65,25 @@ public sealed record TowerDef(
     float ProjectileSpeed,
     float SplashRadius,
     float SplashFalloff,          // damage multiplier at the splash edge
+    int ChainJumps,               // Tesla: extra targets after the first
+    float ChainRange,             // Tesla: max hop distance between targets
+    float ChainFalloff,           // Tesla: damage multiplier per hop
+    float StructureHp,            // Barricade (and towers, once Ram lands at M4)
     IReadOnlyList<string> Applies, // status ids attached to this tower's hits/aura
     IReadOnlyList<EnemyLayer> TargetLayers,
     IReadOnlyList<UpgradePathDef> UpgradePaths);
+
+/// <summary>Path-floor traps: charge-based, rearming, placed on trap sockets.</summary>
+public sealed record TrapDef(
+    string Id,
+    int Cost,
+    float TriggerRadius,
+    int Charges,
+    float RearmSeconds,
+    float Damage,                 // Spike
+    string? Applies,              // Tar: chill
+    float KnockbackMeters,        // Launcher: route displacement, divided by mass
+    IReadOnlyDictionary<ScrapType, int> ScrapCost);
 
 public sealed record WeaponDef(
     string Id,
@@ -78,15 +97,22 @@ public enum SocketTag
 {
     Ground,
     Wall,
-    Trap,       // M2 — present on Foundry, buildable later
+    Trap,
+    Barricade,  // barricade slots gate shortcut routes
 }
 
 public sealed record SocketDef(string Id, Vec3 Pos, SocketTag Tag);
 
+/// <summary>A route with a BarricadeGate is a shortcut: usable only while no
+/// living barricade occupies that slot. Enemies pick their route at spawn
+/// (never mid-walk), so pathing stays deterministic and sweep-enumerable.
+/// FallbackRouteId names the long way around.</summary>
 public sealed record RouteDef(
     string Id,
     EnemyLayer Layer,
-    IReadOnlyList<Vec3> Waypoints);
+    IReadOnlyList<Vec3> Waypoints,
+    string? BarricadeGate = null,
+    string? FallbackRouteId = null);
 
 /// <summary>Auto-hero anchor points with travel-time edges (the traversal graph).</summary>
 public sealed record HeroStationDef(string Id, Vec3 Pos);

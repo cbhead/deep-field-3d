@@ -21,6 +21,7 @@ public static class Step
         UpdateWaves(w);
         UpdateStatuses(w);
         MoveEnemies(w);
+        TriggerTraps(w);
         UpdatePlayers(w);
         FireTowers(w);
         StepTowerProjectiles(w);
@@ -120,12 +121,6 @@ public static class Step
 
     private static void ApplyPlaceTower(World w, Command.PlaceTower place)
     {
-        if (!Towers.All.TryGetValue(place.TowerId, out var def))
-        {
-            w.Emit(new SimEvent.BuildRejected(place.PlayerId, place.TowerId, place.SocketId, "unknownTower"));
-            return;
-        }
-
         var socket = w.Map.Sockets.FirstOrDefault(s => s.Id == place.SocketId);
         if (socket is null)
         {
@@ -133,9 +128,26 @@ public static class Step
             return;
         }
 
-        if (socket.Tag == SocketTag.Trap)
+        // Trap defs route to the trap path; tags must match both ways.
+        if (Traps.All.TryGetValue(place.TowerId, out var trapDef))
         {
-            w.Emit(new SimEvent.BuildRejected(place.PlayerId, place.TowerId, place.SocketId, "trapSocket"));
+            ApplyPlaceTrap(w, place, trapDef, socket);
+            return;
+        }
+
+        if (!Towers.All.TryGetValue(place.TowerId, out var def))
+        {
+            w.Emit(new SimEvent.BuildRejected(place.PlayerId, place.TowerId, place.SocketId, "unknownTower"));
+            return;
+        }
+
+        bool tagOk = def.Kind == TowerKind.Barricade
+            ? socket.Tag == SocketTag.Barricade
+            : socket.Tag is SocketTag.Ground or SocketTag.Wall;
+        if (!tagOk)
+        {
+            w.Emit(new SimEvent.BuildRejected(place.PlayerId, place.TowerId, place.SocketId,
+                socket.Tag == SocketTag.Trap ? "trapSocket" : "wrongSocketTag"));
             return;
         }
 
@@ -167,6 +179,48 @@ public static class Step
         };
         w.Towers.Add(tower);
         w.Emit(new SimEvent.TowerPlaced(tower.Id, def.Id, socket.Id, place.PlayerId));
+    }
+
+    private static void ApplyPlaceTrap(World w, Command.PlaceTower place, TrapDef def, SocketDef socket)
+    {
+        if (socket.Tag != SocketTag.Trap)
+        {
+            w.Emit(new SimEvent.BuildRejected(place.PlayerId, def.Id, socket.Id, "wrongSocketTag"));
+            return;
+        }
+        if (w.Traps.Any(t => t.SocketId == socket.Id))
+        {
+            w.Emit(new SimEvent.BuildRejected(place.PlayerId, def.Id, socket.Id, "occupied"));
+            return;
+        }
+        if (w.Money < def.Cost)
+        {
+            w.Emit(new SimEvent.BuildRejected(place.PlayerId, def.Id, socket.Id, "insufficientFunds"));
+            return;
+        }
+        foreach (var (type, amount) in def.ScrapCost)
+        {
+            if (w.TeamScrap.GetValueOrDefault(type, 0) < amount)
+            {
+                w.Emit(new SimEvent.BuildRejected(place.PlayerId, def.Id, socket.Id, "insufficientScrap"));
+                return;
+            }
+        }
+
+        w.Money -= def.Cost;
+        foreach (var (type, amount) in def.ScrapCost)
+            w.TeamScrap[type] -= amount;
+
+        var trap = new Trap
+        {
+            Id = w.NextId(),
+            DefId = def.Id,
+            SocketId = socket.Id,
+            Pos = socket.Pos,
+            ChargesLeft = def.Charges,
+        };
+        w.Traps.Add(trap);
+        w.Emit(new SimEvent.TowerPlaced(trap.Id, def.Id, socket.Id, place.PlayerId));
     }
 
     private static void ApplySellTower(World w, Command.SellTower sell)
@@ -369,7 +423,21 @@ public static class Step
             if (entry.TickOffset > waveTick) continue;
 
             var def = Enemies.All[entry.DefId];
-            var route = w.Map.Routes[entry.RouteIndex];
+
+            // Barricade route gating, resolved at spawn time (never mid-walk):
+            // a gated shortcut with a living barricade sends the spawn down its
+            // fallback route instead.
+            int routeIndex = entry.RouteIndex;
+            var routeDef = w.Map.Routes[routeIndex];
+            if (routeDef.BarricadeGate is { } gate
+                && w.Towers.Any(t => t.SocketId == gate && Towers.All[t.DefId].Kind == TowerKind.Barricade)
+                && routeDef.FallbackRouteId is { } fallback)
+            {
+                for (int r = 0; r < w.Map.Routes.Count; r++)
+                    if (w.Map.Routes[r].Id == fallback) { routeIndex = r; break; }
+            }
+
+            var route = w.Map.Routes[routeIndex];
             var enemy = new Enemy
             {
                 Id = w.NextId(),
@@ -377,7 +445,7 @@ public static class Step
                 Hp = def.Hp * entry.HpFactor,
                 MaxHp = def.Hp * entry.HpFactor,
                 Shield = def.Shield * entry.HpFactor,
-                RouteIndex = entry.RouteIndex,
+                RouteIndex = routeIndex,
                 LateralOffset = entry.LateralOffset,
                 Pos = route.Waypoints[0],
                 Facing = (route.Waypoints[1] - route.Waypoints[0]).Normalized(),
@@ -677,6 +745,48 @@ public static class Step
                 if (tower.BuffTimer <= 0f) tower.BuffFactor = 1f;
             }
 
+            if (def.Kind == TowerKind.Barricade)
+                continue;   // no weapon; it works by existing (route gate)
+
+            if (def.Kind == TowerKind.Tesla)
+            {
+                tower.Cooldown = MathF.Max(0f, tower.Cooldown - Balance.Dt);
+                if (tower.Cooldown > 0f) continue;
+
+                var first = PickTarget(w, tower, def);
+                if (first is null) continue;
+
+                tower.Cooldown = 1f / EffectiveRate(tower, def);
+                w.Emit(new SimEvent.TowerFired(tower.Id, first.Id));
+
+                // Instant arc: the first target, then hops to the nearest other
+                // target within chain range, damage falling off per hop.
+                float damage = EffectiveDamage(tower, def);
+                var struck = first;
+                var hitIds = new HashSet<int> { first.Id };
+                DealTeslaDamage(w, tower, struck, damage, def);
+
+                for (int hop = 0; hop < def.ChainJumps; hop++)
+                {
+                    Enemy? next = null;
+                    float bestDist = def.ChainRange;
+                    foreach (var candidate in w.Enemies)
+                    {
+                        if (candidate.Dead || candidate.Burrowed || hitIds.Contains(candidate.Id)) continue;
+                        if (!def.TargetLayers.Contains(Enemies.All[candidate.DefId].Layer)) continue;
+                        float dist = struck.Pos.DistanceTo(candidate.Pos);
+                        if (dist < bestDist) { bestDist = dist; next = candidate; }
+                    }
+                    if (next is null) break;
+
+                    damage *= def.ChainFalloff;
+                    hitIds.Add(next.Id);
+                    DealTeslaDamage(w, tower, next, damage, def);
+                    struck = next;
+                }
+                continue;
+            }
+
             if (def.Kind == TowerKind.ChillAura)
             {
                 float auraRange = EffectiveRange(tower, def);
@@ -834,6 +944,77 @@ public static class Step
                 projectile.Pos += (aim - projectile.Pos).Normalized() * stepLength;
             }
         }
+    }
+
+    private static void DealTeslaDamage(World w, Tower tower, Enemy enemy, float amount, TowerDef def)
+    {
+        Damage(w, enemy, amount, $"tower{tower.Id}", tower.Pos, def.Applies, null);
+        tower.DamageDealt += amount;
+        if (enemy.Dead) tower.Kills++;
+    }
+
+    /// <summary>Armed traps fire on surfaced ground enemies in radius: one
+    /// charge per trigger event, hitting everything inside at once.</summary>
+    private static void TriggerTraps(World w)
+    {
+        foreach (var trap in w.Traps)
+        {
+            if (trap.RearmTimer > 0f)
+            {
+                trap.RearmTimer -= Balance.Dt;
+                continue;
+            }
+            if (trap.ChargesLeft <= 0) continue;
+
+            var def = Traps.All[trap.DefId];
+            bool fired = false;
+
+            foreach (var enemy in w.Enemies)
+            {
+                if (enemy.Dead || enemy.Burrowed) continue;
+                var enemyDef = Enemies.All[enemy.DefId];
+                if (enemyDef.Layer != EnemyLayer.Ground) continue;
+                if (trap.Pos.DistanceTo(enemy.Pos) > def.TriggerRadius) continue;
+
+                fired = true;
+                if (def.Damage > 0f)
+                    Damage(w, enemy, def.Damage, $"trap{trap.Id}", trap.Pos, null, null);
+                if (def.Applies is { } statusId && !enemy.Dead)
+                    ApplyStatus(w, enemy, statusId, $"trap{trap.Id}", null);
+                if (def.KnockbackMeters > 0f && !enemy.Dead)
+                    KnockBack(w, enemy, def.KnockbackMeters / MathF.Max(enemyDef.Mass, 0.25f));
+            }
+
+            if (fired)
+            {
+                trap.ChargesLeft--;
+                trap.RearmTimer = def.RearmSeconds;
+                w.Emit(new SimEvent.TowerFired(trap.Id, 0));
+            }
+        }
+        w.Traps.RemoveAll(t => t.ChargesLeft <= 0 && t.RearmTimer <= 0f);
+    }
+
+    /// <summary>Knockback is an instantaneous route displacement, not a status:
+    /// walk the enemy backward along its legs.</summary>
+    private static void KnockBack(World w, Enemy enemy, float meters)
+    {
+        float remaining = meters;
+        while (remaining > 0f)
+        {
+            if (enemy.LegProgress >= remaining)
+            {
+                enemy.LegProgress -= remaining;
+                enemy.TotalTraveled -= remaining;
+                break;
+            }
+            remaining -= enemy.LegProgress;
+            enemy.TotalTraveled -= enemy.LegProgress;
+            if (enemy.Leg == 0) { enemy.LegProgress = 0f; break; }
+            enemy.Leg--;
+            enemy.LegProgress = w.RouteLegLengths[enemy.RouteIndex][enemy.Leg];
+        }
+        enemy.TotalTraveled = MathF.Max(0f, enemy.TotalTraveled);
     }
 
     private static void DealProjectileDamage(

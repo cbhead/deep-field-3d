@@ -60,6 +60,18 @@ public sealed class Tower
     public float BuffFactor = 1f;
 }
 
+/// <summary>Path-floor trap: charge-based, rearming. Placed via the same
+/// command as towers; lives on a trap socket.</summary>
+public sealed class Trap
+{
+    public int Id;
+    public string DefId = "";
+    public string SocketId = "";
+    public Vec3 Pos;
+    public int ChargesLeft;
+    public float RearmTimer;
+}
+
 public sealed class Projectile
 {
     public int Id;
@@ -136,6 +148,7 @@ public sealed class World
 
     public List<Enemy> Enemies = new();
     public List<Tower> Towers = new();
+    public List<Trap> Traps = new();
     public List<Projectile> Projectiles = new();
     public Dictionary<int, PlayerState> Players = new();
 

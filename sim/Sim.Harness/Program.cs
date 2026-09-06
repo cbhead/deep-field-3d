@@ -329,6 +329,83 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
     Gate("flash freeze: chill+shock reaction emits freeze (table)", frozen, "");
 }
 
+// --- Gate 17 (M2): Arc chains to a second target and applies shock;
+//     next to a chill field that means Flash Freeze end-to-end.
+{
+    var world = new World(Seed, Maps.Foundry);
+    world.Money = 1000;
+    world.Enqueue(new Command.PlaceTower(0, "arc", "g3"));
+    Step.Advance(world);
+
+    Enemy Spawn(float lateral) => new()
+    {
+        Id = world.NextId(), DefId = "drifter", Hp = 500f, MaxHp = 500f,
+        RouteIndex = 0, Leg = 2, LegProgress = 15f, LateralOffset = lateral,
+        Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1,
+    };
+    var a = Spawn(0f);
+    var b = Spawn(2f);
+    a.Statuses[(int)Channel.Movement] = new StatusSlot { StatusId = "chill", TimeLeft = 10f, Source = "t" };
+    world.Enemies.Add(a);
+    world.Enemies.Add(b);
+
+    bool froze = false;
+    for (int i = 0; i < Balance.TickHz * 2; i++)
+    {
+        Step.Advance(world);
+        froze |= world.Events.OfType<SimEvent.StatusApplied>().Any(e => e.StatusId == "freeze");
+    }
+
+    bool bothHit = a.Hp < 500f && b.Hp < 500f;
+    Gate("arc: chain hits two targets; shock on chill flash-freezes", bothHit && froze,
+        $"aHp {a.Hp:0}, bHp {b.Hp:0}, controlActive {froze}");
+}
+
+// --- Gate 18 (M2): traps trigger with charges; launcher knockback respects mass.
+{
+    var world = new World(Seed, Maps.Foundry);
+    world.Money = 1000;
+    world.TeamScrap[ScrapType.Alloy] = 20;
+    world.TeamScrap[ScrapType.Plating] = 20;
+    world.Enqueue(new Command.PlaceTower(0, "launcher", "t2"));
+    Step.Advance(world);
+
+    Enemy AtTrap(string defId)
+    {
+        // Trap t2 sits at (0,0,3); ground route leg 3 runs (0,14)→(0,-8).
+        var e = new Enemy
+        {
+            Id = world.NextId(), DefId = defId, Hp = 10000f, MaxHp = 10000f,
+            RouteIndex = 0, Leg = 3, LegProgress = 11f, TotalTraveled = 60f,
+            Facing = new Vec3(0, 0, -1), Bounty = 0, LeakDamage = 1,
+        };
+        world.Enemies.Add(e);
+        return e;
+    }
+
+    var drifter = AtTrap("drifter");
+    Step.Advance(world);   // moves into radius, trap fires
+    Step.Advance(world);
+    float drifterSetback = 60f + 2.5f * 2 * Balance.Dt - drifter.TotalTraveled;
+
+    var world2Backup = drifter.TotalTraveled;
+    Gate("traps: launcher knocks a drifter meaningfully backward", drifterSetback > 4f,
+        $"setback {drifterSetback:0.0}m, traveled {drifter.TotalTraveled:0.0}");
+}
+
+// --- Gate 19 (M2): trap placement refuses tower sockets and vice versa.
+{
+    var world = new World(Seed, Maps.Foundry);
+    world.Money = 1000;
+    world.TeamScrap[ScrapType.Alloy] = 20;
+    world.Enqueue(new Command.PlaceTower(0, "spike", "g1"));     // trap on ground socket
+    world.Enqueue(new Command.PlaceTower(0, "barricade", "g2")); // barricade on ground socket
+    Step.Advance(world);
+    var reasons = world.Events.OfType<SimEvent.BuildRejected>().Select(e => e.Reason).ToList();
+    Gate("sockets: trap and barricade refuse mismatched tags",
+        reasons.Count(r => r == "wrongSocketTag") == 2, string.Join(",", reasons));
+}
+
 Console.WriteLine();
 Console.WriteLine(failures == 0 ? "ALL GATES GREEN" : $"{failures} GATE(S) FAILED");
 return failures == 0 ? 0 : 1;

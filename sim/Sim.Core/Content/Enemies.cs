@@ -12,7 +12,7 @@ public static class Enemies
         Layer: EnemyLayer.Ground,
         ContactDamage: 8f, ScatterWidth: 0f, BlocksSight: false,
         FrontArmorArcDegrees: 0f, FrontArmorFactor: 1f, RearWeakFactor: 1f,
-        Shield: 0f, FlatArmor: 0f, Burrower: false, SplitInto: null, SplitCount: 0,
+        Shield: 0f, FlatArmor: 0f, Mass: 1f, Burrower: false, SplitInto: null, SplitCount: 0,
         ScrapYield: new Dictionary<ScrapType, int> { [ScrapType.Alloy] = 2 });
 
     /// <summary>Lateral-scatter swarm: spreads across the path width so splash
@@ -23,7 +23,7 @@ public static class Enemies
         Layer: EnemyLayer.Ground,
         ContactDamage: 4f, ScatterWidth: 2.8f, BlocksSight: false,
         FrontArmorArcDegrees: 0f, FrontArmorFactor: 1f, RearWeakFactor: 1f,
-        Shield: 0f, FlatArmor: 0f, Burrower: false, SplitInto: null, SplitCount: 0,
+        Shield: 0f, FlatArmor: 0f, Mass: 1f, Burrower: false, SplitInto: null, SplitCount: 0,
         ScrapYield: new Dictionary<ScrapType, int> { [ScrapType.Alloy] = 1 });
 
     /// <summary>HP wall, scaled up for 3D: a towering silhouette that blocks tower
@@ -34,7 +34,7 @@ public static class Enemies
         Layer: EnemyLayer.Ground,
         ContactDamage: 16f, ScatterWidth: 0f, BlocksSight: true,
         FrontArmorArcDegrees: 0f, FrontArmorFactor: 1f, RearWeakFactor: 1f,
-        Shield: 0f, FlatArmor: 0f, Burrower: false, SplitInto: null, SplitCount: 0,
+        Shield: 0f, FlatArmor: 0f, Mass: 8f, Burrower: false, SplitInto: null, SplitCount: 0,
         ScrapYield: new Dictionary<ScrapType, int> { [ScrapType.Alloy] = 4, [ScrapType.Plating] = 2 });
 
     /// <summary>Flyer on the air lane: did you buy vertical coverage? Ground
@@ -45,7 +45,7 @@ public static class Enemies
         Layer: EnemyLayer.Air,
         ContactDamage: 0f, ScatterWidth: 1.5f, BlocksSight: false,
         FrontArmorArcDegrees: 0f, FrontArmorFactor: 1f, RearWeakFactor: 1f,
-        Shield: 0f, FlatArmor: 0f, Burrower: false, SplitInto: null, SplitCount: 0,
+        Shield: 0f, FlatArmor: 0f, Mass: 1f, Burrower: false, SplitInto: null, SplitCount: 0,
         ScrapYield: new Dictionary<ScrapType, int> { [ScrapType.Flux] = 2 });
 
     /// <summary>Directional armor, 140° front arc at 75% reduction; rear hits land
@@ -57,7 +57,7 @@ public static class Enemies
         Layer: EnemyLayer.Ground,
         ContactDamage: 12f, ScatterWidth: 0f, BlocksSight: false,
         FrontArmorArcDegrees: 140f, FrontArmorFactor: 0.25f, RearWeakFactor: 1.5f,
-        Shield: 0f, FlatArmor: 0f, Burrower: false, SplitInto: null, SplitCount: 0,
+        Shield: 0f, FlatArmor: 0f, Mass: 3f, Burrower: false, SplitInto: null, SplitCount: 0,
         ScrapYield: new Dictionary<ScrapType, int> { [ScrapType.Plating] = 3 });
 
     /// <summary>M2 — shootable bubble shield that regenerates after a lull;
@@ -68,7 +68,7 @@ public static class Enemies
         Layer: EnemyLayer.Ground,
         ContactDamage: 10f, ScatterWidth: 0f, BlocksSight: false,
         FrontArmorArcDegrees: 0f, FrontArmorFactor: 1f, RearWeakFactor: 1f,
-        Shield: 25f, FlatArmor: 0f, Burrower: false, SplitInto: null, SplitCount: 0,
+        Shield: 25f, FlatArmor: 0f, Mass: 1f, Burrower: false, SplitInto: null, SplitCount: 0,
         ScrapYield: new Dictionary<ScrapType, int> { [ScrapType.Flux] = 3 });
 
     /// <summary>M2 — burrower: cycles untargetable underground and surfaces in
@@ -79,7 +79,7 @@ public static class Enemies
         Layer: EnemyLayer.Ground,
         ContactDamage: 6f, ScatterWidth: 0f, BlocksSight: false,
         FrontArmorArcDegrees: 0f, FrontArmorFactor: 1f, RearWeakFactor: 1f,
-        Shield: 0f, FlatArmor: 0f, Burrower: true, SplitInto: null, SplitCount: 0,
+        Shield: 0f, FlatArmor: 0f, Mass: 1f, Burrower: true, SplitInto: null, SplitCount: 0,
         ScrapYield: new Dictionary<ScrapType, int> { [ScrapType.Alloy] = 2, [ScrapType.Flux] = 1 });
 
     /// <summary>M2 — dies into five low-hp Motes scattered radially (up from 3
@@ -90,7 +90,7 @@ public static class Enemies
         Layer: EnemyLayer.Ground,
         ContactDamage: 8f, ScatterWidth: 0f, BlocksSight: false,
         FrontArmorArcDegrees: 0f, FrontArmorFactor: 1f, RearWeakFactor: 1f,
-        Shield: 0f, FlatArmor: 0f, Burrower: false, SplitInto: "mote", SplitCount: 5,
+        Shield: 0f, FlatArmor: 0f, Mass: 1f, Burrower: false, SplitInto: "mote", SplitCount: 5,
         ScrapYield: new Dictionary<ScrapType, int> { [ScrapType.Alloy] = 3 });
 
     public static readonly IReadOnlyDictionary<string, EnemyDef> All =
