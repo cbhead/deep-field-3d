@@ -19,6 +19,8 @@ public partial class MatchScreens : CanvasLayer
 
     private Control _intermission = null!;
     private VBoxContainer _intermissionBody = null!;
+    private KitPanel _intermissionPanel = null!;
+    private Label _intermissionTitle = null!;
     private Control _endScreen = null!;
     private VBoxContainer _endBody = null!;
     private Control _pause = null!;
@@ -49,75 +51,116 @@ public partial class MatchScreens : CanvasLayer
         _intermission.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         AddChild(_intermission);
 
-        var card = UiTheme.Card();
-        card.SetAnchorsPreset(Control.LayoutPreset.CenterTop);
-        card.Position = new Vector2(-230, 96);
-        card.CustomMinimumSize = new Vector2(460, 0);
-        _intermission.AddChild(card);
+        // Top-centre and wide, per design — it has to be readable while you
+        // are still walking around building, not a modal that stops play.
+        _intermissionPanel = new KitPanel("Next wave", Tokens.Brass500, hazard: true);
+        _intermissionPanel.SetAnchorsPreset(Control.LayoutPreset.CenterTop);
+        _intermissionPanel.Position = new Vector2(-410, 84);
+        _intermissionPanel.CustomMinimumSize = new Vector2(820, 0);
+        _intermission.AddChild(_intermissionPanel);
 
-        _intermissionBody = new VBoxContainer();
-        card.AddChild(_intermissionBody);
+        _intermissionTitle = Kit.Label("", Tokens.TextSecondary);
+        _intermissionPanel.HeaderTrailing(_intermissionTitle);
+        _intermissionBody = _intermissionPanel.Body;
     }
 
-    /// <summary>Wave composition is a pure function of (seed, map, wave, players),
-    /// so the client can preview the next wave honestly without asking the server.</summary>
+    /// <summary>Wave composition is a pure function of (seed, map, wave,
+    /// players), so the client previews the next wave honestly without asking
+    /// the server — and the same call the sim will make is the one drawn here.</summary>
     public void ShowIntermission(GameView view, MapDef map, uint seed, int lastWaveLeaks)
     {
         _intermission.Visible = true;
         foreach (var child in _intermissionBody.GetChildren()) child.QueueFree();
 
         int next = view.Wave + 1;
-        _intermissionBody.AddChild(UiTheme.Text(
-            next < map.TotalWaves ? $"NEXT: WAVE {next + 1} of {map.TotalWaves}" : "FINAL WAVE CLEARED",
-            18));
+        bool more = next < map.TotalWaves;
+        _intermissionTitle.Text = more
+            ? $"wave {next + 1} of {map.TotalWaves}"
+            : "final wave cleared";
 
-        if (view.Wave >= 0)
-            _intermissionBody.AddChild(UiTheme.Text(
-                lastWaveLeaks > 0
-                    ? $"last wave leaked {lastWaveLeaks} — {view.Lives} lives left"
-                    : $"last wave held clean — {view.Lives} lives",
-                12, lastWaveLeaks > 0 ? UiTheme.Warn : UiTheme.Good));
-
-        if (next < map.TotalWaves)
+        if (!more)
         {
-            int players = Mathf.Max(1, view.Players.Count(p => p.Connected));
-            var plan = WavePlan.PlanWave(seed, map, next, players);
-            var composition = plan.GroupBy(e => e.DefId)
-                .OrderByDescending(g => g.Count())
-                .ToList();
-
-            var row = new HBoxContainer();
-            row.AddThemeConstantOverride("separation", 12);
-            foreach (var group in composition)
-            {
-                var chip = new HBoxContainer();
-                chip.AddThemeConstantOverride("separation", 4);
-                chip.AddChild(new TextureRect
-                {
-                    Texture = UiTheme.Icon($"enemy_{group.Key}", UiTheme.Accent),
-                    Modulate = UiTheme.Ink,
-                    CustomMinimumSize = new Vector2(22, 22),
-                    StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-                    TooltipText = group.Key,
-                });
-                chip.AddChild(UiTheme.Text($"{group.Key} ×{group.Count()}", 12));
-                row.AddChild(chip);
-            }
-            _intermissionBody.AddChild(row);
-
-            // Call out debuts — the "one to learn on" convention deserves a shout.
-            var debuts = composition.Select(g => g.Key)
-                .Where(id => !SeenBefore(seed, map, next, players, id)).ToList();
-            if (debuts.Count > 0)
-                _intermissionBody.AddChild(UiTheme.Text(
-                    $"NEW: {string.Join(", ", debuts)} — {string.Join("; ", debuts.Select(Hint))}",
-                    12, UiTheme.Warn));
+            _intermissionBody.AddChild(Kit.Paragraph(
+                "Hold what you have — the core survives or it does not.",
+                Tokens.SizeBody, Tokens.TextSecondary));
+            return;
         }
 
-        _intermissionBody.AddChild(UiTheme.Text("[F] start now", 12, UiTheme.InkDim));
+        int players = Mathf.Max(1, view.Players.Count(p => p.Connected));
+        var plan = WavePlan.PlanWave(seed, map, next, players);
+
+        // Split by the lane each group walks, because that is the decision the
+        // panel exists to inform: ground coverage or air coverage.
+        var lanes = plan
+            .GroupBy(e => map.Routes[e.RouteIndex].Layer)
+            .OrderBy(g => g.Key == EnemyLayer.Air ? 1 : 0)
+            .ToList();
+
+        var debuts = plan.Select(e => e.DefId).Distinct()
+            .Where(id => !SeenBefore(seed, map, next, players, id)).ToList();
+
+        var grid = Kit.Row(Tokens.Space6);
+        _intermissionBody.AddChild(grid);
+
+        foreach (var lane in lanes)
+        {
+            var column = Kit.Col(Tokens.Space3);
+            column.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            column.AddChild(Kit.Label(lane.Key == EnemyLayer.Air ? "air lane" : "ground lane"));
+
+            foreach (var group in lane.GroupBy(e => e.DefId).OrderByDescending(g => g.Count()))
+            {
+                var strip = Kit.Surface(Tokens.SurfaceInset, Tokens.BorderPanel, 4f, shadow: false);
+                var row = Kit.Row(Tokens.Space4);
+                strip.AddChild(row);
+
+                row.AddChild(Kit.Icon($"enemy_{group.Key}", Tokens.TextSecondary, 22));
+                var name = Kit.Body(group.Key, Tokens.SizeBody, Tokens.TextPrimary);
+                name.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+                row.AddChild(name);
+                if (debuts.Contains(group.Key)) row.AddChild(Kit.TagDanger("new"));
+                row.AddChild(Kit.Numeral($"×{group.Count()}", Tokens.SizeStatSm, Tokens.TextPrimary));
+
+                column.AddChild(strip);
+            }
+            grid.AddChild(column);
+        }
+
+        // The debut card: what it is and what answers it. This is the "one to
+        // learn on" convention — a new enemy arrives with its counter stated.
+        foreach (string debut in debuts)
+        {
+            var card = Kit.Card();
+            var column = Kit.Col(Tokens.Space3);
+            card.AddChild(column);
+            column.AddChild(Kit.Label(debut, Tokens.TextAccent));
+            column.AddChild(Kit.Paragraph(Hint(debut), Tokens.SizeCaption, Tokens.TextSecondary));
+
+            var counters = Kit.Row(Tokens.Space3);
+            foreach (string counter in Counters(debut)) counters.AddChild(Kit.Tag(counter));
+            column.AddChild(counters);
+            _intermissionBody.AddChild(card);
+        }
+
+        _intermissionBody.AddChild(Kit.Rule());
+
+        var footer = Kit.Row(Tokens.Space6);
+        footer.AddChild(Kit.Label("last wave"));
+        footer.AddChild(view.Wave < 0
+            ? Kit.Body("—", Tokens.SizeCaption, Tokens.TextMuted)
+            : Kit.Body(lastWaveLeaks > 0 ? $"leaked {lastWaveLeaks}" : "held clean",
+                Tokens.SizeCaption, lastWaveLeaks > 0 ? UiTheme.Warn : UiTheme.Good));
+        footer.AddChild(Kit.Label("core"));
+        footer.AddChild(Kit.Numeral(view.Lives.ToString(), Tokens.SizeStatSm,
+            view.Lives <= 5 ? UiTheme.Danger : Tokens.Lives));
+        footer.AddChild(Kit.Spacer());
+        footer.AddChild(Kit.Label("start early"));
+        footer.AddChild(Kit.Key("F"));
+        _intermissionBody.AddChild(footer);
     }
 
+    /// <summary>True if this type has already appeared in an earlier wave, so
+    /// only genuine debuts get called out.</summary>
     private static bool SeenBefore(uint seed, MapDef map, int wave, int players, string defId)
     {
         for (int i = 0; i < wave; i++)
@@ -127,14 +170,30 @@ public partial class MatchScreens : CanvasLayer
 
     private static string Hint(string defId) => defId switch
     {
-        "skiff" => "flyer, ground towers can't reach it",
-        "aegis" => "armored front — hit it from behind",
-        "monolith" => "blocks tower sightlines",
-        "warden" => "shield soaks damage and regrows",
-        "mole" => "burrows; only hittable when surfaced",
-        "cluster" => "splits into five on death",
-        "mote" => "fast swarm, spreads wide",
-        _ => "new contact",
+        "skiff" => "Flyer — ground towers cannot reach it.",
+        "aegis" => "Armoured 140° front plate; the rear takes bonus damage.",
+        "monolith" => "Blocks tower sightlines for everything in its shadow.",
+        "warden" => "A shield soaks damage, blocks burn, and regrows after a lull.",
+        "mole" => "Burrows, and is only targetable during its surface windows.",
+        "cluster" => "Splits into five low-hp motes when it dies.",
+        "mote" => "Fast swarm that spreads across the lane width.",
+        "drifter" => "The baseline walker — the reference for everything else.",
+        _ => "New contact.",
+    };
+
+    /// <summary>What answers this enemy. Stated as tags rather than prose so a
+    /// player scanning between builds gets it without reading a sentence.</summary>
+    private static string[] Counters(string defId) => defId switch
+    {
+        "skiff" => new[] { "skywatch", "deck sockets" },
+        "aegis" => new[] { "flank it", "shred", "ap ammo" },
+        "monolith" => new[] { "splash", "reposition" },
+        "warden" => new[] { "burst the shield", "poison later" },
+        "mole" => new[] { "traps", "surface windows" },
+        "cluster" => new[] { "splash", "pre-place" },
+        "mote" => new[] { "nova", "spread coverage" },
+        "drifter" => new[] { "anything" },
+        _ => new[] { "improvise" },
     };
 
     public void HideIntermission() => _intermission.Visible = false;
