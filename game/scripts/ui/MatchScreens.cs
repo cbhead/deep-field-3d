@@ -30,6 +30,15 @@ public partial class MatchScreens : CanvasLayer
     private Label _endCoreLine = null!;
     private Control _pause = null!;
     private Control _howTo = null!;
+    private KitPanel _pausePanel = null!;
+    private VBoxContainer _settingsPane = null!;
+    private Profile _profile = new();
+
+    /// <summary>Settings that something outside this screen has to apply.</summary>
+    public System.Action<int>? OnFieldOfView;
+    public System.Action<float>? OnSensitivity;
+    public System.Action<float>? OnHudScale;
+    public System.Action<float>? OnVolume;
     private Control _status = null!;
     private Label _statusText = null!;
     private Label _statusDetail = null!;
@@ -382,53 +391,133 @@ public partial class MatchScreens : CanvasLayer
 
         var backdrop = new ColorRect
         {
-            Color = new Color(0.02f, 0.03f, 0.05f, 0.85f),
+            Color = Tokens.SurfaceScrim,
             MouseFilter = Control.MouseFilterEnum.Stop,
         };
         backdrop.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         _pause.AddChild(backdrop);
 
-        var columns = new HBoxContainer();
-        columns.SetAnchorsPreset(Control.LayoutPreset.Center);
-        columns.Position = new Vector2(-330, -170);
-        columns.AddThemeConstantOverride("separation", 16);
-        _pause.AddChild(columns);
+        // Design centres a single wide panel: a rail of sections on the left,
+        // the settings pane on the right. The header states the multiplayer
+        // truth outright — pausing does not stop anyone else's match.
+        _pausePanel = new KitPanel("Paused · match continues", Tokens.Brass500);
+        _pausePanel.SetAnchorsPreset(Control.LayoutPreset.Center);
+        _pausePanel.Position = new Vector2(-500, -320);
+        _pausePanel.CustomMinimumSize = new Vector2(1000, 620);
+        _pause.AddChild(_pausePanel);
 
-        // Menu
-        var menuCard = UiTheme.Card();
-        menuCard.CustomMinimumSize = new Vector2(260, 0);
-        var menu = new VBoxContainer();
-        menu.AddThemeConstantOverride("separation", 8);
-        menu.AddChild(UiTheme.Text("PAUSED", 22));
-        menu.AddChild(UiTheme.Text("(multiplayer keeps running)", 11, UiTheme.InkDim));
+        var columns = Kit.Row(Tokens.Space8);
+        _pausePanel.Body.AddChild(columns);
 
-        var resume = new Button { Text = "RESUME" };
+        var rail = Kit.Col(Tokens.Space2);
+        rail.CustomMinimumSize = new Vector2(220, 0);
+        columns.AddChild(rail);
+
+        var resume = new KitButton("Resume", KitButton.Tone.Primary);
         resume.Pressed += () => OnResume?.Invoke();
-        menu.AddChild(resume);
+        rail.AddChild(resume);
 
-        var save = new Button { Text = "SAVE (solo)" };
+        var howTo = new KitButton("How to play", KitButton.Tone.Ghost);
+        howTo.Pressed += ShowHowTo;
+        rail.AddChild(howTo);
+
+        var save = new KitButton("Save (solo)", KitButton.Tone.Ghost);
         save.Pressed += () => OnSave?.Invoke();
-        menu.AddChild(save);
+        rail.AddChild(save);
 
-        var load = new Button { Text = "LOAD (solo)" };
+        var load = new KitButton("Load (solo)", KitButton.Tone.Ghost);
         load.Pressed += () => OnLoad?.Invoke();
-        menu.AddChild(load);
+        rail.AddChild(load);
 
-        var damageToggle = new CheckBox { Text = "damage numbers", ButtonPressed = true };
-        damageToggle.Toggled += on => OnToggleDamageNumbers?.Invoke(on);
-        menu.AddChild(damageToggle);
+        rail.AddChild(Kit.Spacer());
 
-        var leave = new Button { Text = "LEAVE MATCH" };
+        var leave = new KitButton("Leave match", KitButton.Tone.Danger);
         leave.Pressed += () => OnLeave?.Invoke();
-        menu.AddChild(leave);
+        rail.AddChild(leave);
 
-        menuCard.AddChild(menu);
-        columns.AddChild(menuCard);
-
-        var help = new KitButton("How to play", KitButton.Tone.Secondary);
-        help.Pressed += ShowHowTo;
-        menu.AddChild(help);
+        _settingsPane = Kit.Col(Tokens.Space5);
+        _settingsPane.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        columns.AddChild(_settingsPane);
     }
+
+    /// <summary>Populates the settings pane against the live profile. Called on
+    /// open rather than at build time so the controls show what is actually
+    /// saved, and every change writes straight through.</summary>
+    public void BindSettings(Profile profile)
+    {
+        _profile = profile;
+        foreach (var child in _settingsPane.GetChildren()) child.QueueFree();
+
+        _settingsPane.AddChild(Kit.Title("Settings", Tokens.SizeDisplaySm));
+
+        Slider("Field of view", profile.FieldOfView, 60, 120, 1,
+            v => { profile.FieldOfView = (int)v; profile.Save(); OnFieldOfView?.Invoke((int)v); },
+            v => $"{v:0}");
+        Slider("Mouse sensitivity", profile.MouseSensitivity, 0.25f, 3f, 0.05f,
+            v => { profile.MouseSensitivity = v; profile.Save(); OnSensitivity?.Invoke(v); },
+            v => $"{v:0.00}×");
+        Slider("HUD scale", profile.HudScale, 0.8f, 1.4f, 0.05f,
+            v => { profile.HudScale = v; profile.Save(); OnHudScale?.Invoke(v); },
+            v => $"{v:0.00}×");
+        Slider("Master volume", profile.MasterVolume, 0f, 1f, 0.05f,
+            v => { profile.MasterVolume = v; profile.Save(); OnVolume?.Invoke(v); },
+            v => $"{v * 100:0}%");
+
+        _settingsPane.AddChild(Kit.Rule());
+
+        Toggle("Damage numbers", profile.ShowDamageNumbers,
+            on => { profile.ShowDamageNumbers = on; profile.Save(); OnToggleDamageNumbers?.Invoke(on); });
+        Toggle("Screen shake", profile.ScreenShake,
+            on => { profile.ScreenShake = on; profile.Save(); });
+        Toggle("Reduce flashes (reaction VFX)", profile.ReduceFlashes,
+            on => { profile.ReduceFlashes = on; profile.Save(); });
+        Toggle("Teammate outlines", profile.TeammateOutlines,
+            on => { profile.TeammateOutlines = on; profile.Save(); });
+
+        void Slider(string label, float value, float min, float max, float step,
+            System.Action<float> apply, System.Func<float, string> format)
+        {
+            var row = Kit.Row(Tokens.Space5);
+            var name = Kit.Body(label, Tokens.SizeBody, Tokens.TextSecondary);
+            name.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            row.AddChild(name);
+
+            var slider = new HSlider
+            {
+                MinValue = min, MaxValue = max, Step = step, Value = value,
+                CustomMinimumSize = new Vector2(240, 0),
+                SizeFlagsVertical = Control.SizeFlags.ShrinkCenter,
+            };
+            row.AddChild(slider);
+
+            var readout = Kit.Numeral(format(value), Tokens.SizeStatSm, Tokens.TextPrimary);
+            readout.CustomMinimumSize = new Vector2(64, 0);
+            readout.HorizontalAlignment = HorizontalAlignment.Right;
+            row.AddChild(readout);
+
+            slider.ValueChanged += v => { readout.Text = format((float)v); apply((float)v); };
+            _settingsPane.AddChild(row);
+        }
+
+        void Toggle(string label, bool on, System.Action<bool> apply)
+        {
+            var row = Kit.Row(Tokens.Space5);
+            var name = Kit.Body(label, Tokens.SizeBody, Tokens.TextSecondary);
+            name.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            row.AddChild(name);
+
+            var toggle = new KitToggle(on);
+            var hit = new Button { Flat = true };
+            hit.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+            hit.Pressed += () => { toggle.On = !toggle.On; toggle.QueueRedraw(); apply(toggle.On); };
+            toggle.AddChild(hit);
+            row.AddChild(toggle);
+            _settingsPane.AddChild(row);
+        }
+    }
+
+    public void ShowPause() => _pause.Visible = true;
+    public void HidePause() => _pause.Visible = false;
 
     // =====================================================================
     // How to play — four cards, one idea each
@@ -537,9 +626,6 @@ public partial class MatchScreens : CanvasLayer
     public void ShowHowTo() => _howTo.Visible = true;
     public void HideHowTo() => _howTo.Visible = false;
     public bool HowToOpen => _howTo.Visible;
-
-    public void ShowPause() => _pause.Visible = true;
-    public void HidePause() => _pause.Visible = false;
 
     // =====================================================================
     // Connection / status overlay

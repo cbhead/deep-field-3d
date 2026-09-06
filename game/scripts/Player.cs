@@ -19,10 +19,16 @@ public partial class Player : CharacterBody3D
     private const float JumpVelocity = 4.8f;
     private const float ClimbSpeed = 4f;
     private const float ZipSpeed = 14f;
-    private const float MouseSensitivity = 0.0022f;
+    private const float BaseMouseSensitivity = 0.0022f;
+
+    /// <summary>Multiplier from the profile, applied on top of the base rate so
+    /// the setting means the same thing regardless of what the base becomes.</summary>
+    public float SensitivityScale = 1f;
     private const float InteractRange = 9f;
 
     private Camera3D _camera = null!;
+
+    public void SetFieldOfView(int degrees) { if (_camera is not null) _camera.Fov = degrees; }
     private GameRoot _root = null!;
     private Area3D _sensor = null!;
     private float _pitch;
@@ -72,8 +78,8 @@ public partial class Player : CharacterBody3D
                 // While a radial menu is open the same motion steers it.
                 if (_root.WheelOpen) { _root.SteerWheel(motion.Relative); break; }
                 if (Input.MouseMode != Input.MouseModeEnum.Captured) break;
-                RotateY(-motion.Relative.X * MouseSensitivity);
-                _pitch = Mathf.Clamp(_pitch - motion.Relative.Y * MouseSensitivity, -1.5f, 1.5f);
+                RotateY(-motion.Relative.X * BaseMouseSensitivity * SensitivityScale);
+                _pitch = Mathf.Clamp(_pitch - motion.Relative.Y * BaseMouseSensitivity * SensitivityScale, -1.5f, 1.5f);
                 _camera.Rotation = new Vector3(_pitch, 0, 0);
                 break;
 

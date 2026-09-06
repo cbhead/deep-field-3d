@@ -169,6 +169,16 @@ public partial class GameRoot : Node3D
         _shotPath = null;
 
         // Surface shots: open the UI being reviewed, then capture next frame.
+        if (_shotView == "pause")
+        {
+            _shotPath = path;
+            _shotView = "eye";
+            _shotCountdown = 4;
+            _screens.BindSettings(_profile);
+            _screens.ShowPause();
+            return;
+        }
+
         if (_shotView == "endmatch" && _world is not null)
         {
             _shotPath = path;
@@ -369,6 +379,9 @@ public partial class GameRoot : Node3D
         BuildLevel(_map);
         SpawnLocalPlayer();
         _markers.ShowDamageNumbers = _profile.ShowDamageNumbers;
+        _hud.Scale = new Vector2(_profile.HudScale, _profile.HudScale);
+        AudioServer.SetBusVolumeDb(0, _profile.MasterVolume <= 0.001f
+            ? -80f : Mathf.LinearToDb(_profile.MasterVolume));
     }
 
     private void SpawnLocalPlayer()
@@ -377,6 +390,9 @@ public partial class GameRoot : Node3D
         AddChild(_player);
         _player.GlobalPosition = ToGd(_map.HeroSpawn) + new Vector3(0, 1.2f, 0);
         _player.RotationDegrees = new Vector3(0, 180, 0);
+        // Saved look settings apply to the freshly spawned camera.
+        _player.SensitivityScale = _profile.MouseSensitivity;
+        _player.SetFieldOfView(_profile.FieldOfView);
     }
 
     private static uint FreshSeed() => (uint)(Time.GetTicksMsec() & 0xFFFFFFFF) ^ 0x9E3779B9u;
@@ -1919,6 +1935,13 @@ public partial class GameRoot : Node3D
         _screens.OnLeave = () => GetTree().Quit();
         _screens.OnSave = SaveGame;
         _screens.OnLoad = LoadGame;
+        // Settings that need something outside the pause screen to apply them.
+        _screens.OnFieldOfView = degrees => _player?.SetFieldOfView(degrees);
+        _screens.OnSensitivity = scale => { if (_player is not null) _player.SensitivityScale = scale; };
+        _screens.OnHudScale = scale => _hud.Scale = new Vector2(scale, scale);
+        _screens.OnVolume = volume => AudioServer.SetBusVolumeDb(0,
+            volume <= 0.001f ? -80f : Mathf.LinearToDb(volume));
+
         _screens.OnToggleDamageNumbers = on =>
         {
             _markers.ShowDamageNumbers = on;
@@ -2073,6 +2096,7 @@ public partial class GameRoot : Node3D
         if (_screens.PauseOpen) CloseSystemMenu();
         else
         {
+            _screens.BindSettings(_profile);   // show what is actually saved
             _screens.ShowPause();
             Input.MouseMode = Input.MouseModeEnum.Visible;
             // Solo pauses outright; in multiplayer the world keeps running and

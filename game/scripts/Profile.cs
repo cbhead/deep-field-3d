@@ -13,7 +13,16 @@ public sealed class Profile
     public string Name = System.Environment.UserName;
     public string PreferredFaction = "ember";
     public string LastJoinAddress = "";
+    // --- Settings. Design's pause screen exposes these; they live here so a
+    // change survives the session rather than resetting every launch.
     public bool ShowDamageNumbers = true;
+    public float MouseSensitivity = 1.0f;      // multiplier on the base rate
+    public int FieldOfView = 80;
+    public float HudScale = 1.0f;
+    public bool ScreenShake = true;
+    public bool ReduceFlashes;                 // damps reaction VFX
+    public bool TeammateOutlines = true;
+    public float MasterVolume = 0.8f;
     public Dictionary<string, int> FactionXp = new();
     // weaponId → { "slots": {slot: attachmentId}, "ammo": ammoId }
     public Dictionary<string, Dictionary<string, string>> BlueprintSlots = new();
@@ -56,6 +65,13 @@ public sealed class Profile
         if (data.TryGetValue("preferredFaction", out var faction)) profile.PreferredFaction = (string)faction;
         if (data.TryGetValue("lastJoinAddress", out var address)) profile.LastJoinAddress = (string)address;
         if (data.TryGetValue("showDamageNumbers", out var damage)) profile.ShowDamageNumbers = (bool)damage;
+        if (data.TryGetValue("mouseSensitivity", out var sens)) profile.MouseSensitivity = (float)sens;
+        if (data.TryGetValue("fieldOfView", out var fov)) profile.FieldOfView = (int)fov;
+        if (data.TryGetValue("hudScale", out var hud)) profile.HudScale = (float)hud;
+        if (data.TryGetValue("screenShake", out var shake)) profile.ScreenShake = (bool)shake;
+        if (data.TryGetValue("reduceFlashes", out var flashes)) profile.ReduceFlashes = (bool)flashes;
+        if (data.TryGetValue("teammateOutlines", out var outlines)) profile.TeammateOutlines = (bool)outlines;
+        if (data.TryGetValue("masterVolume", out var vol)) profile.MasterVolume = (float)vol;
         if (data.TryGetValue("factionXp", out var xp))
             foreach (var (k, v) in xp.AsGodotDictionary()) profile.FactionXp[(string)k] = (int)v;
         if (data.TryGetValue("blueprintSlots", out var bp))
@@ -93,6 +109,13 @@ public sealed class Profile
             ["preferredFaction"] = PreferredFaction,
             ["lastJoinAddress"] = LastJoinAddress,
             ["showDamageNumbers"] = ShowDamageNumbers,
+            ["mouseSensitivity"] = MouseSensitivity,
+            ["fieldOfView"] = FieldOfView,
+            ["hudScale"] = HudScale,
+            ["screenShake"] = ScreenShake,
+            ["reduceFlashes"] = ReduceFlashes,
+            ["teammateOutlines"] = TeammateOutlines,
+            ["masterVolume"] = MasterVolume,
             ["factionXp"] = xp,
             ["blueprintSlots"] = slots,
             ["blueprintAmmo"] = ammo,
