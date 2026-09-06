@@ -106,6 +106,20 @@ public sealed class PlayerState
     public Dictionary<ScrapType, int> Scrap = new();
     public bool Connected = true;
 
+    /// <summary>Gunsmith state: build per owned weapon, ammo crafted once each.</summary>
+    public Dictionary<string, WeaponBuild> Builds = new();
+    public HashSet<string> CraftedAmmo = new() { "standard" };
+
+    public WeaponBuild BuildFor(string weaponId)
+    {
+        if (!Builds.TryGetValue(weaponId, out var build))
+        {
+            build = new WeaponBuild();
+            Builds[weaponId] = build;
+        }
+        return build;
+    }
+
     public bool Alive => !Downed && RespawnTimer <= 0f;
 }
 

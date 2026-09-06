@@ -44,6 +44,8 @@ public class ProtocolTests
             new Command.SelectWeapon(1, "rifle"),
             new Command.UseAbility(1, new Vec3(-4f, 0f, 12f)),
             new Command.Revive(1, 3),
+            new Command.CraftAttachment(1, "rifle", "longBarrel"),
+            new Command.SelectAmmo(1, "rifle", "ap"),
         };
 
         foreach (var command in commands)

@@ -15,6 +15,7 @@ public enum ScrapType
     Alloy,      // common — basic walkers
     Flux,       // uncommon — shielded/energy enemies, flyers
     Plating,    // uncommon — armored enemies
+    Gravium,    // rare — heavies and elites (M2+)
 }
 
 public sealed record EnemyDef(

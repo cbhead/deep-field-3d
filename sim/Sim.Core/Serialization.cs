@@ -26,7 +26,9 @@ public static class Serialization
         int Id, string Name, string FactionId, float X, float Y, float Z,
         float Hp, bool Downed, float BleedoutTimer, float ReviveProgress, float RespawnTimer,
         float RegenDelay, float WeaponCooldown, float AbilityCooldown,
-        string WeaponId, List<string> OwnedWeapons, Dictionary<string, int> Scrap, bool Connected);
+        string WeaponId, List<string> OwnedWeapons, Dictionary<string, int> Scrap, bool Connected,
+        Dictionary<string, Dictionary<string, string>>? Builds, Dictionary<string, string>? BuildAmmo,
+        List<string>? CraftedAmmo);
 
     private sealed record WorldState(
         uint Seed, long Tick, string MapId, int Money, int Lives,
@@ -59,7 +61,11 @@ public static class Serialization
                 p.Hp, p.Downed, p.BleedoutTimer, p.ReviveProgress, p.RespawnTimer,
                 p.RegenDelay, p.WeaponCooldown, p.AbilityCooldown,
                 p.WeaponId, p.OwnedWeapons.OrderBy(x => x, StringComparer.Ordinal).ToList(),
-                p.Scrap.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value), p.Connected)).ToList(),
+                p.Scrap.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value), p.Connected,
+                p.Builds.ToDictionary(kv => kv.Key,
+                    kv => kv.Value.Attachments.ToDictionary(a => a.Key.ToString(), a => a.Value)),
+                p.Builds.ToDictionary(kv => kv.Key, kv => kv.Value.AmmoId),
+                p.CraftedAmmo.OrderBy(x => x, StringComparer.Ordinal).ToList())).ToList(),
             w.Traps.Select(t => new TrapState(t.Id, t.DefId, t.SocketId, t.ChargesLeft, t.RearmTimer)).ToList(),
             w.NextIdValue);
         return JsonSerializer.Serialize(state);
@@ -145,6 +151,16 @@ public static class Serialization
             };
             foreach (var (typeName, amount) in p.Scrap)
                 player.Scrap[System.Enum.Parse<ScrapType>(typeName)] = amount;
+            foreach (var (weaponId, slots) in p.Builds ?? new())
+            {
+                var build = player.BuildFor(weaponId);
+                foreach (var (slotName, attachmentId) in slots)
+                    build.Attachments[System.Enum.Parse<AttachmentSlot>(slotName)] = attachmentId;
+                if (p.BuildAmmo is { } ammoMap && ammoMap.TryGetValue(weaponId, out var ammoId))
+                    build.AmmoId = ammoId;
+            }
+            if (p.CraftedAmmo is { } crafted)
+                player.CraftedAmmo = new HashSet<string>(crafted);
             world.Players[p.Id] = player;
         }
 

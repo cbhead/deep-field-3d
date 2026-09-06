@@ -116,6 +116,8 @@ public static class Protocol
         Command.SelectWeapon c => $"select|{c.PlayerId}|{c.WeaponId}",
         Command.UseAbility c => $"ability|{c.PlayerId}|{F(c.TargetPos.X)}|{F(c.TargetPos.Y)}|{F(c.TargetPos.Z)}",
         Command.Revive c => $"revive|{c.PlayerId}|{c.TargetPlayerId}",
+        Command.CraftAttachment c => $"craft|{c.PlayerId}|{c.WeaponId}|{c.AttachmentId}",
+        Command.SelectAmmo c => $"ammo|{c.PlayerId}|{c.WeaponId}|{c.AmmoId}",
         _ => throw new InvalidOperationException($"unwired command {command.GetType().Name}"),
     };
 
@@ -138,6 +140,8 @@ public static class Protocol
                 "select" => new Command.SelectWeapon(int.Parse(p[1]), p[2]),
                 "ability" => new Command.UseAbility(int.Parse(p[1]), new Vec3(Pf(p[2]), Pf(p[3]), Pf(p[4]))),
                 "revive" => new Command.Revive(int.Parse(p[1]), int.Parse(p[2])),
+                "craft" => new Command.CraftAttachment(int.Parse(p[1]), p[2], p[3]),
+                "ammo" => new Command.SelectAmmo(int.Parse(p[1]), p[2], p[3]),
                 _ => null,
             };
         }
@@ -162,6 +166,8 @@ public static class Protocol
         Command.SelectWeapon c => c.PlayerId == seatPlayerId,
         Command.UseAbility c => c.PlayerId == seatPlayerId,
         Command.Revive c => c.PlayerId == seatPlayerId,
+        Command.CraftAttachment c => c.PlayerId == seatPlayerId,
+        Command.SelectAmmo c => c.PlayerId == seatPlayerId,
         _ => false,
     };
 

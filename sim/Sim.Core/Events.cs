@@ -117,6 +117,21 @@ public abstract record SimEvent
         public override string LogLine() => $"{Tick} purchaseRejected {PlayerId} {WeaponId} {Reason}";
     }
 
+    public sealed record AttachmentCrafted(int PlayerId, string WeaponId, string AttachmentId) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} attachmentCrafted {PlayerId} {WeaponId} {AttachmentId}";
+    }
+
+    public sealed record AmmoSelected(int PlayerId, string WeaponId, string AmmoId) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} ammoSelected {PlayerId} {WeaponId} {AmmoId}";
+    }
+
+    public sealed record CraftRejected(int PlayerId, string ItemId, string Reason) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} craftRejected {PlayerId} {ItemId} {Reason}";
+    }
+
     public sealed record AbilityUsed(int PlayerId, string AbilityId) : SimEvent
     {
         public override string LogLine() => $"{Tick} abilityUsed {PlayerId} {AbilityId}";

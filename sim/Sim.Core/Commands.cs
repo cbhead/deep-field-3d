@@ -40,6 +40,13 @@ public abstract record Command
 
     public sealed record SelectWeapon(int PlayerId, string WeaponId) : Command;
 
+    /// <summary>Craft an attachment onto a weapon's slot, paid in personal scrap
+    /// (replacing whatever occupied the slot; no refunds — scrap is spent).</summary>
+    public sealed record CraftAttachment(int PlayerId, string WeaponId, string AttachmentId) : Command;
+
+    /// <summary>Craft (once) and select an ammo type for a weapon.</summary>
+    public sealed record SelectAmmo(int PlayerId, string WeaponId, string AmmoId) : Command;
+
     /// <summary>Faction signature ability at an aim point (Ember) or self
     /// (Forge — TargetPos ignored).</summary>
     public sealed record UseAbility(int PlayerId, Vec3 TargetPos) : Command;

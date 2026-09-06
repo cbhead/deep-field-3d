@@ -55,6 +55,8 @@ public static class Step
                 case Command.SelectWeapon select: ApplySelectWeapon(w, select); break;
                 case Command.UseAbility ability: ApplyUseAbility(w, ability); break;
                 case Command.Revive revive: ApplyRevive(w, revive); break;
+                case Command.CraftAttachment craft: ApplyCraftAttachment(w, craft); break;
+                case Command.SelectAmmo ammo: ApplySelectAmmo(w, ammo); break;
             }
         }
         w.PendingCommands.Clear();
@@ -298,8 +300,16 @@ public static class Step
         var enemy = w.Enemies.FirstOrDefault(e => e.Id == hit.EnemyId && !e.Dead);
         if (enemy is null || enemy.Burrowed) return;
 
-        player.WeaponCooldown = 1f / weapon.ShotsPerSecond;
-        Damage(w, enemy, weapon.Damage, $"player{hit.PlayerId}", player.Pos, weapon.Applies, hit.PlayerId);
+        var build = player.BuildFor(weapon.Id);
+        var enemyDef = Enemies.All[enemy.DefId];
+        bool armored = enemyDef.FlatArmor > 0f || enemyDef.FrontArmorArcDegrees > 0f;
+
+        player.WeaponCooldown = 1f / (weapon.ShotsPerSecond * build.RateFactor());
+
+        var applies = weapon.Applies.Concat(build.ExtraApplies()).ToList();
+        Damage(w, enemy, weapon.Damage * build.DamageFactor(armored),
+            $"player{hit.PlayerId}", player.Pos, applies, hit.PlayerId,
+            ignoreFlatArmor: build.IgnoresFlatArmor);
     }
 
     private static void ApplyBuyWeapon(World w, Command.BuyWeapon buy)
@@ -332,6 +342,60 @@ public static class Step
         if (w.Players.TryGetValue(select.PlayerId, out var player)
             && player.OwnedWeapons.Contains(select.WeaponId))
             player.WeaponId = select.WeaponId;
+    }
+
+    private static bool PayScrap(PlayerState player, IReadOnlyDictionary<ScrapType, int> recipe)
+    {
+        foreach (var (type, amount) in recipe)
+            if (player.Scrap.GetValueOrDefault(type, 0) < amount) return false;
+        foreach (var (type, amount) in recipe)
+            player.Scrap[type] -= amount;
+        return true;
+    }
+
+    private static void ApplyCraftAttachment(World w, Command.CraftAttachment craft)
+    {
+        if (!w.Players.TryGetValue(craft.PlayerId, out var player)) return;
+        if (!player.OwnedWeapons.Contains(craft.WeaponId))
+        {
+            w.Emit(new SimEvent.CraftRejected(craft.PlayerId, craft.AttachmentId, "weaponNotOwned"));
+            return;
+        }
+        if (!Attachments.All.TryGetValue(craft.AttachmentId, out var def))
+        {
+            w.Emit(new SimEvent.CraftRejected(craft.PlayerId, craft.AttachmentId, "unknownAttachment"));
+            return;
+        }
+        if (!PayScrap(player, def.Recipe))
+        {
+            w.Emit(new SimEvent.CraftRejected(craft.PlayerId, craft.AttachmentId, "insufficientScrap"));
+            return;
+        }
+
+        player.BuildFor(craft.WeaponId).Attachments[def.Slot] = def.Id;
+        w.Emit(new SimEvent.AttachmentCrafted(craft.PlayerId, craft.WeaponId, def.Id));
+    }
+
+    private static void ApplySelectAmmo(World w, Command.SelectAmmo select)
+    {
+        if (!w.Players.TryGetValue(select.PlayerId, out var player)) return;
+        if (!Ammo.All.TryGetValue(select.AmmoId, out var def))
+        {
+            w.Emit(new SimEvent.CraftRejected(select.PlayerId, select.AmmoId, "unknownAmmo"));
+            return;
+        }
+        if (!player.CraftedAmmo.Contains(def.Id))
+        {
+            if (!PayScrap(player, def.Recipe))
+            {
+                w.Emit(new SimEvent.CraftRejected(select.PlayerId, select.AmmoId, "insufficientScrap"));
+                return;
+            }
+            player.CraftedAmmo.Add(def.Id);
+        }
+
+        player.BuildFor(select.WeaponId).AmmoId = def.Id;
+        w.Emit(new SimEvent.AmmoSelected(select.PlayerId, select.WeaponId, def.Id));
     }
 
     private static void ApplyUseAbility(World w, Command.UseAbility ability)
@@ -1115,7 +1179,7 @@ public static class Step
 
     private static void Damage(
         World w, Enemy enemy, float amount, string source, Vec3 sourcePos,
-        IReadOnlyList<string>? applies, int? playerId)
+        IReadOnlyList<string>? applies, int? playerId, bool ignoreFlatArmor = false)
     {
         if (enemy.Dead) return;
 
@@ -1153,7 +1217,7 @@ public static class Step
             if (def.FrontArmorArcDegrees > 0f)
                 amount *= 1.35f;    // shredded plating: the front arc leaks
         }
-        if (flatArmor > 0f && amount > 0f)
+        if (flatArmor > 0f && amount > 0f && !ignoreFlatArmor)
             amount = MathF.Max(0.5f, amount - flatArmor);
 
         // Shield soaks first (Warden) and resets its regen lull. Statuses still

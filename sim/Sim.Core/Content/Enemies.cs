@@ -35,7 +35,7 @@ public static class Enemies
         ContactDamage: 16f, ScatterWidth: 0f, BlocksSight: true,
         FrontArmorArcDegrees: 0f, FrontArmorFactor: 1f, RearWeakFactor: 1f,
         Shield: 0f, FlatArmor: 0f, Mass: 8f, Burrower: false, SplitInto: null, SplitCount: 0,
-        ScrapYield: new Dictionary<ScrapType, int> { [ScrapType.Alloy] = 4, [ScrapType.Plating] = 2 });
+        ScrapYield: new Dictionary<ScrapType, int> { [ScrapType.Alloy] = 4, [ScrapType.Plating] = 2, [ScrapType.Gravium] = 1 });
 
     /// <summary>Flyer on the air lane: did you buy vertical coverage? Ground
     /// towers can't see it; Skywatch and hero fire can.</summary>
