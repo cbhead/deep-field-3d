@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Deep Field 3D — UI Screens</title>
+<link rel="stylesheet" href="ds/tokens/fonts.css">
+<link rel="stylesheet" href="ds/tokens/colors.css">
+<link rel="stylesheet" href="ds/tokens/typography.css">
+<link rel="stylesheet" href="ds/tokens/spacing.css">
+<link rel="stylesheet" href="ds/tokens/effects.css">
+<link rel="stylesheet" href="ui-kit.css">
+</head>
+<body>
+<header class="app">
+  <div class="brand"><h1>UI Screens & Branding</h1><p>Deep Field 3D · brief §5 + §6 · 1920×1080 frames, ds tokens, §3.8 icon set</p></div>
+  <nav class="tabs" id="tabs"></nav>
+</header>
+<main>
+  <nav class="screens" id="nav"></nav>
+  <div class="stagewrap"><div class="stagearea" id="wrap"><div class="stage" id="stage"></div></div><div class="caption" id="cap"></div></div>
+</main>
+<script type="module">
+import { SCREENS } from './ui-screens.js';
+import './ui-branding.js';
+const el = (id) => document.getElementById(id);
+el('tabs').innerHTML = `<a href="Deep Field 3D - Asset Export.html"><span class="faction forge" style="width:8px;height:8px"></span>Export pack</a><a href="Deep Field 3D - Roster.html">Roster</a><a href="Deep Field 3D - Gunsmith.html">Gunsmith</a><a href="Deep Field 3D - Maps.html">Maps</a><a href="Lance.html">Towers</a>`;
+const groups = [...new Set(SCREENS.map((s) => s.group))];
+el('nav').innerHTML = groups.map((g) => `<h2>${g}</h2>` + SCREENS.filter((s) => s.group === g).map((s) => `<button type="button" data-id="${s.id}">${s.label}<small>${s.tag || ''}</small></button>`).join('')).join('');
+el('nav').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) show(b.dataset.id); });
+function show(id) {
+  const s = SCREENS.find((x) => x.id === id); if (!s) return;
+  for (const b of el('nav').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.id === id));
+  el('stage').innerHTML = s.render();
+  el('cap').innerHTML = `<b>${s.label}</b>${s.note}`;
+  location.hash = id;
+}
+function fit() { const w = el('wrap').clientWidth - 48, h = el('wrap').clientHeight - 48; el('stage').style.transform = `translate(-50%,-50%) scale(${Math.min(w / 1920, h / 1080)})`; }
+window.addEventListener('resize', fit); fit();
+show(location.hash.slice(1) || SCREENS[0].id);
+window.__screens = { SCREENS, show };
+</script>
+</body>
+</html>
