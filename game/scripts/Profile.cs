@@ -12,6 +12,8 @@ public sealed class Profile
 
     public string Name = System.Environment.UserName;
     public string PreferredFaction = "ember";
+    public string LastJoinAddress = "";
+    public bool ShowDamageNumbers = true;
     public Dictionary<string, int> FactionXp = new();
     // weaponId → { "slots": {slot: attachmentId}, "ammo": ammoId }
     public Dictionary<string, Dictionary<string, string>> BlueprintSlots = new();
@@ -52,6 +54,8 @@ public sealed class Profile
 
         if (data.TryGetValue("name", out var name)) profile.Name = (string)name;
         if (data.TryGetValue("preferredFaction", out var faction)) profile.PreferredFaction = (string)faction;
+        if (data.TryGetValue("lastJoinAddress", out var address)) profile.LastJoinAddress = (string)address;
+        if (data.TryGetValue("showDamageNumbers", out var damage)) profile.ShowDamageNumbers = (bool)damage;
         if (data.TryGetValue("factionXp", out var xp))
             foreach (var (k, v) in xp.AsGodotDictionary()) profile.FactionXp[(string)k] = (int)v;
         if (data.TryGetValue("blueprintSlots", out var bp))
@@ -87,6 +91,8 @@ public sealed class Profile
         {
             ["name"] = Name,
             ["preferredFaction"] = PreferredFaction,
+            ["lastJoinAddress"] = LastJoinAddress,
+            ["showDamageNumbers"] = ShowDamageNumbers,
             ["factionXp"] = xp,
             ["blueprintSlots"] = slots,
             ["blueprintAmmo"] = ammo,

@@ -1,6 +1,7 @@
 using Godot;
 using System.Collections.Generic;
 using System.Linq;
+using DeepField.Game.Ui;
 using DeepField.Sim;
 using DeepField.Sim.Content;
 using SimWorld = DeepField.Sim.World;
@@ -35,14 +36,34 @@ public partial class GameRoot : Node3D
     private readonly Dictionary<int, Node3D> _towerViews = new();
     private readonly Dictionary<int, Node3D> _avatarViews = new();
 
-    private Label _hudLabel = null!;
-    private Label _toastLabel = null!;
-    private Label _capturePrompt = null!;
-    private ColorRect _crosshair = null!;
-    private Control _lobbyUi = null!;
-    private double _toastTimer, _hitFlashTimer;
+    // UI surfaces (M2.5). GameRoot owns state; these are views that raise
+    // commands back through Submit().
+    private HudRoot _hud = null!;
+    private MatchScreens _screens = null!;
+    private BuildWheel _wheel = null!;
+    private UpgradePanel _upgrade = null!;
+    private ArmoryScreen _armory = null!;
+    private BuildGhost _ghost = null!;
+    private WorldMarkers _markers = null!;
+    private LobbyScreen _lobby = null!;
+    private CanvasLayer _overlay = null!;
+
+    private readonly GameView _view = new();
+    private readonly Dictionary<int, EnemyOverhead> _overheads = new();
+    private readonly Dictionary<int, int> _killsByPlayer = new();
+    private int _reactionCount;
+    private int _lastWaveLeaks;
+    private uint _seed;
+    private bool _matchOver;
+    private bool _paused;
+    private int _bankedXp;
+    private string _hint = "";
+
+    /// <summary>Client-side aim feedback source (the sim isn't here to ask).</summary>
+    private readonly Dictionary<int, (bool Burrowed, bool Shielded)> _lastSnapshotBits = new();
 
     public int LocalPlayerId => _net.LocalPlayerId;
+    public GameView View => _view;
 
     public override void _Ready()
     {
@@ -59,17 +80,26 @@ public partial class GameRoot : Node3D
             return;
         }
 
-        BuildHud();
-        BuildLobby();
+        BuildUi();
 
-        // Headless smoke-test seam: --join <ip> connects straight from boot.
-        for (int i = 0; i < args.Length - 1; i++)
+        // Headless smoke-test seams: --join <ip> connects from boot, --solo
+        // starts a local match immediately (both exercise the full UI stack).
+        for (int i = 0; i < args.Length; i++)
         {
-            if (args[i] == "--join")
+            if (args[i] == "--join" && i + 1 < args.Length)
             {
                 _playerName = "smoke";
                 StartClient(args[i + 1], "forge");
-                break;
+                return;
+            }
+            if (args[i] == "--solo")
+            {
+                if (i + 1 < args.Length && Maps.All.TryGetValue(args[i + 1], out var chosen))
+                    _map = chosen;
+                _playerName = "smoke";
+                StartSolo("ember");
+                GD.Print($"[solo] started on {_map.Id}");
+                return;
             }
         }
     }
@@ -120,7 +150,7 @@ public partial class GameRoot : Node3D
         AddChild(_info);
         _info.StatusProvider = ServerInfo;
         _info.Start(Protocol.DefaultPort);
-        Toast(_info.TailscaleIp is { } ip
+        Post(_info.TailscaleIp is { } ip
             ? $"hosting — invite: {ip}:{Protocol.DefaultPort}"
             : "hosting (no tailscale ip found — friends need your LAN ip)");
     }
@@ -129,8 +159,8 @@ public partial class GameRoot : Node3D
     {
         Mode = RunMode.Client;
         _factionId = faction;
-        _lobbyUi.Visible = false;
-        Toast($"connecting to {address}…");
+        _lobby.Visible = false;
+        _screens.ShowStatus("CONNECTING", $"reaching {address}…");
 
         // "100.x.x.x" or "100.x.x.x:8791" both work.
         int port = Protocol.DefaultPort;
@@ -142,19 +172,25 @@ public partial class GameRoot : Node3D
         }
 
         Multiplayer.ConnectedToServer += () =>
+        {
             _net.SendHello(_playerName, _factionId, _profile.LevelFor(_factionId));
-        Multiplayer.ConnectionFailed += () => Toast("connection failed");
+            _screens.ShowStatus("SYNCING", "receiving the world — you'll drop in at the next intermission");
+        };
+        Multiplayer.ConnectionFailed += () => _screens.ShowStatus("CONNECTION FAILED",
+            "check the host's address and that you're on their tailnet, then try again");
         _net.JoinServer(address, port);
     }
 
     private void BeginLocalWorld(string faction)
     {
         _factionId = faction;
-        _lobbyUi.Visible = false;
-        _world = new SimWorld(FreshSeed(), _map);
+        _lobby.Visible = false;
+        _seed = FreshSeed();
+        _world = new SimWorld(_seed, _map);
         _world.Enqueue(new Command.Join(1, _playerName, faction, _profile.LevelFor(faction)));
         BuildLevel(_map);
         SpawnLocalPlayer();
+        _markers.ShowDamageNumbers = _profile.ShowDamageNumbers;
     }
 
     private void SpawnLocalPlayer()
@@ -229,13 +265,60 @@ public partial class GameRoot : Node3D
                 break;
         }
 
-        if (Mode != RunMode.Dedicated)
-            UpdateHud(delta);
+        if (Mode == RunMode.Dedicated) return;
+
+        RebuildView();
+        RefreshUi(delta);
+    }
+
+    /// <summary>One read model per frame, from whichever source this process
+    /// has. Everything in ui/ reads this and nothing else.</summary>
+    private void RebuildView()
+    {
+        if (Mode != RunMode.Client && _world is not null)
+            _view.FromWorld(_world, LocalPlayerId);
+        else if (_net.Meta is { } meta)
+            _view.FromMeta(meta, LocalPlayerId);
+    }
+
+    private void RefreshUi(double delta)
+    {
+        if (!_view.Valid) return;
+
+        _hud.Refresh(_view, delta, Input.MouseMode == Input.MouseModeEnum.Captured, _hint);
+        if (_wheel.IsOpen) _wheel.Refresh(_view);
+        if (_upgrade.IsOpen) _upgrade.Refresh(_view);
+        if (_armory.IsOpen) _armory.Refresh(_view);
+
+        // Intermission panel rides the phase, not an event, so a late joiner
+        // sees it immediately.
+        if (_view.Phase == MatchPhase.Intermission && !_matchOver)
+            _screens.ShowIntermission(_view, _map, _seed, _lastWaveLeaks);
+        else
+            _screens.HideIntermission();
+
+        UpdateReviveBeacons();
+    }
+
+    private void UpdateReviveBeacons()
+    {
+        var local = _view.Local;
+        foreach (var player in _view.Players)
+        {
+            if (player.Id == LocalPlayerId) continue;
+            float distance = local is null ? 0f : local.Pos.DistanceTo(player.Pos);
+            _markers.SetReviveBeacon(player.Id, player.Pos, player.Name, distance,
+                player.Downed && player.Connected);
+        }
     }
 
     private void StepAuthoritative(double delta)
     {
         _tickEvents.Clear();
+
+        // Solo pause freezes the sim; hosts keep running for everyone else.
+        if (_paused && Mode == RunMode.Solo) return;
+
         _accumulator = Mathf.Min(_accumulator + delta, 0.25);
         while (_accumulator >= Balance.Dt)
         {
@@ -378,34 +461,77 @@ public partial class GameRoot : Node3D
                 case SimEvent.TowerSold sold:
                     if (_towerViews.Remove(sold.TowerId, out var view)) view.QueueFree();
                     break;
-                case SimEvent.BuildRejected rejected: Toast($"build rejected: {rejected.Reason}"); break;
-                case SimEvent.UpgradeRejected rejected: Toast($"upgrade rejected: {rejected.Reason}"); break;
-                case SimEvent.PurchaseRejected rejected: Toast($"armory: {rejected.Reason}"); break;
-                case SimEvent.JoinRejected rejected: Toast($"join rejected: {rejected.Reason}"); break;
-                case SimEvent.WaveStarted started: Toast($"wave {started.WaveIndex + 1} — {started.EnemyCount} inbound"); break;
-                case SimEvent.EnemyLeaked: Toast("breach! core hit"); break;
-                case SimEvent.ReactionTriggered: Toast("THERMAL SHOCK"); break;
-                case SimEvent.PlayerDowned downed when downed.PlayerId == LocalPlayerId: Toast("DOWN — a teammate can revive you"); break;
-                case SimEvent.MatchEnded ended:
-                    Toast(ended.Victory ? "VICTORY" : "DEFEAT");
-                    BankLocalXp();
+
+                // Refusals answer at the surface that caused them, not only in
+                // the feed — the player is looking at the wheel, not the corner.
+                case SimEvent.BuildRejected rejected:
+                    _wheel.ShowRefusal(Explain(rejected.Reason));
+                    Post($"build refused: {Explain(rejected.Reason)}", UiTheme.Danger);
                     break;
+                case SimEvent.UpgradeRejected rejected:
+                    _upgrade.ShowRefusal(Explain(rejected.Reason));
+                    Post($"upgrade refused: {Explain(rejected.Reason)}", UiTheme.Danger);
+                    break;
+                case SimEvent.PurchaseRejected rejected when rejected.PlayerId == LocalPlayerId:
+                    _armory.ShowNotice(Explain(rejected.Reason));
+                    Post($"armory: {Explain(rejected.Reason)}", UiTheme.Danger);
+                    break;
+                case SimEvent.CraftRejected rejected when rejected.PlayerId == LocalPlayerId:
+                    _armory.ShowNotice(Explain(rejected.Reason));
+                    Post($"craft: {Explain(rejected.Reason)}", UiTheme.Danger);
+                    break;
+                case SimEvent.JoinRejected rejected:
+                    _screens.ShowStatus("JOIN REFUSED", Explain(rejected.Reason));
+                    break;
+
+                case SimEvent.WaveStarted started:
+                    _screens.HideIntermission();
+                    _lastWaveLeaks = 0;
+                    Post($"wave {started.WaveIndex + 1} — {started.EnemyCount} inbound");
+                    break;
+                case SimEvent.WaveCleared cleared:
+                    Post($"wave {cleared.WaveIndex + 1} cleared", UiTheme.Good);
+                    break;
+                case SimEvent.EnemyLeaked:
+                    _lastWaveLeaks++;
+                    Post("BREACH — core hit", UiTheme.Danger);
+                    break;
+
+                case SimEvent.ReactionTriggered reaction:
+                    _reactionCount++;
+                    OnReaction(reaction.EnemyId, reaction.ReactionId);
+                    break;
+
+                case SimEvent.PlayerDowned downed:
+                    Post(downed.PlayerId == LocalPlayerId
+                        ? "DOWNED — hold on, a teammate can revive you"
+                        : $"{NameOf(downed.PlayerId)} is down", UiTheme.Danger);
+                    break;
+                case SimEvent.PlayerRevived revived:
+                    Post($"{NameOf(revived.PlayerId)} revived", UiTheme.Good);
+                    break;
+
+                case SimEvent.MatchEnded ended:
+                    OnMatchEnded(ended.Victory);
+                    break;
+
                 case SimEvent.AttachmentCrafted crafted when crafted.PlayerId == LocalPlayerId:
                     _profile.RecordAttachment(crafted.WeaponId,
                         Attachments.All[crafted.AttachmentId].Slot.ToString(), crafted.AttachmentId);
-                    Toast($"crafted {crafted.AttachmentId}");
+                    _armory.ShowNotice($"crafted {crafted.AttachmentId}");
+                    Post($"crafted {crafted.AttachmentId}", UiTheme.Good);
                     break;
                 case SimEvent.AmmoSelected ammo when ammo.PlayerId == LocalPlayerId:
                     _profile.RecordAmmo(ammo.WeaponId, ammo.AmmoId);
-                    Toast($"ammo: {ammo.AmmoId}");
+                    _armory.ShowNotice($"loaded {ammo.AmmoId}");
                     break;
-                case SimEvent.CraftRejected rejected when rejected.PlayerId == LocalPlayerId:
-                    Toast($"craft: {rejected.Reason}");
+
+                case SimEvent.EnemyDamaged damaged:
+                    OnEnemyDamaged(damaged.EnemyId, damaged.Amount, damaged.Source);
                     break;
-                case SimEvent.EnemyDamaged damaged when damaged.Source == $"player{LocalPlayerId}":
-                    _hitFlashTimer = 0.12; break;
-                case SimEvent.EnemyDied died when died.Source == $"player{LocalPlayerId}":
-                    _hitFlashTimer = 0.3; Toast($"+{died.Bounty} credits"); break;
+                case SimEvent.EnemyDied died:
+                    OnEnemyDied(died.EnemyId, died.Bounty, died.Source);
+                    break;
             }
         }
     }
@@ -420,24 +546,130 @@ public partial class GameRoot : Node3D
             case "towerSold":
                 if (_towerViews.Remove(int.Parse(p[2]), out var view)) view.QueueFree();
                 break;
-            case "buildRejected": Toast($"build rejected: {p[5]}"); break;
-            case "waveStarted": Toast($"wave {int.Parse(p[2]) + 1} — {p[3]} inbound"); break;
-            case "enemyLeaked": Toast("breach! core hit"); break;
-            case "reaction": Toast("THERMAL SHOCK"); break;
-            case "playerDowned" when int.Parse(p[2]) == LocalPlayerId: Toast("DOWN — a teammate can revive you"); break;
-            case "matchEnded": Toast(p[2] == "victory" ? "VICTORY" : "DEFEAT"); BankLocalXp(); break;
+            case "buildRejected":
+                _wheel.ShowRefusal(Explain(p[5]));
+                Post($"build refused: {Explain(p[5])}", UiTheme.Danger);
+                break;
+            case "upgradeRejected":
+                _upgrade.ShowRefusal(Explain(p[4]));
+                Post($"upgrade refused: {Explain(p[4])}", UiTheme.Danger);
+                break;
+            case "craftRejected" when int.Parse(p[2]) == LocalPlayerId:
+                _armory.ShowNotice(Explain(p[4]));
+                break;
+            case "waveStarted":
+                _screens.HideIntermission();
+                _lastWaveLeaks = 0;
+                Post($"wave {int.Parse(p[2]) + 1} — {p[3]} inbound");
+                break;
+            case "waveCleared": Post($"wave {int.Parse(p[2]) + 1} cleared", UiTheme.Good); break;
+            case "enemyLeaked": _lastWaveLeaks++; Post("BREACH — core hit", UiTheme.Danger); break;
+            case "reaction": _reactionCount++; OnReaction(int.Parse(p[2]), p[3]); break;
+            case "playerDowned":
+                Post(int.Parse(p[2]) == LocalPlayerId
+                    ? "DOWNED — hold on, a teammate can revive you"
+                    : $"{NameOf(int.Parse(p[2]))} is down", UiTheme.Danger);
+                break;
+            case "playerRevived": Post($"{NameOf(int.Parse(p[2]))} revived", UiTheme.Good); break;
+            case "matchEnded": OnMatchEnded(p[2] == "victory"); break;
             case "attachmentCrafted" when int.Parse(p[2]) == LocalPlayerId:
                 _profile.RecordAttachment(p[3], Attachments.All[p[4]].Slot.ToString(), p[4]);
-                Toast($"crafted {p[4]}");
+                _armory.ShowNotice($"crafted {p[4]}");
                 break;
             case "ammoSelected" when int.Parse(p[2]) == LocalPlayerId:
                 _profile.RecordAmmo(p[3], p[4]);
-                Toast($"ammo: {p[4]}");
+                _armory.ShowNotice($"loaded {p[4]}");
                 break;
-            case "enemyDamaged" when p[4] == $"player{LocalPlayerId}": _hitFlashTimer = 0.12; break;
-            case "enemyDied" when p[5] == $"player{LocalPlayerId}": _hitFlashTimer = 0.3; break;
+            case "enemyDamaged":
+                OnEnemyDamaged(int.Parse(p[2]), float.Parse(p[3],
+                    System.Globalization.CultureInfo.InvariantCulture), p[4]);
+                break;
+            case "enemyDied": OnEnemyDied(int.Parse(p[2]), int.Parse(p[4]), p[5]); break;
         }
     }
+
+    // ---- Shared event reactions (identical in every mode) -----------------
+
+    private void OnEnemyDamaged(int enemyId, float amount, string source)
+    {
+        bool mine = source == $"player{LocalPlayerId}";
+        if (mine) _hud.SetCrosshair(CrosshairState.Hit);
+
+        if (EnemyWorldPos(enemyId) is { } pos)
+        {
+            var color = source.StartsWith("player")
+                ? (mine ? UiTheme.Ink : UiTheme.InkDim)
+                : source.StartsWith("tower") ? UiTheme.Accent : UiTheme.Warn;
+            _markers.DamageNumber(pos, amount, color);
+        }
+    }
+
+    private void OnEnemyDied(int enemyId, int bounty, string source)
+    {
+        if (source.StartsWith("player") && int.TryParse(source[6..], out int killer))
+        {
+            _killsByPlayer[killer] = _killsByPlayer.GetValueOrDefault(killer) + 1;
+            if (killer == LocalPlayerId)
+            {
+                _hud.SetCrosshair(CrosshairState.Kill, 0.3);
+                Post($"+{bounty}c", UiTheme.Warn);
+            }
+        }
+        _overheads.Remove(enemyId);
+        _lastSnapshotBits.Remove(enemyId);
+    }
+
+    private void OnReaction(int enemyId, string reactionId)
+    {
+        string label = reactionId switch
+        {
+            "thermalShock" => "THERMAL SHOCK",
+            "flashFreeze" => "FLASH FREEZE",
+            _ => reactionId.ToUpperInvariant(),
+        };
+        var color = reactionId == "flashFreeze" ? UiTheme.Status("freeze") : UiTheme.Status("burn");
+        if (EnemyWorldPos(enemyId) is { } pos) _markers.Callout(pos, label, color);
+        Post(label, color);
+    }
+
+    private void OnMatchEnded(bool victory)
+    {
+        if (_matchOver) return;
+        _matchOver = true;
+        BankLocalXp();
+        _screens.HideIntermission();
+        _screens.ShowEnd(_view, victory, _bankedXp, _factionId, _killsByPlayer, _reactionCount);
+        Input.MouseMode = Input.MouseModeEnum.Visible;
+    }
+
+    private Vector3? EnemyWorldPos(int enemyId) =>
+        _enemyViews.TryGetValue(enemyId, out var view) && IsInstanceValid(view)
+            ? view.Position
+            : null;
+
+    private string NameOf(int playerId) =>
+        _view.Players.FirstOrDefault(p => p.Id == playerId)?.Name ?? $"player {playerId}";
+
+    /// <summary>Sim refusal codes are terse by design; the UI says them in words.</summary>
+    private static string Explain(string reason) => reason switch
+    {
+        "insufficientFunds" => "not enough credits",
+        "insufficientScrap" => "not enough scrap",
+        "occupied" => "socket already taken",
+        "unknownSocket" => "no socket there",
+        "unknownTower" => "unknown structure",
+        "wrongSocketTag" => "wrong socket type for that",
+        "trapSocket" => "that plate takes traps",
+        "maxLevel" => "already at max level",
+        "unknownPath" => "no such upgrade path",
+        "factionTaken" => "another player already has that faction",
+        "unknownFaction" => "unknown faction",
+        "alreadyOwned" => "already owned",
+        "weaponNotOwned" => "buy the weapon first",
+        "unknownAttachment" => "unknown attachment",
+        "unknownAmmo" => "unknown ammo",
+        _ => reason,
+    };
 
     private void OnTowerPlaced(int towerId, string socketId)
     {
@@ -495,9 +727,42 @@ public partial class GameRoot : Node3D
                 _enemyViews[enemy.Id] = view;
             }
             view.Position = ToGd(enemy.Pos);
-            TintEnemy(view, enemy.Hp / enemy.MaxHp, Protocol.PackStatusBits(enemy));
+            byte bits = Protocol.PackStatusBits(enemy);
+            TintEnemy(view, enemy.Hp / enemy.MaxHp, bits);
+
+            float maxShield = Enemies.All[enemy.DefId].Shield;
+            UpdateOverhead(enemy.Id, view, enemy.Hp / enemy.MaxHp,
+                maxShield > 0f ? enemy.Shield / (maxShield * (enemy.MaxHp / Enemies.All[enemy.DefId].Hp)) : 0f,
+                bits, enemy.Burrowed);
         }
         SweepViews(_enemyViews, _world.Enemies.Select(e => e.Id));
+        SweepOverheads(_world.Enemies.Select(e => e.Id));
+    }
+
+    /// <summary>Attaches (once) and updates the billboarded bar/status cluster
+    /// above an enemy. Overheads live under the enemy view so they follow it and
+    /// die with it.</summary>
+    private void UpdateOverhead(int enemyId, Node3D view, float hpFraction,
+        float shieldFraction, byte statusBits, bool burrowed)
+    {
+        if (!_overheads.TryGetValue(enemyId, out var overhead) || !IsInstanceValid(overhead))
+        {
+            overhead = new EnemyOverhead { HeadHeight = view.HasMeta("head_height")
+                ? (float)view.GetMeta("head_height") : 2.0f };
+            view.AddChild(overhead);
+            _overheads[enemyId] = overhead;
+        }
+
+        var camera = GetViewport().GetCamera3D();
+        float distance = camera is null ? 0f : camera.GlobalPosition.DistanceTo(view.Position);
+        overhead.Set(hpFraction, shieldFraction, statusBits, burrowed, distance);
+    }
+
+    private void SweepOverheads(IEnumerable<int> liveIds)
+    {
+        var live = new HashSet<int>(liveIds);
+        foreach (int id in _overheads.Keys.Where(id => !live.Contains(id)).ToList())
+            _overheads.Remove(id);
     }
 
     private void SyncEnemyViewsRemote()
@@ -522,8 +787,16 @@ public partial class GameRoot : Node3D
                 : snap.Pos;
             view.Position = ToGd(target);
             TintEnemy(view, snap.HpFraction, snap.StatusBits);
+
+            // Snapshots carry no shield channel of their own; a Warden that
+            // still has shield reads as full hp with the shield bit unset, so
+            // the client shows hp only and lets the crosshair report shielded.
+            bool burrowed = snap.HpFraction <= 0f;
+            UpdateOverhead(snap.Id, view, snap.HpFraction, 0f, snap.StatusBits, burrowed);
+            _lastSnapshotBits[snap.Id] = (burrowed, Shielded: false);
         }
         SweepViews(_enemyViews, newest.Enemies.Select(s => s.Id));
+        SweepOverheads(newest.Enemies.Select(s => s.Id));
     }
 
     private void SyncProjectileViews()
@@ -822,6 +1095,10 @@ public partial class GameRoot : Node3D
         area.SetMeta("enemy_id", enemyId);
         root.AddChild(area);
 
+        // Overheads sit just above the silhouette; scale drives the offset so a
+        // Monolith's bar doesn't sit inside its chest.
+        root.SetMeta("head_height", 1.9f * scale);
+
         AddChild(root);
         return root;
     }
@@ -858,205 +1135,211 @@ public partial class GameRoot : Node3D
     }
 
     // =====================================================================
-    // HUD + lobby
+    // UI construction (M2.5)
     // =====================================================================
 
-    private void BuildHud()
+    private void BuildUi()
     {
-        var canvas = new CanvasLayer { Name = "Hud" };
+        _hud = new HudRoot { Name = "Hud" };
+        AddChild(_hud);
 
-        _hudLabel = new Label { Position = new Vector2(16, 12) };
-        canvas.AddChild(_hudLabel);
-
-        _toastLabel = new Label { Position = new Vector2(16, 110), Modulate = new Color(1f, 0.85f, 0.4f) };
-        canvas.AddChild(_toastLabel);
-
-        _crosshair = new ColorRect
+        _screens = new MatchScreens { Name = "Screens" };
+        AddChild(_screens);
+        _screens.OnResume = CloseSystemMenu;
+        _screens.OnLeave = () => GetTree().Quit();
+        _screens.OnSave = SaveGame;
+        _screens.OnLoad = LoadGame;
+        _screens.OnToggleDamageNumbers = on =>
         {
-            Color = new Color(1, 1, 1, 0.8f),
-            AnchorLeft = 0.5f, AnchorTop = 0.5f, AnchorRight = 0.5f, AnchorBottom = 0.5f,
-            OffsetLeft = -2, OffsetTop = -2, OffsetRight = 2, OffsetBottom = 2,
-            PivotOffset = new Vector2(2, 2),
-            MouseFilter = Control.MouseFilterEnum.Ignore,
-        };
-        canvas.AddChild(_crosshair);
-
-        _capturePrompt = new Label
-        {
-            Text = "CLICK TO CAPTURE MOUSE",
-            Modulate = new Color(1f, 0.9f, 0.3f),
-            AnchorLeft = 0.5f, AnchorTop = 0.5f, AnchorRight = 0.5f, AnchorBottom = 0.5f,
-            OffsetLeft = -110, OffsetTop = 30,
-            Visible = false,
-        };
-        canvas.AddChild(_capturePrompt);
-
-        AddChild(canvas);
-    }
-
-    private void BuildLobby()
-    {
-        _lobbyUi = new PanelContainer
-        {
-            AnchorLeft = 0.5f, AnchorTop = 0.5f, AnchorRight = 0.5f, AnchorBottom = 0.5f,
-            OffsetLeft = -220, OffsetTop = -170, OffsetRight = 220, OffsetBottom = 170,
-        };
-        var vbox = new VBoxContainer();
-        _lobbyUi.AddChild(vbox);
-
-        vbox.AddChild(new Label { Text = "DEEP FIELD 3D — FOUNDRY", HorizontalAlignment = HorizontalAlignment.Center });
-
-        var nameEdit = new LineEdit { PlaceholderText = "name", Text = System.Environment.UserName };
-        vbox.AddChild(nameEdit);
-
-        vbox.AddChild(new Label { Text = "faction (one per player — ability levels persist across matches):" });
-        var factionButtons = new Dictionary<string, CheckBox>();
-        var descriptions = new Dictionary<string, string>
-        {
-            ["forge"] = "Forge — Overdrive surge + build discount",
-            ["ember"] = "Ember — Ignition Wave + longer burns",
-            ["tempest"] = "Tempest — Chain Surge (shock) + fire rate",
-        };
-        foreach (var (id, text) in descriptions)
-        {
-            var button = new CheckBox
-            {
-                Text = $"{text}   [Lv{_profile.LevelFor(id)}  {_profile.FactionXp.GetValueOrDefault(id, 0)}xp]",
-                ButtonPressed = id == _profile.PreferredFaction,
-            };
-            string captured = id;
-            button.Toggled += on =>
-            {
-                if (!on) return;
-                foreach (var (otherId, other) in factionButtons)
-                    if (otherId != captured) other.ButtonPressed = false;
-                _profile.PreferredFaction = captured;
-                _profile.Save();
-            };
-            factionButtons[id] = button;
-            vbox.AddChild(button);
-        }
-
-        string Faction() =>
-            factionButtons.FirstOrDefault(kv => kv.Value.ButtonPressed).Key ?? "ember";
-        void Grab()
-        {
-            _playerName = nameEdit.Text.Length > 0 ? nameEdit.Text : "player";
-            _profile.Name = _playerName;
+            _markers.ShowDamageNumbers = on;
+            _profile.ShowDamageNumbers = on;
             _profile.Save();
-        }
+        };
 
-        var mapPick = new OptionButton();
-        mapPick.AddItem("Foundry (10 waves — the slice)", 0);
-        mapPick.AddItem("Switchyard (12 waves — three tiers, barricade the cut)", 1);
-        mapPick.ItemSelected += index => _map = index == 0 ? Maps.Foundry : Maps.Switchyard;
-        vbox.AddChild(mapPick);
+        // Interactive surfaces live above the HUD and capture the mouse when open.
+        _overlay = new CanvasLayer { Name = "Overlay", Layer = 3 };
+        AddChild(_overlay);
 
-        var soloBtn = new Button { Text = "SOLO" };
-        soloBtn.Pressed += () => { Grab(); StartSolo(Faction()); };
-        vbox.AddChild(soloBtn);
+        _wheel = new BuildWheel { Name = "BuildWheel" };
+        _overlay.AddChild(_wheel);
 
-        var hostBtn = new Button { Text = "HOST (friends join via your tailscale ip)" };
-        hostBtn.Pressed += () => { Grab(); StartHost(Faction()); };
-        vbox.AddChild(hostBtn);
+        _upgrade = new UpgradePanel { Name = "UpgradePanel" };
+        _overlay.AddChild(_upgrade);
 
-        var joinRow = new HBoxContainer();
-        var ipEdit = new LineEdit { PlaceholderText = "host ip (100.x.x.x)", CustomMinimumSize = new Vector2(240, 0) };
-        var joinBtn = new Button { Text = "JOIN" };
-        joinBtn.Pressed += () => { Grab(); if (ipEdit.Text.Length > 0) StartClient(ipEdit.Text.Trim(), Faction()); };
-        joinRow.AddChild(ipEdit);
-        joinRow.AddChild(joinBtn);
-        vbox.AddChild(joinRow);
+        _armory = new ArmoryScreen { Name = "Armory" };
+        _armory.Submit = Submit;
+        _armory.RecraftBlueprint = RecraftBlueprint;
+        _armory.HasBlueprint = weaponId => _profile.BlueprintSlots.ContainsKey(weaponId);
+        _overlay.AddChild(_armory);
 
-        var hud = GetNode<CanvasLayer>("Hud");
-        hud.AddChild(_lobbyUi);
+        _lobby = new LobbyScreen { Name = "Lobby" };
+        _overlay.AddChild(_lobby);
+        _lobby.Build(_profile);
+        _lobby.OnSolo = faction => { _map = _lobby.SelectedMap; _playerName = _lobby.PlayerName; StartSolo(faction); };
+        _lobby.OnHost = faction => { _map = _lobby.SelectedMap; _playerName = _lobby.PlayerName; StartHost(faction); };
+        _lobby.OnJoin = (address, faction) => { _playerName = _lobby.PlayerName; StartClient(address, faction); };
+
+        // World-space marker layer.
+        _markers = new WorldMarkers { Name = "Markers" };
+        AddChild(_markers);
+
+        _ghost = new BuildGhost { Name = "BuildGhost" };
+        AddChild(_ghost);
     }
 
-    private void UpdateHud(double delta)
+    // =====================================================================
+    // UI entry points called by Player
+    // =====================================================================
+
+    /// <summary>True while any surface owns the mouse — Player suspends look
+    /// and fire while these are up.</summary>
+    public bool UiCapturesMouse => _armory.IsOpen || _screens.PauseOpen;
+
+    public bool WheelOpen => _wheel.IsOpen;
+    public bool UpgradeOpen => _upgrade.IsOpen;
+
+    public void OpenBuildWheel(string socketId)
     {
-        if (Mode == RunMode.Lobby) { _capturePrompt.Visible = false; return; }
+        var socket = _map.Sockets.FirstOrDefault(s => s.Id == socketId);
+        if (socket is null || _view.SocketOccupied(socketId)) return;
+        _wheel.Open(socket, _view);
+    }
 
-        string status;
-        string vitals = "";
-        if (_world is not null)
-        {
-            string phase = _world.Phase switch
-            {
-                MatchPhase.Intermission => $"intermission {_world.PhaseTimer:0.0}s  [F] start",
-                MatchPhase.Wave => $"wave {_world.WaveIndex + 1}/{_world.Map.TotalWaves}",
-                MatchPhase.Victory => "VICTORY",
-                MatchPhase.Defeat => "DEFEAT",
-                _ => "",
-            };
-            string scrap = string.Join("  ", _world.TeamScrap.Select(kv => $"{kv.Key}:{kv.Value}"));
-            status = $"credits {_world.Money}    lives {_world.Lives}    {phase}\nteam scrap  {scrap}";
-            if (_world.Players.TryGetValue(LocalPlayerId, out var me))
-                vitals = $"\nhp {me.Hp:0}    weapon {me.WeaponId}    ability {(me.AbilityCooldown <= 0 ? "READY [Q]" : $"{me.AbilityCooldown:0.0}s")}"
-                    + (me.Downed ? "    !! DOWNED !!" : "");
-        }
-        else if (_net.Meta is { } meta)
-        {
-            int phaseInt = (int)meta["phase"];
-            string phase = phaseInt switch
-            {
-                0 => $"intermission {(float)meta["phaseTimer"]:0.0}s  [F] start",
-                1 => $"wave {(int)meta["wave"] + 1}/{(int)meta["totalWaves"]}",
-                2 => "VICTORY", 3 => "DEFEAT", _ => "",
-            };
-            var teamScrap = meta["teamScrap"].AsGodotDictionary();
-            string scrap = string.Join("  ", teamScrap.Keys.Select(k => $"{k}:{teamScrap[k]}"));
-            status = $"credits {(int)meta["money"]}    lives {(int)meta["lives"]}    {phase}\nteam scrap  {scrap}";
-            foreach (Godot.Collections.Dictionary entry in meta["players"].AsGodotArray())
-            {
-                if ((int)entry["id"] != LocalPlayerId) continue;
-                float cd = (float)entry["abilityCd"];
-                vitals = $"\nhp {(float)entry["hp"]:0}    weapon {entry["weapon"]}    ability {(cd <= 0 ? "READY [Q]" : $"{cd:0.0}s")}"
-                    + ((bool)entry["downed"] ? "    !! DOWNED !!" : "");
-            }
-        }
-        else status = "connecting…";
+    public void SteerWheel(Vector2 relative)
+    {
+        _wheel.Steer(relative);
+        UpdateGhost();
+    }
 
-        _hudLabel.Text = status + vitals +
-            "\n[E] build   [U] upgrade   [Q] ability   [R] revive   [1-4] armory (near station)   [LMB] fire";
+    public void WheelSelect(int index)
+    {
+        _wheel.SelectIndex(index);
+        UpdateGhost();
+    }
 
-        if (_toastTimer > 0)
+    private void UpdateGhost()
+    {
+        if (!_wheel.IsOpen || _wheel.Selection is not { } option)
         {
-            _toastTimer -= delta;
-            if (_toastTimer <= 0) _toastLabel.Text = "";
+            _ghost.Hide3D();
+            return;
         }
+        var socket = _map.Sockets.FirstOrDefault(s => s.Id == _wheel.SocketId);
+        if (socket is null) { _ghost.Hide3D(); return; }
+        _ghost.Show(ToGd(socket.Pos), option.DefId, _wheel.CanAfford(option));
+    }
 
-        if (_hitFlashTimer > 0)
+    /// <summary>Release: build the highlighted option (the sim still has final
+    /// say — its refusal comes back as an event and lands on the wheel).</summary>
+    public void ConfirmBuildWheel()
+    {
+        if (_wheel.Selection is { } option)
+            Submit(new Command.PlaceTower(LocalPlayerId, option.DefId, _wheel.SocketId));
+        _wheel.Close();
+        _ghost.Hide3D();
+    }
+
+    public void CancelBuildWheel()
+    {
+        _wheel.Close();
+        _ghost.Hide3D();
+    }
+
+    public void OpenUpgradePanel(string socketId)
+    {
+        if (_view.AtSocket(socketId) is not { } structure) return;
+        _upgrade.Open(structure, _view);
+    }
+
+    public void UpgradeKey(int oneBased)
+    {
+        int path = _upgrade.PathForKey(oneBased);
+        if (path >= 0 && _upgrade.TargetId >= 0)
+            Submit(new Command.UpgradeTower(LocalPlayerId, _upgrade.TargetId, path));
+    }
+
+    public void TickUpgradeSell(double delta, bool held)
+    {
+        _upgrade.TickSellHold(delta, held);
+        if (_upgrade.SellRequested && _upgrade.TargetId >= 0)
         {
-            _hitFlashTimer -= delta;
-            _crosshair.Color = new Color(1f, 0.35f, 0.2f, 1f);
-            _crosshair.Scale = new Vector2(2.2f, 2.2f);
+            Submit(new Command.SellTower(LocalPlayerId, _upgrade.TargetId));
+            _upgrade.ConsumeSell();
+            _upgrade.Close();
         }
+    }
+
+    public void CloseUpgradePanel() => _upgrade.Close();
+
+    public void ToggleArmory()
+    {
+        if (_armory.IsOpen) { _armory.Close(); Input.MouseMode = Input.MouseModeEnum.Captured; }
+        else { _armory.Open(_view); Input.MouseMode = Input.MouseModeEnum.Visible; }
+    }
+
+    public void ToggleSystemMenu()
+    {
+        if (_armory.IsOpen) { ToggleArmory(); return; }
+        if (_screens.PauseOpen) CloseSystemMenu();
         else
         {
-            _crosshair.Color = new Color(1, 1, 1, 0.8f);
-            _crosshair.Scale = Vector2.One;
+            _screens.ShowPause();
+            Input.MouseMode = Input.MouseModeEnum.Visible;
+            // Solo pauses outright; in multiplayer the world keeps running and
+            // the menu says so.
+            if (Mode == RunMode.Solo) _paused = true;
+        }
+    }
+
+    private void CloseSystemMenu()
+    {
+        _screens.HidePause();
+        _paused = false;
+        Input.MouseMode = Input.MouseModeEnum.Captured;
+    }
+
+    /// <summary>Aim-context feedback: what would my next shot do to this target?</summary>
+    public void ReportAim(int enemyId)
+    {
+        if (enemyId < 0) { _hud.SetCrosshair(CrosshairState.Neutral); return; }
+
+        var enemy = _world?.Enemies.FirstOrDefault(e => e.Id == enemyId);
+        if (enemy is not null)
+        {
+            var def = Enemies.All[enemy.DefId];
+            if (enemy.Burrowed) _hud.SetCrosshair(CrosshairState.Burrowed);
+            else if (enemy.Shield > 0f) _hud.SetCrosshair(CrosshairState.Shielded);
+            else if (def.FrontArmorArcDegrees > 0f || def.FlatArmor > 0f)
+                _hud.SetCrosshair(CrosshairState.Armored);
+            else _hud.SetCrosshair(CrosshairState.Neutral);
+            return;
         }
 
-        _capturePrompt.Visible = _player is not null && Input.MouseMode != Input.MouseModeEnum.Captured;
+        // Client: the snapshot's status bits are what we have.
+        if (_lastSnapshotBits.TryGetValue(enemyId, out var snap))
+        {
+            if (snap.Burrowed) _hud.SetCrosshair(CrosshairState.Burrowed);
+            else if (snap.Shielded) _hud.SetCrosshair(CrosshairState.Shielded);
+            else _hud.SetCrosshair(CrosshairState.Neutral);
+        }
     }
+
+    public void SetHint(string hint) => _hint = hint;
 
     private void BankLocalXp()
     {
         if (_xpBanked) return;
-        int xp = 0;
-        if (_world is not null && _world.Players.TryGetValue(LocalPlayerId, out var me))
-            xp = me.MatchXp;
-        else if (_net.Meta is { } meta)
-        {
-            foreach (Godot.Collections.Dictionary entry in meta["players"].AsGodotArray())
-                if ((int)entry["id"] == LocalPlayerId) xp = (int)entry["xp"];
-        }
-        if (xp > 0)
-        {
-            _xpBanked = true;
-            _profile.BankXp(_factionId, xp);
-            Toast($"+{xp} {_factionId} xp banked (Lv{_profile.LevelFor(_factionId)})");
-        }
+        int xp = _view.Local?.MatchXp ?? 0;
+        if (xp <= 0) return;
+
+        _xpBanked = true;
+        _bankedXp = xp;
+        int before = _profile.LevelFor(_factionId);
+        _profile.BankXp(_factionId, xp);
+        int after = _profile.LevelFor(_factionId);
+        Post(after > before
+            ? $"{_factionId} reached level {after}!"
+            : $"+{xp} {_factionId} xp banked", UiTheme.Good);
     }
 
     /// <summary>Blueprint recraft: replay the saved build for a weapon as craft
@@ -1070,11 +1353,14 @@ public partial class GameRoot : Node3D
             Submit(new Command.SelectAmmo(LocalPlayerId, weaponId, ammoId));
     }
 
-    public void Toast(string message)
+    /// <summary>Event feed line. Kept named Toast for call sites that predate
+    /// the feed; Post is the preferred name.</summary>
+    public void Toast(string message) => Post(message);
+
+    public void Post(string message, Color? color = null)
     {
         if (Mode == RunMode.Dedicated) { GD.Print($"[match] {message}"); return; }
-        _toastLabel.Text = message;
-        _toastTimer = 2.5;
+        _hud?.Post(message, color);
     }
 
     public static Vector3 ToGd(Vec3 v) => new(v.X, v.Y, v.Z);

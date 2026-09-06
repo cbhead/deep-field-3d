@@ -188,8 +188,32 @@ public partial class NetworkManager : Node
         var players = new Godot.Collections.Array();
         foreach (var p in _world!.Players.Values)
         {
+            // Gunsmith state rides along so the armory screen works on clients
+            // (7 slots × 4 players is nothing next to the snapshot channel).
+            var builds = new Godot.Collections.Dictionary();
+            foreach (var (weaponId, build) in p.Builds)
+            {
+                var slots = new Godot.Collections.Dictionary();
+                foreach (var (slot, attachmentId) in build.Attachments)
+                    slots[slot.ToString()] = attachmentId;
+                builds[weaponId] = new Godot.Collections.Dictionary
+                {
+                    ["slots"] = slots,
+                    ["ammo"] = build.AmmoId,
+                };
+            }
+
+            var owned = new Godot.Collections.Array();
+            foreach (var weaponId in p.OwnedWeapons) owned.Add(weaponId);
+
+            var craftedAmmo = new Godot.Collections.Array();
+            foreach (var ammoId in p.CraftedAmmo) craftedAmmo.Add(ammoId);
+
             players.Add(new Godot.Collections.Dictionary
             {
+                ["builds"] = builds,
+                ["owned"] = owned,
+                ["craftedAmmo"] = craftedAmmo,
                 ["id"] = p.Id, ["name"] = p.Name, ["faction"] = p.FactionId,
                 ["x"] = p.Pos.X, ["y"] = p.Pos.Y, ["z"] = p.Pos.Z,
                 ["hp"] = p.Hp, ["downed"] = p.Downed, ["connected"] = p.Connected,
@@ -201,6 +225,29 @@ public partial class NetworkManager : Node
             });
         }
 
+        // Structures ride the meta channel so clients can drive the build wheel
+        // and upgrade panel (they need per-path levels, which events don't carry).
+        var structures = new Godot.Collections.Array();
+        foreach (var tower in _world.Towers)
+        {
+            var levels = new Godot.Collections.Array();
+            foreach (int level in tower.PathLevels) levels.Add(level);
+            structures.Add(new Godot.Collections.Dictionary
+            {
+                ["id"] = tower.Id, ["def"] = tower.DefId, ["socket"] = tower.SocketId,
+                ["levels"] = levels, ["trap"] = false, ["charges"] = 0,
+            });
+        }
+        foreach (var trap in _world.Traps)
+        {
+            structures.Add(new Godot.Collections.Dictionary
+            {
+                ["id"] = trap.Id, ["def"] = trap.DefId, ["socket"] = trap.SocketId,
+                ["levels"] = new Godot.Collections.Array(), ["trap"] = true,
+                ["charges"] = trap.ChargesLeft,
+            });
+        }
+
         return new Godot.Collections.Dictionary
         {
             ["money"] = _world.Money,
@@ -209,8 +256,10 @@ public partial class NetworkManager : Node
             ["phaseTimer"] = _world.PhaseTimer,
             ["wave"] = _world.WaveIndex,
             ["totalWaves"] = _world.Map.TotalWaves,
+            ["enemies"] = _world.Enemies.Count + _world.PendingSpawns.Count,
             ["teamScrap"] = ScrapDict(_world.TeamScrap),
             ["players"] = players,
+            ["structures"] = structures,
         };
     }
 
