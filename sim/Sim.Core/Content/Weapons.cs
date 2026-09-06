@@ -29,6 +29,14 @@ public static class Weapons
         Damage: 4f, ShotsPerSecond: 2.0f, RangeMeters: 40f,
         Applies: new[] { "burn" });
 
+    /// <summary>M3 status-applier: low direct damage, high rate, applies poison.
+    /// The hero half of the toxin answer — it rots a Warden that eats fire whole
+    /// and an Aegis that shrugs off chip, because poison ignores both.</summary>
+    public static readonly WeaponDef PoisonStream = new(
+        Id: "poisonStream", Cost: 110,
+        Damage: 2f, ShotsPerSecond: 6f, RangeMeters: 18f,
+        Applies: new[] { "poison" });
+
     public static readonly IReadOnlyDictionary<string, WeaponDef> All =
         new Dictionary<string, WeaponDef>
         {
@@ -36,5 +44,6 @@ public static class Weapons
             [Rifle.Id] = Rifle,
             [Scattergun.Id] = Scattergun,
             [EmberPistol.Id] = EmberPistol,
+            [PoisonStream.Id] = PoisonStream,
         };
 }

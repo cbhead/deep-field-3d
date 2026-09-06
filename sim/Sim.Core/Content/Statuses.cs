@@ -24,7 +24,9 @@ public sealed record StatusDef(
     float DamageTakenFactor,  // vulnerability channel (1 = no effect)
     float ArmorDelta,         // defense channel (negative = shredded)
     bool HardControl,         // control channel: full stop, gated by cc-resist
-    float MaxDurationSeconds)
+    float MaxDurationSeconds,
+    bool IgnoresArmor = false,    // toxin: flat armor does not reduce the tick
+    bool IgnoresShield = false)   // toxin: the tick lands on hp through a shield
 {
     /// <summary>Magnitude decides strongest-wins within a channel.</summary>
     public float Magnitude => Channel switch
@@ -81,6 +83,22 @@ public static class Statuses
         SpeedFactor: 1f, DamagePerSecond: 0f, DamageTakenFactor: 1f,
         ArmorDelta: -2f, HardControl: false, MaxDurationSeconds: 4f);
 
+    /// <summary>Poison is the chip answer burn is not: it ignores flat armor
+    /// AND passes through shields, so a Warden that eats fire whole still rots.
+    /// Low dps, long duration — it beats sustain, not health bars.</summary>
+    public static readonly StatusDef Poison = new(
+        Id: "poison", Channel: Channel.Toxin,
+        SpeedFactor: 1f, DamagePerSecond: 3f, DamageTakenFactor: 1f,
+        ArmorDelta: 0f, HardControl: false, MaxDurationSeconds: 6f,
+        IgnoresArmor: true, IgnoresShield: true);
+
+    /// <summary>Detector output. Carries no combat effect of its own — being
+    /// seen is the effect, because a revealed Shade is targetable.</summary>
+    public static readonly StatusDef Reveal = new(
+        Id: "reveal", Channel: Channel.Detection,
+        SpeedFactor: 1f, DamagePerSecond: 0f, DamageTakenFactor: 1f,
+        ArmorDelta: 0f, HardControl: false, MaxDurationSeconds: 3f);
+
     public static readonly IReadOnlyDictionary<string, StatusDef> All =
         new Dictionary<string, StatusDef>
         {
@@ -90,6 +108,8 @@ public static class Statuses
             [Shock.Id] = Shock,
             [Freeze.Id] = Freeze,
             [Shred.Id] = Shred,
+            [Poison.Id] = Poison,
+            [Reveal.Id] = Reveal,
         };
 }
 
@@ -124,7 +144,18 @@ public static class Reactions
         BurstFraction: 0f,
         EmitStatus: Statuses.Freeze.Id);
 
-    public static readonly IReadOnlyList<ReactionDef> All = new[] { ThermalShock, FlashFreeze };
+    /// <summary>M3: poison + shred corrodes. Shred is the armor answer and
+    /// poison the sustain answer, so the pair is what a team brings to something
+    /// that is both — and the burst is the reward for bringing both halves.</summary>
+    public static readonly ReactionDef Corrode = new(
+        Id: "corrode",
+        StatusA: Statuses.Poison.Id,
+        StatusB: Statuses.Shred.Id,
+        BurstFraction: 0.10f,
+        EmitStatus: null);
+
+    public static readonly IReadOnlyList<ReactionDef> All =
+        new[] { ThermalShock, FlashFreeze, Corrode };
 
     public static ReactionDef? Match(string active, string incoming)
     {

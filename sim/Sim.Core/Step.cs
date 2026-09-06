@@ -562,9 +562,11 @@ public static class Step
                 if (def.DamagePerSecond > 0f)
                 {
                     // DoT attributes to whoever applied it — bounty and scrap
-                    // credit survive the burn.
+                    // credit survive the burn. Poison additionally bypasses
+                    // armor and shields, which is its entire reason to exist.
                     Damage(w, enemy, def.DamagePerSecond * Balance.Dt, slot.Source, enemy.Pos, null,
-                        SourcePlayerId(slot.Source));
+                        SourcePlayerId(slot.Source),
+                        ignoreFlatArmor: def.IgnoresArmor, ignoreShield: def.IgnoresShield);
                 }
                 if (def.HardControl) controlled = true;
 
@@ -1200,7 +1202,8 @@ public static class Step
 
     private static void Damage(
         World w, Enemy enemy, float amount, string source, Vec3 sourcePos,
-        IReadOnlyList<string>? applies, int? playerId, bool ignoreFlatArmor = false)
+        IReadOnlyList<string>? applies, int? playerId, bool ignoreFlatArmor = false,
+        bool ignoreShield = false)
     {
         if (enemy.Dead) return;
 
@@ -1245,7 +1248,7 @@ public static class Step
         // apply through a shield — except burn, which ApplyStatus refuses while
         // shielded (the "can't ignite a shielded Warden" identity).
         float total = amount;
-        if (enemy.Shield > 0f && amount > 0f)
+        if (enemy.Shield > 0f && amount > 0f && !ignoreShield)
         {
             enemy.ShieldTimer = Balance.ShieldRegenDelaySeconds;
             float soaked = MathF.Min(enemy.Shield, amount);

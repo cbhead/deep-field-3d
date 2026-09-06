@@ -481,6 +481,66 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
         $"routes {string.Join(",", world.Enemies.Select(e => e.RouteIndex).Distinct())}");
 }
 
+// --- Gate 24 (M3): poison is the answer burn is not.
+//
+// Burn is refused outright while a shield is up; poison has to land on hp
+// through that same shield. If both were only damage-over-time with different
+// numbers there would be no reason to carry either. Driven through a real
+// PlayerHit with the poison stream, not a test hook.
+{
+    float DamageThroughShield(string weaponId)
+    {
+        var world = new World(Seed, Maps.Foundry);
+        world.Enqueue(new Command.Join(1, "p1", "forge"));
+        Step.Advance(world);
+
+        var player = world.Players[1];
+        player.OwnedWeapons.Add(weaponId);
+        player.WeaponId = weaponId;
+        player.WeaponCooldown = 0f;
+        player.Pos = new Vec3(0, 0, 2);
+
+        var enemy = new Enemy
+        {
+            Id = world.NextId(), DefId = "warden",
+            Hp = 300f, MaxHp = 300f, Shield = 200f,
+            Pos = new Vec3(0, 0, 0), Facing = new Vec3(1, 0, 0),
+            Bounty = 0, LeakDamage = 1,
+        };
+        world.Enemies.Add(enemy);
+
+        world.Enqueue(new Command.PlayerSync(1, player.Pos));
+        world.Enqueue(new Command.PlayerHit(1, enemy.Id, weaponId));
+
+        float startHp = enemy.Hp;
+        for (int i = 0; i < Balance.TickHz * 2; i++) Step.Advance(world);
+        return startHp - enemy.Hp;                 // hp lost *behind* the shield
+    }
+
+    float poison = DamageThroughShield("poisonStream");
+    float ember = DamageThroughShield("emberPistol");
+
+    Gate("poison: reaches hp through a shield that stops burn",
+        poison > 0f && ember <= 0f,
+        $"poison {poison:0.0} hp behind shield, ember {ember:0.0}");
+}
+
+// --- Gate 25 (M3): Corrode joins the table without breaking closure.
+{
+    var reactions = Reactions.All;
+    var emitted = reactions.Where(r => r.EmitStatus is not null).Select(r => r.EmitStatus!).ToList();
+
+    // Closure: nothing a reaction emits may itself be half of another reaction.
+    bool closed = !emitted.Any(e => reactions.Any(r => r.StatusA == e || r.StatusB == e));
+
+    var corrode = Reactions.Match(Statuses.Poison.Id, Statuses.Shred.Id);
+    var corrodeReversed = Reactions.Match(Statuses.Shred.Id, Statuses.Poison.Id);
+
+    Gate("corrode: poison + shred reacts, and the table stays closed",
+        corrode is not null && corrodeReversed is not null && closed,
+        $"{reactions.Count} reactions, emits [{string.Join(",", emitted)}]");
+}
+
 // --- Gate 23: socket placement is legal and generous.
 //
 // Build density is a player-freedom dial: too few sockets and there is only
