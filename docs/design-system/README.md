@@ -35,10 +35,15 @@ Known gaps of that kind:
 - **Per-tower kills / uptime / coverage** in the upgrade panel. The sim tracks
   damage dealt but not the rest.
 - **Early-start scrap bonus** on the intermission panel. No such bonus exists.
-- **Condition banner** on the intermission panel. Conditions arrive at M3.
+Closed since: per-player damage / builds / revives now ride `GameView`, the
+version-mismatch modal names both builds, and the intermission condition banner
+is live — Night and Fog exist, the schedule is authored on the `MapDef`, and the
+panel announces next wave's weather one wave ahead.
 
-Closed since: per-player damage / builds / revives now ride `GameView`, and the
-version-mismatch modal names both builds.
+One asset gap it opened: `icon_cond_fog` / `icon_cond_night` are on
+design's forward manifest but not delivered, so the banner draws a placeholder
+chip. `make usage` reports them as requested-and-missing rather than the code
+pretending they exist.
 
 ## Naming
 

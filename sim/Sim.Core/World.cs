@@ -61,6 +61,11 @@ public sealed class Tower
     public int RampTargetId = -1;
     public float RampSeconds;
 
+    /// <summary>Which enemy this tower last shot at. Only used to notice that
+    /// it is acquiring something new, which is when Night's delay applies —
+    /// weather taxes finding a target, not keeping one.</summary>
+    public int LastTargetId = -1;
+
     /// <summary>Forge Overdrive: fire-rate factor and remaining time.</summary>
     public float BuffTimer;
     public float BuffFactor = 1f;

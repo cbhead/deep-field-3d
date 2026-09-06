@@ -450,6 +450,101 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
         $"apCrafted {apCrafted}, reachable {reachable}");
 }
 
+// --- Gate 30 (M3): no condition may blind a tower outright.
+//
+// Conditions are specified as factors over the swept baseline, and the whole
+// value of that rule is that weather can never be the thing that decides a
+// wave. Geometry can break the rule without breaking the formula: a tower
+// sitting at the edge of its reach does not lose margin to a range factor, it
+// loses the route. Fog at the design's 0.7 took switchyard from 28 sockets
+// covering the ground route to 17 — eleven towers switched off, not reduced.
+//
+// This gate is why the shipped factor is 0.9. It is also what makes restoring
+// 0.7 safe once the maps give their sockets margin: fix the geometry and the
+// gate goes quiet on its own.
+{
+    var offenders = new List<string>();
+    foreach (var map in new[] { Maps.Foundry, Maps.Switchyard })
+    {
+        foreach (var condition in Conditions.All.Values)
+        {
+            if (condition.TowerRangeFactor >= 1f) continue;
+            foreach (var route in map.Routes)
+            {
+                // Only towers that can engage this route's layer count. Judging
+                // the air lane by a lance's reach measures nothing: a lance
+                // could not shoot a Skiff at any range.
+                var defenders = Towers.All.Values
+                    .Where(d => d.TargetLayers.Contains(route.Layer) && d.RangeMeters > 0f)
+                    .ToList();
+                if (defenders.Count == 0) continue;
+
+                int full = 0, fogged = 0;
+                foreach (var socket in map.Sockets)
+                {
+                    bool Sees(float r)
+                    {
+                        for (int i = 0; i + 1 < route.Waypoints.Count; i++)
+                            for (int k = 0; k < 20; k++)
+                            {
+                                var pt = route.Waypoints[i]
+                                    + (route.Waypoints[i + 1] - route.Waypoints[i]) * (k / 20f);
+                                if ((pt - socket.Pos).Length() <= r) return true;
+                            }
+                        return false;
+                    }
+                    // A socket counts as covering if any legal defender reaches
+                    // from it, and as still covering under weather if any legal
+                    // defender that weather does not exempt still reaches.
+                    if (defenders.Any(d => Sees(d.RangeMeters))) full++;
+                    if (defenders.Any(d => Sees(d.RangeMeters
+                            * (condition.RangeExemptTowerIds.Contains(d.Id)
+                                ? 1f : condition.TowerRangeFactor)))) fogged++;
+                }
+                if (full == 0) continue;
+                // Losing a quarter of the covering sockets is reduction; losing
+                // more is the condition making the decision instead of the wave.
+                if (fogged < full * 0.75f)
+                    offenders.Add($"{map.Id}/{route.Id} under {condition.Id}: {full} -> {fogged}");
+            }
+        }
+    }
+
+    Gate("conditions: weather reduces coverage, never erases it",
+        offenders.Count == 0,
+        offenders.Count == 0 ? "all routes keep 75%+ of their covering sockets"
+                             : string.Join("; ", offenders));
+}
+
+// --- Gate 31 (M3 exit gate): the weathered campaign is winnable and is
+// measurably not the clear one.
+//
+// The plan's exit condition, run as a gate. "Winnable" is the easy half; the
+// half that matters is that weather is felt, because a condition that changes
+// nothing would pass a winnability check perfectly.
+//
+// It does not re-derive that detection answers stealth — gate 28 proves that
+// directly, on an isolated Shade, which is a far cleaner measurement than a
+// campaign outcome. Two attempts to measure it here failed for reasons worth
+// recording: with a bot present the hero kills Shades whether or not a
+// Detector exists (the roster's stated "Detector tower, hero eyes"), and with
+// towers alone the trap sockets kill them anyway, because a trap triggers on
+// proximity and does not care whether it can see what stepped on it. Both are
+// the design working; neither leaves room for a campaign-level control.
+{
+    var clear = Maps.Switchyard with { ConditionScheduleOrNull = new Dictionary<int, string>() };
+    var shipped = MatchRunner.Run(Seed, Maps.Switchyard, MidBot());
+    var unweathered = MatchRunner.Run(Seed, clear, MidBot());
+
+    bool winnable = shipped.Victory;
+    bool felt = shipped.LivesLeft < unweathered.LivesLeft;
+
+    Gate("night+fog: the weathered campaign is winnable, and weather is felt",
+        winnable && felt,
+        $"weathered {(shipped.Victory ? "clears" : "loses")} with {shipped.LivesLeft} lives | "
+        + $"clear skies {unweathered.LivesLeft} lives (cost: {unweathered.LivesLeft - shipped.LivesLeft})");
+}
+
 // --- Gate 21 (M2): Switchyard clears for the mid-band bot; towers-only floor holds.
 {
     var mid = MatchRunner.Run(Seed, Maps.Switchyard, MidBot());

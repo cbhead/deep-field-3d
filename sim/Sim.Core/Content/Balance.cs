@@ -65,4 +65,11 @@ public static class Balance
     /// burrowed for the first stretch of each cycle, surfaced for the rest.</summary>
     public const float BurrowCycleMeters = 14f;
     public const float BurrowedMeters = 8f;
+
+    /// <summary>How far past a weapon's stated range the server still accepts a
+    /// hit. The client raycasts and the server sanity-checks, so this absorbs
+    /// the gap between an interpolated enemy on screen and its authoritative
+    /// position — a dial, not a magic number, because tightening it is a
+    /// balance decision and not a networking one.</summary>
+    public const float HitRangeSlack = 1.15f;
 }

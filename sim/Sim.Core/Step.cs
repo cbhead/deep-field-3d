@@ -304,6 +304,14 @@ public static class Step
         if (enemy is null || enemy.Burrowed) return;
 
         var build = player.BuildFor(weapon.Id);
+
+        // Until now the sim never range-checked a hit, which quietly made every
+        // range stat in the gunsmith decorative — longBarrel's +25% and the
+        // rangefinder optic drew delta bars for a number nothing read. The check
+        // is deliberately generous (the client raycasts; this is the server's
+        // sanity bound, per the netcode design), but it is a bound.
+        if (player.Pos.DistanceTo(enemy.Pos) > EffectiveWeaponRange(w, weapon, build)) return;
+
         var enemyDef = Enemies.All[enemy.DefId];
         bool armored = enemyDef.FlatArmor > 0f || enemyDef.FrontArmorArcDegrees > 0f;
 
@@ -315,6 +323,16 @@ public static class Step
         Damage(w, enemy, weapon.Damage * build.DamageFactor(armored),
             $"player{hit.PlayerId}", player.Pos, applies, hit.PlayerId,
             ignoreFlatArmor: build.IgnoresFlatArmor);
+    }
+
+    /// <summary>What a build can actually reach, weather included. Shared with
+    /// the harness bot so it does not fire shots the sim will silently drop.</summary>
+    public static float EffectiveWeaponRange(World w, WeaponDef weapon, WeaponBuild build)
+    {
+        float range = weapon.RangeMeters * build.RangeFactor();
+        var condition = Conditions.ForWave(w.Map, w.WaveIndex);
+        if (condition is not null) range *= condition.HeroRangeFactor;
+        return range * Balance.HitRangeSlack;
     }
 
     private static void ApplyBuyWeapon(World w, Command.BuyWeapon buy)
@@ -934,7 +952,7 @@ public static class Step
 
             if (def.Kind == TowerKind.Aura)
             {
-                float auraRange = EffectiveRange(tower, def);
+                float auraRange = EffectiveRange(w, tower, def);
                 foreach (var enemy in w.Enemies)
                 {
                     if (enemy.Dead) continue;
@@ -950,7 +968,17 @@ public static class Step
             if (tower.Cooldown > 0f) continue;
 
             var target = PickTarget(w, tower, def);
-            if (target is null) continue;
+            if (target is null) { tower.LastTargetId = -1; continue; }
+
+            // Night: the beat before a tower settles on something new. Charged
+            // to the cooldown rather than a separate timer so it cannot stack
+            // with itself, and so a resumed save carries it in one field.
+            if (target.Id != tower.LastTargetId)
+            {
+                float delay = AcquisitionDelay(w, target);
+                tower.LastTargetId = target.Id;
+                if (delay > 0f) { tower.Cooldown = delay; continue; }
+            }
 
             tower.Cooldown = 1f / EffectiveRate(tower, def);
             w.Projectiles.Add(new Projectile
@@ -970,7 +998,7 @@ public static class Step
 
     private static Enemy? PickTarget(World w, Tower tower, TowerDef def)
     {
-        float range = EffectiveRange(tower, def);
+        float range = EffectiveRange(w, tower, def);
         Enemy? best = null;
         float bestTraveled = -1f;
 
@@ -1031,11 +1059,32 @@ public static class Step
     /// <summary>Range, whatever the tower calls the path that grows it —
     /// Detector's is "field", Filament's is "optics". Only one exists per
     /// tower, so multiplying all three is a lookup, not a stack.</summary>
-    private static float EffectiveRange(Tower tower, TowerDef def) =>
-        def.RangeMeters
-        * PathFactor(tower, def, "range")
-        * PathFactor(tower, def, "field")
-        * PathFactor(tower, def, "optics");
+    /// <summary>Weather rides on top of the swept baseline, never replaces it,
+    /// so a condition can shrink a tower's reach but never decide it.</summary>
+    private static float EffectiveRange(World w, Tower tower, TowerDef def)
+    {
+        float range = def.RangeMeters
+            * PathFactor(tower, def, "range")
+            * PathFactor(tower, def, "field")
+            * PathFactor(tower, def, "optics");
+
+        var condition = Conditions.ForWave(w.Map, w.WaveIndex);
+        if (condition is not null && !condition.RangeExemptTowerIds.Contains(def.Id))
+            range *= condition.TowerRangeFactor;
+        return range;
+    }
+
+    /// <summary>Night's hesitation: a tower takes a beat to find something
+    /// nobody has marked. Marked targets are acquired instantly, which is the
+    /// whole reason mark is worth carrying into a night wave.</summary>
+    private static float AcquisitionDelay(World w, Enemy target)
+    {
+        var condition = Conditions.ForWave(w.Map, w.WaveIndex);
+        if (condition is null || condition.AcquisitionDelaySeconds <= 0f) return 0f;
+        if (condition.AcquisitionDelayExemptsMarked
+            && target.Statuses[(int)Channel.Vulnerability].Active) return 0f;
+        return condition.AcquisitionDelaySeconds;
+    }
 
     private static float EffectiveRate(Tower tower, TowerDef def) =>
         def.ShotsPerSecond * PathFactor(tower, def, "rate") * tower.BuffFactor;

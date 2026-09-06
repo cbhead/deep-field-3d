@@ -102,6 +102,25 @@ public partial class MatchScreens : CanvasLayer
             return;
         }
 
+        // Weather, announced one wave ahead — the convention the design calls
+        // for and the reason the schedule is authored data rather than rolled.
+        // This closes the "condition banner" gap recorded in the design-system
+        // README: the slot existed and had nothing real to put in it.
+        var condition = Conditions.ForWave(map, next);
+        if (condition is not null)
+        {
+            var banner = Kit.Surface(Tokens.SurfaceInset, Tokens.StateWarning, 4f, shadow: false);
+            var row = Kit.Row(Tokens.Space4);
+            banner.AddChild(row);
+            row.AddChild(Kit.Icon($"cond_{condition.Id}", Tokens.StateWarning, 24));
+            var text = Kit.Col(Tokens.Space1);
+            text.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            text.AddChild(Kit.Title(condition.Name, Tokens.SizeStatSm, Tokens.StateWarning));
+            text.AddChild(Kit.Body(condition.Effect, Tokens.SizeCaption, Tokens.TextSecondary));
+            row.AddChild(text);
+            _intermissionBody.AddChild(banner);
+        }
+
         int players = Mathf.Max(1, view.Players.Count(p => p.Connected));
         var plan = WavePlan.PlanWave(seed, map, next, players);
 

@@ -28,6 +28,12 @@ public static class MatchRunner
     /// <summary>Deterministic build orders per map: "tower:socket" placed as
     /// money allows, then damage-path upgrades with the surplus. A floor policy,
     /// not a forecast — same doctrine as the 2D greedy builder.</summary>
+    /// <summary>The switchyard floor policy with its Detector removed, for the
+    /// conditions gate. Same list, same order, one tower missing — so any
+    /// difference in outcome is attributable to that tower and nothing else.</summary>
+    public static string[] SwitchyardWithoutDetector =>
+        BuildOrders["switchyard"].Where(e => !e.StartsWith("detector:")).ToArray();
+
     private static readonly Dictionary<string, string[]> BuildOrders = new()
     {
         ["testlane"] = new[] { "lance:s2", "lance:s3", "lance:s1", "lance:s4" },
@@ -53,13 +59,19 @@ public static class MatchRunner
         },
     };
 
-    public static MatchResult Run(uint seed, MapDef map, params PlayerBot[] bots)
+    public static MatchResult Run(uint seed, MapDef map, params PlayerBot[] bots) =>
+        RunWithBuild(seed, map, null, bots);
+
+    /// <summary>As above, but with the floor policy's build list overridden —
+    /// how the harness asks "what does this tower actually buy us?" by running
+    /// the same seed, map and bot with and without it.</summary>
+    public static MatchResult RunWithBuild(uint seed, MapDef map, string[]? buildOverride, params PlayerBot[] bots)
     {
         var world = new World(seed, map);
         var log = new List<string>();
         int spawned = 0, towerKills = 0, playerKills = 0, leaked = 0, reactions = 0, wavesCleared = 0;
         bool victory = false;
-        var buildOrder = BuildOrders[map.Id];
+        var buildOrder = buildOverride ?? BuildOrders[map.Id];
         int buildCursor = 0;
 
         while (!world.IsOver && world.Tick < MaxTicks)

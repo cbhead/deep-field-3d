@@ -117,6 +117,9 @@ public static class Waves
                     new WaveGroup("mole", 3, 55, 100, "ground"),
                     new WaveGroup("mote", 8, 9, 160, "groundShort"),
                 },
+                // W7 rides FOG. The wave keeps its authored weight: the whole
+                // point of a factor system is that weather adjusts the baseline
+                // rather than the baseline being rewritten around the weather.
                 new[]
                 {
                     new WaveGroup("monolith", 1, 0, 0, "ground"),

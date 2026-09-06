@@ -38,6 +38,13 @@ public static class RngStreams
     public const string Combat = "combat";
     public const string Bot = "bot";
 
+    /// <summary>Weather draws here and nowhere else. Anything a condition adds
+    /// to a wave must come off this stream, so that turning a condition on
+    /// cannot shift a single authored spawn — otherwise the sweep's
+    /// with-condition and without-condition columns are two different games
+    /// and the comparison means nothing.</summary>
+    public const string Condition = "condition";
+
     public static Rng StreamFor(uint seed, string stream, uint index = 0)
     {
         uint h = 2166136261u;

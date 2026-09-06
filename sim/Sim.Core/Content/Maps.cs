@@ -143,7 +143,12 @@ public static class Maps
             new HeroStationDef("midLane", new Vec3(-8f, 0f, 5f)),
             new HeroStationDef("coreGate", new Vec3(28f, 0f, 3f)),
         },
-        TotalWaves: 10);
+        TotalWaves: 10,
+        // Fog on W9, late enough that a team has towers worth blinding.
+        ConditionScheduleOrNull: new Dictionary<int, string>
+        {
+            [8] = Conditions.Fog.Id,
+        });
 
     /// <summary>M2 — "Switchyard": three tiers and the barricade lesson. The
     /// ground shortcut through the freight cut is fast and badly covered; a
@@ -261,7 +266,21 @@ public static class Maps
             new HeroStationDef("cutMouth", new Vec3(-16f, 0f, -2f)),
             new HeroStationDef("coreGate", new Vec3(32f, 0f, 5f)),
         },
-        TotalWaves: 12);
+        TotalWaves: 12,
+        // One condition per sector, the "one to learn on" convention applied to
+        // weather. Night lands on the Shade wave (W9), where more stealth and
+        // slower acquisition sharpen exactly the lesson the wave already
+        // teaches; Fog is sector 1's, so a player meets them one at a time.
+        // Both on one map was measured and cut: each costs the campaign about
+        // two lives and the arc only carries three.
+        // A third condition wave on the finale was tried and cut: at a quarter
+        // of the campaign, weather stopped being an event and became the
+        // baseline, which is the one thing a factor-over-baseline system must
+        // not do.
+        ConditionScheduleOrNull: new Dictionary<int, string>
+        {
+            [8] = Conditions.Night.Id,
+        });
 
     public static readonly IReadOnlyDictionary<string, MapDef> All =
         new Dictionary<string, MapDef>

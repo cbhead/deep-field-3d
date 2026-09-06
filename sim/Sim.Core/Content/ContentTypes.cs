@@ -132,4 +132,15 @@ public sealed record MapDef(
     Vec3 HeroSpawn,
     Vec3 ArmoryPos,
     IReadOnlyList<HeroStationDef> HeroStations,
-    int TotalWaves);
+    int TotalWaves,
+    // Wave index -> condition id. Authored rather than rolled so the sweep can
+    // run a column per condition, and so the intermission panel can announce
+    // next wave's weather one wave ahead.
+    IReadOnlyDictionary<int, string>? ConditionScheduleOrNull = null)
+{
+    public IReadOnlyDictionary<int, string> ConditionSchedule =>
+        ConditionScheduleOrNull ?? EmptySchedule;
+
+    private static readonly IReadOnlyDictionary<int, string> EmptySchedule =
+        new Dictionary<int, string>();
+}
