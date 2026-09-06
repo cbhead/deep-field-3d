@@ -22,6 +22,7 @@ public partial class MatchScreens : CanvasLayer
     private Control _endScreen = null!;
     private VBoxContainer _endBody = null!;
     private Control _pause = null!;
+    private Control _howTo = null!;
     private Control _status = null!;
     private Label _statusText = null!;
     private Label _statusDetail = null!;
@@ -34,6 +35,7 @@ public partial class MatchScreens : CanvasLayer
         BuildIntermission();
         BuildEndScreen();
         BuildPause();
+        BuildHowTo();
         BuildStatus();
     }
 
@@ -260,32 +262,118 @@ public partial class MatchScreens : CanvasLayer
         menuCard.AddChild(menu);
         columns.AddChild(menuCard);
 
-        // How to play
-        var helpCard = UiTheme.Card();
-        helpCard.CustomMinimumSize = new Vector2(380, 0);
-        var help = new VBoxContainer();
-        help.AddChild(UiTheme.Text("HOW TO PLAY", 16));
-        foreach (var (title, body) in new[]
-        {
-            ("BUILD", "Hold E at a green socket for the build wheel. Wall sockets see the air lane; "
-                + "path plates take traps. Hold U on a tower to level a path — level 4 also costs scrap."),
-            ("SHOOT", "Your gun is the flex layer: towers cover, you prioritize. Flank an Aegis, "
-                + "break a Warden's shield, catch a Mole in its surface window."),
-            ("COMBINE", "Statuses react. Chill a target then burn it for Thermal Shock; chill then "
-                + "shock for Flash Freeze. Different players' kits are meant to overlap."),
-            ("SPEND", "Kills drop scrap by enemy type. Team scrap buys tower breakpoints; your own "
-                + "scrap builds your gun at the armory (Tab)."),
-        })
-        {
-            help.AddChild(UiTheme.Text(title, 13, UiTheme.Accent));
-            var text = UiTheme.Text(body, 11, UiTheme.InkDim);
-            text.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-            text.CustomMinimumSize = new Vector2(350, 0);
-            help.AddChild(text);
-        }
-        helpCard.AddChild(help);
-        columns.AddChild(helpCard);
+        var help = new KitButton("How to play", KitButton.Tone.Secondary);
+        help.Pressed += ShowHowTo;
+        menu.AddChild(help);
     }
+
+    // =====================================================================
+    // How to play — four cards, one idea each
+    // =====================================================================
+
+    /// <summary>Design's four cards: build, shoot, react, hold. One idea per
+    /// card with a big step numeral, an icon cluster and two lines, because
+    /// this is read once on first launch and then never again — anything that
+    /// needs a second read has failed.</summary>
+    private void BuildHowTo()
+    {
+        _howTo = new Control { Visible = false };
+        _howTo.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        AddChild(_howTo);
+
+        var backdrop = new ColorRect
+        {
+            Color = Tokens.Obsidian900,
+            MouseFilter = Control.MouseFilterEnum.Stop,
+        };
+        backdrop.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        _howTo.AddChild(backdrop);
+        _howTo.AddChild(new KitGrid());
+
+        var frame = new VBoxContainer();
+        frame.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        frame.AddThemeConstantOverride("separation", Tokens.Space6);
+        _howTo.AddChild(frame);
+
+        var title = Kit.Col(Tokens.Space2);
+        title.Alignment = BoxContainer.AlignmentMode.Center;
+        title.AddChild(Kit.Label("how to play", Tokens.TextAccent));
+        var headline = Kit.Title("Build. Shoot. React.", Tokens.SizeDisplayLg);
+        headline.HorizontalAlignment = HorizontalAlignment.Center;
+        title.AddChild(headline);
+
+        var titleMargin = new MarginContainer();
+        titleMargin.AddThemeConstantOverride("margin_top", Tokens.Space10);
+        titleMargin.AddChild(title);
+        frame.AddChild(titleMargin);
+
+        var cardsMargin = new MarginContainer { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
+        foreach (string side in new[] { "left", "right" })
+            cardsMargin.AddThemeConstantOverride($"margin_{side}", Tokens.Space12);
+        frame.AddChild(cardsMargin);
+
+        var cards = Kit.Row(Tokens.Space7);
+        cardsMargin.AddChild(cards);
+
+        var steps = new (string Key, string Title, string Body, string[] Icons)[]
+        {
+            ("E", "Build on sockets",
+                "Hold E at a socket ring and pick from the wheel. Green rings are on the ground, "
+                + "blue ones on the decks — those are the only sockets that reach the air lane.",
+                new[] { "tower_lance", "tower_nova", "tower_barricade" }),
+            ("LMB", "Shoot what towers miss",
+                "Your gun is a tower that moves. Towers answer coverage; you answer priority and "
+                + "geometry — flank an Aegis, break a Warden's shield, catch a Mole surfacing.",
+                new[] { "weapon_rifle", "ammo_ap", "status_mark" }),
+            ("Q", "React together",
+                "Statuses combine. Chill from a Singularity plus burn from Ember is Thermal Shock; "
+                + "chill plus shock is Flash Freeze. Both halves are needed, so they are a team play.",
+                new[] { "status_chill", "status_burn", "reaction_thermalshock" }),
+            ("R", "Hold the core",
+                "Every leak costs a core life, whatever leaked. Revive a downed teammate with R, and "
+                + "start a wave early with F when you are ready — it pays.",
+                new[] { "enemy_monolith", "scrap_alloy", "faction_forge" }),
+        };
+
+        for (int i = 0; i < steps.Length; i++)
+        {
+            var (key, stepTitle, body, icons) = steps[i];
+            var panel = new KitPanel($"step {i + 1}", i == 0 ? Tokens.Brass500 : null);
+            panel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            panel.HeaderTrailing(Kit.Key(key));
+            cards.AddChild(panel);
+
+            var numeral = Kit.Numeral($"0{i + 1}", Tokens.SizeDisplayXl, Tokens.Obsidian400);
+            panel.Body.AddChild(numeral);
+
+            var well = Kit.Surface(Tokens.SurfaceInset, Tokens.BorderPanel, Tokens.ChamferSm, shadow: false);
+            well.CustomMinimumSize = new Vector2(0, 150);
+            var wellRow = Kit.Row(Tokens.Space6);
+            wellRow.Alignment = BoxContainer.AlignmentMode.Center;
+            foreach (string icon in icons)
+                wellRow.AddChild(Kit.Icon(icon, Tokens.Brass400, 44));
+            well.AddChild(wellRow);
+            panel.Body.AddChild(well);
+
+            panel.Body.AddChild(Kit.Title(stepTitle, Tokens.SizeDisplaySm));
+            panel.Body.AddChild(Kit.Paragraph(body, Tokens.SizeBody, Tokens.TextSecondary));
+        }
+
+        var actions = Kit.Row(Tokens.Space4);
+        actions.Alignment = BoxContainer.AlignmentMode.Center;
+        var close = new KitButton("Back", KitButton.Tone.Primary, Tokens.ControlLg);
+        close.Pressed += HideHowTo;
+        actions.AddChild(close);
+
+        var actionsMargin = new MarginContainer();
+        actionsMargin.AddThemeConstantOverride("margin_bottom", Tokens.Space10);
+        actionsMargin.AddChild(actions);
+        frame.AddChild(actionsMargin);
+    }
+
+    public void ShowHowTo() => _howTo.Visible = true;
+    public void HideHowTo() => _howTo.Visible = false;
+    public bool HowToOpen => _howTo.Visible;
 
     public void ShowPause() => _pause.Visible = true;
     public void HidePause() => _pause.Visible = false;
