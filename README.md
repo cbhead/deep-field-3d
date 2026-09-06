@@ -51,6 +51,7 @@ shell. `make run` does the same if your PATH is set up — see
 ```sh
 make check    # sim build + unit tests + harness gates + game build
 make assets   # art delivered vs what the design brief names
+make usage    # what the game actually consumes (docs/ASSET-USAGE.md)
 ```
 
 ```sh
