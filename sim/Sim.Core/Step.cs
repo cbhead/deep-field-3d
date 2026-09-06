@@ -20,6 +20,7 @@ public static class Step
         ApplyCommands(w);
         UpdateWaves(w);
         UpdateStatuses(w);
+        ApplyHealAuras(w);
         MoveEnemies(w);
         TriggerTraps(w);
         UpdatePlayers(w);
@@ -670,6 +671,29 @@ public static class Step
     // Movement
     // =====================================================================
 
+    /// <summary>Menders restore nearby allies. Runs after statuses so a poison
+    /// tick and a heal tick resolve in the same order every time — the heal is
+    /// meant to lose to poison, and determinism requires the phase order be
+    /// fixed rather than incidental.</summary>
+    private static void ApplyHealAuras(World w)
+    {
+        foreach (var healer in w.Enemies)
+        {
+            if (healer.Dead) continue;
+            var healerDef = Enemies.All[healer.DefId];
+            if (healerDef.HealPerSecond <= 0f) continue;
+
+            float amount = healerDef.HealPerSecond * Balance.Dt;
+            foreach (var ally in w.Enemies)
+            {
+                if (ally.Dead || ally.Id == healer.Id) continue;
+                if (ally.Hp >= ally.MaxHp) continue;
+                if (healer.Pos.DistanceTo(ally.Pos) > healerDef.HealRadius) continue;
+                ally.Hp = MathF.Min(ally.MaxHp, ally.Hp + amount);
+            }
+        }
+    }
+
     private static void MoveEnemies(World w)
     {
         foreach (var enemy in w.Enemies)
@@ -678,6 +702,11 @@ public static class Step
 
             var def = Enemies.All[enemy.DefId];
             float speed = def.SpeedMetersPerSec;
+
+            // A Shade nobody has revealed moves faster — ignoring it costs you,
+            // which is what stops stealth from being a pure tempo loss.
+            if (def.Stealth && !enemy.Statuses[(int)Channel.Detection].Active)
+                speed *= def.StealthSpeedBonus;
 
             ref var movement = ref enemy.Statuses[(int)Channel.Movement];
             if (movement.Active)
@@ -951,6 +980,11 @@ public static class Step
             if (!def.TargetLayers.Contains(Enemies.All[enemy.DefId].Layer)) continue;
 
             if (enemy.Burrowed) continue;   // untargetable underground
+
+            // Stealth: towers need it revealed. Heroes are unaffected — they
+            // shoot what they can see, which is the Shade's whole trade.
+            var targetDef = Enemies.All[enemy.DefId];
+            if (targetDef.Stealth && !enemy.Statuses[(int)Channel.Detection].Active) continue;
 
             float distance = tower.Pos.DistanceTo(enemy.Pos);
             if (distance > range || distance < def.MinRangeMeters) continue;

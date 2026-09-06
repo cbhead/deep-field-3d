@@ -37,7 +37,11 @@ public sealed record EnemyDef(
     bool Burrower,                // Mole: cycles untargetable underground
     string? SplitInto,            // Cluster: child def id spawned on death
     int SplitCount,
-    IReadOnlyDictionary<ScrapType, int> ScrapYield);
+    IReadOnlyDictionary<ScrapType, int> ScrapYield,
+    bool Stealth = false,          // Shade: towers cannot target it unless revealed
+    float StealthSpeedBonus = 0f,  // Shade: faster while unseen — being ignored pays
+    float HealPerSecond = 0f,      // Mender: hp/sec restored to nearby allies
+    float HealRadius = 0f);
 
 public sealed record UpgradePathDef(
     string Id,                    // "damage" | "range" | "rate"

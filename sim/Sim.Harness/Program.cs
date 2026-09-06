@@ -463,7 +463,7 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
     // (Same doctrine as the 2D game's accepted probe-understates-play note.)
     Gate("switchyard: mid-band clears; towers-only holds ≥10 waves",
         mid.Victory && floor.WavesCleared >= 10,
-        $"mid waves {mid.WavesCleared}/12 lives {mid.LivesLeft} | floor waves {floor.WavesCleared} lives {floor.LivesLeft} leaks {string.Join(",", leaksByDef)}");
+        $"mid waves {mid.WavesCleared}/{Maps.Switchyard.TotalWaves} lives {mid.LivesLeft} | floor waves {floor.WavesCleared} lives {floor.LivesLeft} leaks {string.Join(",", leaksByDef)}");
 }
 
 // --- Gate 22 (M2): a barricade on b1 reroutes shortcut spawns to the long way.
@@ -617,6 +617,139 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
     Gate("detector: reveals without dealing damage",
         revealed && MathF.Abs(before - enemy.Hp) < 0.01f,
         $"revealed {revealed}, hp delta {before - enemy.Hp:0.00}");
+}
+
+// --- Gate 27 (M3): every defined enemy actually spawns somewhere.
+//
+// Written because it did not hold: Shade and Mender were fully implemented,
+// gated for counterability, and reachable by nothing — no wave table named
+// them. A roster entry no campaign spawns is dead content that still passes
+// every other gate.
+{
+    var spawned = new HashSet<string>();
+    foreach (var (mapId, waves) in Waves.ByMap)
+    {
+        if (mapId == "testlane") continue;      // the M0 fixture, not a campaign
+        foreach (var wave in waves)
+            foreach (var group in wave)
+                spawned.Add(group.EnemyId);
+    }
+
+    // Cluster children are born from a split, never from a wave table.
+    var fromSplits = Enemies.All.Values
+        .Where(e => e.SplitCount > 0 && e.SplitInto is not null)
+        .Select(e => e.SplitInto!)
+        .ToHashSet();
+
+    var orphans = Enemies.All.Keys
+        .Where(id => !spawned.Contains(id) && !fromSplits.Contains(id))
+        .OrderBy(id => id)
+        .ToList();
+
+    Gate("roster: every enemy is reachable from some wave table",
+        orphans.Count == 0,
+        orphans.Count == 0 ? $"{Enemies.All.Count} enemies all spawn"
+                           : "never spawned: " + string.Join(", ", orphans));
+}
+
+// --- Gate 27b: the declared campaign length matches the authored table.
+//
+// Inserting two waves mid-arc silently truncated the finale — the map still
+// declared twelve and the table had fourteen, so the ending simply never
+// played and every gate stayed green.
+{
+    var mismatched = new List<string>();
+    foreach (var (mapId, waves) in Waves.ByMap)
+    {
+        var map = Maps.All.Values.FirstOrDefault(m => m.Id == mapId);
+        if (map is null) continue;
+        if (map.TotalWaves != waves.Count)
+            mismatched.Add($"{mapId} declares {map.TotalWaves}, table has {waves.Count}");
+    }
+
+    Gate("waves: every map plays its whole authored arc",
+        mismatched.Count == 0,
+        mismatched.Count == 0 ? "all maps match" : string.Join("; ", mismatched));
+}
+
+// --- Gate 28 (M3): a Shade is invisible to towers until something reveals it.
+//
+// Both halves matter. If towers could see it, the Detector is a wasted socket;
+// if a Detector did not fix it, the Shade is uncounterable by building, which
+// the roster rule forbids.
+{
+    float ShadeHpAfter(bool withDetector)
+    {
+        var world = new World(Seed, Maps.Foundry);
+        world.Money = 2000;
+        world.Enqueue(new Command.PlaceTower(0, "lance", "g4"));
+        if (withDetector) world.Enqueue(new Command.PlaceTower(0, "detector", "g15"));
+        Step.Advance(world);
+
+        var shade = new Enemy
+        {
+            Id = world.NextId(), DefId = "shade", Hp = 500f, MaxHp = 500f,
+            Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1,
+            RouteIndex = 0, Leg = 3, LegProgress = 14f,
+        };
+        world.Enemies.Add(shade);
+
+        for (int i = 0; i < Balance.TickHz * 2; i++) Step.Advance(world);
+        return shade.Hp;
+    }
+
+    float unseen = ShadeHpAfter(withDetector: false);
+    float revealed = ShadeHpAfter(withDetector: true);
+
+    Gate("shade: towers ignore it until a Detector reveals it",
+        unseen >= 500f && revealed < 500f,
+        $"unseen {unseen:0.0} hp, with detector {revealed:0.0} hp");
+}
+
+// --- Gate 29 (M3): the Mender is answered by prioritisation, not by dps.
+//
+// Its heal (7/s) deliberately out-paces poison (3/s), so the counter is killing
+// the healer — the plan's "can you prioritize?". The gate measures the same
+// escort twice: once with the Mender alive, once without. If the heal did not
+// lengthen the kill, the Mender is decoration; if the escort survived either
+// way, it is uncounterable.
+{
+    int TicksToKillEscort(bool withMender)
+    {
+        var world = new World(Seed, Maps.Foundry);
+        world.Money = 2000;
+        world.Enqueue(new Command.PlaceTower(0, "lance", "g4"));
+        Step.Advance(world);
+
+        Enemy Add(string defId, float hp, float legProgress)
+        {
+            var e = new Enemy
+            {
+                Id = world.NextId(), DefId = defId, Hp = hp, MaxHp = hp,
+                Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1,
+                RouteIndex = 0, Leg = 3, LegProgress = legProgress,
+            };
+            world.Enemies.Add(e);
+            return e;
+        }
+
+        var escort = Add("drifter", 90f, 14f);
+        if (withMender) Add("mender", 400f, 14.5f);   // fat enough to outlive the escort
+
+        for (int tick = 1; tick <= Balance.TickHz * 30; tick++)
+        {
+            Step.Advance(world);
+            if (!world.Enemies.Contains(escort) || escort.Hp <= 0f) return tick;
+        }
+        return int.MaxValue;      // never died
+    }
+
+    int guarded = TicksToKillEscort(withMender: true);
+    int alone = TicksToKillEscort(withMender: false);
+
+    Gate("mender: healing lengthens the kill, and both escorts still die",
+        guarded > alone && guarded != int.MaxValue,
+        $"guarded {guarded} ticks vs alone {alone} ticks");
 }
 
 // --- Gate 23: socket placement is legal and generous.

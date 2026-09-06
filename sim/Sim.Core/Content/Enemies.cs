@@ -93,6 +93,34 @@ public static class Enemies
         Shield: 0f, FlatArmor: 0f, Mass: 1f, Burrower: false, SplitInto: "mote", SplitCount: 5,
         ScrapYield: new Dictionary<ScrapType, int> { [ScrapType.Alloy] = 3 });
 
+    /// <summary>M3 — invisible to towers until something reveals it, and faster
+    /// while unseen, so ignoring it is actively punished. A Detector in range
+    /// turns it into an ordinary walker; without one, towers watch it stroll
+    /// past and only heroes can answer.</summary>
+    public static readonly EnemyDef Shade = new(
+        Id: "shade",
+        Hp: 34f, SpeedMetersPerSec: 2.6f, Bounty: 11, LeakDamage: 1,
+        Layer: EnemyLayer.Ground,
+        ContactDamage: 8f, ScatterWidth: 0f, BlocksSight: false,
+        FrontArmorArcDegrees: 0f, FrontArmorFactor: 1f, RearWeakFactor: 1f,
+        Shield: 0f, FlatArmor: 0f, Mass: 1f, Burrower: false, SplitInto: null, SplitCount: 0,
+        ScrapYield: new Dictionary<ScrapType, int> { [ScrapType.Flux] = 2 },
+        Stealth: true, StealthSpeedBonus: 1.45f);
+
+    /// <summary>M3 — heals everything around it, so a line it walks in stops
+    /// dying to chip. The question is prioritisation: kill it first or out-damage
+    /// its output. Poison is the clean answer, since the heal cannot outpace
+    /// something that ignores armor and shields.</summary>
+    public static readonly EnemyDef Mender = new(
+        Id: "mender",
+        Hp: 46f, SpeedMetersPerSec: 2.0f, Bounty: 14, LeakDamage: 1,
+        Layer: EnemyLayer.Ground,
+        ContactDamage: 4f, ScatterWidth: 0f, BlocksSight: false,
+        FrontArmorArcDegrees: 0f, FrontArmorFactor: 1f, RearWeakFactor: 1f,
+        Shield: 0f, FlatArmor: 0f, Mass: 1.2f, Burrower: false, SplitInto: null, SplitCount: 0,
+        ScrapYield: new Dictionary<ScrapType, int> { [ScrapType.Flux] = 2, [ScrapType.Gravium] = 1 },
+        HealPerSecond: 7f, HealRadius: 6f);
+
     public static readonly IReadOnlyDictionary<string, EnemyDef> All =
         new Dictionary<string, EnemyDef>
         {
@@ -104,5 +132,7 @@ public static class Enemies
             [Cluster.Id] = Cluster,
             [Skiff.Id] = Skiff,
             [Aegis.Id] = Aegis,
+            [Shade.Id] = Shade,
+            [Mender.Id] = Mender,
         };
 }

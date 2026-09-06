@@ -43,7 +43,11 @@ public static class MatchRunner
             // its first anti-air at the west mouth where the lane still dips
             // low, and covers the middle from the catwalk.
             "lance:g3", "skywatch:g8", "arc:g6", "skywatch:w3",
-            "barricade:b1", "nova:g4", "skywatch:w9", "singularity:g2", "lance:w1",
+            "barricade:b1", "nova:g4", "skywatch:w9",
+            // Shade debuts at W9 and nothing already on this list can see it,
+            // so the floor policy buys eyes before it needs them — mid-map,
+            // on the stretch of ground route its field covers most (29%).
+            "detector:g14", "singularity:g2", "lance:w1",
             "tar:t2", "nova:g7", "lance:w2", "lance:g1",
             "spike:t4", "skywatch:w4",
         },

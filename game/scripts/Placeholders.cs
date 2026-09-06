@@ -39,6 +39,7 @@ public static class Placeholders
         "aegis" => 1.4f,
         "skiff" => 0.9f,
         "cluster" => 1.15f,
+        "mender" => 1.1f,
         _ => 1f,
     };
 
@@ -56,6 +57,15 @@ public static class Placeholders
             "monolith" => new BoxMesh { Size = new Vector3(1.2f * scale, 1.9f * scale, 1.0f * scale) },
             "skiff" => new BoxMesh { Size = new Vector3(1.9f * scale, 0.35f * scale, 0.9f * scale) },
             "aegis" => new BoxMesh { Size = new Vector3(1.3f * scale, 1.7f * scale, 0.8f * scale) },
+            // Shade is narrow and tall — a shape you catch out of the corner of
+            // your eye, since heroes must spot it before a Detector does.
+            "shade" => new PrismMesh { Size = new Vector3(0.55f, 1.9f, 0.55f) },
+            // Mender reads as an emitter on a stalk: the heal is the threat, so
+            // the thing to shoot is the thing you can see.
+            "mender" => new CylinderMesh
+            {
+                TopRadius = 0.55f * scale, BottomRadius = 0.28f * scale, Height = 1.7f * scale,
+            },
             _ => new CapsuleMesh { Radius = 0.45f * scale, Height = 1.6f * scale },
         };
 

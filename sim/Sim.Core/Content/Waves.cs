@@ -129,17 +129,25 @@ public static class Waves
                     new WaveGroup("warden", 2, 80, 120, "ground"),
                     new WaveGroup("mote", 8, 9, 200, "groundShort"),
                 },
+                // Shade debuts here rather than in a wave of its own: the arc
+                // stays twelve waves, so the swept difficulty curve holds. It
+                // replaces two of the skiffs, which keeps the wave's weight
+                // roughly where it was while changing what the wave asks.
                 new[]
                 {
-                    new WaveGroup("mole", 5, 45, 0, "ground"),
-                    new WaveGroup("cluster", 4, 55, 60, "groundShort"),
-                    new WaveGroup("skiff", 6, 28, 100, "air"),
+                    new WaveGroup("shade", 3, 70, 0, "ground"),
+                    new WaveGroup("mole", 4, 45, 40, "ground"),
+                    new WaveGroup("cluster", 3, 55, 60, "groundShort"),
+                    new WaveGroup("skiff", 4, 28, 100, "air"),
                 },
+                // Mender debuts behind the warden pair — shoot the healer, not
+                // the shield. One aegis steps aside to pay for it.
                 new[]
                 {
                     new WaveGroup("monolith", 1, 0, 0, "groundShort"),
-                    new WaveGroup("aegis", 2, 90, 80, "ground"),
-                    new WaveGroup("warden", 2, 80, 180, "groundShort"),
+                    new WaveGroup("aegis", 1, 90, 80, "ground"),
+                    new WaveGroup("warden", 2, 80, 140, "groundShort"),
+                    new WaveGroup("mender", 1, 0, 200, "groundShort"),
                 },
                 new[]
                 {
@@ -155,8 +163,10 @@ public static class Waves
                     new WaveGroup("aegis", 2, 90, 100, "groundShort"),
                     new WaveGroup("warden", 2, 80, 200, "ground"),
                     new WaveGroup("cluster", 4, 55, 280, "groundShort"),
-                    new WaveGroup("skiff", 5, 30, 320, "air"),
-                    new WaveGroup("mote", 10, 9, 380, "groundShort"),
+                    new WaveGroup("shade", 3, 60, 240, "ground"),
+                    new WaveGroup("mender", 1, 0, 300, "groundShort"),
+                    new WaveGroup("skiff", 4, 30, 320, "air"),
+                    new WaveGroup("mote", 8, 9, 380, "groundShort"),
                 },
             },
         };
