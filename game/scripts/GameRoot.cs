@@ -122,6 +122,9 @@ public partial class GameRoot : Node3D
                 _shotPath = args[i + 2];
                 _shotView = i + 3 < args.Length ? args[i + 3] : "eye";
                 _shotCountdown = 90;
+                // Lobby and other pre-match surfaces are captured where they
+                // live — starting a match would tear them down.
+                if (_shotView == "lobby") { _shotView = "eye"; return; }
                 StartSolo("ember");
                 return;
             }
