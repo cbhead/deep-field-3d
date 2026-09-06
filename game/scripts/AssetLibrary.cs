@@ -57,6 +57,12 @@ public static class AssetLibrary
     public static IReadOnlyCollection<string> Resolved => ResolvedNames;
     public static IEnumerable<string> Missing => RequestedNames.Except(ResolvedNames);
 
+    /// <summary>Design names every file in lower case; sim content ids are
+    /// camelCase ("emberPistol", "longBarrel", "ignitionWave"). Without this
+    /// those three silently resolved to placeholder chips — and because the
+    /// placeholder is designed to look deliberate, nobody noticed.</summary>
+    private static string Normalise(string asset) => asset.ToLowerInvariant();
+
     public static string FolderFor(string asset)
     {
         foreach (var (prefix, folder) in Routes)
@@ -66,13 +72,18 @@ public static class AssetLibrary
 
     /// <summary>Where design drops the file. Printed in the report so nobody
     /// has to guess the folder from the prefix table.</summary>
-    public static string PathFor(string asset) => $"res://assets/{FolderFor(asset)}/{asset}.glb";
+    public static string PathFor(string asset)
+    {
+        asset = Normalise(asset);
+        return $"res://assets/{FolderFor(asset)}/{asset}.glb";
+    }
 
     /// <summary>The model if design has shipped it, else null. Callers that
     /// want a graybox fallback use <see cref="Instantiate"/>; callers where
     /// absence simply means "skip this flourish" use this directly.</summary>
     public static Node3D? TryInstantiate(string asset)
     {
+        asset = Normalise(asset);
         RequestedNames.Add(asset);
 
         if (!Cache.TryGetValue(asset, out var scene))
@@ -98,6 +109,7 @@ public static class AssetLibrary
 
     public static bool Has(string asset)
     {
+        asset = Normalise(asset);
         string folder = FolderFor(asset);
         return ResourceLoader.Exists($"res://assets/{folder}/{asset}.tscn")
             || ResourceLoader.Exists($"res://assets/{folder}/{asset}.glb");

@@ -38,10 +38,14 @@ public partial class GameRoot : Node3D
     /// its socket's. Cheap, and it is how the wall-socket pads were caught
     /// rendering on the floor instead of on the deck.</summary>
     private bool _auditSockets;
+    private bool _dumpAssets;
     private string? _shotPath;
     private string _shotView = "eye";
     private int _shotCountdown;
     private List<Vector3> _laneMouths = new();
+    private Node3D? _coreView;
+    private Node3D? _coreHitView;
+    private double _coreHitTimer;
     private readonly Dictionary<string, StaticBody3D> _socketBodies = new();
     private readonly Dictionary<string, SocketTag> _socketTags = new();
     private readonly Dictionary<int, Node3D> _avatarViews = new();
@@ -78,7 +82,17 @@ public partial class GameRoot : Node3D
     /// <summary>Art coverage, printed once per run. Headless smoke lanes grep
     /// this, and it answers "is the build actually using the new models?"
     /// without opening the game.</summary>
-    public override void _ExitTree() => GD.Print(AssetLibrary.Summary());
+    public override void _ExitTree()
+    {
+        GD.Print(AssetLibrary.Summary());
+
+        // --dump-assets makes a played match report everything it asked for,
+        // which is the only way to see the map kit: the audit walks content
+        // tables and never builds a level.
+        if (!_dumpAssets) return;
+        foreach (string name in AssetLibrary.Requested) GD.Print($"[asset-audit] requested {name}");
+        foreach (string id in UiTheme.RequestedIcons) GD.Print($"[asset-audit] requested icon_{id}");
+    }
 
     public override void _Ready()
     {
@@ -97,6 +111,7 @@ public partial class GameRoot : Node3D
 
         BuildUi();
         _auditSockets = System.Array.IndexOf(args, "--audit-sockets") >= 0;
+        _dumpAssets = System.Array.IndexOf(args, "--dump-assets") >= 0;
 
         // Headless smoke-test seams: --join <ip> connects from boot, --solo
         // starts a local match immediately (both exercise the full UI stack).
@@ -297,7 +312,24 @@ public partial class GameRoot : Node3D
             built.Add(AssetLibrary.Instantiate($"hero_{def.Id}_downed", () => Placeholders.Hero(def.Id)));
         }
 
+        // Icons follow the same content tables the UI derives them from, so
+        // the audit asks for exactly what a played match would ask for.
+        foreach (var def in Enemies.All.Values) UiTheme.Icon($"enemy_{def.Id}");
+        foreach (var def in Towers.All.Values) { UiTheme.Icon($"tower_{def.Id}"); foreach (var path in def.UpgradePaths) UiTheme.Icon($"path_{path.Id}"); }
+        foreach (var def in Traps.All.Values) UiTheme.Icon($"trap_{def.Id}");
+        foreach (var def in Weapons.All.Values) UiTheme.Icon($"weapon_{def.Id}");
+        foreach (var def in Attachments.All.Values) UiTheme.Icon($"attach_{def.Id}");
+        foreach (var def in Ammo.All.Values) UiTheme.Icon($"ammo_{def.Id}");
+        foreach (var def in Factions.All.Values) { UiTheme.Icon($"faction_{def.Id}"); UiTheme.Icon($"ability_{def.AbilityId}"); }
+        foreach (var type in System.Enum.GetValues<ScrapType>()) UiTheme.Icon($"scrap_{type.ToString().ToLowerInvariant()}");
+        foreach (string status in new[] { "burn", "chill", "freeze", "shock", "shred", "mark", "reveal" })
+            UiTheme.Icon($"status_{status}");
+        foreach (string reaction in new[] { "thermalshock", "flashfreeze" })
+            UiTheme.Icon($"reaction_{reaction}");
+
         GD.Print($"[asset-audit] built {built.Count} views over {AssetLibrary.Requested.Count} asset names");
+        foreach (string name in AssetLibrary.Requested) GD.Print($"[asset-audit] requested {name}");
+        foreach (string id in UiTheme.RequestedIcons) GD.Print($"[asset-audit] requested icon_{id}");
         foreach (string name in AssetLibrary.Missing)
             GD.Print($"[asset-audit] placeholder: {name} -> {AssetLibrary.PathFor(name)}");
 
@@ -459,6 +491,7 @@ public partial class GameRoot : Node3D
     public override void _Process(double delta)
     {
         if (_shotPath is not null && --_shotCountdown <= 0) CaptureShot();
+        TickCoreFlash(delta);
 
         switch (Mode)
         {
@@ -731,6 +764,7 @@ public partial class GameRoot : Node3D
                 case SimEvent.EnemyLeaked leaked:
                     _lastWaveLeaks++;
                     Post("BREACH — core hit", UiTheme.Danger);
+                    FlashCore();
                     OnBreach(leaked.EnemyId);
                     break;
 
@@ -804,6 +838,7 @@ public partial class GameRoot : Node3D
             case "enemyLeaked":
                 _lastWaveLeaks++;
                 Post("BREACH — core hit", UiTheme.Danger);
+                FlashCore();
                 OnBreach(int.Parse(p[2]));
                 break;
             case "reaction": _reactionCount++; OnReaction(int.Parse(p[2]), p[3]); break;
@@ -886,6 +921,25 @@ public partial class GameRoot : Node3D
 
     /// <summary>Point the player at a leak they didn't see. The leaking enemy's
     /// view is already gone this frame, so fall back to the route's goal.</summary>
+    /// <summary>Flashes the core to its struck state for a beat. A leak costs
+    /// a life wherever it happened, so the core itself should show it.</summary>
+    private void FlashCore()
+    {
+        if (_coreHitView is null || _coreView is null) return;
+        _coreHitView.Visible = true;
+        _coreView.Visible = false;
+        _coreHitTimer = 1.2;
+    }
+
+    private void TickCoreFlash(double delta)
+    {
+        if (_coreHitTimer <= 0) return;
+        _coreHitTimer -= delta;
+        if (_coreHitTimer > 0) return;
+        if (_coreHitView is not null) _coreHitView.Visible = false;
+        if (_coreView is not null) _coreView.Visible = true;
+    }
+
     private void OnBreach(int enemyId)
     {
         var where = EnemyWorldPos(enemyId)
@@ -1136,6 +1190,9 @@ public partial class GameRoot : Node3D
             view.Position = ToGd(projectile.Pos);
         }
         SweepViews(_projectileViews, _world.Projectiles.Select(p => p.Id));
+
+        foreach (var trap in _world.Traps)
+            RefreshTrapArt(trap.Id, trap.DefId, trap.ChargesLeft, Traps.All[trap.DefId].Charges);
     }
 
     private void SyncAvatarsFromWorld()
@@ -1379,7 +1436,11 @@ public partial class GameRoot : Node3D
             {
                 cores.Add(end);
                 // The core faces back up the lane, at the thing coming for it.
-                MapKit.Prop(this, "shared_core", end, MapKit.YawTowards(-inbound));
+                var core = MapKit.Prop(this, "shared_core", end, MapKit.YawTowards(-inbound));
+                if (core is not null) { core.Name = "Core"; _coreView = core; }
+                // The hit state is a second model, hidden until a leak lands.
+                var struck = MapKit.Prop(this, "shared_core_hit", end, MapKit.YawTowards(-inbound));
+                if (struck is not null) { struck.Name = "CoreHit"; struck.Visible = false; _coreHitView = struck; }
             }
         }
         _laneMouths = gates.Concat(cores).ToList();
@@ -1458,6 +1519,39 @@ public partial class GameRoot : Node3D
         if (lengthSq < 0.001f) return point.DistanceTo(a);
         float t = Mathf.Clamp((point - a).Dot(ab) / lengthSq, 0f, 1f);
         return point.DistanceTo(a + ab * t);
+    }
+
+    /// <summary>Swaps a trap to the state its charges say it is in. Design
+    /// delivered armed / triggered / spent for every trap because charges and
+    /// rearm are gameplay information — a spent plate that still looks armed is
+    /// a lie the player pays for.</summary>
+    private void RefreshTrapArt(int trapId, string defId, int chargesLeft, int maxCharges)
+    {
+        if (!_towerViews.TryGetValue(trapId, out var view)) return;
+
+        string state = chargesLeft <= 0 ? "spent"
+            : chargesLeft < maxCharges ? "triggered"
+            : "armed";
+        string asset = defId switch
+        {
+            "spike" => $"trap_spike_{state}",
+            "tar" => chargesLeft <= 0 ? "trap_tar_depleted" : "trap_tar_full",
+            "launcher" => chargesLeft <= 0 ? "trap_launcher_rearming"
+                : chargesLeft < maxCharges ? "trap_launcher_fired" : "trap_launcher_charged",
+            _ => "",
+        };
+        if (asset.Length == 0 || !AssetLibrary.Has(asset)) return;
+        if ((string)view.GetMeta("trap_state", "") == asset) return;
+
+        if (view.GetNodeOrNull<Node3D>("Body") is { } old)
+        {
+            view.RemoveChild(old);
+            old.QueueFree();
+        }
+        var body = AssetLibrary.Instantiate(asset, () => Placeholders.Structure(defId));
+        body.Name = "Body";
+        view.AddChild(body);
+        view.SetMeta("trap_state", asset);
     }
 
     /// <summary>Tears down a sold structure and hands its socket back to the

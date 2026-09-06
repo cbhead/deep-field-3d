@@ -1,7 +1,7 @@
 GODOT ?= $(HOME)/Applications/Godot_mono.app/Contents/MacOS/Godot
 export PATH := $(HOME)/.dotnet:$(PATH)
 
-.PHONY: sim test gates game run import check assets
+.PHONY: sim test gates game run import check assets usage usage-list
 
 ## Build the pure sim (standalone — enforces the no-Godot boundary).
 sim:
@@ -30,6 +30,13 @@ import:
 ## Art delivery status: what the design brief names vs what's in game/assets/.
 assets:
 	@./tools/asset-report.sh --list
+
+## Which delivered assets does the game actually consume?
+usage:
+	@./tools/asset-usage.sh
+
+usage-list:
+	@./tools/asset-usage.sh --list
 
 ## Everything CI runs: the pre-push check.
 check: sim test gates game

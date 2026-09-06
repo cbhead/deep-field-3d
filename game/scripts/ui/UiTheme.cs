@@ -93,10 +93,19 @@ public static class UiTheme
 
     private static readonly Dictionary<string, Texture2D> IconCache = new();
 
+    /// <summary>Every icon id the running game has asked for. Icon ids are
+    /// built by interpolation ($"enemy_{defId}"), so scanning source for string
+    /// literals under-reports badly — this is the honest record.</summary>
+    public static readonly SortedSet<string> RequestedIcons = new();
+
     /// <summary>Design's icon if present, else a generated labeled chip.
     /// Ids match docs/DESIGN-BRIEF.md §3.8 (e.g. "tower_lance", "scrap_flux").</summary>
     public static Texture2D Icon(string id, Color? tint = null)
     {
+        // Same lower-casing rule as AssetLibrary: design's filenames are all
+        // lower case, sim content ids are not.
+        id = id.ToLowerInvariant();
+        RequestedIcons.Add(id);
         if (IconCache.TryGetValue(id, out var cached)) return cached;
 
         // Design ships SVG (Godot rasterises it to a CompressedTexture2D on
