@@ -61,6 +61,10 @@ public static class Attachments
                 new Dictionary<ScrapType, int> { [ScrapType.Flux] = 3, [ScrapType.Alloy] = 2 }),
             ["voltCap"] = new("voltCap", AttachmentSlot.Infusion, 1f, 1f, 1f, "shock",
                 new Dictionary<ScrapType, int> { [ScrapType.Flux] = 5 }),
+            // M3 — toxin feed. Priced in Plating: you craft the armour answer
+            // out of the armour that stopped you, the same rule AP ammo follows.
+            ["toxinFeed"] = new("toxinFeed", AttachmentSlot.Infusion, 1f, 1f, 1f, "poison",
+                new Dictionary<ScrapType, int> { [ScrapType.Plating] = 3, [ScrapType.Flux] = 2 }),
         };
 }
 
@@ -89,6 +93,14 @@ public static class Ammo
                 new Dictionary<ScrapType, int> { [ScrapType.Flux] = 3, [ScrapType.Alloy] = 2 }),
             ["cryoRounds"] = new("cryoRounds", 0.9f, false, 1f, "chill",
                 new Dictionary<ScrapType, int> { [ScrapType.Flux] = 4 }),
+            // M3 — the two status rounds. Toxin trades the most raw damage
+            // because what it applies bypasses armour and shields entirely;
+            // shock trades least because its value is a reaction it can't
+            // trigger alone.
+            ["toxinRounds"] = new("toxinRounds", 0.8f, false, 1f, "poison",
+                new Dictionary<ScrapType, int> { [ScrapType.Plating] = 3, [ScrapType.Gravium] = 1 }),
+            ["shockRounds"] = new("shockRounds", 0.92f, false, 1f, "shock",
+                new Dictionary<ScrapType, int> { [ScrapType.Flux] = 5 }),
         };
 }
 

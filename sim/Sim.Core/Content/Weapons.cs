@@ -37,9 +37,18 @@ public static class Weapons
         Damage: 2f, ShotsPerSecond: 6f, RangeMeters: 18f,
         Applies: new[] { "poison" });
 
+    /// <summary>M3 — the chill applier. Pairs with a Singularity for Flash
+    /// Freeze, or with any burn source for Thermal Shock: its job is to be the
+    /// hero half of a reaction the builder sets up.</summary>
+    public static readonly WeaponDef CryoSprayer = new(
+        Id: "cryoSprayer", Cost: 105,
+        Damage: 1.6f, ShotsPerSecond: 7f, RangeMeters: 14f,
+        Applies: new[] { "chill" });
+
     public static readonly IReadOnlyDictionary<string, WeaponDef> All =
         new Dictionary<string, WeaponDef>
         {
+            [CryoSprayer.Id] = CryoSprayer,
             [Sidearm.Id] = Sidearm,
             [Rifle.Id] = Rifle,
             [Scattergun.Id] = Scattergun,

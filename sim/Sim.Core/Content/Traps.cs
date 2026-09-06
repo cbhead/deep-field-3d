@@ -2,11 +2,15 @@ namespace DeepField.Sim.Content;
 
 public static class Traps
 {
-    /// <summary>Burst damage on the pack that steps on it; recharges.</summary>
+    /// <summary>Burst damage on the pack that steps on it; recharges. Applies
+    /// shred, which until M3 nothing in the game did — Corrode was a defined,
+    /// closure-gated reaction with no way to ever occur in a match. Spikes are
+    /// the right owner: they tear armour off, and putting it on the builder's
+    /// side makes Corrode a genuine co-op combo (trap shreds, hero poisons).</summary>
     public static readonly TrapDef Spike = new(
         Id: "spike", Cost: 45,
         TriggerRadius: 1.8f, Charges: 3, RearmSeconds: 6f,
-        Damage: 18f, Applies: null, KnockbackMeters: 0f,
+        Damage: 18f, Applies: "shred", KnockbackMeters: 0f,
         ScrapCost: new Dictionary<ScrapType, int> { [ScrapType.Alloy] = 3 });
 
     /// <summary>The cheap movement-channel source: chills whoever wades through.</summary>

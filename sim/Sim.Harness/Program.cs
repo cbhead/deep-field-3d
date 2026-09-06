@@ -541,6 +541,47 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
         $"{reactions.Count} reactions, emits [{string.Join(",", emitted)}]");
 }
 
+// --- Gate 25b (M3): every reaction is actually reachable, and is co-op.
+//
+// Closure was gated; reachability was not. Corrode shipped as a defined,
+// closure-clean reaction whose second input — shred — nothing in the game
+// applied: no tower, trap, weapon, attachment or ammo. It could never fire.
+//
+// The rule the plan states is stronger than "reachable": each reaction must
+// have one input a builder can supply and one a shooter can, because that
+// split is what makes a reaction a co-op moment rather than a solo rotation.
+{
+    var towerSide = new HashSet<string>();
+    foreach (var tower in Towers.All.Values) foreach (var s in tower.Applies) towerSide.Add(s);
+    foreach (var trap in Traps.All.Values) if (trap.Applies is { } s) towerSide.Add(s);
+
+    var heroSide = new HashSet<string>();
+    foreach (var w in Weapons.All.Values) foreach (var s in w.Applies) heroSide.Add(s);
+    foreach (var a in Attachments.All.Values) if (a.Applies is { } s) heroSide.Add(s);
+    foreach (var a in Ammo.All.Values) if (a.Applies is { } s) heroSide.Add(s);
+    // Faction abilities apply statuses in code rather than through a def field,
+    // so they are deliberately not counted here: a reaction that only works
+    // because someone picked Ember is not a reaction the roster guarantees.
+
+    var broken = new List<string>();
+    foreach (var r in Reactions.All)
+    {
+        var inputs = new[] { r.StatusA, r.StatusB };
+        var unsourced = inputs.Where(i => !towerSide.Contains(i) && !heroSide.Contains(i)).ToList();
+        if (unsourced.Count > 0) { broken.Add($"{r.Id}: nothing applies {string.Join("+", unsourced)}"); continue; }
+        // Co-op shape: one side buildable, the other shootable.
+        bool coop = (towerSide.Contains(r.StatusA) && heroSide.Contains(r.StatusB))
+                 || (towerSide.Contains(r.StatusB) && heroSide.Contains(r.StatusA));
+        if (!coop) broken.Add($"{r.Id}: not splittable between a builder and a shooter");
+    }
+
+    Gate("reactions: every one is reachable, and splits builder/shooter",
+        broken.Count == 0,
+        broken.Count == 0
+            ? $"{Reactions.All.Count} reactions | towers apply [{string.Join(",", towerSide.OrderBy(x => x))}] heroes apply [{string.Join(",", heroSide.OrderBy(x => x))}]"
+            : string.Join("; ", broken));
+}
+
 // --- Gate 26 (M3): the Filament ramps, and switching targets costs it.
 //
 // A beam whose damage did not climb would just be a worse Lance, and one that
