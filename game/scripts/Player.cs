@@ -94,6 +94,8 @@ public partial class Player : CharacterBody3D
             case Key.Key2: ArmoryKey("rifle"); break;
             case Key.Key3: ArmoryKey("scattergun"); break;
             case Key.Key4: ArmoryKey("emberPistol"); break;
+            case Key.F9: _root.SaveGame(); break;
+            case Key.F10: _root.LoadGame(); break;
             case Key.Key5:
                 if (_sensor.GetOverlappingAreas().Any(a => (string)a.GetMeta("kind", "") == "armory"))
                     _root.RecraftBlueprint(_root.CurrentWeaponId());
@@ -224,10 +226,16 @@ public partial class Player : CharacterBody3D
         var map = _root.CurrentMap();
         var socket = map.Sockets.First(s => s.Id == socketId);
         if (socket.Tag == SocketTag.Wall) return "skywatch";
+        if (socket.Tag == SocketTag.Barricade) return "barricade";
+        if (socket.Tag == SocketTag.Trap)
+        {
+            int placedTraps = map.Sockets.Count(s => s.Tag == SocketTag.Trap && _root.SocketOccupied(s.Id));
+            return placedTraps switch { 0 => "tar", 1 => "spike", _ => "launcher" };
+        }
 
-        // Cycle: lance, lance, singularity, nova, then lances.
+        // Ground cycle: lance, arc, singularity, nova, then lances.
         int placed = map.Sockets.Count(s => s.Tag == SocketTag.Ground && _root.SocketOccupied(s.Id));
-        return placed switch { 2 => "singularity", 3 => "nova", _ => "lance" };
+        return placed switch { 1 => "arc", 2 => "singularity", 3 => "nova", _ => "lance" };
     }
 
     private void TryUpgrade()

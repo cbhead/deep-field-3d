@@ -82,5 +82,82 @@ public static class Waves
                     new WaveGroup("skiff", 4, 36, 260, "air"),
                 },
             },
+
+            // Switchyard: 12 waves, the M2 roster's teaching arc. Shortcut-route
+            // groups reroute to the long way when a barricade holds b1.
+            ["switchyard"] = new IReadOnlyList<WaveGroup>[]
+            {
+                new[] { new WaveGroup("drifter", 7, 24, 0, "groundShort") },
+                new[]
+                {
+                    new WaveGroup("drifter", 8, 22, 0, "ground"),
+                    new WaveGroup("mote", 8, 9, 100, "groundShort"),
+                },
+                // Warden debuts — coverage gaps get punished.
+                new[]
+                {
+                    new WaveGroup("warden", 2, 80, 0, "ground"),
+                    new WaveGroup("drifter", 8, 20, 40, "groundShort"),
+                },
+                // Mole debuts — hit the windows.
+                new[]
+                {
+                    new WaveGroup("mole", 4, 50, 0, "groundShort"),
+                    new WaveGroup("drifter", 6, 22, 60, "ground"),
+                },
+                // Cluster debuts — pre-place the splash.
+                new[]
+                {
+                    new WaveGroup("cluster", 4, 60, 0, "ground"),
+                    new WaveGroup("skiff", 4, 36, 40, "air"),
+                },
+                new[]
+                {
+                    new WaveGroup("warden", 3, 70, 0, "groundShort"),
+                    new WaveGroup("mole", 3, 55, 100, "ground"),
+                    new WaveGroup("mote", 8, 9, 160, "groundShort"),
+                },
+                new[]
+                {
+                    new WaveGroup("monolith", 1, 0, 0, "ground"),
+                    new WaveGroup("cluster", 3, 65, 40, "groundShort"),
+                    new WaveGroup("skiff", 5, 32, 80, "air"),
+                },
+                new[]
+                {
+                    new WaveGroup("aegis", 3, 80, 0, "groundShort"),
+                    new WaveGroup("warden", 2, 80, 120, "ground"),
+                    new WaveGroup("mote", 8, 9, 200, "groundShort"),
+                },
+                new[]
+                {
+                    new WaveGroup("mole", 5, 45, 0, "ground"),
+                    new WaveGroup("cluster", 4, 55, 60, "groundShort"),
+                    new WaveGroup("skiff", 6, 28, 100, "air"),
+                },
+                new[]
+                {
+                    new WaveGroup("monolith", 1, 0, 0, "groundShort"),
+                    new WaveGroup("aegis", 2, 90, 80, "ground"),
+                    new WaveGroup("warden", 2, 80, 180, "groundShort"),
+                },
+                new[]
+                {
+                    new WaveGroup("drifter", 12, 16, 0, "groundShort"),
+                    new WaveGroup("mole", 3, 50, 100, "ground"),
+                    new WaveGroup("cluster", 3, 60, 200, "groundShort"),
+                    new WaveGroup("skiff", 5, 30, 240, "air"),
+                },
+                // Finale: everything, both routes, both layers.
+                new[]
+                {
+                    new WaveGroup("monolith", 2, 180, 0, "ground"),
+                    new WaveGroup("aegis", 2, 90, 100, "groundShort"),
+                    new WaveGroup("warden", 2, 80, 200, "ground"),
+                    new WaveGroup("cluster", 4, 55, 280, "groundShort"),
+                    new WaveGroup("skiff", 5, 30, 320, "air"),
+                    new WaveGroup("mote", 10, 9, 380, "groundShort"),
+                },
+            },
         };
 }

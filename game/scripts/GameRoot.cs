@@ -88,20 +88,17 @@ public partial class GameRoot : Node3D
     private void StartDedicated(int port)
     {
         Mode = RunMode.Dedicated;
+        var args = OS.GetCmdlineUserArgs();
+        for (int i = 0; i < args.Length - 1; i++)
+            if (args[i] == "--map" && Maps.All.TryGetValue(args[i + 1], out var chosen))
+                _map = chosen;
         _world = new SimWorld(FreshSeed(), _map) { WaitForPlayers = true };
         _net.HostServer(port, _world);
         _net.ServerEnqueue = c => _world.Enqueue(c);
 
         _info = new InfoServer { Name = "Info" };
         AddChild(_info);
-        _info.StatusProvider = () => new Godot.Collections.Dictionary
-        {
-            ["app"] = "deepfield-3d",
-            ["map"] = _world.Map.Id,
-            ["players"] = _world.ConnectedPlayerCount,
-            ["wave"] = _world.WaveIndex + 1,
-            ["phase"] = _world.Phase.ToString(),
-        };
+        _info.StatusProvider = ServerInfo;
         _info.Start(port);
         GD.Print($"[server] deepfield-3d dedicated on udp:{port}, map {_map.Id}, protocol v{Protocol.Version}");
     }
@@ -121,14 +118,7 @@ public partial class GameRoot : Node3D
 
         _info = new InfoServer { Name = "Info" };
         AddChild(_info);
-        _info.StatusProvider = () => new Godot.Collections.Dictionary
-        {
-            ["app"] = "deepfield-3d",
-            ["map"] = _world!.Map.Id,
-            ["players"] = _world.ConnectedPlayerCount,
-            ["wave"] = _world.WaveIndex + 1,
-            ["phase"] = _world.Phase.ToString(),
-        };
+        _info.StatusProvider = ServerInfo;
         _info.Start(Protocol.DefaultPort);
         Toast(_info.TailscaleIp is { } ip
             ? $"hosting — invite: {ip}:{Protocol.DefaultPort}"
@@ -176,6 +166,46 @@ public partial class GameRoot : Node3D
     }
 
     private static uint FreshSeed() => (uint)(Time.GetTicksMsec() & 0xFFFFFFFF) ^ 0x9E3779B9u;
+
+    /// <summary>Mission Control's window into a live match.</summary>
+    private Godot.Collections.Dictionary ServerInfo() => new()
+    {
+        ["app"] = "deepfield-3d",
+        ["map"] = _world!.Map.Id,
+        ["players"] = _world.ConnectedPlayerCount,
+        ["wave"] = _world.WaveIndex + 1,
+        ["totalWaves"] = _world.Map.TotalWaves,
+        ["phase"] = _world.Phase.ToString(),
+        ["lives"] = _world.Lives,
+        ["money"] = _world.Money,
+    };
+
+    // ---- Solo save/load (F9/F10): the serialization layer doing double duty --
+
+    public void SaveGame()
+    {
+        if (Mode != RunMode.Solo || _world is null) { Toast("save is solo-only"); return; }
+        using var file = FileAccess.Open($"user://save-{_map.Id}.json", FileAccess.ModeFlags.Write);
+        file.StoreString(Serialization.Serialize(_world));
+        Toast("saved");
+    }
+
+    public void LoadGame()
+    {
+        if (Mode != RunMode.Solo) { Toast("load is solo-only"); return; }
+        string path = $"user://save-{_map.Id}.json";
+        if (!FileAccess.FileExists(path)) { Toast("no save for this map"); return; }
+        using var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
+        _world = Serialization.Deserialize(file.GetAsText());
+
+        // Rebuild structure views from the restored world.
+        foreach (var view in _towerViews.Values) view.QueueFree();
+        _towerViews.Clear();
+        foreach (var tower in _world.Towers) OnTowerPlaced(tower.Id, tower.SocketId);
+        foreach (var trap in _world.Traps) OnTowerPlaced(trap.Id, trap.SocketId);
+        _xpBanked = false;
+        Toast($"loaded — wave {_world.WaveIndex + 1}, {_world.Lives} lives");
+    }
 
     // =====================================================================
     // Frame loop
@@ -281,7 +311,8 @@ public partial class GameRoot : Node3D
         if (world is null) return false;
         if (Mode == RunMode.Client)
             return _towerViews.Values.Any(v => (string)v.GetMeta("socket_id", "") == socketId);
-        return world.Towers.Any(t => t.SocketId == socketId);
+        return world.Towers.Any(t => t.SocketId == socketId)
+            || world.Traps.Any(t => t.SocketId == socketId);
     }
 
     public string CurrentWeaponId()
@@ -412,9 +443,42 @@ public partial class GameRoot : Node3D
     {
         var socket = _map.Sockets.FirstOrDefault(s => s.Id == socketId);
         if (socket is null) return;
-        var view = SpawnTowerView(ToGd(socket.Pos));
+        var view = socket.Tag switch
+        {
+            SocketTag.Trap => SpawnFlatView(ToGd(socket.Pos), new Color(0.8f, 0.55f, 0.25f)),
+            SocketTag.Barricade => SpawnBarricadeView(ToGd(socket.Pos)),
+            _ => SpawnTowerView(ToGd(socket.Pos)),
+        };
         view.SetMeta("socket_id", socketId);
         _towerViews[towerId] = view;
+    }
+
+    private Node3D SpawnFlatView(Vector3 pos, Color color)
+    {
+        var root = new Node3D();
+        root.AddChild(new MeshInstance3D
+        {
+            Mesh = new CylinderMesh { TopRadius = 1.5f, BottomRadius = 1.5f, Height = 0.15f },
+            MaterialOverride = new StandardMaterial3D { AlbedoColor = color, EmissionEnabled = true, Emission = color * 0.3f },
+            Position = new Vector3(0, 0.2f, 0),
+        });
+        root.Position = pos;
+        AddChild(root);
+        return root;
+    }
+
+    private Node3D SpawnBarricadeView(Vector3 pos)
+    {
+        var root = new Node3D();
+        root.AddChild(new MeshInstance3D
+        {
+            Mesh = new BoxMesh { Size = new Vector3(4.5f, 2.2f, 0.8f) },
+            MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color(0.6f, 0.45f, 0.3f) },
+            Position = new Vector3(0, 1.1f, 0),
+        });
+        root.Position = pos;
+        AddChild(root);
+        return root;
     }
 
     // =====================================================================
@@ -608,6 +672,7 @@ public partial class GameRoot : Node3D
         }
 
         if (map.Id == "foundry") BuildFoundryStructures();
+        if (map.Id == "switchyard") BuildSwitchyardStructures();
 
         // Armory station.
         var armory = AddStaticBox(ToGd(map.ArmoryPos) + new Vector3(0, 1.25f, 0),
@@ -658,6 +723,40 @@ public partial class GameRoot : Node3D
         // (sim hookup lands at M2 with operated elements; sweepInert visual now).
         var controlPad = AddStaticBox(new Vector3(26, 0.1f, -6), new Vector3(3f, 0.2f, 3f), new Color(0.3f, 0.9f, 0.6f), layer: 1);
         controlPad.AddChild(MakeArea("controlPoint", new BoxShape3D { Size = new Vector3(3f, 1.5f, 3f) }));
+    }
+
+    /// <summary>Three tiers: mid deck over the yard, catwalk over the air lane.
+    /// Ladders chain tier to tier; the launcher skips straight to the deck.</summary>
+    private void BuildSwitchyardStructures()
+    {
+        // Mid deck (y=5) with its wall sockets w1/w2.
+        AddStaticBox(new Vector3(-6, 4.8f, -18), new Vector3(24, 0.4f, 8), new Color(0.45f, 0.48f, 0.55f), layer: 1);
+        AddStaticBox(new Vector3(-6, 2.4f, -18), new Vector3(1.2f, 4.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
+
+        // Upper catwalk (y=10) carrying w3/w4 over the air lane.
+        AddStaticBox(new Vector3(3, 9.8f, 3), new Vector3(22, 0.4f, 5), new Color(0.5f, 0.52f, 0.6f), layer: 1);
+        AddStaticBox(new Vector3(-6, 4.9f, 3), new Vector3(1.2f, 9.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
+        AddStaticBox(new Vector3(12, 4.9f, 3), new Vector3(1.2f, 9.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
+
+        // Ladders: yard → mid deck, mid deck → catwalk.
+        var ladder1 = AddStaticBox(new Vector3(-14f, 2.5f, -14.2f), new Vector3(1.2f, 5f, 0.15f), new Color(0.7f, 0.6f, 0.3f), layer: 0);
+        ladder1.AddChild(MakeArea("ladder", new BoxShape3D { Size = new Vector3(1.6f, 5.6f, 1.4f) }));
+        var ladder2 = AddStaticBox(new Vector3(-4f, 7.5f, 1.2f), new Vector3(1.2f, 5.4f, 0.15f), new Color(0.7f, 0.6f, 0.3f), layer: 0);
+        ladder2.AddChild(MakeArea("ladder", new BoxShape3D { Size = new Vector3(1.6f, 6.2f, 1.4f) }));
+
+        // Launcher pad: spawn yard straight onto the mid deck.
+        var launcher = AddStaticBox(new Vector3(8, 0.15f, -22), new Vector3(2.2f, 0.3f, 2.2f), new Color(0.9f, 0.5f, 0.9f), layer: 1);
+        var launchArea = MakeArea("launcher", new BoxShape3D { Size = new Vector3(2.2f, 1.2f, 2.2f) });
+        launchArea.SetMeta("launch_velocity", new Vector3(-8f, 11f, 3f));
+        launcher.AddChild(launchArea);
+
+        // Zipline: catwalk down to the core gate.
+        var zipStart = new Vector3(12f, 10.6f, 4f);
+        var zipEnd = new Vector3(32f, 1.6f, 5f);
+        var anchor = AddStaticBox(zipStart + new Vector3(0, 0.5f, 0), new Vector3(0.4f, 1f, 0.4f), new Color(0.85f, 0.8f, 0.4f), layer: 0);
+        var zipArea = MakeArea("zipline", new BoxShape3D { Size = new Vector3(2.5f, 2.5f, 2.5f) });
+        zipArea.SetMeta("zip_end", zipEnd);
+        anchor.AddChild(zipArea);
     }
 
     private static Area3D MakeArea(string kind, Shape3D shape)
@@ -846,6 +945,12 @@ public partial class GameRoot : Node3D
             _profile.Name = _playerName;
             _profile.Save();
         }
+
+        var mapPick = new OptionButton();
+        mapPick.AddItem("Foundry (10 waves — the slice)", 0);
+        mapPick.AddItem("Switchyard (12 waves — three tiers, barricade the cut)", 1);
+        mapPick.ItemSelected += index => _map = index == 0 ? Maps.Foundry : Maps.Switchyard;
+        vbox.AddChild(mapPick);
 
         var soloBtn = new Button { Text = "SOLO" };
         soloBtn.Pressed += () => { Grab(); StartSolo(Faction()); };

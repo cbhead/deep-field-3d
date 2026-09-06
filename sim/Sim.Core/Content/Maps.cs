@@ -90,10 +90,81 @@ public static class Maps
         },
         TotalWaves: 10);
 
+    /// <summary>M2 — "Switchyard": three tiers and the barricade lesson. The
+    /// ground shortcut through the freight cut is fast and badly covered; a
+    /// barricade on b1 closes it and forces the long switchback climb past the
+    /// kill-boxes. Wall sockets sit on two separate deck heights.</summary>
+    public static readonly MapDef Switchyard = new(
+        Id: "switchyard",
+        Routes: new[]
+        {
+            // The long way: switchbacks under both decks.
+            new RouteDef("ground", EnemyLayer.Ground, new[]
+            {
+                new Vec3(-45f, 0f, -10f),
+                new Vec3(-25f, 0f, -10f),
+                new Vec3(-25f, 0f, 12f),
+                new Vec3(-5f, 0f, 12f),
+                new Vec3(-5f, 0f, -12f),
+                new Vec3(15f, 0f, -12f),
+                new Vec3(15f, 0f, 10f),
+                new Vec3(40f, 0f, 8f),
+            }),
+            // The freight cut: straight through the middle, gated by b1.
+            new RouteDef("groundShort", EnemyLayer.Ground, new[]
+            {
+                new Vec3(-45f, 0f, -10f),
+                new Vec3(-20f, 0f, -2f),
+                new Vec3(5f, 0f, 0f),
+                new Vec3(40f, 0f, 8f),
+            }, BarricadeGate: "b1", FallbackRouteId: "ground"),
+            new RouteDef("air", EnemyLayer.Air, new[]
+            {
+                new Vec3(-45f, 9f, 4f),
+                new Vec3(-12f, 10f, 0f),
+                new Vec3(16f, 9f, -4f),
+                new Vec3(40f, 9f, 6f),
+            }),
+        },
+        Sockets: new[]
+        {
+            new SocketDef("g1", new Vec3(-30f, 0f, 2f), SocketTag.Ground),
+            new SocketDef("g2", new Vec3(-18f, 0f, 8f), SocketTag.Ground),
+            new SocketDef("g3", new Vec3(-10f, 0f, 4f), SocketTag.Ground),
+            new SocketDef("g4", new Vec3(0f, 0f, -4f), SocketTag.Ground),
+            new SocketDef("g5", new Vec3(10f, 0f, 2f), SocketTag.Ground),
+            new SocketDef("g6", new Vec3(20f, 0f, -4f), SocketTag.Ground),
+            new SocketDef("g7", new Vec3(30f, 0f, 2f), SocketTag.Ground),
+            // Mid deck (y=5) over the freight cut; upper catwalk (y=10) sees both.
+            new SocketDef("w1", new Vec3(-12f, 5f, -18f), SocketTag.Wall),
+            new SocketDef("w2", new Vec3(0f, 5f, -18f), SocketTag.Wall),
+            // Upper catwalk hangs over the air lane — the only sockets that can
+            // see the whole strand (ground Skywatches only reach its low dips).
+            new SocketDef("w3", new Vec3(-4f, 10f, 6f), SocketTag.Wall),
+            new SocketDef("w4", new Vec3(10f, 10f, 0f), SocketTag.Wall),
+            new SocketDef("t1", new Vec3(-25f, 0f, 0f), SocketTag.Trap),
+            new SocketDef("t2", new Vec3(-5f, 0f, 0f), SocketTag.Trap),
+            new SocketDef("t3", new Vec3(15f, 0f, -2f), SocketTag.Trap),
+            new SocketDef("t4", new Vec3(5f, 0f, 0f), SocketTag.Trap),
+            new SocketDef("b1", new Vec3(-8f, 0f, -1f), SocketTag.Barricade),
+        },
+        HeroSpawn: new Vec3(0f, 0f, -26f),
+        ArmoryPos: new Vec3(6f, 0f, -26f),
+        HeroStations: new[]
+        {
+            new HeroStationDef("yard", new Vec3(0f, 0f, -22f)),
+            new HeroStationDef("midDeck", new Vec3(-6f, 5f, -17f)),
+            new HeroStationDef("catwalk", new Vec3(2f, 10f, 3f)),
+            new HeroStationDef("cutMouth", new Vec3(-16f, 0f, -2f)),
+            new HeroStationDef("coreGate", new Vec3(32f, 0f, 5f)),
+        },
+        TotalWaves: 12);
+
     public static readonly IReadOnlyDictionary<string, MapDef> All =
         new Dictionary<string, MapDef>
         {
             [TestLane.Id] = TestLane,
             [Foundry.Id] = Foundry,
+            [Switchyard.Id] = Switchyard,
         };
 }

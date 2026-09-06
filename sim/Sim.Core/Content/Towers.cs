@@ -61,7 +61,7 @@ public static class Towers
     public static readonly TowerDef Skywatch = new(
         Id: "skywatch", Kind: TowerKind.Flak,
         Cost: 90, RangeMeters: 15f, MinRangeMeters: 0f,
-        Damage: 4f, ShotsPerSecond: 3.0f, ProjectileSpeed: 45f,
+        Damage: 5.5f, ShotsPerSecond: 3.0f, ProjectileSpeed: 45f,
         SplashRadius: 0f, SplashFalloff: 1f,
         ChainJumps: 0, ChainRange: 0f, ChainFalloff: 1f, StructureHp: 0f,
         Applies: System.Array.Empty<string>(),

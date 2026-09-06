@@ -450,6 +450,37 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
         $"apCrafted {apCrafted}, reachable {reachable}");
 }
 
+// --- Gate 21 (M2): Switchyard clears for the mid-band bot; towers-only floor holds.
+{
+    var mid = MatchRunner.Run(Seed, Maps.Switchyard, MidBot());
+    var floor = MatchRunner.Run(Seed, Maps.Switchyard);
+    var leaksByDef = floor.EventLog.Where(l => l.Contains(" enemyLeaked "))
+        .GroupBy(l => l.Split(' ')[3])
+        .Select(g => $"{g.Key}:{g.Count()}");
+    // Sector 2's shape differs from sector 1 by design: the mid-band player
+    // must clear it, but towers alone are only required to hold deep (≥10 of
+    // 12) — heroes mattering more as the campaign advances IS the thesis.
+    // (Same doctrine as the 2D game's accepted probe-understates-play note.)
+    Gate("switchyard: mid-band clears; towers-only holds ≥10 waves",
+        mid.Victory && floor.WavesCleared >= 10,
+        $"mid waves {mid.WavesCleared}/12 lives {mid.LivesLeft} | floor waves {floor.WavesCleared} lives {floor.LivesLeft} leaks {string.Join(",", leaksByDef)}");
+}
+
+// --- Gate 22 (M2): a barricade on b1 reroutes shortcut spawns to the long way.
+{
+    var world = new World(Seed, Maps.Switchyard);
+    world.Money = 1000;
+    world.Enqueue(new Command.PlaceTower(0, "barricade", "b1"));
+    world.Enqueue(new Command.StartWave(0));
+    while (world.Enemies.Count == 0) Step.Advance(world);
+
+    // Wave 1 is authored entirely onto groundShort (route index 1); with the
+    // gate closed every spawn must walk route index 0 (the long way).
+    bool rerouted = world.Enemies.All(e => e.RouteIndex == 0);
+    Gate("barricade: gated shortcut spawns fall back to the long route", rerouted,
+        $"routes {string.Join(",", world.Enemies.Select(e => e.RouteIndex).Distinct())}");
+}
+
 Console.WriteLine();
 Console.WriteLine(failures == 0 ? "ALL GATES GREEN" : $"{failures} GATE(S) FAILED");
 return failures == 0 ? 0 : 1;

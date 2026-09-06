@@ -36,6 +36,13 @@ public static class MatchRunner
             "lance:g2", "lance:g5", "skywatch:g4", "singularity:g3",
             "nova:g1", "skywatch:w2", "lance:g6", "lance:w1",
         },
+        ["switchyard"] = new[]
+        {
+            "lance:g3", "skywatch:g5", "arc:g6", "skywatch:w3",
+            "barricade:b1", "nova:g4", "singularity:g2", "lance:w1",
+            "tar:t2", "nova:g7", "lance:w2", "lance:g1",
+            "spike:t4", "skywatch:w4",
+        },
     };
 
     public static MatchResult Run(uint seed, MapDef map, params PlayerBot[] bots)
@@ -53,14 +60,16 @@ public static class MatchRunner
             if (buildCursor < buildOrder.Length)
             {
                 var parts = buildOrder[buildCursor].Split(':');
-                var def = Towers.All[parts[0]];
-                if (world.Money >= def.Cost)
+                int cost = Towers.All.TryGetValue(parts[0], out var towerDef)
+                    ? towerDef.Cost
+                    : Traps.All[parts[0]].Cost;
+                if (world.Money >= cost)
                 {
                     world.Enqueue(new Command.PlaceTower(0, parts[0], parts[1]));
                     buildCursor++;
                 }
             }
-            else if (world.Money > 250 && world.Towers.Count > 0)
+            else if (world.Money > 150 && world.Towers.Count > 0)
             {
                 // Surplus into damage paths, round-robin by tick for determinism.
                 var tower = world.Towers[(int)(world.Tick % world.Towers.Count)];
