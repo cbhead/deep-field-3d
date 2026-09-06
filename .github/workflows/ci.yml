@@ -21,3 +21,31 @@ jobs:
         run: dotnet test sim/Sim.Core.Tests --configuration Release
       - name: Harness gates
         run: dotnet run --project sim/Sim.Harness --configuration Release
+
+  # Smoke lane: headless dedicated server + headless client join on loopback.
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.2
+          use-dotnet: true
+          include-templates: false
+      - name: Import + build
+        run: |
+          godot --headless --import game
+          godot --headless --path game --build-solutions --quit || true
+      - name: Server + client join smoke
+        run: |
+          godot --headless --path game -- --server --port 8791 > server.log 2>&1 &
+          SERVER_PID=$!
+          sleep 6
+          godot --headless --path game --quit-after 900 -- --join 127.0.0.1:8791 > client.log 2>&1
+          curl -s http://127.0.0.1:8791/info | tee info.json
+          kill $SERVER_PID || true
+          grep -q '"app":"deepfield-3d"' info.json
+          grep -q "\[client\] joined seat" client.log

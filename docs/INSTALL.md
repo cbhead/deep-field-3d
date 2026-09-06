@@ -1,8 +1,21 @@
 # Install
 
 > This file is a first-class deliverable: it gets updated at every milestone.
-> Right now (M0) it covers **developer setup** only. Player installs (download a
-> release, open, paste invite link) arrive with the first tagged release at M1.
+
+## Players (friends joining a match)
+
+1. Download the latest release for your OS from the Releases page
+   (`DeepField3D-mac.zip` or `DeepField3D-windows.zip`).
+2. Unzip. On macOS the app is unsigned: **right-click → Open** the first time
+   (Gatekeeper), then it opens normally.
+3. Launch → enter your name → pick a faction (one per player — coordinate) →
+   paste the host's Tailscale IP into JOIN.
+4. You need to be on the host's tailnet. They'll send you a Tailscale invite if
+   you aren't; install Tailscale, accept, done.
+
+If you see "version mismatch" the host has a newer/older release — both grab
+the latest and rejoin. Mid-match joining is fine; you'll drop in at the next
+intermission with catch-up scrap.
 
 ## Developer setup (macOS)
 

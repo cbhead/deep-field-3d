@@ -1,0 +1,46 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Gates first — no release ships red
+        run: |
+          dotnet test sim/Sim.Core.Tests --configuration Release
+          dotnet run --project sim/Sim.Harness --configuration Release
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.2
+          use-dotnet: true
+          include-templates: true
+      - name: Import + build solutions
+        run: |
+          godot --headless --import game
+          godot --headless --path game --build-solutions --quit || true
+      - name: Export all presets
+        run: |
+          mkdir -p export
+          godot --headless --path game --export-release mac
+          godot --headless --path game --export-release windows
+          godot --headless --path game --export-release server-linux
+      - name: Package windows zip
+        run: |
+          cd export && zip DeepField3D-windows.zip DeepField3D-windows.* && rm DeepField3D-windows.exe || true
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            export/DeepField3D-mac.zip
+            export/DeepField3D-windows.zip
+            export/deepfield3d-server-linux
+          generate_release_notes: true
