@@ -242,7 +242,7 @@ public static class Step
         if (player.WeaponCooldown > 0f) return;
 
         var enemy = w.Enemies.FirstOrDefault(e => e.Id == hit.EnemyId && !e.Dead);
-        if (enemy is null) return;
+        if (enemy is null || enemy.Burrowed) return;
 
         player.WeaponCooldown = 1f / weapon.ShotsPerSecond;
         Damage(w, enemy, weapon.Damage, $"player{hit.PlayerId}", player.Pos, weapon.Applies, hit.PlayerId);
@@ -376,6 +376,7 @@ public static class Step
                 DefId = def.Id,
                 Hp = def.Hp * entry.HpFactor,
                 MaxHp = def.Hp * entry.HpFactor,
+                Shield = def.Shield * entry.HpFactor,
                 RouteIndex = entry.RouteIndex,
                 LateralOffset = entry.LateralOffset,
                 Pos = route.Waypoints[0],
@@ -400,6 +401,7 @@ public static class Step
         {
             if (enemy.Dead) continue;
 
+            bool controlled = false;
             for (int c = 0; c < enemy.Statuses.Length; c++)
             {
                 ref var slot = ref enemy.Statuses[c];
@@ -413,10 +415,25 @@ public static class Step
                     Damage(w, enemy, def.DamagePerSecond * Balance.Dt, slot.Source, enemy.Pos, null,
                         SourcePlayerId(slot.Source));
                 }
+                if (def.HardControl) controlled = true;
 
                 slot.TimeLeft -= Balance.Dt;
                 if (slot.TimeLeft <= 0f)
                     slot.StatusId = null;
+            }
+
+            // CC-resist gauge: fills while controlled, decays otherwise.
+            enemy.CcResist = controlled
+                ? MathF.Min(1f, enemy.CcResist + Balance.CcResistFillPerSecond * Balance.Dt)
+                : MathF.Max(0f, enemy.CcResist - Balance.CcResistDecayPerSecond * Balance.Dt);
+
+            // Shield regen after a lull (Warden).
+            var enemyDef = Enemies.All[enemy.DefId];
+            if (enemyDef.Shield > 0f)
+            {
+                enemy.ShieldTimer = MathF.Max(0f, enemy.ShieldTimer - Balance.Dt);
+                if (enemy.ShieldTimer <= 0f && enemy.Shield < enemyDef.Shield)
+                    enemy.Shield = MathF.Min(enemyDef.Shield, enemy.Shield + Balance.ShieldRegenPerSecond * Balance.Dt);
             }
         }
     }
@@ -439,9 +456,33 @@ public static class Step
             slot.StatusId = null;   // consume the active half
             float burst = enemy.MaxHp * reaction.BurstFraction;
             w.Emit(new SimEvent.ReactionTriggered(enemy.Id, reaction.Id, burst));
-            Damage(w, enemy, burst, source, enemy.Pos, null, playerId);
+            if (burst > 0f)
+                Damage(w, enemy, burst, source, enemy.Pos, null, playerId);
+
+            // Reaction output goes straight into its slot — never re-scanned,
+            // which is the closure guarantee (no reaction chains).
+            if (reaction.EmitStatus is { } emitted && !enemy.Dead)
+            {
+                var emitDef = Statuses.All[emitted];
+                if (!emitDef.HardControl || enemy.CcResist < 1f)
+                {
+                    ref var emitSlot = ref enemy.Statuses[(int)emitDef.Channel];
+                    emitSlot.StatusId = emitDef.Id;
+                    emitSlot.TimeLeft = emitDef.MaxDurationSeconds;
+                    emitSlot.Source = source;
+                    w.Emit(new SimEvent.StatusApplied(enemy.Id, emitDef.Id, source));
+                }
+            }
             return;                 // incoming status consumed by the reaction
         }
+
+        // Burn cannot ignite a shielded target — the shield eats it whole.
+        if (incoming.Channel == Channel.Thermal && enemy.Shield > 0f)
+            return;
+
+        // Hard control is gated by the cc-resist gauge.
+        if (incoming.HardControl && enemy.CcResist >= 1f)
+            return;
 
         float duration = incoming.MaxDurationSeconds;
         // Ember passive: that player's burns last longer.
@@ -486,6 +527,16 @@ public static class Step
             ref var movement = ref enemy.Statuses[(int)Channel.Movement];
             if (movement.Active)
                 speed *= Statuses.All[movement.StatusId!].SpeedFactor;
+
+            // Hard control: dead stop.
+            ref var control = ref enemy.Statuses[(int)Channel.Control];
+            if (control.Active && Statuses.All[control.StatusId!].HardControl)
+                speed = 0f;
+
+            // Burrow cycle (distance-based, deterministic): underground for the
+            // first stretch of every cycle, surfaced for the rest.
+            if (def.Burrower)
+                enemy.Burrowed = enemy.TotalTraveled % Balance.BurrowCycleMeters < Balance.BurrowedMeters;
 
             var legs = w.RouteLegLengths[enemy.RouteIndex];
             var waypoints = w.Map.Routes[enemy.RouteIndex].Waypoints;
@@ -673,6 +724,8 @@ public static class Step
             if (enemy.Dead) continue;
             if (!def.TargetLayers.Contains(Enemies.All[enemy.DefId].Layer)) continue;
 
+            if (enemy.Burrowed) continue;   // untargetable underground
+
             float distance = tower.Pos.DistanceTo(enemy.Pos);
             if (distance > range || distance < def.MinRangeMeters) continue;
             if (SightBlocked(w, tower.Pos, enemy)) continue;
@@ -799,9 +852,47 @@ public static class Step
     {
     }
 
-    /// <summary>M1 stub — split-on-death (Cluster) and death auras arrive with the roster.</summary>
+    /// <summary>Split-on-death: dead Clusters birth their Motes at the parent's
+    /// route position with seeded radial scatter. Children spawned here are
+    /// stepped from next tick (they join the lists after this phase).</summary>
     private static void ResolveDeaths(World w)
     {
+        var births = new List<Enemy>();
+        foreach (var enemy in w.Enemies)
+        {
+            if (!enemy.Dead) continue;
+            var def = Enemies.All[enemy.DefId];
+            if (def.SplitInto is null || def.SplitCount <= 0) continue;
+            if (enemy.Leg >= w.RouteLegLengths[enemy.RouteIndex].Length) continue; // leaked, not killed
+
+            var childDef = Enemies.All[def.SplitInto];
+            var rng = Util.RngStreams.StreamFor(w.Seed, "split", (uint)enemy.Id);
+            float hpFactor = enemy.MaxHp / def.Hp;   // children inherit wave scaling
+
+            for (int i = 0; i < def.SplitCount; i++)
+            {
+                var child = new Enemy
+                {
+                    Id = w.NextId(),
+                    DefId = childDef.Id,
+                    Hp = childDef.Hp * hpFactor,
+                    MaxHp = childDef.Hp * hpFactor,
+                    RouteIndex = enemy.RouteIndex,
+                    Leg = enemy.Leg,
+                    LegProgress = enemy.LegProgress,
+                    TotalTraveled = enemy.TotalTraveled,
+                    LateralOffset = (rng.NextFloat() - 0.5f) * MathF.Max(childDef.ScatterWidth, 2f),
+                    Pos = enemy.Pos,
+                    Facing = enemy.Facing,
+                    Bounty = childDef.Bounty,
+                    LeakDamage = childDef.LeakDamage,
+                    WaveIndex = enemy.WaveIndex,
+                };
+                births.Add(child);
+                w.Emit(new SimEvent.EnemySpawned(child.Id, child.DefId, child.WaveIndex));
+            }
+        }
+        w.Enemies.AddRange(births);
     }
 
     private static void Cleanup(World w)
@@ -871,8 +962,33 @@ public static class Step
         if (vulnerability.Active)
             amount *= Statuses.All[vulnerability.StatusId!].DamageTakenFactor;
 
+        // Flat armor per hit, softened by shred (defense channel). Shred also
+        // weakens Aegis's front plate — the counter to armor you can't out-level.
+        float flatArmor = def.FlatArmor;
+        ref var defense = ref enemy.Statuses[(int)Channel.Defense];
+        if (defense.Active)
+        {
+            flatArmor = MathF.Max(0f, flatArmor + Statuses.All[defense.StatusId!].ArmorDelta);
+            if (def.FrontArmorArcDegrees > 0f)
+                amount *= 1.35f;    // shredded plating: the front arc leaks
+        }
+        if (flatArmor > 0f && amount > 0f)
+            amount = MathF.Max(0.5f, amount - flatArmor);
+
+        // Shield soaks first (Warden) and resets its regen lull. Statuses still
+        // apply through a shield — except burn, which ApplyStatus refuses while
+        // shielded (the "can't ignite a shielded Warden" identity).
+        float total = amount;
+        if (enemy.Shield > 0f && amount > 0f)
+        {
+            enemy.ShieldTimer = Balance.ShieldRegenDelaySeconds;
+            float soaked = MathF.Min(enemy.Shield, amount);
+            enemy.Shield -= soaked;
+            amount -= soaked;
+        }
+
         enemy.Hp -= amount;
-        w.Emit(new SimEvent.EnemyDamaged(enemy.Id, amount, source));
+        w.Emit(new SimEvent.EnemyDamaged(enemy.Id, total, source));
 
         if (applies is not null)
         {

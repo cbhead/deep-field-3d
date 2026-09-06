@@ -30,6 +30,11 @@ public sealed record EnemyDef(
     float FrontArmorArcDegrees,   // Aegis: incoming damage inside this frontal arc is reduced
     float FrontArmorFactor,       // damage multiplier inside the arc (0.25 = 75% reduction)
     float RearWeakFactor,         // damage multiplier from directly behind (Aegis reward)
+    float Shield,                 // Warden: regenerating pool that soaks damage first
+    float FlatArmor,              // per-hit flat reduction (shred strips it)
+    bool Burrower,                // Mole: cycles untargetable underground
+    string? SplitInto,            // Cluster: child def id spawned on death
+    int SplitCount,
     IReadOnlyDictionary<ScrapType, int> ScrapYield);
 
 public sealed record UpgradePathDef(

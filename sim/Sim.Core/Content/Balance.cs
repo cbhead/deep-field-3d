@@ -42,4 +42,19 @@ public static class Balance
     public const float EmberBurnDurationFactor = 1.3f;
 
     public const int SellRefundPercent = 70;
+
+    // ---- M2: shields, cc-resist, burrowing --------------------------------
+    /// <summary>Seconds without damage before a Warden shield starts regrowing.</summary>
+    public const float ShieldRegenDelaySeconds = 3f;
+    public const float ShieldRegenPerSecond = 8f;
+
+    /// <summary>Hard CC fills a per-enemy resistance gauge; at full, immune
+    /// until it decays. One dial, swept — perma-stun breaks the genre.</summary>
+    public const float CcResistFillPerSecond = 0.45f;   // gauge/sec while controlled
+    public const float CcResistDecayPerSecond = 0.125f; // ~8s from full to empty
+
+    /// <summary>Mole cycle, distance-based so it's deterministic and readable:
+    /// burrowed for the first stretch of each cycle, surfaced for the rest.</summary>
+    public const float BurrowCycleMeters = 14f;
+    public const float BurrowedMeters = 8f;
 }

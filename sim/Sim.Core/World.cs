@@ -33,6 +33,12 @@ public sealed class Enemy
 
     /// <summary>Indexed by (int)Channel — fixed size, no allocation per status.</summary>
     public StatusSlot[] Statuses = new StatusSlot[8];
+
+    // M2 state.
+    public float Shield;
+    public float ShieldTimer;     // counts down after damage; regen when expired
+    public float CcResist;        // 0..1 gauge; full = immune to hard control
+    public bool Burrowed;         // Mole: untargetable while underground
 }
 
 public sealed class Tower

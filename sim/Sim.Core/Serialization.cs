@@ -12,7 +12,8 @@ public static class Serialization
     private sealed record EnemyState(
         int Id, string DefId, float Hp, float MaxHp, int RouteIndex, int Leg, float LegProgress,
         float TotalTraveled, float LateralOffset, float FacingX, float FacingY, float FacingZ,
-        int Bounty, int LeakDamage, int WaveIndex, List<StatusState> Statuses);
+        int Bounty, int LeakDamage, int WaveIndex, List<StatusState> Statuses,
+        float Shield, float ShieldTimer, float CcResist, bool Burrowed);
     private sealed record TowerState(
         int Id, string DefId, string SocketId, float Cooldown, int Spent, int Kills,
         float DamageDealt, int[] PathLevels, float BuffTimer, float BuffFactor);
@@ -42,7 +43,8 @@ public static class Serialization
             w.Enemies.Select(e => new EnemyState(
                 e.Id, e.DefId, e.Hp, e.MaxHp, e.RouteIndex, e.Leg, e.LegProgress,
                 e.TotalTraveled, e.LateralOffset, e.Facing.X, e.Facing.Y, e.Facing.Z,
-                e.Bounty, e.LeakDamage, e.WaveIndex, ActiveStatuses(e))).ToList(),
+                e.Bounty, e.LeakDamage, e.WaveIndex, ActiveStatuses(e),
+                e.Shield, e.ShieldTimer, e.CcResist, e.Burrowed)).ToList(),
             w.Towers.Select(t => new TowerState(
                 t.Id, t.DefId, t.SocketId, t.Cooldown, t.Spent, t.Kills,
                 t.DamageDealt, t.PathLevels, t.BuffTimer, t.BuffFactor)).ToList(),
@@ -88,6 +90,8 @@ public static class Serialization
                 TotalTraveled = e.TotalTraveled, LateralOffset = e.LateralOffset,
                 Facing = new Vec3(e.FacingX, e.FacingY, e.FacingZ),
                 Bounty = e.Bounty, LeakDamage = e.LeakDamage, WaveIndex = e.WaveIndex,
+                Shield = e.Shield, ShieldTimer = e.ShieldTimer,
+                CcResist = e.CcResist, Burrowed = e.Burrowed,
             };
             foreach (var s in e.Statuses)
             {

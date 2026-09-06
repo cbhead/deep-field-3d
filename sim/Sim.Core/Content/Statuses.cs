@@ -22,6 +22,8 @@ public sealed record StatusDef(
     float SpeedFactor,        // movement channel (1 = no effect)
     float DamagePerSecond,    // thermal/toxin channels
     float DamageTakenFactor,  // vulnerability channel (1 = no effect)
+    float ArmorDelta,         // defense channel (negative = shredded)
+    bool HardControl,         // control channel: full stop, gated by cc-resist
     float MaxDurationSeconds)
 {
     /// <summary>Magnitude decides strongest-wins within a channel.</summary>
@@ -30,6 +32,8 @@ public sealed record StatusDef(
         Channel.Movement => 1f - SpeedFactor,
         Channel.Thermal or Channel.Toxin => DamagePerSecond,
         Channel.Vulnerability => DamageTakenFactor - 1f,
+        Channel.Defense => -ArmorDelta,
+        Channel.Control => MaxDurationSeconds,
         _ => 0f,
     };
 }
@@ -40,21 +44,42 @@ public static class Statuses
     public static readonly StatusDef Chill = new(
         Id: "chill", Channel: Channel.Movement,
         SpeedFactor: 0.65f, DamagePerSecond: 0f, DamageTakenFactor: 1f,
-        MaxDurationSeconds: 1.5f);
+        ArmorDelta: 0f, HardControl: false, MaxDurationSeconds: 1.5f);
 
     /// <summary>Ember faction ability and ember-coil infusion. High dps, short —
-    /// and at M2+ shields eat it (the burn-vs-poison identity).</summary>
+    /// and shields eat it entirely (the burn-vs-poison identity).</summary>
     public static readonly StatusDef Burn = new(
         Id: "burn", Channel: Channel.Thermal,
         SpeedFactor: 1f, DamagePerSecond: 6f, DamageTakenFactor: 1f,
-        MaxDurationSeconds: 3f);
+        ArmorDelta: 0f, HardControl: false, MaxDurationSeconds: 3f);
 
     /// <summary>Rifle alt-fire. Short window of amplified damage — the
     /// prioritization tool.</summary>
     public static readonly StatusDef Mark = new(
         Id: "mark", Channel: Channel.Vulnerability,
         SpeedFactor: 1f, DamagePerSecond: 0f, DamageTakenFactor: 1.25f,
-        MaxDurationSeconds: 4f);
+        ArmorDelta: 0f, HardControl: false, MaxDurationSeconds: 4f);
+
+    /// <summary>Arc tower and Tempest's Chain Surge. A micro-stagger in the
+    /// control channel (cc-resist gates it) — mostly reaction fuel.</summary>
+    public static readonly StatusDef Shock = new(
+        Id: "shock", Channel: Channel.Control,
+        SpeedFactor: 0f, DamagePerSecond: 0f, DamageTakenFactor: 1f,
+        ArmorDelta: 0f, HardControl: true, MaxDurationSeconds: 0.25f);
+
+    /// <summary>Flash Freeze output — the real hard stop. Never applied
+    /// directly at M2; only the chill+shock reaction produces it.</summary>
+    public static readonly StatusDef Freeze = new(
+        Id: "freeze", Channel: Channel.Control,
+        SpeedFactor: 0f, DamagePerSecond: 0f, DamageTakenFactor: 1f,
+        ArmorDelta: 0f, HardControl: true, MaxDurationSeconds: 1.2f);
+
+    /// <summary>Armor shred: strips flat armor and softens Aegis's front arc —
+    /// the answer to armor the team hasn't out-leveled.</summary>
+    public static readonly StatusDef Shred = new(
+        Id: "shred", Channel: Channel.Defense,
+        SpeedFactor: 1f, DamagePerSecond: 0f, DamageTakenFactor: 1f,
+        ArmorDelta: -2f, HardControl: false, MaxDurationSeconds: 4f);
 
     public static readonly IReadOnlyDictionary<string, StatusDef> All =
         new Dictionary<string, StatusDef>
@@ -62,6 +87,9 @@ public static class Statuses
             [Chill.Id] = Chill,
             [Burn.Id] = Burn,
             [Mark.Id] = Mark,
+            [Shock.Id] = Shock,
+            [Freeze.Id] = Freeze,
+            [Shred.Id] = Shred,
         };
 }
 
@@ -73,7 +101,8 @@ public sealed record ReactionDef(
     string Id,
     string StatusA,
     string StatusB,
-    float BurstFraction);   // burst damage = fraction of victim MaxHp
+    float BurstFraction,     // burst damage = fraction of victim MaxHp
+    string? EmitStatus);     // status applied by the reaction's output (bypasses further reactions)
 
 public static class Reactions
 {
@@ -83,9 +112,19 @@ public static class Reactions
         Id: "thermalShock",
         StatusA: Statuses.Chill.Id,
         StatusB: Statuses.Burn.Id,
-        BurstFraction: 0.12f);
+        BurstFraction: 0.12f,
+        EmitStatus: null);
 
-    public static readonly IReadOnlyList<ReactionDef> All = new[] { ThermalShock };
+    /// <summary>M2: chill + shock locks the target solid. Emitted freeze goes
+    /// straight into the control slot — reaction outputs never chain (closure).</summary>
+    public static readonly ReactionDef FlashFreeze = new(
+        Id: "flashFreeze",
+        StatusA: Statuses.Chill.Id,
+        StatusB: Statuses.Shock.Id,
+        BurstFraction: 0f,
+        EmitStatus: Statuses.Freeze.Id);
+
+    public static readonly IReadOnlyList<ReactionDef> All = new[] { ThermalShock, FlashFreeze };
 
     public static ReactionDef? Match(string active, string incoming)
     {
