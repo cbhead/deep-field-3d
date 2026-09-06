@@ -34,6 +34,10 @@ public partial class GameRoot : Node3D
     private readonly Dictionary<int, Node3D> _enemyViews = new();
     private readonly Dictionary<int, Node3D> _projectileViews = new();
     private readonly Dictionary<int, Node3D> _towerViews = new();
+    /// <summary>--audit-sockets prints every build pad's world height beside
+    /// its socket's. Cheap, and it is how the wall-socket pads were caught
+    /// rendering on the floor instead of on the deck.</summary>
+    private bool _auditSockets;
     private string? _shotPath;
     private string _shotView = "eye";
     private int _shotCountdown;
@@ -92,6 +96,7 @@ public partial class GameRoot : Node3D
         }
 
         BuildUi();
+        _auditSockets = System.Array.IndexOf(args, "--audit-sockets") >= 0;
 
         // Headless smoke-test seams: --join <ip> connects from boot, --solo
         // starts a local match immediately (both exercise the full UI stack).
@@ -1249,6 +1254,9 @@ public partial class GameRoot : Node3D
             _socketBodies[socket.Id] = body;
             _socketTags[socket.Id] = socket.Tag;
             RefreshSocketArt(socket.Id, occupied: false);
+            if (_auditSockets && body.GetNodeOrNull<Node3D>("SocketArt") is { } pad)
+                GD.Print($"[socket] {socket.Id} tag={socket.Tag} socketY={body.Position.Y:0.00} "
+                    + $"padY={pad.GlobalPosition.Y:0.00}");
         }
 
         if (map.Id == "foundry") BuildFoundryStructures();
@@ -1414,7 +1422,12 @@ public partial class GameRoot : Node3D
             body.RemoveChild(stale);
             stale.QueueFree();
         }
-        var art = MapKit.Mount(body, asset, MapKit.GroundLocal(body));
+        // At the socket, not at world zero. GroundLocal is for map kit authored
+        // at true world height — a terrain tile or a deck segment carries its
+        // own elevation. A build pad belongs wherever its socket is, so using
+        // that rule here dropped every wall socket's pad onto the floor
+        // directly under the deck and left the deck itself unmarked.
+        var art = MapKit.Mount(body, asset, 0f);
         if (art && body.GetChild(body.GetChildCount() - 1) is Node3D placed) placed.Name = "SocketArt";
     }
 
