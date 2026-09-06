@@ -44,7 +44,7 @@ public partial class MatchScreens : CanvasLayer
     private void BuildIntermission()
     {
         _intermission = new Control { MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false };
-        _intermission.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        _intermission.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         AddChild(_intermission);
 
         var card = UiTheme.Card();
@@ -144,11 +144,11 @@ public partial class MatchScreens : CanvasLayer
     private void BuildEndScreen()
     {
         _endScreen = new Control { MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false };
-        _endScreen.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        _endScreen.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         AddChild(_endScreen);
 
         var backdrop = new ColorRect { Color = new Color(0.02f, 0.03f, 0.05f, 0.75f) };
-        backdrop.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        backdrop.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         _endScreen.AddChild(backdrop);
 
         var card = UiTheme.Card();
@@ -212,7 +212,7 @@ public partial class MatchScreens : CanvasLayer
     private void BuildPause()
     {
         _pause = new Control { Visible = false };
-        _pause.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        _pause.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         AddChild(_pause);
 
         var backdrop = new ColorRect
@@ -220,7 +220,7 @@ public partial class MatchScreens : CanvasLayer
             Color = new Color(0.02f, 0.03f, 0.05f, 0.85f),
             MouseFilter = Control.MouseFilterEnum.Stop,
         };
-        backdrop.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        backdrop.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         _pause.AddChild(backdrop);
 
         var columns = new HBoxContainer();
@@ -297,7 +297,7 @@ public partial class MatchScreens : CanvasLayer
     private void BuildStatus()
     {
         _status = new Control { MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false };
-        _status.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        _status.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         AddChild(_status);
 
         var card = UiTheme.Card();

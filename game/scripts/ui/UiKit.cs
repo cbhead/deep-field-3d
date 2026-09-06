@@ -324,6 +324,291 @@ public static class Kit
         col.AddThemeConstantOverride("separation", gap);
         return col;
     }
+
+    /// <summary>Label on the left, value on the right — the row shape that
+    /// carries almost every stat readout in the kit.</summary>
+    public static HBoxContainer Between(Control left, Control right)
+    {
+        var row = Row();
+        left.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        row.AddChild(left);
+        row.AddChild(right);
+        return row;
+    }
+
+    /// <summary>Tinted tag chips: the kit's `.tag` tones.</summary>
+    public static PanelContainer TagBrass(string t) => Tag(t, Tokens.Brass500);
+    public static PanelContainer TagArcane(string t) => Tag(t, Tokens.Arcane500);
+    public static PanelContainer TagDanger(string t) => Tag(t, Tokens.Threat500, Tokens.Steel050);
+    public static PanelContainer TagOk(string t) => Tag(t, Tokens.Venom500);
+    public static PanelContainer TagSoul(string t) => Tag(t, Tokens.Soul500, Tokens.Steel050);
+
+    /// <summary>The 24px icon used inline throughout the screens.</summary>
+    public static TextureRect Icon(string id, Color tint, int size = 24)
+        => SlotIcon(UiTheme.Icon(id, tint), tint, size);
+
+    /// <summary>Full-screen surfaces all sit on the same obsidian lattice.</summary>
+    public static Control Backdrop(Control root)
+    {
+        var grid = new KitGrid();
+        root.AddChild(grid);
+        return grid;
+    }
+
+    /// <summary>The 64px title bar with a brass underline that every
+    /// full-screen surface opens with.</summary>
+    public static (PanelContainer Bar, HBoxContainer Row) ScreenHeader(string title)
+    {
+        var bar = new PanelContainer();
+        bar.AddThemeStyleboxOverride("panel", new StyleBoxFlat
+        {
+            BgColor = Tokens.SurfacePanel,
+            BorderColor = Tokens.Brass500,
+            BorderWidthBottom = 2,
+            ContentMarginLeft = Tokens.Space9,
+            ContentMarginRight = Tokens.Space9,
+            ContentMarginTop = Tokens.Space5,
+            ContentMarginBottom = Tokens.Space5,
+        });
+        bar.SetAnchorsPreset(Control.LayoutPreset.TopWide);
+        bar.CustomMinimumSize = new Vector2(0, 64);
+
+        var row = Row(Tokens.Space8);
+        bar.AddChild(row);
+        row.AddChild(Title(title, Tokens.SizeDisplayMd));
+        return (bar, row);
+    }
+
+    public static Control Spacer()
+        => new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+}
+
+/// <summary>The kit's titled panel: a 38px header carrying a brass diamond and
+/// tracked caps, a padded body, and an optional inset footer. The header's
+/// bottom edge takes the panel's tone, which is how a surface says whether it
+/// is informational, a purchase, or a warning.</summary>
+public partial class KitPanel : PanelContainer
+{
+    public VBoxContainer Body = null!;
+    private VBoxContainer _stack = null!;
+    private HBoxContainer _header = null!;
+
+    public KitPanel(string title, Color? tone = null, bool hazard = false)
+    {
+        AddThemeStyleboxOverride("panel", new ChamferBox
+        {
+            Fill = Tokens.SurfacePanel,
+            Stroke = Tokens.BorderPanel,
+            Chamfer = Tokens.ChamferMd,
+            DropShadow = true,
+        });
+
+        _stack = new VBoxContainer();
+        _stack.AddThemeConstantOverride("separation", 0);
+        AddChild(_stack);
+
+        var headerBox = new PanelContainer();
+        headerBox.AddThemeStyleboxOverride("panel", new StyleBoxFlat
+        {
+            BgColor = hazard ? Tokens.Obsidian500 : Tokens.SurfaceRaised,
+            BorderColor = tone ?? Tokens.BorderPanel,
+            BorderWidthBottom = tone is null ? 1 : 2,
+            ContentMarginLeft = Tokens.PadPanelTight,
+            ContentMarginRight = Tokens.PadPanelTight,
+            ContentMarginTop = 9,
+            ContentMarginBottom = 9,
+        });
+        _stack.AddChild(headerBox);
+
+        _header = Kit.Row(Tokens.GapInline);
+        headerBox.AddChild(_header);
+        _header.AddChild(new KitDiamond(10f, tone ?? Tokens.Brass400));
+        var label = Kit.Label(title, Tokens.TextSecondary);
+        label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        _header.AddChild(label);
+
+        var bodyBox = new PanelContainer();
+        bodyBox.AddThemeStyleboxOverride("panel", new StyleBoxFlat
+        {
+            BgColor = new Color(0, 0, 0, 0),
+            ContentMarginLeft = Tokens.PadPanel,
+            ContentMarginRight = Tokens.PadPanel,
+            ContentMarginTop = Tokens.PadPanel,
+            ContentMarginBottom = Tokens.PadPanel,
+        });
+        bodyBox.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+        _stack.AddChild(bodyBox);
+
+        Body = Kit.Col(Tokens.GapStack);
+        bodyBox.AddChild(Body);
+    }
+
+    /// <summary>Right-hand chip in the header — costs, counts, states.</summary>
+    public void HeaderTrailing(Control node) => _header.AddChild(node);
+
+    public void SetFooter(Control content)
+    {
+        var footer = new PanelContainer();
+        footer.AddThemeStyleboxOverride("panel", new StyleBoxFlat
+        {
+            BgColor = Tokens.SurfaceInset,
+            BorderColor = Tokens.BorderPanel,
+            BorderWidthTop = 1,
+            ContentMarginLeft = Tokens.PadPanel,
+            ContentMarginRight = Tokens.PadPanel,
+            ContentMarginTop = Tokens.PadPanelTight,
+            ContentMarginBottom = Tokens.PadPanelTight,
+        });
+        footer.AddChild(content);
+        _stack.AddChild(footer);
+    }
+}
+
+/// <summary>Buttons are chamfered on two corners and never rounded. Primary is
+/// a brass gradient with dark ink — it is the only element allowed to be that
+/// loud, which is what makes "the action" obvious on a busy screen.</summary>
+public partial class KitButton : Button
+{
+    public enum Tone { Primary, Secondary, Danger, Arcane, Ghost }
+
+    public KitButton(string text, Tone tone = Tone.Primary, int height = Tokens.ControlMd)
+    {
+        Text = text.ToUpperInvariant();
+        CustomMinimumSize = new Vector2(0, height);
+
+        if (Kit.TrackedDisplay(Tokens.TrackingLabel) is { } font)
+            AddThemeFontOverride("font", font);
+        AddThemeFontSizeOverride("font_size", height >= Tokens.ControlLg ? Tokens.SizeBody : Tokens.SizeCaption);
+
+        var (fill, ink, stroke) = tone switch
+        {
+            Tone.Primary => (Tokens.Brass500, Tokens.TextInverse, Tokens.Brass300),
+            Tone.Danger => (Tokens.Threat500, Tokens.Steel050, Tokens.Threat400),
+            Tone.Arcane => (Tokens.Arcane500, Tokens.TextInverse, Tokens.Arcane300),
+            Tone.Ghost => (new Color(0, 0, 0, 0), Tokens.TextSecondary, Tokens.BorderPanel),
+            _ => (Tokens.Obsidian500, Tokens.TextPrimary, Tokens.BorderStrong),
+        };
+
+        foreach (string state in new[] { "normal", "hover", "pressed", "disabled", "focus" })
+        {
+            bool hot = state is "hover" or "pressed";
+            bool off = state == "disabled";
+            AddThemeStyleboxOverride(state, new ChamferBox
+            {
+                Fill = off ? fill with { A = fill.A * 0.4f } : hot ? fill.Lightened(0.12f) : fill,
+                Stroke = stroke,
+                Chamfer = 7f,
+                DropShadow = tone != Tone.Ghost,
+            });
+        }
+
+        AddThemeColorOverride("font_color", ink);
+        AddThemeColorOverride("font_hover_color", ink);
+        AddThemeColorOverride("font_pressed_color", ink);
+        AddThemeColorOverride("font_disabled_color", Tokens.TextDisabled);
+    }
+}
+
+/// <summary>Settings switch. Hard edges, brass when on — no pill, no slide.</summary>
+public partial class KitToggle : Control
+{
+    public bool On;
+
+    public KitToggle(bool on = false)
+    {
+        On = on;
+        CustomMinimumSize = new Vector2(44, 22);
+    }
+
+    public override void _Draw()
+    {
+        var track = new Rect2(Vector2.Zero, Size);
+        DrawRect(track, On ? Tokens.Brass700 : Tokens.SurfaceSlot);
+        DrawRect(track, On ? Tokens.Brass500 : Tokens.BorderStrong, filled: false, width: 1f);
+        var knob = new Rect2(new Vector2(On ? Size.X - 20 : 2, 2), new Vector2(18, Size.Y - 4));
+        DrawRect(knob, On ? Tokens.Brass400 : Tokens.Steel400);
+    }
+}
+
+/// <summary>Per-wave clear times. Bars, not a curve — this is a game HUD.</summary>
+public partial class KitSpark : Control
+{
+    public float[] Values = System.Array.Empty<float>();
+    public int Highlight = -1;
+
+    public KitSpark() => CustomMinimumSize = new Vector2(0, 40);
+
+    public void Set(float[] values, int highlight = -1)
+    {
+        Values = values;
+        Highlight = highlight;
+        QueueRedraw();
+    }
+
+    public override void _Draw()
+    {
+        if (Values.Length == 0) return;
+        float peak = 0.001f;
+        foreach (float v in Values) peak = Mathf.Max(peak, v);
+        float slot = Size.X / Values.Length;
+        for (int i = 0; i < Values.Length; i++)
+        {
+            float h = Size.Y * (Values[i] / peak);
+            DrawRect(new Rect2(new Vector2(i * slot, Size.Y - h), new Vector2(slot - 2, h)),
+                i == Highlight ? Tokens.Arcane400 : Tokens.Arcane600);
+        }
+    }
+}
+
+/// <summary>The bleed-out and revive dial. A ring rather than a bar because it
+/// sits at screen centre where a bar would read as damage.</summary>
+public partial class KitRing : Control
+{
+    public float Value;                       // 0..1
+    public Color Fill = Tokens.Venom500;
+    public string Caption = "";
+
+    public KitRing(float size = 120f) => CustomMinimumSize = new Vector2(size, size);
+
+    public void Set(float value, Color fill, string caption)
+    {
+        Value = Mathf.Clamp(value, 0f, 1f);
+        Fill = fill;
+        Caption = caption;
+        QueueRedraw();
+    }
+
+    public override void _Draw()
+    {
+        var centre = Size * 0.5f;
+        float radius = Mathf.Min(Size.X, Size.Y) * 0.5f - 6f;
+        DrawArc(centre, radius, 0, Mathf.Tau, 64, Tokens.Obsidian500, 8f);
+        if (Value > 0f)
+            DrawArc(centre, radius, -Mathf.Pi / 2f, -Mathf.Pi / 2f + Mathf.Tau * Value, 64, Fill, 8f);
+
+        if (Caption.Length == 0 || Tokens.Mono is not { } font) return;
+        var size = font.GetStringSize(Caption, HorizontalAlignment.Center, -1, Tokens.SizeStat);
+        DrawString(font, centre + new Vector2(-size.X * 0.5f, size.Y * 0.3f), Caption,
+            HorizontalAlignment.Center, -1, Tokens.SizeStat, Fill);
+    }
+}
+
+/// <summary>The faint 24px lattice behind every full-screen surface.</summary>
+public partial class KitGrid : Control
+{
+    public KitGrid()
+    {
+        MouseFilter = MouseFilterEnum.Ignore;
+        SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+    }
+
+    public override void _Draw()
+    {
+        DrawRect(new Rect2(Vector2.Zero, Size), Tokens.Obsidian900);
+        var line = new Color(Tokens.Steel500.R, Tokens.Steel500.G, Tokens.Steel500.B, 0.16f);
+        for (float x = 0; x < Size.X; x += 24) DrawLine(new Vector2(x, 0), new Vector2(x, Size.Y), line, 1f);
+        for (float y = 0; y < Size.Y; y += 24) DrawLine(new Vector2(0, y), new Vector2(Size.X, y), line, 1f);
+    }
 }
 
 /// <summary>A rotated square. Lives, faction chips and panel header marks are

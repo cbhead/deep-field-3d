@@ -25,6 +25,7 @@ public partial class BuildWheel : Control
     private GameView _view = new();
     private string _socketId = "";
     private string _refusal = "";
+    private string _tagLabel = "";
 
     public bool IsOpen { get; private set; }
     public string SocketId => _socketId;
@@ -64,7 +65,7 @@ public partial class BuildWheel : Control
 
     public override void _Ready()
     {
-        SetAnchorsPreset(LayoutPreset.FullRect);
+        SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         MouseFilter = MouseFilterEnum.Ignore;   // never eat gameplay input
         Visible = false;
         ZIndex = 10;
@@ -73,6 +74,7 @@ public partial class BuildWheel : Control
     public void Open(SocketDef socket, GameView view)
     {
         _socketId = socket.Id;
+        _tagLabel = socket.Tag.ToString().ToUpperInvariant();
         _view = view;
         _options.Clear();
         _options.AddRange(OptionsFor(socket.Tag));
@@ -155,10 +157,13 @@ public partial class BuildWheel : Control
     {
         if (!IsOpen || _options.Count == 0) return;
 
-        var center = Size * 0.5f;
+        var centre = Size * 0.5f;
         float wedge = Mathf.Tau / _options.Count;
+        var display = Tokens.Display;
+        var mono = Tokens.Mono;
 
-        DrawCircle(center, Radius + 14f, new Color(0, 0, 0, 0.45f));
+        // Ring backing keeps the wedges legible over a bright world.
+        DrawCircle(centre, Radius + 30f, new Color(0.031f, 0.043f, 0.067f, 0.55f));
 
         for (int i = 0; i < _options.Count; i++)
         {
@@ -167,63 +172,73 @@ public partial class BuildWheel : Control
             bool selected = i == _selected;
 
             float mid = i * wedge - Mathf.Pi * 0.5f;
-            var dir = new Vector2(Mathf.Cos(mid), Mathf.Sin(mid));
-            var seat = center + dir * (Radius * 0.62f);
+            var seat = centre + new Vector2(Mathf.Cos(mid), Mathf.Sin(mid)) * Radius;
 
-            // Wedge backing.
-            var fill = selected
-                ? (affordable ? UiTheme.Accent with { A = 0.55f } : UiTheme.Danger with { A = 0.45f })
-                : new Color(0.10f, 0.12f, 0.15f, 0.75f);
-            DrawArcFilled(center, Radius, i * wedge - wedge * 0.5f - Mathf.Pi * 0.5f, wedge, fill);
+            // Each entry is a chamfered card, not a pie slice — design's wheel
+            // is a ring of cards so the icon, name and price stay upright.
+            var card = new Rect2(seat - new Vector2(58, 46), new Vector2(116, 92));
+            DrawChamfered(card, selected ? Tokens.SurfaceRaised : Tokens.SurfaceGlass,
+                selected ? Tokens.Brass500 : Tokens.BorderPanel, 8f);
 
-            var ink = affordable ? UiTheme.Ink : UiTheme.Disabled;
+            var ink = !affordable ? Tokens.TextDisabled
+                : selected ? Tokens.TextAccent : Tokens.TextPrimary;
 
-            // Icon chip (design's art when present, placeholder chip until then).
-            var icon = UiTheme.Icon(option.IconId, affordable ? UiTheme.Accent : UiTheme.Disabled);
-            var iconSize = new Vector2(34, 34);
-            // Design's icons are white line art; the modulate colour is what
-            // makes affordable vs unaffordable read.
-            var iconTint = affordable ? UiTheme.Ink : UiTheme.Disabled;
-            DrawTextureRect(icon, new Rect2(seat - iconSize * 0.5f - new Vector2(0, 14), iconSize), false,
-                iconTint with { A = affordable ? 1f : 0.5f });
+            var icon = UiTheme.Icon(option.IconId, ink);
+            DrawTextureRect(icon, new Rect2(seat - new Vector2(16, 34), new Vector2(32, 32)),
+                false, ink with { A = affordable ? 1f : 0.45f });
 
-            DrawString(ThemeDB.FallbackFont, seat + new Vector2(-38, 16), option.Label,
-                HorizontalAlignment.Center, 76, 13, ink);
+            if (display is not null)
+                DrawString(display, seat + new Vector2(-52, 16), option.Label,
+                    HorizontalAlignment.Center, 104, Tokens.SizeCaption, ink);
 
-            string price = $"{DisplayCost(option)}c";
-            foreach (var (type, amount) in option.ScrapCost)
-                price += $" +{amount}{type.ToString()[0]}";
-            DrawString(ThemeDB.FallbackFont, seat + new Vector2(-38, 32), price,
-                HorizontalAlignment.Center, 76, 11,
-                affordable ? UiTheme.InkDim : UiTheme.Danger);
+            if (mono is not null)
+            {
+                string price = DisplayCost(option).ToString();
+                foreach (var (type, amount) in option.ScrapCost)
+                    price += $" +{amount}{type.ToString()[0]}";
+                DrawString(mono, seat + new Vector2(-52, 34), price,
+                    HorizontalAlignment.Center, 104, Tokens.SizeCaption,
+                    affordable ? Tokens.TextAccent : Tokens.StateDanger);
+            }
         }
 
-        // Hub: current selection detail, or the prompt.
-        DrawCircle(center, DeadZone, new Color(0.05f, 0.06f, 0.08f, 0.92f));
-        string hub = Selection is { } sel ? sel.Label : "AIM";
-        DrawString(ThemeDB.FallbackFont, center + new Vector2(-DeadZone, 4), hub,
-            HorizontalAlignment.Center, DeadZone * 2, 12, UiTheme.Ink);
+        // Hub: which socket this is and what it accepts.
+        DrawCircle(centre, DeadZone + 22f, new Color(0.039f, 0.055f, 0.086f, 0.95f));
+        DrawArc(centre, DeadZone + 22f, 0, Mathf.Tau, 48, Tokens.BorderPanel, 1f);
 
-        // Footer: credits on hand, and any refusal the sim answered with.
-        DrawString(ThemeDB.FallbackFont, center + new Vector2(-100, Radius + 42),
-            $"{_view.Money} credits   ·   release E to build", HorizontalAlignment.Center, 200, 12,
-            UiTheme.InkDim);
+        if (display is not null)
+            DrawString(display, centre + new Vector2(-60, -14), "SOCKET",
+                HorizontalAlignment.Center, 120, Tokens.SizeMicro, Tokens.TextMuted);
+        if (mono is not null)
+            DrawString(mono, centre + new Vector2(-60, 10), _socketId.ToUpperInvariant(),
+                HorizontalAlignment.Center, 120, Tokens.SizeStat, Tokens.TextPrimary);
+        if (display is not null)
+            DrawString(display, centre + new Vector2(-60, 30), _tagLabel,
+                HorizontalAlignment.Center, 120, Tokens.SizeMicro, Tokens.TextArcane);
 
-        if (_refusal.Length > 0)
-            DrawString(ThemeDB.FallbackFont, center + new Vector2(-100, Radius + 62),
-                _refusal, HorizontalAlignment.Center, 200, 13, UiTheme.Danger);
+        if (_refusal.Length > 0 && display is not null)
+            DrawString(display, centre + new Vector2(-160, Radius + 82), _refusal,
+                HorizontalAlignment.Center, 320, Tokens.SizeBody, Tokens.StateDanger);
     }
 
-    private void DrawArcFilled(Vector2 center, float radius, float startAngle, float sweep, Color color)
+    /// <summary>The kit's two-corner chamfer, drawn directly — the wheel paints
+    /// itself rather than nesting Controls so it can follow the mouse at
+    /// whatever rate the frame allows.</summary>
+    private void DrawChamfered(Rect2 r, Color fill, Color stroke, float c)
     {
-        const int steps = 16;
-        var points = new Vector2[steps + 2];
-        points[0] = center;
-        for (int i = 0; i <= steps; i++)
+        var p = new[]
         {
-            float a = startAngle + sweep * i / steps;
-            points[i + 1] = center + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * radius;
-        }
-        DrawColoredPolygon(points, color);
+            r.Position + new Vector2(c, 0),
+            r.Position + new Vector2(r.Size.X, 0),
+            r.Position + new Vector2(r.Size.X, r.Size.Y - c),
+            r.Position + new Vector2(r.Size.X - c, r.Size.Y),
+            r.Position + new Vector2(0, r.Size.Y),
+            r.Position + new Vector2(0, c),
+        };
+        DrawColoredPolygon(p, fill);
+        var loop = new Vector2[p.Length + 1];
+        p.CopyTo(loop, 0);
+        loop[^1] = p[0];
+        DrawPolyline(loop, stroke, 1f);
     }
 }

@@ -6,10 +6,18 @@ using DeepField.Sim.Content;
 
 namespace DeepField.Game.Ui;
 
-/// <summary>Full-screen gunsmith at the armory station. Buy platforms with
-/// credits; craft attachments and ammo with personal scrap; save and recraft
-/// blueprints. Every action maps to an existing sim command and every refusal
-/// is answered inline — the sim stays the authority on what's affordable.</summary>
+/// <summary>The armory and gunsmith, laid out to design's frame.
+///
+/// Three columns, because that is what the job actually is: pick a platform on
+/// the left, mount modules on it in the middle, read what you did to it on the
+/// right. The previous version was four scrolling lists of text, which made
+/// building a weapon a reading exercise rather than a spatial one.
+///
+/// The middle column is the load-bearing idea — seven slots arranged around
+/// the gun in the positions the parts physically occupy, so "barrel" is at the
+/// front and "stock" is at the back. Every action maps to a command the sim
+/// already accepts; refusals come back through CraftRejected and land in the
+/// notice line rather than a toast the player has looked away from.</summary>
 public partial class ArmoryScreen : Control
 {
     public System.Action<Command>? Submit;
@@ -21,87 +29,120 @@ public partial class ArmoryScreen : Control
     private AttachmentSlot _slot = AttachmentSlot.Barrel;
     private string _notice = "";
 
-    private VBoxContainer _weaponList = null!;
-    private VBoxContainer _slotList = null!;
-    private VBoxContainer _optionList = null!;
-    private VBoxContainer _ammoList = null!;
-    private Label _statLine = null!;
+    private VBoxContainer _platformRail = null!;
+    private Control _bench = null!;
+    private HFlowContainer _ammoRow = null!;
+    private KitPanel _statPanel = null!;
+    private KitPanel _recipePanel = null!;
+    private KitPanel _blueprintPanel = null!;
+    private VBoxContainer _optionColumn = null!;
     private Label _noticeLabel = null!;
-    private Label _scrapLine = null!;
+    private Label _economyLabel = null!;
 
     public bool IsOpen { get; private set; }
 
+    /// <summary>Where each slot sits around the gun. These are design's
+    /// coordinates on the 900×640 bench, scaled at runtime.</summary>
+    private static readonly (AttachmentSlot Slot, float X, float Y)[] BenchLayout =
+    {
+        (AttachmentSlot.Barrel, 0.18f, 0.10f),
+        (AttachmentSlot.Muzzle, 0.02f, 0.34f),
+        (AttachmentSlot.Optic, 0.46f, 0.10f),
+        (AttachmentSlot.Magazine, 0.60f, 0.70f),
+        (AttachmentSlot.Stock, 0.84f, 0.30f),
+        (AttachmentSlot.Underbarrel, 0.34f, 0.70f),
+        (AttachmentSlot.Infusion, 0.84f, 0.70f),
+    };
+
     public override void _Ready()
     {
-        SetAnchorsPreset(LayoutPreset.FullRect);
+        SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         Visible = false;
 
+        // A full-rect stack rather than anchored siblings: anchor presets on
+        // sibling Controls left the header sized to its content and the
+        // backdrop not covering, so the live world showed between panels.
         var backdrop = new ColorRect
         {
-            Color = new Color(0.02f, 0.03f, 0.04f, 0.92f),
+            Color = Tokens.Obsidian900,
             MouseFilter = MouseFilterEnum.Stop,
         };
-        backdrop.SetAnchorsPreset(LayoutPreset.FullRect);
+        backdrop.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(backdrop);
+        AddChild(new KitGrid());
 
         var frame = new VBoxContainer();
-        frame.SetAnchorsPreset(LayoutPreset.FullRect);
-        frame.AddThemeConstantOverride("separation", 10);
-        frame.OffsetLeft = 60; frame.OffsetTop = 40;
-        frame.OffsetRight = -60; frame.OffsetBottom = -40;
+        frame.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        frame.AddThemeConstantOverride("separation", 0);
         AddChild(frame);
 
-        var header = new HBoxContainer();
-        header.AddChild(UiTheme.Text("ARMORY", 24));
-        header.AddChild(UiTheme.Text("   [Esc] close", 13, UiTheme.InkDim));
-        frame.AddChild(header);
+        // --- header
+        var (bar, headerRow) = Kit.ScreenHeader("Armory");
+        bar.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        frame.AddChild(bar);
+        headerRow.AddChild(Kit.TagBrass("gunsmith"));
+        headerRow.AddChild(Kit.Spacer());
+        _economyLabel = Kit.Numeral("", Tokens.SizeStat, Tokens.TextAccent);
+        headerRow.AddChild(_economyLabel);
+        var close = new KitButton("Close  ESC", KitButton.Tone.Secondary);
+        close.Pressed += Close;
+        headerRow.AddChild(close);
 
-        _scrapLine = UiTheme.Text("", 13, UiTheme.InkDim);
-        frame.AddChild(_scrapLine);
+        // --- three columns
+        var margin = new MarginContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
+        foreach (string side in new[] { "left", "right", "top", "bottom" })
+            margin.AddThemeConstantOverride($"margin_{side}", Tokens.Space8);
+        frame.AddChild(margin);
 
-        var columns = new HBoxContainer();
-        columns.AddThemeConstantOverride("separation", 14);
-        columns.SizeFlagsVertical = SizeFlags.ExpandFill;
-        frame.AddChild(columns);
+        var columns = Kit.Row(Tokens.Space6);
+        margin.AddChild(columns);
 
-        columns.AddChild(Column("WEAPONS", 220, out _weaponList));
-        columns.AddChild(Column("SLOTS", 200, out _slotList));
-        columns.AddChild(Column("OPTIONS", 320, out _optionList));
-        columns.AddChild(Column("AMMO", 220, out _ammoList));
+        var railPanel = new KitPanel("Platforms");
+        railPanel.CustomMinimumSize = new Vector2(268, 0);
+        _platformRail = railPanel.Body;
+        columns.AddChild(railPanel);
 
-        _statLine = UiTheme.Text("", 13, UiTheme.InkDim);
-        frame.AddChild(_statLine);
+        var benchPanel = new KitPanel("Build", Tokens.Arcane500);
+        benchPanel.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        benchPanel.SizeFlagsStretchRatio = 1.6f;
+        benchPanel.CustomMinimumSize = new Vector2(360, 0);
+        columns.AddChild(benchPanel);
 
-        _noticeLabel = UiTheme.Text("", 14, UiTheme.Danger);
-        frame.AddChild(_noticeLabel);
+        _bench = new Control { SizeFlagsVertical = SizeFlags.ExpandFill };
+        _bench.CustomMinimumSize = new Vector2(0, 420);
+        _bench.Draw += DrawBench;
+        _bench.Resized += () => { _bench.QueueRedraw(); LayoutBench(); };
+        benchPanel.Body.AddChild(_bench);
 
-        var footer = new HBoxContainer();
-        footer.AddThemeConstantOverride("separation", 10);
-        var recraft = new Button { Text = "RECRAFT SAVED BLUEPRINT" };
-        recraft.Pressed += () => { RecraftBlueprint?.Invoke(_weaponId); _notice = "recrafting…"; };
-        footer.AddChild(recraft);
-        footer.AddChild(UiTheme.Text("crafted attachments and ammo save to your profile automatically",
-            11, UiTheme.InkDim));
-        frame.AddChild(footer);
+        benchPanel.Body.AddChild(Kit.Rule());
+        benchPanel.Body.AddChild(Kit.Label("ammo"));
+        _ammoRow = new HFlowContainer();
+        _ammoRow.AddThemeConstantOverride("h_separation", Tokens.Space3);
+        _ammoRow.AddThemeConstantOverride("v_separation", Tokens.Space3);
+        benchPanel.Body.AddChild(_ammoRow);
+
+        _noticeLabel = Kit.Body("", Tokens.SizeCaption, UiTheme.Danger);
+        benchPanel.Body.AddChild(_noticeLabel);
+
+        var right = Kit.Col(Tokens.Space5);
+        right.CustomMinimumSize = new Vector2(360, 0);
+        right.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        columns.AddChild(right);
+
+        _statPanel = new KitPanel("Built", Tokens.Arcane500);
+        right.AddChild(_statPanel);
+
+        _recipePanel = new KitPanel("Recipe", Tokens.Brass500, hazard: true);
+        right.AddChild(_recipePanel);
+
+        _optionColumn = Kit.Col(Tokens.Space3);
+        _recipePanel.Body.AddChild(_optionColumn);
+
+        _blueprintPanel = new KitPanel("Blueprint");
+        right.AddChild(_blueprintPanel);
     }
 
-    private static Control Column(string title, int width, out VBoxContainer body)
-    {
-        var card = UiTheme.Card();
-        card.CustomMinimumSize = new Vector2(width, 0);
-        card.SizeFlagsVertical = SizeFlags.ExpandFill;
-
-        var column = new VBoxContainer();
-        column.AddChild(UiTheme.Text(title, 12, UiTheme.InkDim));
-
-        var scroll = new ScrollContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
-        body = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        scroll.AddChild(body);
-        column.AddChild(scroll);
-
-        card.AddChild(column);
-        return card;
-    }
+    // =====================================================================
 
     public void Open(GameView view)
     {
@@ -125,213 +166,329 @@ public partial class ArmoryScreen : Control
         _view = view;
         if (!IsOpen || view.Local is not { } local) return;
 
-        _scrapLine.Text = "your scrap:  " + string.Join("   ",
-            System.Enum.GetValues<ScrapType>().Select(t => $"{t} {view.PersonalScrapOf(t)}"))
-            + $"      credits {view.Money}";
+        _economyLabel.Text = view.Money.ToString();
         _noticeLabel.Text = _notice;
 
-        RebuildWeapons(local);
-        RebuildSlots(local);
-        RebuildOptions(local);
+        RebuildPlatforms(local);
+        LayoutBench();
         RebuildAmmo(local);
-        RebuildStatLine(local);
+        RebuildStats(local);
+        RebuildRecipe(local);
+        RebuildBlueprint(local);
+        _bench.QueueRedraw();
     }
 
-    private void RebuildWeapons(PlayerView local)
+    // =====================================================================
+    // Left: platform rail
+    // =====================================================================
+
+    private void RebuildPlatforms(PlayerView local)
     {
-        foreach (var child in _weaponList.GetChildren()) child.QueueFree();
+        foreach (var child in _platformRail.GetChildren()) child.QueueFree();
 
-        foreach (var weapon in Weapons.All.Values)
+        foreach (var def in Weapons.All.Values)
         {
-            bool owned = local.OwnedWeapons.Contains(weapon.Id);
-            bool equipped = local.WeaponId == weapon.Id;
-            bool affordable = _view.Money >= weapon.Cost;
+            bool owned = local.OwnedWeapons.Contains(def.Id);
+            bool equipped = def.Id == local.WeaponId;
+            bool selected = def.Id == _weaponId;
 
-            var button = new Button
-            {
-                Text = owned
-                    ? $"{(equipped ? "▸ " : "  ")}{weapon.Id.ToUpperInvariant()}"
-                    : $"  {weapon.Id.ToUpperInvariant()}   {weapon.Cost}c",
-                Alignment = HorizontalAlignment.Left,
-                Disabled = !owned && !affordable,
-                TooltipText = $"{weapon.Damage} dmg · {weapon.ShotsPerSecond}/s · {weapon.RangeMeters}m"
-                    + (weapon.Applies.Count > 0 ? $" · applies {string.Join(",", weapon.Applies)}" : ""),
-            };
-            if (equipped) button.AddThemeColorOverride("font_color", UiTheme.Accent);
+            var card = Kit.Card(selected);
+            var row = Kit.Row(Tokens.Space5);
+            card.AddChild(row);
 
-            string captured = weapon.Id;
-            button.Pressed += () =>
+            row.AddChild(Kit.Icon($"weapon_{def.Id}",
+                selected ? Tokens.TextAccent : Tokens.TextSecondary, 26));
+
+            var text = Kit.Col(2);
+            text.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            text.AddChild(Kit.Title(def.Id.ToUpperInvariant(), Tokens.SizeBody));
+            text.AddChild(Kit.Label(equipped ? "equipped" : owned ? "owned" : $"{def.Cost} credits",
+                equipped ? Tokens.TextArcane : Tokens.TextMuted));
+            row.AddChild(text);
+
+            string captured = def.Id;
+            if (!owned)
             {
-                _weaponId = captured;
-                if (!local.OwnedWeapons.Contains(captured))
+                var buy = new KitButton("Buy", KitButton.Tone.Primary, Tokens.ControlSm);
+                buy.Disabled = _view.Money < def.Cost;
+                buy.Pressed += () =>
+                {
                     Submit?.Invoke(new Command.BuyWeapon(_view.LocalPlayerId, captured));
-                else
+                    _weaponId = captured;
+                };
+                row.AddChild(buy);
+            }
+            else if (!equipped)
+            {
+                var equip = new KitButton("Equip", KitButton.Tone.Secondary, Tokens.ControlSm);
+                equip.Pressed += () =>
+                {
                     Submit?.Invoke(new Command.SelectWeapon(_view.LocalPlayerId, captured));
+                    _weaponId = captured;
+                };
+                row.AddChild(equip);
+            }
+            else
+            {
+                row.AddChild(Kit.TagArcane("1"));
+            }
+
+            // Clicking anywhere on the card inspects that platform.
+            var hit = new Button { Flat = true, MouseFilter = MouseFilterEnum.Pass };
+            hit.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+            hit.Pressed += () => { _weaponId = captured; Refresh(_view); };
+            card.AddChild(hit);
+
+            _platformRail.AddChild(card);
+        }
+    }
+
+    // =====================================================================
+    // Centre: the bench
+    // =====================================================================
+
+    /// <summary>The gun silhouette, drawn rather than modelled — design's frame
+    /// shows the weapon's outline with the slots arranged around it, and a
+    /// placeholder polygon reads the same at this size.</summary>
+    private void DrawBench()
+    {
+        var size = _bench.Size;
+        if (size.X < 10 || size.Y < 10) return;
+
+        var body = new Rect2(size.X * 0.16f, size.Y * 0.40f, size.X * 0.66f, size.Y * 0.20f);
+        _bench.DrawRect(body, Tokens.Obsidian500);
+        _bench.DrawRect(body, Tokens.BorderStrong, filled: false, width: 1f);
+
+        // Barrel forward, grip below — enough shape to orient the slots.
+        _bench.DrawRect(new Rect2(size.X * 0.06f, size.Y * 0.45f, size.X * 0.12f, size.Y * 0.07f), Tokens.Obsidian500);
+        _bench.DrawRect(new Rect2(size.X * 0.34f, size.Y * 0.58f, size.X * 0.09f, size.Y * 0.16f), Tokens.Obsidian500);
+
+        if (Tokens.Display is { } font)
+            _bench.DrawString(font, new Vector2(size.X * 0.16f, size.Y * 0.36f),
+                _weaponId.ToUpperInvariant(), HorizontalAlignment.Left, -1,
+                Tokens.SizeCaption, Tokens.TextMuted);
+    }
+
+    private void LayoutBench()
+    {
+        foreach (var child in _bench.GetChildren().OfType<Control>().ToList())
+        {
+            _bench.RemoveChild(child);
+            child.QueueFree();
+        }
+        if (_view.Local is not { } local) return;
+
+        var mounted = local.AttachmentsFor(_weaponId);
+        var size = _bench.Size;
+        if (size.X < 10) return;
+
+        foreach (var (slot, fx, fy) in BenchLayout)
+        {
+            mounted.TryGetValue(slot, out string? fitted);
+            bool active = !string.IsNullOrEmpty(fitted);
+            bool selected = slot == _slot;
+
+            var column = Kit.Col(Tokens.Space2);
+            column.Position = new Vector2(size.X * fx, size.Y * fy);
+            _bench.AddChild(column);
+
+            var well = Kit.SlotBox(selected, Tokens.SlotLg);
+            if (active)
+                well.AddChild(Kit.SlotIcon(UiTheme.Icon($"attach_{fitted}", Tokens.TextArcane),
+                    Tokens.Arcane400, 34));
+            column.AddChild(well);
+
+            column.AddChild(Kit.Label(slot.ToString(), Tokens.TextSecondary));
+            column.AddChild(Kit.Body(active ? fitted! : "empty", Tokens.SizeMicro,
+                active ? Tokens.TextArcane : Tokens.TextDisabled));
+
+            var pick = new Button { Flat = true };
+            pick.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+            var captured = slot;
+            pick.Pressed += () => { _slot = captured; Refresh(_view); };
+            well.AddChild(pick);
+        }
+    }
+
+    private void RebuildAmmo(PlayerView local)
+    {
+        foreach (var child in _ammoRow.GetChildren()) child.QueueFree();
+
+        string current = local.AmmoFor(_weaponId);
+        foreach (var def in Ammo.All.Values)
+        {
+            bool crafted = local.CraftedAmmo.Contains(def.Id);
+            bool active = def.Id == current;
+
+            var chip = Kit.Surface(active ? Tokens.Obsidian600 : Tokens.SurfaceSlot,
+                active ? Tokens.Brass500 : Tokens.BorderPanel, 4f, shadow: false);
+            var row = Kit.Row(Tokens.Space3);
+            chip.AddChild(row);
+            row.AddChild(Kit.Icon($"ammo_{def.Id}",
+                active ? Tokens.TextAccent : crafted ? Tokens.TextSecondary : Tokens.TextDisabled, 18));
+            row.AddChild(Kit.Label(def.Id,
+                active ? Tokens.TextAccent : crafted ? Tokens.TextSecondary : Tokens.TextDisabled));
+
+            string captured = def.Id;
+            var pick = new Button { Flat = true };
+            pick.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+            pick.Pressed += () =>
+            {
+                Submit?.Invoke(new Command.SelectAmmo(_view.LocalPlayerId, _weaponId, captured));
                 _notice = "";
             };
-            _weaponList.AddChild(button);
+            chip.AddChild(pick);
+            _ammoRow.AddChild(chip);
         }
     }
 
-    private void RebuildSlots(PlayerView local)
-    {
-        foreach (var child in _slotList.GetChildren()) child.QueueFree();
+    // =====================================================================
+    // Right: what the build did, what the next module costs
+    // =====================================================================
 
-        var equipped = local.AttachmentsFor(_weaponId);
-        foreach (AttachmentSlot slot in System.Enum.GetValues<AttachmentSlot>())
+    private void RebuildStats(PlayerView local)
+    {
+        foreach (var child in _statPanel.Body.GetChildren()) child.QueueFree();
+        if (!Weapons.All.TryGetValue(_weaponId, out var weapon)) return;
+
+        var mounted = local.AttachmentsFor(_weaponId);
+        float damage = 1f, rate = 1f, range = 1f;
+        var applies = new List<string>(weapon.Applies);
+        foreach (var id in mounted.Values)
         {
-            string current = equipped.TryGetValue(slot, out var id) ? id : "—";
-            var button = new Button
-            {
-                Text = $"{(slot == _slot ? "▸ " : "  ")}{slot}\n     {current}",
-                Alignment = HorizontalAlignment.Left,
-            };
-            if (slot == _slot) button.AddThemeColorOverride("font_color", UiTheme.Accent);
+            if (!Attachments.All.TryGetValue(id, out var attachment)) continue;
+            damage *= attachment.DamageFactor;
+            rate *= attachment.RateFactor;
+            range *= attachment.RangeFactor;
+            if (attachment.Applies is { } status) applies.Add(status);
+        }
 
-            var captured = slot;
-            button.Pressed += () => { _slot = captured; _notice = ""; };
-            _slotList.AddChild(button);
+        Delta("Damage", weapon.Damage, weapon.Damage * damage, damage);
+        Delta("Rate", weapon.ShotsPerSecond, weapon.ShotsPerSecond * rate, rate);
+        Delta("Range", weapon.RangeMeters, weapon.RangeMeters * range, range);
+
+        _statPanel.Body.AddChild(Kit.Rule());
+        var appliesRow = Kit.Row();
+        appliesRow.AddChild(Kit.Label("applies"));
+        var chips = Kit.Row(Tokens.Space3);
+        chips.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        foreach (string status in applies.Distinct())
+            chips.AddChild(Kit.Tag(status, UiTheme.Status(status)));
+        if (applies.Count == 0) chips.AddChild(Kit.Body("—", Tokens.SizeCaption, Tokens.TextDisabled));
+        appliesRow.AddChild(chips);
+        _statPanel.Body.AddChild(appliesRow);
+
+        void Delta(string name, float baseValue, float built, float factor)
+        {
+            var column = Kit.Col(Tokens.Space2);
+            var header = Kit.Row();
+            header.AddChild(Kit.Label(name));
+            var readout = Kit.Numeral($"{baseValue:0.##} → {built:0.##}  ×{factor:0.00}",
+                Tokens.SizeCaption,
+                factor > 1.001f ? Tokens.StateSuccess : factor < 0.999f ? Tokens.StateDanger : Tokens.TextSecondary);
+            readout.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            readout.HorizontalAlignment = HorizontalAlignment.Right;
+            header.AddChild(readout);
+            column.AddChild(header);
+            // Half the bar is the base value, so a build that helps grows right
+            // of centre and one that costs you shrinks left of it.
+            column.AddChild(Kit.Bar(Mathf.Clamp(factor * 0.5f, 0f, 1f),
+                factor >= 1f ? Tokens.StateSuccess : Tokens.StateDanger, 14f));
+            _statPanel.Body.AddChild(column);
         }
     }
 
-    private void RebuildOptions(PlayerView local)
+    private void RebuildRecipe(PlayerView local)
     {
-        foreach (var child in _optionList.GetChildren()) child.QueueFree();
+        foreach (var child in _optionColumn.GetChildren()) child.QueueFree();
 
-        var equipped = local.AttachmentsFor(_weaponId);
+        var mounted = local.AttachmentsFor(_weaponId);
+        mounted.TryGetValue(_slot, out string? fitted);
+
+        _optionColumn.AddChild(Kit.Label($"{_slot} options", Tokens.TextSecondary));
+
         var candidates = Attachments.All.Values.Where(a => a.Slot == _slot).ToList();
         if (candidates.Count == 0)
         {
-            _optionList.AddChild(UiTheme.Text("nothing for this slot yet", 12, UiTheme.Disabled));
+            _optionColumn.AddChild(Kit.Body("no modules for this slot yet", Tokens.SizeCaption, Tokens.TextDisabled));
             return;
         }
 
         foreach (var attachment in candidates)
         {
-            bool isEquipped = equipped.TryGetValue(_slot, out var id) && id == attachment.Id;
-            bool affordable = attachment.Recipe.All(r => _view.PersonalScrapOf(r.Key) >= r.Value);
+            bool active = attachment.Id == fitted;
+            var card = Kit.Card(active);
+            var column = Kit.Col(Tokens.Space3);
+            card.AddChild(column);
 
-            var card = UiTheme.Card(isEquipped ? UiTheme.PanelRaised : UiTheme.Panel,
-                isEquipped ? UiTheme.Accent : null);
-            var column = new VBoxContainer();
+            var head = Kit.Row(Tokens.Space3);
+            head.AddChild(Kit.Icon($"attach_{attachment.Id}",
+                active ? Tokens.TextArcane : Tokens.TextSecondary, 20));
+            var name = Kit.Title(attachment.Id.ToUpperInvariant(), Tokens.SizeCaption);
+            name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            head.AddChild(name);
+            head.AddChild(Kit.Numeral(
+                $"×{attachment.DamageFactor:0.00}d ×{attachment.RateFactor:0.00}r ×{attachment.RangeFactor:0.00}g",
+                Tokens.SizeMicro, Tokens.TextMuted));
+            column.AddChild(head);
 
-            column.AddChild(UiTheme.Text(attachment.Id, 14,
-                isEquipped ? UiTheme.Accent : UiTheme.Ink));
-
-            // Stat deltas read as signed percentages — the tradeoff is the point.
-            var deltas = new HBoxContainer();
-            deltas.AddThemeConstantOverride("separation", 10);
-            AddDelta(deltas, "dmg", attachment.DamageFactor);
-            AddDelta(deltas, "rate", attachment.RateFactor);
-            AddDelta(deltas, "rng", attachment.RangeFactor);
-            if (attachment.Applies is { } status)
-                deltas.AddChild(UiTheme.Text($"+{status}", 12, UiTheme.Status(status)));
-            column.AddChild(deltas);
-
-            var recipe = new HBoxContainer();
-            recipe.AddThemeConstantOverride("separation", 8);
-            foreach (var (type, amount) in attachment.Recipe)
+            // Have/need per scrap type: the player needs to know which enemies
+            // to go farm, not just that they are short.
+            var recipe = Kit.Row(Tokens.Space4);
+            bool affordable = true;
+            foreach (var (type, need) in attachment.Recipe)
+            {
+                int have = _view.PersonalScrapOf(type);
+                if (have < need) affordable = false;
                 recipe.AddChild(UiTheme.CountChip($"scrap_{type.ToString().ToLowerInvariant()}",
-                    _view.PersonalScrapOf(type), UiTheme.Scrap(type), amount));
-            column.AddChild(recipe);
-
-            var craft = new Button
-            {
-                Text = isEquipped ? "EQUIPPED" : (affordable ? "CRAFT" : "NEED SCRAP"),
-                Disabled = isEquipped,
-            };
-            string capturedId = attachment.Id;
-            craft.Pressed += () =>
-            {
-                Submit?.Invoke(new Command.CraftAttachment(_view.LocalPlayerId, _weaponId, capturedId));
-                _notice = "";
-            };
-            column.AddChild(craft);
-
-            card.AddChild(column);
-            _optionList.AddChild(card);
-        }
-    }
-
-    private static void AddDelta(Control row, string label, float factor)
-    {
-        if (Mathf.IsEqualApprox(factor, 1f)) return;
-        int percent = Mathf.RoundToInt((factor - 1f) * 100f);
-        row.AddChild(UiTheme.Text($"{label} {(percent > 0 ? "+" : "")}{percent}%", 12,
-            percent > 0 ? UiTheme.Good : UiTheme.Danger));
-    }
-
-    private void RebuildAmmo(PlayerView local)
-    {
-        foreach (var child in _ammoList.GetChildren()) child.QueueFree();
-
-        string current = local.AmmoFor(_weaponId);
-        foreach (var ammo in Ammo.All.Values)
-        {
-            bool selected = ammo.Id == current;
-            bool crafted = local.CraftedAmmo.Contains(ammo.Id);
-            bool affordable = crafted || ammo.Recipe.All(r => _view.PersonalScrapOf(r.Key) >= r.Value);
-
-            var card = UiTheme.Card(selected ? UiTheme.PanelRaised : UiTheme.Panel,
-                selected ? UiTheme.Accent : null);
-            var column = new VBoxContainer();
-            column.AddChild(UiTheme.Text(ammo.Id, 13, selected ? UiTheme.Accent : UiTheme.Ink));
-
-            var notes = new HBoxContainer();
-            notes.AddThemeConstantOverride("separation", 8);
-            AddDelta(notes, "dmg", ammo.DamageFactor);
-            if (ammo.IgnoresFlatArmor) notes.AddChild(UiTheme.Text("ignores armor", 11, UiTheme.Good));
-            if (ammo.UnarmoredBonusFactor > 1f)
-                notes.AddChild(UiTheme.Text($"+{Mathf.RoundToInt((ammo.UnarmoredBonusFactor - 1) * 100)}% vs soft",
-                    11, UiTheme.Good));
-            if (ammo.Applies is { } status)
-                notes.AddChild(UiTheme.Text($"+{status}", 11, UiTheme.Status(status)));
-            column.AddChild(notes);
-
-            if (!crafted && ammo.Recipe.Count > 0)
-            {
-                var recipe = new HBoxContainer();
-                foreach (var (type, amount) in ammo.Recipe)
-                    recipe.AddChild(UiTheme.CountChip($"scrap_{type.ToString().ToLowerInvariant()}",
-                        _view.PersonalScrapOf(type), UiTheme.Scrap(type), amount));
-                column.AddChild(recipe);
+                    have, UiTheme.Scrap(type), need));
             }
+            if (attachment.Applies is { } status) recipe.AddChild(Kit.Tag(status, UiTheme.Status(status)));
+            recipe.AddChild(Kit.Spacer());
 
-            var button = new Button
+            if (!active)
             {
-                Text = selected ? "LOADED" : (crafted ? "LOAD" : (affordable ? "CRAFT + LOAD" : "NEED SCRAP")),
-                Disabled = selected,
-            };
-            string capturedId = ammo.Id;
-            button.Pressed += () =>
+                var craft = new KitButton("Fit", affordable ? KitButton.Tone.Primary : KitButton.Tone.Secondary,
+                    Tokens.ControlSm);
+                craft.Disabled = !affordable;
+                string capturedId = attachment.Id;
+                craft.Pressed += () =>
+                {
+                    Submit?.Invoke(new Command.CraftAttachment(_view.LocalPlayerId, _weaponId, capturedId));
+                    _notice = "";
+                };
+                recipe.AddChild(craft);
+            }
+            else
             {
-                Submit?.Invoke(new Command.SelectAmmo(_view.LocalPlayerId, _weaponId, capturedId));
-                _notice = "";
-            };
-            column.AddChild(button);
-
-            card.AddChild(column);
-            _ammoList.AddChild(card);
+                recipe.AddChild(Kit.TagArcane("fitted"));
+            }
+            column.AddChild(recipe);
+            _optionColumn.AddChild(card);
         }
     }
 
-    private void RebuildStatLine(PlayerView local)
+    private void RebuildBlueprint(PlayerView local)
     {
-        if (!Weapons.All.TryGetValue(_weaponId, out var weapon)) { _statLine.Text = ""; return; }
+        foreach (var child in _blueprintPanel.Body.GetChildren()) child.QueueFree();
 
-        // Mirror the sim's WeaponBuild math so the preview can't drift from play.
-        var build = new WeaponBuild { AmmoId = local.AmmoFor(_weaponId) };
-        foreach (var (slot, id) in local.AttachmentsFor(_weaponId)) build.Attachments[slot] = id;
+        int fitted = local.AttachmentsFor(_weaponId).Count;
+        bool saved = HasBlueprint?.Invoke(_weaponId) ?? false;
 
-        float damage = weapon.Damage * build.DamageFactor(targetArmored: false);
-        float rate = weapon.ShotsPerSecond * build.RateFactor();
-        float range = weapon.RangeMeters * build.RangeFactor();
-        var applies = weapon.Applies.Concat(build.ExtraApplies()).Distinct().ToList();
+        var column = Kit.Col(Tokens.Space3);
+        column.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        column.AddChild(Kit.Title(saved ? "SAVED BUILD" : "NO BUILD SAVED", Tokens.SizeBody));
+        column.AddChild(Kit.Label($"{_weaponId} · {fitted} modules"));
 
-        _statLine.Text = $"{_weaponId.ToUpperInvariant()} as built:  "
-            + $"{damage:0.#} dmg   ·   {rate:0.##}/s   ·   {damage * rate:0.#} dps   ·   {range:0}m"
-            + (build.IgnoresFlatArmor ? "   ·   ignores flat armor" : "")
-            + (applies.Count > 0 ? $"   ·   applies {string.Join(", ", applies)}" : "")
-            + (HasBlueprint?.Invoke(_weaponId) == true ? "   ·   blueprint saved" : "");
+        var actions = Kit.Row(Tokens.Space4);
+        var recraft = new KitButton("Recraft", KitButton.Tone.Arcane, Tokens.ControlMd);
+        recraft.Disabled = !saved;
+        recraft.Pressed += () => { RecraftBlueprint?.Invoke(_weaponId); _notice = "recrafting…"; };
+        actions.AddChild(recraft);
+
+        var row = Kit.Row(Tokens.Space5);
+        row.AddChild(column);
+        row.AddChild(actions);
+        _blueprintPanel.Body.AddChild(row);
     }
 }

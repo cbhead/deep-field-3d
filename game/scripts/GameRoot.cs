@@ -147,6 +147,25 @@ public partial class GameRoot : Node3D
         string path = _shotPath!;
         _shotPath = null;
 
+        // Surface shots: open the UI being reviewed, then capture next frame.
+        if (_shotView is "armory" or "wheel" or "upgrade")
+        {
+            string surface = _shotView;
+            _shotView = "eye";
+            _shotPath = path;
+            _shotCountdown = 4;
+            if (surface == "armory") ToggleArmory();
+            else if (surface == "wheel") OpenBuildWheel(_map.Sockets[0].Id);
+            else if (surface == "upgrade" && _world is not null)
+            {
+                Submit(new Command.PlaceTower(LocalPlayerId, "lance", _map.Sockets[0].Id));
+                for (int i = 0; i < 3; i++) Step.Advance(_world);
+                RebuildView();
+                OpenUpgradePanel(_map.Sockets[0].Id);
+            }
+            return;
+        }
+
         // Layout review needs to see the whole map, not the player's eyeline.
         // The camera has to exist for a frame before the viewport shows it, so
         // this pass only stages it and re-arms the countdown.
@@ -1966,6 +1985,13 @@ public partial class GameRoot : Node3D
 
     public void TickUpgradeSell(double delta, bool held)
     {
+        // The panel's Upgrade buttons raise intent; number keys still work.
+        if (_upgrade.UpgradeRequested >= 0 && _upgrade.TargetId >= 0)
+        {
+            Submit(new Command.UpgradeTower(LocalPlayerId, _upgrade.TargetId, _upgrade.UpgradeRequested));
+            _upgrade.ConsumeUpgrade();
+        }
+
         _upgrade.TickSellHold(delta, held);
         if (_upgrade.SellRequested && _upgrade.TargetId >= 0)
         {
@@ -1979,8 +2005,21 @@ public partial class GameRoot : Node3D
 
     public void ToggleArmory()
     {
-        if (_armory.IsOpen) { _armory.Close(); Input.MouseMode = Input.MouseModeEnum.Captured; }
-        else { _armory.Open(_view); Input.MouseMode = Input.MouseModeEnum.Visible; }
+        // The armory is a full screen in design's set, not an overlay — the
+        // in-match HUD stands down while it is up, or the wave cluster and the
+        // vitals dock show through its backdrop.
+        if (_armory.IsOpen)
+        {
+            _armory.Close();
+            _hud.Visible = true;
+            Input.MouseMode = Input.MouseModeEnum.Captured;
+        }
+        else
+        {
+            _armory.Open(_view);
+            _hud.Visible = false;
+            Input.MouseMode = Input.MouseModeEnum.Visible;
+        }
     }
 
     public void ToggleSystemMenu()

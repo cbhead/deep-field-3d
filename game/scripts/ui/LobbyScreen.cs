@@ -30,14 +30,14 @@ public partial class LobbyScreen : Control
         _profile = profile;
         _faction = profile.PreferredFaction;
 
-        SetAnchorsPreset(LayoutPreset.FullRect);
+        SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
 
         var backdrop = new ColorRect { Color = new Color(0.03f, 0.04f, 0.06f, 0.96f) };
-        backdrop.SetAnchorsPreset(LayoutPreset.FullRect);
+        backdrop.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(backdrop);
 
         var frame = new VBoxContainer();
-        frame.SetAnchorsPreset(LayoutPreset.FullRect);
+        frame.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         frame.OffsetLeft = 70; frame.OffsetTop = 44;
         frame.OffsetRight = -70; frame.OffsetBottom = -44;
         frame.AddThemeConstantOverride("separation", 12);

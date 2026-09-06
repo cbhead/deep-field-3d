@@ -75,7 +75,7 @@ public partial class HudRoot : CanvasLayer
         Layer = 1;
 
         var root = new Control();
-        root.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        root.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         root.MouseFilter = Control.MouseFilterEnum.Ignore;
         AddChild(root);
 
@@ -93,7 +93,7 @@ public partial class HudRoot : CanvasLayer
     private void BuildDownedOverlay(Control root)
     {
         _vignette = new Control { MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false };
-        _vignette.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        _vignette.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         _vignette.Draw += DrawVignette;
         root.AddChild(_vignette);
 
@@ -285,7 +285,7 @@ public partial class HudRoot : CanvasLayer
 
         // The sweep and the "Q" cap sit over the icon.
         _abilityCooldown = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
-        _abilityCooldown.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        _abilityCooldown.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         _abilityCooldown.Draw += DrawAbilityCooldown;
         _abilitySlot.AddChild(_abilityCooldown);
 
