@@ -56,7 +56,9 @@ hands_firstperson	weapons	no
 hands_forge	weapons	no
 hands_tempest	weapons	no
 hero_ember	heroes	yes
+hero_glacier	heroes	no
 hero_forge	heroes	yes
+hero_specter	heroes	no
 hero_tempest	heroes	yes
 pickup_alloy	economy	no
 pickup_flux	economy	no
@@ -194,9 +196,13 @@ tower_skywatch_rate_s*	structures	yes
 foundry_skybox	maps	yes
 foundry_terrain_scatter	maps	yes
 hero_ember_downed	heroes	yes
+hero_glacier_downed	heroes	no
+hero_glacier_revive	heroes	no
 hero_ember_revive	heroes	no
 hero_forge_downed	heroes	yes
 hero_forge_revive	heroes	no
+hero_specter_downed	heroes	no
+hero_specter_revive	heroes	no
 hero_tempest_downed	heroes	yes
 hero_tempest_revive	heroes	no
 proj_lance_bolt_t2	vfx	no

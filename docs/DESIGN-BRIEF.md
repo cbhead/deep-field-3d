@@ -150,10 +150,13 @@ Ammo — magazine/round visual + distinct tracer/impact per type:
 `vfx_tracer_incendiary.glb` · `vfx_tracer_cryo.glb`
 
 ### 3.5 Heroes (`game/assets/heroes/`)
-`hero_forge.glb` · `hero_ember.glb` · `hero_tempest.glb`
+`hero_forge.glb` · `hero_ember.glb` · `hero_tempest.glb` ·
+`hero_glacier.glb` · `hero_specter.glb` (M3 — both factions are live in the
+lobby now, so these are no longer forward-manifest entries)
 (distinct at 40 m; include downed pose `hero_<faction>_downed.glb` and
 revive-crouch `hero_<faction>_revive.glb`)
-`hands_forge.glb` · `hands_ember.glb` · `hands_tempest.glb` (first-person arms)
+`hands_forge.glb` · `hands_ember.glb` · `hands_tempest.glb` ·
+`hands_glacier.glb` · `hands_specter.glb` (first-person arms)
 `ui_nameplate.glb` (world-space name-tag plate)
 
 ### 3.6 Maps — full environment kits

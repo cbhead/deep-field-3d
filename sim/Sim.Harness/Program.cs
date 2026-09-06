@@ -450,6 +450,49 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
         $"apCrafted {apCrafted}, reachable {reachable}");
 }
 
+// --- Gate 33 (M3): the campaign chain is well-formed and fully reachable.
+//
+// A sector list is exactly the kind of content that rots quietly: rename a map
+// and the chain still "works", it just strands everything behind a sector that
+// no longer exists, and the only symptom is a player who cannot get to level
+// two. Cheap to check, so it gets checked.
+{
+    var problems = new List<string>();
+
+    foreach (string sector in Campaign.Sectors)
+        if (!Maps.All.Values.Any(m => m.Id == sector))
+            problems.Add($"campaign names {sector}, which is not a map");
+
+    // Every real map should be in the campaign — a map nobody can select is
+    // work nobody sees. testlane is the documented exception.
+    foreach (var map in Maps.All.Values)
+        if (map.Id != "testlane" && Campaign.IndexOf(map.Id) < 0)
+            problems.Add($"{map.Id} exists but no sector plays it");
+
+    if (Campaign.Sectors.Distinct().Count() != Campaign.Sectors.Count)
+        problems.Add("a sector appears twice");
+
+    // Walking the chain from nothing cleared must reach every sector.
+    var cleared = new List<string>();
+    var reached = new List<string>();
+    for (int step = 0; step < Campaign.Sectors.Count; step++)
+    {
+        string? open = Campaign.Sectors.FirstOrDefault(
+            s => Campaign.IsUnlocked(s, cleared) && !cleared.Contains(s));
+        if (open is null) break;
+        reached.Add(open);
+        cleared.Add(open);
+    }
+    if (reached.Count != Campaign.Sectors.Count)
+        problems.Add($"chain stalls after {reached.Count} of {Campaign.Sectors.Count}");
+
+    Gate("campaign: the sector chain is well-formed and every map is reachable",
+        problems.Count == 0,
+        problems.Count == 0
+            ? $"{Campaign.Sectors.Count} sectors: {string.Join(" -> ", Campaign.Sectors)}"
+            : string.Join("; ", problems));
+}
+
 // --- Gate 32 (M3): every faction's ability changes the world when used.
 //
 // Written after the third instance of the same bug class in one milestone:

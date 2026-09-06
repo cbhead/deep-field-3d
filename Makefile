@@ -1,7 +1,7 @@
 GODOT ?= $(HOME)/Applications/Godot_mono.app/Contents/MacOS/Godot
 export PATH := $(HOME)/.dotnet:$(PATH)
 
-.PHONY: sim test gates game run import check assets usage usage-list
+.PHONY: sim test gates game run import check audit assets usage usage-list
 
 ## Build the pure sim (standalone — enforces the no-Godot boundary).
 sim:
@@ -38,5 +38,17 @@ usage:
 usage-list:
 	@./tools/asset-usage.sh --list
 
+## Build one view of every def and check the names against the brief. Needs
+## Godot, so it is slower than the rest — but leaving it out of `check` meant
+## adding two factions passed locally and failed in CI on the hero models
+## nobody had named yet. A pre-push check that does not run what CI runs is
+## not a pre-push check.
+audit: game
+	@"$(GODOT)" --headless --path game -- --asset-audit > /tmp/deepfield-audit.log 2>&1 || \
+		{ tail -30 /tmp/deepfield-audit.log; exit 1; }
+	@grep -q "\[asset-audit\] built" /tmp/deepfield-audit.log
+	@! grep -qiE "^ERROR|SCRIPT ERROR|Unhandled exception" /tmp/deepfield-audit.log
+	@./tools/asset-report.sh --verify /tmp/deepfield-audit.log
+
 ## Everything CI runs: the pre-push check.
-check: sim test gates game
+check: sim test gates game audit
