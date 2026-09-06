@@ -27,6 +27,8 @@ public partial class GameRoot : Node3D
     private MapDef _map = Maps.Foundry;
     private string _factionId = "ember";
     private string _playerName = "player";
+    private Profile _profile = null!;
+    private bool _xpBanked;
 
     private readonly Dictionary<int, Node3D> _enemyViews = new();
     private readonly Dictionary<int, Node3D> _projectileViews = new();
@@ -46,6 +48,8 @@ public partial class GameRoot : Node3D
     {
         _net = new NetworkManager { Name = "Net" };
         AddChild(_net);
+        _profile = Profile.Load();
+        _playerName = _profile.Name;
 
         var args = OS.GetCmdlineUserArgs();
         if (args.Contains("--server"))
@@ -147,7 +151,8 @@ public partial class GameRoot : Node3D
             if (int.TryParse(parts[1], out int parsed)) port = parsed;
         }
 
-        Multiplayer.ConnectedToServer += () => _net.SendHello(_playerName, _factionId);
+        Multiplayer.ConnectedToServer += () =>
+            _net.SendHello(_playerName, _factionId, _profile.LevelFor(_factionId));
         Multiplayer.ConnectionFailed += () => Toast("connection failed");
         _net.JoinServer(address, port);
     }
@@ -157,7 +162,7 @@ public partial class GameRoot : Node3D
         _factionId = faction;
         _lobbyUi.Visible = false;
         _world = new SimWorld(FreshSeed(), _map);
-        _world.Enqueue(new Command.Join(1, _playerName, faction));
+        _world.Enqueue(new Command.Join(1, _playerName, faction, _profile.LevelFor(faction)));
         BuildLevel(_map);
         SpawnLocalPlayer();
     }
@@ -350,7 +355,22 @@ public partial class GameRoot : Node3D
                 case SimEvent.EnemyLeaked: Toast("breach! core hit"); break;
                 case SimEvent.ReactionTriggered: Toast("THERMAL SHOCK"); break;
                 case SimEvent.PlayerDowned downed when downed.PlayerId == LocalPlayerId: Toast("DOWN — a teammate can revive you"); break;
-                case SimEvent.MatchEnded ended: Toast(ended.Victory ? "VICTORY" : "DEFEAT"); break;
+                case SimEvent.MatchEnded ended:
+                    Toast(ended.Victory ? "VICTORY" : "DEFEAT");
+                    BankLocalXp();
+                    break;
+                case SimEvent.AttachmentCrafted crafted when crafted.PlayerId == LocalPlayerId:
+                    _profile.RecordAttachment(crafted.WeaponId,
+                        Attachments.All[crafted.AttachmentId].Slot.ToString(), crafted.AttachmentId);
+                    Toast($"crafted {crafted.AttachmentId}");
+                    break;
+                case SimEvent.AmmoSelected ammo when ammo.PlayerId == LocalPlayerId:
+                    _profile.RecordAmmo(ammo.WeaponId, ammo.AmmoId);
+                    Toast($"ammo: {ammo.AmmoId}");
+                    break;
+                case SimEvent.CraftRejected rejected when rejected.PlayerId == LocalPlayerId:
+                    Toast($"craft: {rejected.Reason}");
+                    break;
                 case SimEvent.EnemyDamaged damaged when damaged.Source == $"player{LocalPlayerId}":
                     _hitFlashTimer = 0.12; break;
                 case SimEvent.EnemyDied died when died.Source == $"player{LocalPlayerId}":
@@ -374,7 +394,15 @@ public partial class GameRoot : Node3D
             case "enemyLeaked": Toast("breach! core hit"); break;
             case "reaction": Toast("THERMAL SHOCK"); break;
             case "playerDowned" when int.Parse(p[2]) == LocalPlayerId: Toast("DOWN — a teammate can revive you"); break;
-            case "matchEnded": Toast(p[2] == "victory" ? "VICTORY" : "DEFEAT"); break;
+            case "matchEnded": Toast(p[2] == "victory" ? "VICTORY" : "DEFEAT"); BankLocalXp(); break;
+            case "attachmentCrafted" when int.Parse(p[2]) == LocalPlayerId:
+                _profile.RecordAttachment(p[3], Attachments.All[p[4]].Slot.ToString(), p[4]);
+                Toast($"crafted {p[4]}");
+                break;
+            case "ammoSelected" when int.Parse(p[2]) == LocalPlayerId:
+                _profile.RecordAmmo(p[3], p[4]);
+                Toast($"ammo: {p[4]}");
+                break;
             case "enemyDamaged" when p[4] == $"player{LocalPlayerId}": _hitFlashTimer = 0.12; break;
             case "enemyDied" when p[5] == $"player{LocalPlayerId}": _hitFlashTimer = 0.3; break;
         }
@@ -782,18 +810,42 @@ public partial class GameRoot : Node3D
         var nameEdit = new LineEdit { PlaceholderText = "name", Text = System.Environment.UserName };
         vbox.AddChild(nameEdit);
 
-        vbox.AddChild(new Label { Text = "faction (one per player):" });
-        var factionRow = new HBoxContainer();
-        var forgeBtn = new CheckBox { Text = "Forge (Overdrive + build discount)", ButtonPressed = false };
-        var emberBtn = new CheckBox { Text = "Ember (Ignition Wave + longer burns)", ButtonPressed = true };
-        forgeBtn.Toggled += on => { if (on) emberBtn.ButtonPressed = false; };
-        emberBtn.Toggled += on => { if (on) forgeBtn.ButtonPressed = false; };
-        factionRow.AddChild(forgeBtn);
-        factionRow.AddChild(emberBtn);
-        vbox.AddChild(factionRow);
+        vbox.AddChild(new Label { Text = "faction (one per player — ability levels persist across matches):" });
+        var factionButtons = new Dictionary<string, CheckBox>();
+        var descriptions = new Dictionary<string, string>
+        {
+            ["forge"] = "Forge — Overdrive surge + build discount",
+            ["ember"] = "Ember — Ignition Wave + longer burns",
+            ["tempest"] = "Tempest — Chain Surge (shock) + fire rate",
+        };
+        foreach (var (id, text) in descriptions)
+        {
+            var button = new CheckBox
+            {
+                Text = $"{text}   [Lv{_profile.LevelFor(id)}  {_profile.FactionXp.GetValueOrDefault(id, 0)}xp]",
+                ButtonPressed = id == _profile.PreferredFaction,
+            };
+            string captured = id;
+            button.Toggled += on =>
+            {
+                if (!on) return;
+                foreach (var (otherId, other) in factionButtons)
+                    if (otherId != captured) other.ButtonPressed = false;
+                _profile.PreferredFaction = captured;
+                _profile.Save();
+            };
+            factionButtons[id] = button;
+            vbox.AddChild(button);
+        }
 
-        string Faction() => forgeBtn.ButtonPressed ? "forge" : "ember";
-        void Grab() { _playerName = nameEdit.Text.Length > 0 ? nameEdit.Text : "player"; }
+        string Faction() =>
+            factionButtons.FirstOrDefault(kv => kv.Value.ButtonPressed).Key ?? "ember";
+        void Grab()
+        {
+            _playerName = nameEdit.Text.Length > 0 ? nameEdit.Text : "player";
+            _profile.Name = _playerName;
+            _profile.Save();
+        }
 
         var soloBtn = new Button { Text = "SOLO" };
         soloBtn.Pressed += () => { Grab(); StartSolo(Faction()); };
@@ -881,6 +933,36 @@ public partial class GameRoot : Node3D
         }
 
         _capturePrompt.Visible = _player is not null && Input.MouseMode != Input.MouseModeEnum.Captured;
+    }
+
+    private void BankLocalXp()
+    {
+        if (_xpBanked) return;
+        int xp = 0;
+        if (_world is not null && _world.Players.TryGetValue(LocalPlayerId, out var me))
+            xp = me.MatchXp;
+        else if (_net.Meta is { } meta)
+        {
+            foreach (Godot.Collections.Dictionary entry in meta["players"].AsGodotArray())
+                if ((int)entry["id"] == LocalPlayerId) xp = (int)entry["xp"];
+        }
+        if (xp > 0)
+        {
+            _xpBanked = true;
+            _profile.BankXp(_factionId, xp);
+            Toast($"+{xp} {_factionId} xp banked (Lv{_profile.LevelFor(_factionId)})");
+        }
+    }
+
+    /// <summary>Blueprint recraft: replay the saved build for a weapon as craft
+    /// commands (the sim refuses whatever scrap can't cover).</summary>
+    public void RecraftBlueprint(string weaponId)
+    {
+        if (_profile.BlueprintSlots.TryGetValue(weaponId, out var slots))
+            foreach (var attachmentId in slots.Values)
+                Submit(new Command.CraftAttachment(LocalPlayerId, weaponId, attachmentId));
+        if (_profile.BlueprintAmmo.TryGetValue(weaponId, out var ammoId))
+            Submit(new Command.SelectAmmo(LocalPlayerId, weaponId, ammoId));
     }
 
     public void Toast(string message)

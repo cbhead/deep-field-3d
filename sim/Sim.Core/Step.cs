@@ -91,6 +91,7 @@ public static class Step
             Id = join.PlayerId,
             Name = join.Name,
             FactionId = join.FactionId,
+            FactionLevel = System.Math.Clamp(join.FactionLevel, 1, Factions.MaxLevel),
             Pos = w.Map.HeroSpawn,
         };
 
@@ -304,7 +305,9 @@ public static class Step
         var enemyDef = Enemies.All[enemy.DefId];
         bool armored = enemyDef.FlatArmor > 0f || enemyDef.FrontArmorArcDegrees > 0f;
 
-        player.WeaponCooldown = 1f / (weapon.ShotsPerSecond * build.RateFactor());
+        float rate = weapon.ShotsPerSecond * build.RateFactor();
+        if (player.FactionId == Factions.Tempest.Id) rate *= Balance.TempestRateFactor;
+        player.WeaponCooldown = 1f / rate;
 
         var applies = weapon.Applies.Concat(build.ExtraApplies()).ToList();
         Damage(w, enemy, weapon.Damage * build.DamageFactor(armored),
@@ -404,7 +407,10 @@ public static class Step
         if (player.AbilityCooldown > 0f) return;
         if (!Factions.All.TryGetValue(player.FactionId, out var faction)) return;
 
-        player.AbilityCooldown = faction.CooldownSeconds;
+        int level = player.FactionLevel;
+        player.AbilityCooldown = faction.CooldownSeconds * Factions.CooldownFactor(level);
+        float radius = faction.RadiusMeters * Factions.RadiusFactor(level);
+        float magnitude = faction.Magnitude * Factions.MagnitudeFactor(level);
         w.Emit(new SimEvent.AbilityUsed(ability.PlayerId, faction.AbilityId));
 
         switch (faction.AbilityId)
@@ -412,10 +418,10 @@ public static class Step
             case "overdrive":
                 foreach (var tower in w.Towers)
                 {
-                    if (tower.Pos.DistanceTo(player.Pos) <= faction.RadiusMeters)
+                    if (tower.Pos.DistanceTo(player.Pos) <= radius)
                     {
                         tower.BuffTimer = faction.DurationSeconds;
-                        tower.BuffFactor = faction.Magnitude;
+                        tower.BuffFactor = magnitude;
                     }
                 }
                 break;
@@ -423,8 +429,18 @@ public static class Step
             case "ignitionWave":
                 foreach (var enemy in w.Enemies)
                 {
-                    if (!enemy.Dead && enemy.Pos.DistanceTo(ability.TargetPos) <= faction.RadiusMeters)
+                    if (!enemy.Dead && !enemy.Burrowed && enemy.Pos.DistanceTo(ability.TargetPos) <= radius)
                         ApplyStatus(w, enemy, Statuses.Burn.Id, $"player{player.Id}", player.Id);
+                }
+                break;
+
+            case "chainSurge":
+                foreach (var enemy in w.Enemies)
+                {
+                    if (enemy.Dead || enemy.Burrowed) continue;
+                    if (enemy.Pos.DistanceTo(ability.TargetPos) > radius) continue;
+                    Damage(w, enemy, magnitude, $"player{player.Id}", player.Pos,
+                        new[] { Statuses.Shock.Id }, player.Id);
                 }
                 break;
         }
@@ -445,6 +461,7 @@ public static class Step
             target.BleedoutTimer = 0f;
             target.ReviveProgress = 0f;
             target.Hp = Balance.PlayerMaxHp * 0.5f;
+            reviver.MatchXp += 5;
             w.Emit(new SimEvent.PlayerRevived(target.Id, reviver.Id));
         }
     }
@@ -588,6 +605,8 @@ public static class Step
             slot.StatusId = null;   // consume the active half
             float burst = enemy.MaxHp * reaction.BurstFraction;
             w.Emit(new SimEvent.ReactionTriggered(enemy.Id, reaction.Id, burst));
+            if (playerId is int reactor && w.Players.TryGetValue(reactor, out var reactorState))
+                reactorState.MatchXp += 2;   // co-op combos pay
             if (burst > 0f)
                 Damage(w, enemy, burst, source, enemy.Pos, null, playerId);
 
@@ -1250,6 +1269,10 @@ public static class Step
             w.Money += enemy.Bounty;
             w.Emit(new SimEvent.EnemyDied(enemy.Id, enemy.DefId, enemy.Bounty, source));
             DropScrap(w, enemy, def, playerId);
+
+            // Faction XP: kills bank into the profile at match end.
+            if (playerId is int killer && w.Players.TryGetValue(killer, out var killerState))
+                killerState.MatchXp += 1;
         }
     }
 

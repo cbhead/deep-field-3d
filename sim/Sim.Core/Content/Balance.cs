@@ -41,6 +41,9 @@ public static class Balance
     /// <summary>Ember passive: burn duration factor for that player's applications.</summary>
     public const float EmberBurnDurationFactor = 1.3f;
 
+    /// <summary>Tempest passive: weapon fire-rate factor.</summary>
+    public const float TempestRateFactor = 1.12f;
+
     public const int SellRefundPercent = 70;
 
     // ---- M2: shields, cc-resist, burrowing --------------------------------

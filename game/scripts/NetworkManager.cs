@@ -73,11 +73,11 @@ public partial class NetworkManager : Node
     // Handshake: client → Hello, server → Welcome (world json) or Rejected.
     // ---------------------------------------------------------------------
 
-    public void SendHello(string name, string factionId) =>
-        RpcId(1, nameof(HelloRpc), Protocol.Version, name, factionId);
+    public void SendHello(string name, string factionId, int factionLevel) =>
+        RpcId(1, nameof(HelloRpc), Protocol.Version, name, factionId, factionLevel);
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    private void HelloRpc(int version, string name, string factionId)
+    private void HelloRpc(int version, string name, string factionId, int factionLevel)
     {
         if (!IsServer || _world is null) return;
         long peerId = Multiplayer.GetRemoteSenderId();
@@ -91,7 +91,7 @@ public partial class NetworkManager : Node
 
         int playerId = _seats.TryGetValue(peerId, out int existing) ? existing : NextFreeSeat();
         _seats[peerId] = playerId;
-        _world.Enqueue(new Command.Join(playerId, name, factionId));
+        _world.Enqueue(new Command.Join(playerId, name, factionId, factionLevel));
 
         // Full-state sync: the drop-in join IS the save-game path.
         RpcId(peerId, nameof(WelcomeRpc), playerId, Serialization.Serialize(_world));
@@ -196,6 +196,8 @@ public partial class NetworkManager : Node
                 ["weapon"] = p.WeaponId,
                 ["abilityCd"] = p.AbilityCooldown,
                 ["scrap"] = ScrapDict(p.Scrap),
+                ["xp"] = p.MatchXp,
+                ["factionLevel"] = p.FactionLevel,
             });
         }
 

@@ -94,6 +94,12 @@ public partial class Player : CharacterBody3D
             case Key.Key2: ArmoryKey("rifle"); break;
             case Key.Key3: ArmoryKey("scattergun"); break;
             case Key.Key4: ArmoryKey("emberPistol"); break;
+            case Key.Key5:
+                if (_sensor.GetOverlappingAreas().Any(a => (string)a.GetMeta("kind", "") == "armory"))
+                    _root.RecraftBlueprint(_root.CurrentWeaponId());
+                else
+                    _root.Toast("blueprint recraft works at the armory station");
+                break;
         }
     }
 

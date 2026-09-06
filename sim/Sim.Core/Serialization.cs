@@ -23,7 +23,7 @@ public static class Serialization
         float Speed, float Damage, float SplashRadius, float SplashFalloff);
     private sealed record SpawnState(string DefId, int TickOffset, float HpFactor, int RouteIndex, float LateralOffset);
     private sealed record PlayerStateDto(
-        int Id, string Name, string FactionId, float X, float Y, float Z,
+        int Id, string Name, string FactionId, int FactionLevel, int MatchXp, float X, float Y, float Z,
         float Hp, bool Downed, float BleedoutTimer, float ReviveProgress, float RespawnTimer,
         float RegenDelay, float WeaponCooldown, float AbilityCooldown,
         string WeaponId, List<string> OwnedWeapons, Dictionary<string, int> Scrap, bool Connected,
@@ -57,7 +57,7 @@ public static class Serialization
                 p.Speed, p.Damage, p.SplashRadius, p.SplashFalloff)).ToList(),
             w.PendingSpawns.Select(s => new SpawnState(s.DefId, s.TickOffset, s.HpFactor, s.RouteIndex, s.LateralOffset)).ToList(),
             w.Players.Values.Select(p => new PlayerStateDto(
-                p.Id, p.Name, p.FactionId, p.Pos.X, p.Pos.Y, p.Pos.Z,
+                p.Id, p.Name, p.FactionId, p.FactionLevel, p.MatchXp, p.Pos.X, p.Pos.Y, p.Pos.Z,
                 p.Hp, p.Downed, p.BleedoutTimer, p.ReviveProgress, p.RespawnTimer,
                 p.RegenDelay, p.WeaponCooldown, p.AbilityCooldown,
                 p.WeaponId, p.OwnedWeapons.OrderBy(x => x, StringComparer.Ordinal).ToList(),
@@ -142,6 +142,7 @@ public static class Serialization
             var player = new PlayerState
             {
                 Id = p.Id, Name = p.Name, FactionId = p.FactionId,
+                FactionLevel = p.FactionLevel == 0 ? 1 : p.FactionLevel, MatchXp = p.MatchXp,
                 Pos = new Vec3(p.X, p.Y, p.Z),
                 Hp = p.Hp, Downed = p.Downed, BleedoutTimer = p.BleedoutTimer,
                 ReviveProgress = p.ReviveProgress, RespawnTimer = p.RespawnTimer,

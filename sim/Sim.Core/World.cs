@@ -92,6 +92,11 @@ public sealed class PlayerState
     public int Id;
     public string Name = "";
     public string FactionId = "";
+    public int FactionLevel = 1;
+
+    /// <summary>XP earned this match (kills, reactions, revives); the client
+    /// banks it into the local profile at match end.</summary>
+    public int MatchXp;
     public Vec3 Pos;
     public float Hp = Balance.PlayerMaxHp;
     public bool Downed;

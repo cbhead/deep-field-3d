@@ -7,8 +7,9 @@ public abstract record Command
     // ---- Session -----------------------------------------------------------
 
     /// <summary>Player joins (host, net join, or harness bot). Faction must be
-    /// unclaimed — exclusivity is a sim rule, not a lobby courtesy.</summary>
-    public sealed record Join(int PlayerId, string Name, string FactionId) : Command;
+    /// unclaimed — exclusivity is a sim rule, not a lobby courtesy. Level comes
+    /// from the client's local profile (trusted friends; the sim just clamps).</summary>
+    public sealed record Join(int PlayerId, string Name, string FactionId, int FactionLevel = 1) : Command;
 
     public sealed record Leave(int PlayerId) : Command;
 

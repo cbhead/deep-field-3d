@@ -30,10 +30,33 @@ public static class Factions
         Magnitude: 1f,     // burn application strength factor (level curve dial)
         Passive: "burnDuration"); // +30% burn duration on everything this player applies
 
+    /// <summary>M2 — Chain Surge: an AoE shock burst at the aim point. Walking
+    /// reaction fuel: pair with any chill source for Flash Freeze columns.</summary>
+    public static readonly FactionDef Tempest = new(
+        Id: "tempest", AbilityId: "chainSurge",
+        CooldownSeconds: 26f, RadiusMeters: 7f, DurationSeconds: 0f,
+        Magnitude: 6f,     // burst damage per enemy struck
+        Passive: "reloadSpeed"); // +12% weapon fire rate (see Balance)
+
     public static readonly IReadOnlyDictionary<string, FactionDef> All =
         new Dictionary<string, FactionDef>
         {
             [Forge.Id] = Forge,
             [Ember.Id] = Ember,
+            [Tempest.Id] = Tempest,
         };
+
+    // ---- Persistent leveling (profile XP → level, applied at Join) ---------
+
+    public const int MaxLevel = 5;
+    public const int XpPerLevel = 100;
+
+    public static int LevelForXp(int xp) =>
+        System.Math.Clamp(1 + xp / XpPerLevel, 1, MaxLevel);
+
+    /// <summary>Per-level improvements, uniform across factions for M2:
+    /// shorter cooldown, wider radius, stronger magnitude. Swept dials.</summary>
+    public static float CooldownFactor(int level) => MathF.Pow(0.94f, level - 1);
+    public static float RadiusFactor(int level) => 1f + 0.06f * (level - 1);
+    public static float MagnitudeFactor(int level) => 1f + 0.05f * (level - 1);
 }

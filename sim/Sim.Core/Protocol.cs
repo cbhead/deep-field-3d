@@ -104,7 +104,7 @@ public static class Protocol
 
     public static string CommandToWire(Command command) => command switch
     {
-        Command.Join c => $"join|{c.PlayerId}|{Sanitize(c.Name)}|{c.FactionId}",
+        Command.Join c => $"join|{c.PlayerId}|{Sanitize(c.Name)}|{c.FactionId}|{c.FactionLevel}",
         Command.Leave c => $"leave|{c.PlayerId}",
         Command.PlayerSync c => $"sync|{c.PlayerId}|{F(c.Pos.X)}|{F(c.Pos.Y)}|{F(c.Pos.Z)}",
         Command.PlaceTower c => $"place|{c.PlayerId}|{c.TowerId}|{c.SocketId}",
@@ -128,7 +128,8 @@ public static class Protocol
         {
             return p[0] switch
             {
-                "join" => new Command.Join(int.Parse(p[1]), p[2], p[3]),
+                "join" => new Command.Join(int.Parse(p[1]), p[2], p[3],
+                    p.Length > 4 ? int.Parse(p[4]) : 1),
                 "leave" => new Command.Leave(int.Parse(p[1])),
                 "sync" => new Command.PlayerSync(int.Parse(p[1]), new Vec3(Pf(p[2]), Pf(p[3]), Pf(p[4]))),
                 "place" => new Command.PlaceTower(int.Parse(p[1]), p[2], p[3]),
