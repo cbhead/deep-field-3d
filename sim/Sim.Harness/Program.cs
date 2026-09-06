@@ -481,6 +481,95 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
         $"routes {string.Join(",", world.Enemies.Select(e => e.RouteIndex).Distinct())}");
 }
 
+// --- Gate 23: socket placement is legal and generous.
+//
+// Build density is a player-freedom dial: too few sockets and there is only
+// one defence, which is what the first pass shipped. This gate keeps the graph
+// honest as it grows — sockets off the road, traps on it, nothing stranded out
+// of range, nothing stacked on top of anything else.
+{
+    static float DistanceToRoute(Vec3 point, MapDef map)
+    {
+        float best = float.MaxValue;
+        foreach (var route in map.Routes)
+        {
+            if (route.Layer != EnemyLayer.Ground) continue;
+            for (int i = 0; i < route.Waypoints.Count - 1; i++)
+                best = MathF.Min(best, PointToSegment(point, route.Waypoints[i], route.Waypoints[i + 1]));
+        }
+        return best;
+    }
+
+    static float PointToSegment(Vec3 p, Vec3 a, Vec3 b)
+    {
+        // Flat distance: height is what separates a deck socket from the lane
+        // under it, and that separation is the point of a wall mount.
+        float abx = b.X - a.X, abz = b.Z - a.Z;
+        float lengthSq = abx * abx + abz * abz;
+        if (lengthSq < 0.001f) return MathF.Sqrt((p.X - a.X) * (p.X - a.X) + (p.Z - a.Z) * (p.Z - a.Z));
+        float t = Math.Clamp(((p.X - a.X) * abx + (p.Z - a.Z) * abz) / lengthSq, 0f, 1f);
+        float cx = a.X + abx * t, cz = a.Z + abz * t;
+        return MathF.Sqrt((p.X - cx) * (p.X - cx) + (p.Z - cz) * (p.Z - cz));
+    }
+
+    var problems = new List<string>();
+    foreach (var map in new[] { Maps.Foundry, Maps.Switchyard })
+    {
+        var sockets = map.Sockets;
+
+        if (sockets.Select(s => s.Id).Distinct().Count() != sockets.Count)
+            problems.Add($"{map.Id}: duplicate socket id");
+
+        // Density: the whole point of this pass.
+        if (sockets.Count < 30) problems.Add($"{map.Id}: only {sockets.Count} sockets");
+
+        foreach (var socket in sockets)
+        {
+            float toLane = DistanceToRoute(socket.Pos, map);
+
+            if (socket.Tag == SocketTag.Trap)
+            {
+                // Traps trigger on contact, so a plate off the road is dead money.
+                if (toLane > 2.5f) problems.Add($"{map.Id}/{socket.Id}: trap {toLane:0.0}m off the lane");
+            }
+            else if (socket.Tag == SocketTag.Ground)
+            {
+                // Standing in the road would put a tower inside the enemies.
+                if (toLane < 3.5f) problems.Add($"{map.Id}/{socket.Id}: {toLane:0.0}m from the lane centre");
+                // Stranded past every tower's reach is a socket nobody will buy.
+                if (toLane > 20f) problems.Add($"{map.Id}/{socket.Id}: stranded {toLane:0.0}m from any lane");
+            }
+            else if (socket.Tag == SocketTag.Wall)
+            {
+                // A wall mount overhanging the lane is the whole appeal, so it
+                // is only checked for being stranded.
+                if (toLane > 20f) problems.Add($"{map.Id}/{socket.Id}: stranded {toLane:0.0}m from any lane");
+            }
+
+            if (socket.Tag == SocketTag.Wall && socket.Pos.Y < 1f)
+                problems.Add($"{map.Id}/{socket.Id}: wall socket at ground level");
+        }
+
+        // Two pads close enough to overlap read as one blurry option.
+        foreach (var a in sockets)
+            foreach (var b in sockets)
+            {
+                if (string.CompareOrdinal(a.Id, b.Id) >= 0) continue;
+                if (a.Tag != b.Tag) continue;                      // a plate beside a pad is fine
+                if (MathF.Abs(a.Pos.Y - b.Pos.Y) > 2f) continue;   // different tiers may stack
+                float dx = a.Pos.X - b.Pos.X, dz = a.Pos.Z - b.Pos.Z;
+                float gap = MathF.Sqrt(dx * dx + dz * dz);
+                if (gap < 4.5f) problems.Add($"{map.Id}: {a.Id}/{b.Id} only {gap:0.0}m apart");
+            }
+    }
+
+    Gate("sockets: placement legal, spaced, and dense enough to choose from",
+        problems.Count == 0,
+        problems.Count == 0
+            ? $"foundry {Maps.Foundry.Sockets.Count}, switchyard {Maps.Switchyard.Sockets.Count}"
+            : string.Join(" | ", problems.Take(6)));
+}
+
 Console.WriteLine();
 Console.WriteLine(failures == 0 ? "ALL GATES GREEN" : $"{failures} GATE(S) FAILED");
 return failures == 0 ? 0 : 1;

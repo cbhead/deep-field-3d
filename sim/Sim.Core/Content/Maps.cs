@@ -60,24 +60,70 @@ public static class Maps
                 new Vec3(36f, 8f, 5f),
             }),
         },
+        // Twelve sockets left exactly one defence to build, so every match
+        // looked the same. The graph is now dense enough that placement is a
+        // decision: both flanks of most legs are buildable, corners are
+        // contested, and the deck can cover the yard or the air lane but not
+        // comfortably both. Every original id keeps its original position, so
+        // the harness's scripted build orders — and therefore the balance
+        // gates — measure exactly what they measured before.
         Sockets: new[]
         {
-            // Lower yard.
+            // --- Ground, west approach (legs A and B).
+            new SocketDef("g7", new Vec3(-34f, 0f, -6f), SocketTag.Ground),
+            new SocketDef("g8", new Vec3(-33f, 0f, 7f), SocketTag.Ground),
+            new SocketDef("g9", new Vec3(-26f, 0f, -6f), SocketTag.Ground),
             new SocketDef("g1", new Vec3(-24f, 0f, 6f), SocketTag.Ground),
+            new SocketDef("g11", new Vec3(-26f, 0f, 14f), SocketTag.Ground),
+            new SocketDef("g10", new Vec3(-14f, 0f, -4f), SocketTag.Ground),
+
+            // --- Ground, north sweep (leg C).
             new SocketDef("g2", new Vec3(-14f, 0f, 9f), SocketTag.Ground),
+            new SocketDef("g12", new Vec3(-16f, 0f, 20f), SocketTag.Ground),
+            new SocketDef("g13", new Vec3(-6f, 0f, 20f), SocketTag.Ground),
             new SocketDef("g3", new Vec3(-4f, 0f, 8f), SocketTag.Ground),
+
+            // --- Ground, the long spine (leg D) — both flanks.
+            new SocketDef("g14", new Vec3(6f, 0f, 12f), SocketTag.Ground),
             new SocketDef("g4", new Vec3(4f, 0f, 0f), SocketTag.Ground),
+            new SocketDef("g15", new Vec3(9f, 0f, 4f), SocketTag.Ground),
+            new SocketDef("g16", new Vec3(-5f, 0f, -5f), SocketTag.Ground),
+
+            // --- Ground, the elbow and the run to the core (legs E, F, G).
             new SocketDef("g5", new Vec3(12f, 0f, -2f), SocketTag.Ground),
+            new SocketDef("g17", new Vec3(6f, 0f, -14f), SocketTag.Ground),
+            new SocketDef("g18", new Vec3(22f, 0f, -13f), SocketTag.Ground),
             new SocketDef("g6", new Vec3(24f, 0f, 0f), SocketTag.Ground),
-            // Upper deck edge — overlooks the middle of the ground lane and the
-            // air lane's midpoint; only reachable by ladder/launcher.
+            new SocketDef("g19", new Vec3(30f, 0f, 0f), SocketTag.Ground),
+            new SocketDef("g20", new Vec3(30f, 0f, 13f), SocketTag.Ground),
+            new SocketDef("g21", new Vec3(14f, 0f, 10f), SocketTag.Ground),
+            new SocketDef("g22", new Vec3(36f, 0f, -2f), SocketTag.Ground),
+
+            // --- Upper deck. The north row overlooks the ground lane; the deep
+            // row trades that for a longer sightline down the air strand.
             new SocketDef("w1", new Vec3(-6f, 6f, -16f), SocketTag.Wall),
             new SocketDef("w2", new Vec3(2f, 6f, -16f), SocketTag.Wall),
             new SocketDef("w3", new Vec3(10f, 6f, -16f), SocketTag.Wall),
-            // Path floor traps (M2 content; validated but unbuildable at M1).
+            new SocketDef("w4", new Vec3(-10f, 6f, -12.8f), SocketTag.Wall),
+            new SocketDef("w5", new Vec3(-2f, 6f, -12.8f), SocketTag.Wall),
+            new SocketDef("w6", new Vec3(6f, 6f, -12.8f), SocketTag.Wall),
+            new SocketDef("w7", new Vec3(14f, 6f, -12.8f), SocketTag.Wall),
+            new SocketDef("w8", new Vec3(-10f, 6f, -19.5f), SocketTag.Wall),
+            new SocketDef("w9", new Vec3(6f, 6f, -19.5f), SocketTag.Wall),
+
+            // --- Path plates. Traps are consumable, so density here is about
+            // choosing where to spend them, not about holding every metre.
+            new SocketDef("t4", new Vec3(-30f, 0f, 0f), SocketTag.Trap),
             new SocketDef("t1", new Vec3(-20f, 0f, 7f), SocketTag.Trap),
+            new SocketDef("t5", new Vec3(-20f, 0f, 13f), SocketTag.Trap),
+            new SocketDef("t6", new Vec3(-10f, 0f, 14f), SocketTag.Trap),
+            new SocketDef("t7", new Vec3(0f, 0f, 10f), SocketTag.Trap),
             new SocketDef("t2", new Vec3(0f, 0f, 3f), SocketTag.Trap),
+            new SocketDef("t8", new Vec3(0f, 0f, -4f), SocketTag.Trap),
+            new SocketDef("t9", new Vec3(9f, 0f, -8f), SocketTag.Trap),
             new SocketDef("t3", new Vec3(18f, 0f, -1f), SocketTag.Trap),
+            new SocketDef("t10", new Vec3(18f, 0f, 5f), SocketTag.Trap),
+            new SocketDef("t11", new Vec3(28f, 0f, 6f), SocketTag.Trap),
         },
         HeroSpawn: new Vec3(0f, 0f, -24f),
         ArmoryPos: new Vec3(-6f, 0f, -24f),
@@ -126,26 +172,71 @@ public static class Maps
                 new Vec3(40f, 9f, 6f),
             }),
         },
+        // Same density pass as Foundry, with the extra job of covering two
+        // ground routes: sockets that watch the switchback are mostly blind to
+        // the freight cut and vice versa, so the barricade decision now comes
+        // with a real question about which of them you already paid to cover.
         Sockets: new[]
         {
+            // --- Ground, the west yard where both routes still share a mouth.
+            new SocketDef("g8", new Vec3(-38f, 0f, -1f), SocketTag.Ground),
+            new SocketDef("g20", new Vec3(-28f, 0f, -18f), SocketTag.Ground),
             new SocketDef("g1", new Vec3(-30f, 0f, 2f), SocketTag.Ground),
+            new SocketDef("g9", new Vec3(-32f, 0f, 8f), SocketTag.Ground),
+
+            // --- Ground, the long switchback.
             new SocketDef("g2", new Vec3(-18f, 0f, 8f), SocketTag.Ground),
+            new SocketDef("g10", new Vec3(-20f, 0f, 16f), SocketTag.Ground),
+            new SocketDef("g11", new Vec3(-10f, 0f, 16f), SocketTag.Ground),
             new SocketDef("g3", new Vec3(-10f, 0f, 4f), SocketTag.Ground),
+            new SocketDef("g13", new Vec3(2f, 0f, 8f), SocketTag.Ground),
+            new SocketDef("g21", new Vec3(8f, 0f, 16f), SocketTag.Ground),
+
+            // --- Ground, over the freight cut — these are the sockets that go
+            // quiet the moment b1 closes it.
+            new SocketDef("g12", new Vec3(-14f, 0f, -6f), SocketTag.Ground),
             new SocketDef("g4", new Vec3(0f, 0f, -4f), SocketTag.Ground),
-            new SocketDef("g5", new Vec3(10f, 0f, 2f), SocketTag.Ground),
+            new SocketDef("g14", new Vec3(4f, 0f, -8f), SocketTag.Ground),
+
+            // --- Ground, the east half and the core approach.
+            new SocketDef("g5", new Vec3(10f, 0f, 5f), SocketTag.Ground),
+            new SocketDef("g15", new Vec3(10f, 0f, -6f), SocketTag.Ground),
             new SocketDef("g6", new Vec3(20f, 0f, -4f), SocketTag.Ground),
+            new SocketDef("g16", new Vec3(24f, 0f, 0f), SocketTag.Ground),
+            new SocketDef("g17", new Vec3(26f, 0f, -6f), SocketTag.Ground),
             new SocketDef("g7", new Vec3(30f, 0f, 2f), SocketTag.Ground),
-            // Mid deck (y=5) over the freight cut; upper catwalk (y=10) sees both.
+            new SocketDef("g18", new Vec3(34f, 0f, -2f), SocketTag.Ground),
+            new SocketDef("g19", new Vec3(36f, 0f, 14f), SocketTag.Ground),
+
+            // --- Mid deck (y=5) over the freight cut.
             new SocketDef("w1", new Vec3(-12f, 5f, -18f), SocketTag.Wall),
             new SocketDef("w2", new Vec3(0f, 5f, -18f), SocketTag.Wall),
-            // Upper catwalk hangs over the air lane — the only sockets that can
-            // see the whole strand (ground Skywatches only reach its low dips).
+            new SocketDef("w5", new Vec3(-16.5f, 5f, -15f), SocketTag.Wall),
+            new SocketDef("w6", new Vec3(-6f, 5f, -16f), SocketTag.Wall),
+            new SocketDef("w7", new Vec3(5f, 5f, -21f), SocketTag.Wall),
+
+            // --- Upper catwalk (y=10) hangs over the air lane — the only
+            // sockets that see the whole strand rather than its low dips.
             new SocketDef("w3", new Vec3(-4f, 10f, 6f), SocketTag.Wall),
             new SocketDef("w4", new Vec3(10f, 10f, 0f), SocketTag.Wall),
+            new SocketDef("w8", new Vec3(-12f, 10f, 2f), SocketTag.Wall),
+            new SocketDef("w9", new Vec3(2f, 10f, 4f), SocketTag.Wall),
+
+            // --- Path plates on both routes.
+            new SocketDef("t5", new Vec3(-35f, 0f, -10f), SocketTag.Trap),
+            new SocketDef("t13", new Vec3(-32f, 0f, -5.84f), SocketTag.Trap),
             new SocketDef("t1", new Vec3(-25f, 0f, 0f), SocketTag.Trap),
+            new SocketDef("t6", new Vec3(-25f, 0f, 8f), SocketTag.Trap),
+            new SocketDef("t7", new Vec3(-15f, 0f, 12f), SocketTag.Trap),
+            new SocketDef("t8", new Vec3(-5f, 0f, 8f), SocketTag.Trap),
             new SocketDef("t2", new Vec3(-5f, 0f, 0f), SocketTag.Trap),
-            new SocketDef("t3", new Vec3(15f, 0f, -2f), SocketTag.Trap),
+            new SocketDef("t9", new Vec3(-5f, 0f, -8f), SocketTag.Trap),
             new SocketDef("t4", new Vec3(5f, 0f, 0f), SocketTag.Trap),
+            new SocketDef("t10", new Vec3(5f, 0f, -12f), SocketTag.Trap),
+            new SocketDef("t3", new Vec3(15f, 0f, -2f), SocketTag.Trap),
+            new SocketDef("t11", new Vec3(15f, 0f, 6f), SocketTag.Trap),
+            new SocketDef("t12", new Vec3(25f, 0f, 9.2f), SocketTag.Trap),
+
             new SocketDef("b1", new Vec3(-8f, 0f, -1f), SocketTag.Barricade),
         },
         HeroSpawn: new Vec3(0f, 0f, -26f),

@@ -1312,8 +1312,13 @@ public partial class GameRoot : Node3D
     /// roadway, or a gantry planted in the spawn yard.</summary>
     private bool Blocked(Vector3 at, float clearance)
     {
+        // Sockets get their own, tighter clearance. A build pad is 2.3 m across
+        // and what matters is not burying it — a crate eight metres away is
+        // scenery, not an obstruction. Holding scenery to the full lane
+        // clearance around 42 pads empties the map instead of dressing it.
+        const float socketClearance = 4.5f;
         foreach (var socket in _map.Sockets)
-            if (Flat(ToGd(socket.Pos)).DistanceTo(Flat(at)) < clearance) return true;
+            if (Flat(ToGd(socket.Pos)).DistanceTo(Flat(at)) < socketClearance) return true;
 
         foreach (var mouth in _laneMouths)
             if (Flat(mouth).DistanceTo(Flat(at)) < clearance + 3f) return true;
@@ -1480,11 +1485,11 @@ public partial class GameRoot : Node3D
         DressProp("foundry_dress_pipes", new Vector3(-38, 0, -18), 90f);
         DressProp("foundry_dress_pipes", new Vector3(38, 0, -16), -90f);
         DressProp("foundry_dress_pipes", new Vector3(30, 0, 24), 180f);
-        DressProp("foundry_dress_lightrig", new Vector3(-30, 0, -8));
+        DressProp("foundry_dress_lightrig", new Vector3(-36, 0, -14));
         DressProp("foundry_dress_lightrig", new Vector3(28, 0, 20));
         DressProp("foundry_dress_lightrig", new Vector3(6, 0, 26));
-        DressProp("foundry_dress_steamvent", new Vector3(-34, 0, 4));
-        DressProp("foundry_dress_steamvent", new Vector3(34, 0, -4));
+        DressProp("foundry_dress_steamvent", new Vector3(-38, 0, 12));
+        DressProp("foundry_dress_steamvent", new Vector3(34, 0, -12));
         ScatterTerrain("foundry_terrain_scatter", 42f, 30f);
     }
 
@@ -1657,7 +1662,7 @@ public partial class GameRoot : Node3D
         DressProp("switchyard_dress_railcar", new Vector3(26, 0, 26), 8f);
         DressProp("switchyard_dress_railcar", new Vector3(-30, 0, -26), 4f);
         DressProp("switchyard_dress_container", new Vector3(-42, 0, -22), 30f);
-        DressProp("switchyard_dress_container", new Vector3(42, 0, 2), -15f);
+        DressProp("switchyard_dress_container", new Vector3(44, 0, -2), -15f);
         DressProp("switchyard_dress_container", new Vector3(20, 0, 27), 60f);
         DressProp("switchyard_dress_signaltower", new Vector3(-24, 0, 27));
         DressProp("switchyard_dress_signaltower", new Vector3(36, 0, -12));
