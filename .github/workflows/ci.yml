@@ -69,7 +69,22 @@ jobs:
       - name: Solo match smoke (both maps)
         run: |
           for MAP in foundry switchyard; do
+            # Capture the exit code rather than letting -e kill the step: a
+            # crash here printed nothing at all, which made a CI-only failure
+            # impossible to diagnose from the run page.
+            set +e
             godot --headless --path game --quit-after 1800 -- --solo $MAP > solo-$MAP.log 2>&1
+            code=$?
+            set -e
+            if [ $code -ne 0 ]; then
+              echo "=== $MAP exited $code ==="
+              tail -80 "solo-$MAP.log"
+              exit $code
+            fi
             grep -q "\[solo\] started on $MAP" solo-$MAP.log
-            ! grep -qiE "^ERROR|SCRIPT ERROR|Unhandled exception" solo-$MAP.log
+            if grep -qiE "^ERROR|SCRIPT ERROR|Unhandled exception" solo-$MAP.log; then
+              echo "=== $MAP reported errors ==="
+              grep -iE "^ERROR|SCRIPT ERROR|Unhandled exception" -A 4 "solo-$MAP.log" | head -40
+              exit 1
+            fi
           done
