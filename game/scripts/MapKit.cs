@@ -30,13 +30,15 @@ public static class MapKit
 
     /// <summary>One piece, centred on the body. Returns false (leaving the
     /// graybox visible) when design hasn't shipped that asset.</summary>
-    public static bool Mount(Node3D body, string asset, float localY, float yawDegrees = 0f)
+    public static bool Mount(Node3D body, string asset, float localY, float yawDegrees = 0f,
+        Vector3? scale = null)
     {
         var piece = AssetLibrary.TryInstantiate(asset);
         if (piece is null) return false;
 
         piece.Position = new Vector3(0, localY, 0);
         piece.RotationDegrees = new Vector3(0, yawDegrees, 0);
+        if (scale is { } s) piece.Scale = s;
         body.AddChild(piece);
         HideBox(body);
         return true;
@@ -98,6 +100,13 @@ public static class MapKit
         parent.AddChild(piece);
         return piece;
     }
+
+    /// <summary>Yaw that points a model's local −Z... no: local +Z along
+    /// <paramref name="direction"/>. Every kit piece with a front (gates,
+    /// kiosks, the core) is authored facing +Z, so this is how a piece gets
+    /// turned to face down a lane instead of across it.</summary>
+    public static float YawTowards(Vector3 direction)
+        => Mathf.RadToDeg(Mathf.Atan2(direction.X, direction.Z));
 
     /// <summary>Stops a model casting shadows. The skybox is real geometry —
     /// a 400 m dome — and a shadow-casting sun inside it puts the entire map

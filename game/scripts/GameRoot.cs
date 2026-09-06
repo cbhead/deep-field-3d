@@ -35,7 +35,9 @@ public partial class GameRoot : Node3D
     private readonly Dictionary<int, Node3D> _projectileViews = new();
     private readonly Dictionary<int, Node3D> _towerViews = new();
     private string? _shotPath;
+    private string _shotView = "eye";
     private int _shotCountdown;
+    private List<Vector3> _laneMouths = new();
     private readonly Dictionary<string, StaticBody3D> _socketBodies = new();
     private readonly Dictionary<string, SocketTag> _socketTags = new();
     private readonly Dictionary<int, Node3D> _avatarViews = new();
@@ -110,14 +112,15 @@ public partial class GameRoot : Node3D
                 GD.Print($"[solo] started on {_map.Id}");
                 return;
             }
-            // --shot <map> <path>: solo match, settle, save a frame, quit.
-            // Needs a real renderer, so run it windowed. This is how art
-            // changes get reviewed without anyone playing the game.
+            // --shot <map> <path> [eye|iso|top|<x,y,z>]: solo match, settle,
+            // save a frame, quit. Needs a real renderer, so run it windowed.
+            // This is how layout and art get reviewed without playing.
             if (args[i] == "--shot" && i + 2 < args.Length)
             {
                 if (Maps.All.TryGetValue(args[i + 1], out var shotMap)) _map = shotMap;
                 _playerName = "shot";
                 _shotPath = args[i + 2];
+                _shotView = i + 3 < args.Length ? args[i + 3] : "eye";
                 _shotCountdown = 90;
                 StartSolo("ember");
                 return;
@@ -143,6 +146,40 @@ public partial class GameRoot : Node3D
     {
         string path = _shotPath!;
         _shotPath = null;
+
+        // Layout review needs to see the whole map, not the player's eyeline.
+        // The camera has to exist for a frame before the viewport shows it, so
+        // this pass only stages it and re-arms the countdown.
+        if (_shotView != "eye")
+        {
+            var (from, look) = _shotView switch
+            {
+                "top" => (new Vector3(0, 95, 1), Vector3.Zero),
+                "iso" => (new Vector3(-52, 46, 52), new Vector3(0, 0, -2)),
+                "iso2" => (new Vector3(56, 40, -46), new Vector3(0, 0, -2)),
+                "lane" => (new Vector3(-46, 14, -26), new Vector3(0, 0, 4)),
+                // Fixture checks: the gate enemies walk out of, the yard the
+                // players spawn into, and the air strand over the map.
+                "gate" => (new Vector3(-30, 9, 22), new Vector3(-40, 2, 0)),
+                "yard" => (new Vector3(4, 4f, -28), new Vector3(-6, 1.6f, -23)),
+                "tunnel" => (new Vector3(11, 5, -3), new Vector3(0, 1, -8)),
+                "air" => (new Vector3(-14, 24, 38), new Vector3(0, 8, 0)),
+                "core" => (new Vector3(20, 10, 26), new Vector3(36, 2, 6)),
+                _ => (new Vector3(0, 60, 60), Vector3.Zero),
+            };
+            var camera = new Camera3D { Position = from, Far = 500f };
+            AddChild(camera);
+            camera.LookAt(look, Vector3.Up);
+            camera.MakeCurrent();
+
+            _shotPath = path;
+            _shotView = "eye";
+            _shotCountdown = 4;
+            _hud?.Hide();
+            _screens?.Hide();
+            return;
+        }
+
         var image = GetViewport().GetTexture().GetImage();
         image.SavePng(path);
         GD.Print($"[shot] wrote {path}  ({image.GetWidth()}x{image.GetHeight()})");
@@ -1122,16 +1159,18 @@ public partial class GameRoot : Node3D
         BuildEnvironment(map);
 
         // Ground slab — one collider, dressed with the 20 m terrain tiles.
+        // Tiles are laid symmetrically so the slab is covered edge to edge;
+        // an off-centre run leaves bare collider showing at one end.
         var ground = AddStaticBox(new Vector3(0, -0.5f, 0), new Vector3(110, 1, 80), new Color(0.35f, 0.38f, 0.4f), layer: 1);
         if (AssetLibrary.Has($"{map.Id}_terrain"))
         {
             MapKit.HideBox(ground);
             for (float x = -50f; x <= 50f; x += 20f)
-                for (float z = -35f; z <= 35f; z += 20f)
+                for (float z = -30f; z <= 30f; z += 20f)
                     MapKit.Prop(ground, $"{map.Id}_terrain", new Vector3(x, MapKit.GroundLocal(ground), z));
         }
 
-        // Route ribbons (ground solid, air translucent).
+        // Lane surfaces.
         foreach (var route in map.Routes)
         {
             bool air = route.Layer == EnemyLayer.Air;
@@ -1145,25 +1184,19 @@ public partial class GameRoot : Node3D
                 var horizontal = b - a;
                 box.Rotation = new Vector3(0, Mathf.Atan2(-horizontal.Z, horizontal.X), 0);
 
-                // The ground lane becomes real roadway; the air lane gets nav
-                // pylons so the Skiff route still reads without a debug ribbon.
+                // The ground lane becomes real roadway. The air lane keeps its
+                // faint ribbon: pylons are placed separately, standing on the
+                // ground, because hanging them off a ribbon 9 m up put a row of
+                // masts in the sky.
                 if (!air)
                     MapKit.MountRun(box, $"{map.Id}_path_ground", (b - a).Length(), 4f,
                         alongX: true, MapKit.GroundLocal(box));
-                else if (AssetLibrary.Has("shared_airlane_pylon"))
-                {
-                    MapKit.HideBox(box);
-                    MapKit.MountRun(box, "shared_airlane_pylon", (b - a).Length(), 12f,
-                        alongX: true, MapKit.GroundLocal(box));
-                }
             }
 
-            // Spawn portal and the core the lane ends at.
-            var spawn = AddStaticBox(ToGd(route.Waypoints[0]) + new Vector3(0, 1.5f, 0), new Vector3(3f, 3f, 3f), new Color(0.75f, 0.45f, 0.15f), layer: 0);
-            MapKit.Mount(spawn, "shared_spawn_portal", MapKit.GroundLocal(spawn));
-            var goal = AddStaticBox(ToGd(route.Waypoints[^1]) + new Vector3(0, 1.5f, 0), new Vector3(3f, 3f, 3f), new Color(0.2f, 0.55f, 0.85f), layer: 0);
-            if (!air) MapKit.Mount(goal, "shared_core", MapKit.GroundLocal(goal));
+            if (air) BuildAirLaneSupports(route);
         }
+
+        BuildLaneMouths(map);
 
         // Sockets.
         foreach (var socket in map.Sockets)
@@ -1202,7 +1235,115 @@ public partial class GameRoot : Node3D
         var armory = AddStaticBox(ToGd(map.ArmoryPos) + new Vector3(0, 1.25f, 0),
             new Vector3(2.5f, 2.5f, 2.5f), new Color(0.8f, 0.7f, 0.2f), layer: 1);
         armory.AddChild(MakeArea("armory", new BoxShape3D { Size = new Vector3(7, 4, 7) }));
-        MapKit.Mount(armory, "shared_armory_kiosk", MapKit.GroundLocal(armory) + 2.1f);
+        // Sits on the ground like every other kit piece and faces the spot
+        // players spawn at. The +2.1 that used to be here was a guess at a
+        // pivot offset and left the kiosk hanging in mid-air.
+        MapKit.Mount(armory, "shared_armory_kiosk", MapKit.GroundLocal(armory),
+            MapKit.YawTowards(ToGd(map.HeroSpawn) - ToGd(map.ArmoryPos)));
+    }
+
+    /// <summary>The gate enemies come out of and the core they are walking at.
+    ///
+    /// Both are oriented along the lane: a gate turned the wrong way reads as
+    /// enemies walking out through a solid wall, which is exactly what it did
+    /// before. Switchyard's two ground routes share a mouth and an end, so
+    /// these are placed per distinct position — otherwise two portals sit in
+    /// the same six metres of space fighting over the depth buffer.</summary>
+    private void BuildLaneMouths(MapDef map)
+    {
+        var gates = new List<Vector3>();
+        var cores = new List<Vector3>();
+
+        foreach (var route in map.Routes)
+        {
+            if (route.Layer == EnemyLayer.Air) continue;   // the air lane has no gate
+            if (route.Waypoints.Count < 2) continue;
+
+            var start = ToGd(route.Waypoints[0]);
+            var outbound = ToGd(route.Waypoints[1]) - start;
+            if (!gates.Any(p => p.DistanceTo(start) < 4f))
+            {
+                gates.Add(start);
+                MapKit.Prop(this, "shared_spawn_portal", start, MapKit.YawTowards(outbound));
+            }
+
+            var end = ToGd(route.Waypoints[^1]);
+            var inbound = end - ToGd(route.Waypoints[^2]);
+            if (!cores.Any(p => p.DistanceTo(end) < 4f))
+            {
+                cores.Add(end);
+                // The core faces back up the lane, at the thing coming for it.
+                MapKit.Prop(this, "shared_core", end, MapKit.YawTowards(-inbound));
+            }
+        }
+        _laneMouths = gates.Concat(cores).ToList();
+    }
+
+    /// <summary>Masts under the air lane, standing on the ground, spaced along
+    /// the strand. The pylon is 9.6 m and the lane flies at 8–9, so a mast
+    /// planted at y=0 meets it — which is the whole point of the silhouette.
+    /// Skipped where a mast would spear the deck or land on the ground lane.</summary>
+    private void BuildAirLaneSupports(RouteDef route)
+    {
+        if (!AssetLibrary.Has("shared_airlane_pylon")) return;
+
+        const float spacing = 13f;
+        for (int i = 0; i < route.Waypoints.Count - 1; i++)
+        {
+            var a = ToGd(route.Waypoints[i]);
+            var b = ToGd(route.Waypoints[i + 1]);
+            float span = new Vector2(b.X - a.X, b.Z - a.Z).Length();
+            int count = Mathf.Max(1, Mathf.FloorToInt(span / spacing));
+
+            for (int step = 0; step <= count; step++)
+            {
+                if (i > 0 && step == 0) continue;              // shared corner
+                var at = a.Lerp(b, count == 0 ? 0f : (float)step / count);
+                var foot = new Vector3(at.X, 0, at.Z);
+                if (Blocked(foot, 6f)) continue;
+                MapKit.Prop(this, "shared_airlane_pylon", foot);
+            }
+        }
+    }
+
+    /// <summary>True when a spot is too close to something the player uses —
+    /// the lane, a socket, a lane mouth, or the places players stand. Scenery
+    /// that ignores this is how a map ends up with a girder through the
+    /// roadway, or a gantry planted in the spawn yard.</summary>
+    private bool Blocked(Vector3 at, float clearance)
+    {
+        foreach (var socket in _map.Sockets)
+            if (Flat(ToGd(socket.Pos)).DistanceTo(Flat(at)) < clearance) return true;
+
+        foreach (var mouth in _laneMouths)
+            if (Flat(mouth).DistanceTo(Flat(at)) < clearance + 3f) return true;
+
+        // Player space: where they spawn, where they shop, and every station
+        // the traversal graph expects them to be able to stand on.
+        if (Flat(ToGd(_map.HeroSpawn)).DistanceTo(Flat(at)) < clearance + 6f) return true;
+        if (Flat(ToGd(_map.ArmoryPos)).DistanceTo(Flat(at)) < clearance + 4f) return true;
+        foreach (var station in _map.HeroStations)
+            if (Flat(ToGd(station.Pos)).DistanceTo(Flat(at)) < clearance) return true;
+
+        foreach (var route in _map.Routes)
+        {
+            if (route.Layer == EnemyLayer.Air) continue;
+            for (int i = 0; i < route.Waypoints.Count - 1; i++)
+                if (DistanceToSegment(Flat(at), Flat(ToGd(route.Waypoints[i])),
+                        Flat(ToGd(route.Waypoints[i + 1]))) < clearance) return true;
+        }
+        return false;
+    }
+
+    private static Vector3 Flat(Vector3 v) => new(v.X, 0, v.Z);
+
+    private static float DistanceToSegment(Vector3 point, Vector3 a, Vector3 b)
+    {
+        var ab = b - a;
+        float lengthSq = ab.LengthSquared();
+        if (lengthSq < 0.001f) return point.DistanceTo(a);
+        float t = Mathf.Clamp((point - a).Dot(ab) / lengthSq, 0f, 1f);
+        return point.DistanceTo(a + ab * t);
     }
 
     /// <summary>Tears down a sold structure and hands its socket back to the
@@ -1262,8 +1403,9 @@ public partial class GameRoot : Node3D
         var pillarEast = AddStaticBox(new Vector3(14, 2.9f, -17), new Vector3(1.2f, 5.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
         MapKit.Mount(pillarEast, "foundry_pillar", MapKit.GroundLocal(pillarEast));
 
-        // Ladder up the deck's south face: an Area3D volume Player climbs inside.
-        var ladderVisual = AddStaticBox(new Vector3(-8f, 3f, -12.4f), new Vector3(1.2f, 6f, 0.15f), new Color(0.7f, 0.6f, 0.3f), layer: 0);
+        // Ladder up the deck's south face. Moved off x=-8 so it no longer
+        // shares a footprint with the vent tunnel's mouth.
+        var ladderVisual = AddStaticBox(new Vector3(-11f, 3f, -12.4f), new Vector3(1.2f, 6f, 0.15f), new Color(0.7f, 0.6f, 0.3f), layer: 0);
         ladderVisual.AddChild(MakeArea("ladder", new BoxShape3D { Size = new Vector3(1.6f, 6.4f, 1.4f) }));
         MapKit.Mount(ladderVisual, "shared_ladder", MapKit.GroundLocal(ladderVisual));
 
@@ -1287,17 +1429,35 @@ public partial class GameRoot : Node3D
         zipAnchor.AddChild(zipArea);
         DressZipline(zipAnchor, cable, zipStart, zipEnd);
 
-        // Vent tunnel under the deck: spawn yard → mid-lane shortcut (hero-only).
-        var ventRoof = AddStaticBox(new Vector3(0, 1.4f, -6.5f), new Vector3(3.0f, 0.25f, 14f), new Color(0.3f, 0.32f, 0.36f), layer: 1);
-        var ventWest = AddStaticBox(new Vector3(-1.8f, 0.7f, -6.5f), new Vector3(0.25f, 1.4f, 14f), new Color(0.3f, 0.32f, 0.36f), layer: 1);
-        var ventEast = AddStaticBox(new Vector3(1.8f, 0.7f, -6.5f), new Vector3(0.25f, 1.4f, 14f), new Color(0.3f, 0.32f, 0.36f), layer: 1);
+        // Vent tunnel: the hero-only shortcut from under the deck out to the
+        // mid-lane station. Two things were wrong with it.
+        //
+        // It ran along x=0, which is the enemy lane's north-south leg — the
+        // shortcut was laid on top of the road it was meant to bypass. It now
+        // sits at x=-8 and surfaces beside the midLane hero station.
+        //
+        // And its bore was 1.275 m under a 1.8 m player capsule, so nobody
+        // could ever walk through it. Clearance is 2.5 m now, with the model
+        // stretched to match — a tube that reads the same at any height.
+        // Pushed south so a third of its run is genuinely under the deck —
+        // otherwise it reads as a shipping container abandoned in the yard
+        // rather than a way through.
+        const float bore = 2.5f;
+        const float ventX = -8f, ventZ = -9f, ventLength = 14f;
+        var ventRoof = AddStaticBox(new Vector3(ventX, bore + 0.13f, ventZ), new Vector3(3.0f, 0.25f, ventLength), new Color(0.3f, 0.32f, 0.36f), layer: 1);
+        var ventWest = AddStaticBox(new Vector3(ventX - 1.8f, bore * 0.5f, ventZ), new Vector3(0.25f, bore, ventLength), new Color(0.3f, 0.32f, 0.36f), layer: 1);
+        var ventEast = AddStaticBox(new Vector3(ventX + 1.8f, bore * 0.5f, ventZ), new Vector3(0.25f, bore, ventLength), new Color(0.3f, 0.32f, 0.36f), layer: 1);
         // One tunnel model covers all three colliders, so the other two just
         // stop drawing.
-        if (MapKit.Mount(ventRoof, "foundry_vent_tunnel", MapKit.GroundLocal(ventRoof)))
+        if (MapKit.Mount(ventRoof, "foundry_vent_tunnel", MapKit.GroundLocal(ventRoof),
+                scale: new Vector3(1f, bore / 1.4f, 1f)))
         {
             MapKit.HideBox(ventWest);
             MapKit.HideBox(ventEast);
         }
+        // Grates at both mouths so the tube reads as something you enter.
+        MapKit.Prop(this, "shared_vent_grate", new Vector3(ventX, 0, ventZ + ventLength * 0.5f), 0f);
+        MapKit.Prop(this, "shared_vent_grate", new Vector3(ventX, 0, ventZ - ventLength * 0.5f), 180f);
 
         // Control point: stand on it to open the bonus wall socket sightline
         // (sim hookup lands at M2 with operated elements; sweepInert visual now).
@@ -1305,19 +1465,40 @@ public partial class GameRoot : Node3D
         controlPad.AddChild(MakeArea("controlPoint", new BoxShape3D { Size = new Vector3(3f, 1.5f, 3f) }));
         MapKit.Mount(controlPad, "shared_controlpoint_neutral", MapKit.GroundLocal(controlPad));
 
-        // Perimeter and dressing. Everything here is layer 0 and sits off the
-        // lane — the brief's rule is that scenery never blocks a socket's line
-        // to the route, because the harness's coverage math is the truth.
-        BuildBoundary("foundry_wall_boundary", 52f, 38f);
-        MapKit.Prop(this, "foundry_dress_crucible", new Vector3(-30, 0, 8), 20f);
-        MapKit.Prop(this, "foundry_dress_gantry", new Vector3(6, 0, -30));
-        MapKit.Prop(this, "foundry_dress_pipes", new Vector3(-34, 0, -14), 90f);
-        MapKit.Prop(this, "foundry_dress_pipes", new Vector3(36, 0, -20), -90f);
-        MapKit.Prop(this, "foundry_dress_lightrig", new Vector3(-20, 0, 22));
-        MapKit.Prop(this, "foundry_dress_lightrig", new Vector3(24, 0, 24));
-        MapKit.Prop(this, "foundry_dress_steamvent", new Vector3(-24, 0, -2));
-        MapKit.Prop(this, "foundry_dress_steamvent", new Vector3(32, 0, 14));
-        ScatterTerrain("foundry_terrain_scatter");
+        // Perimeter sized to the lane: the ground route runs x −40 → +36, so
+        // the wall stands two metres past each mouth and the gates read as
+        // openings in it. Everything else is dressing at layer 0.
+        BuildBoundary("foundry_wall_boundary", 42f, 30f);
+
+        // Dressing clusters where the theme wants it — the melt floor west, the
+        // gantry over the yard, pipe runs hugging the walls — and every piece
+        // is clearance-checked against the lane and the sockets.
+        DressProp("foundry_dress_crucible", new Vector3(-33, 0, 16), 20f);
+        DressProp("foundry_dress_crucible", new Vector3(-26, 0, 22), -10f);
+        DressProp("foundry_dress_gantry", new Vector3(24, 0, -26));
+        DressProp("foundry_dress_gantry", new Vector3(-16, 0, 25), 90f);
+        DressProp("foundry_dress_pipes", new Vector3(-38, 0, -18), 90f);
+        DressProp("foundry_dress_pipes", new Vector3(38, 0, -16), -90f);
+        DressProp("foundry_dress_pipes", new Vector3(30, 0, 24), 180f);
+        DressProp("foundry_dress_lightrig", new Vector3(-30, 0, -8));
+        DressProp("foundry_dress_lightrig", new Vector3(28, 0, 20));
+        DressProp("foundry_dress_lightrig", new Vector3(6, 0, 26));
+        DressProp("foundry_dress_steamvent", new Vector3(-34, 0, 4));
+        DressProp("foundry_dress_steamvent", new Vector3(34, 0, -4));
+        ScatterTerrain("foundry_terrain_scatter", 42f, 30f);
+    }
+
+    /// <summary>Places a prop only if it clears the lane, the sockets and the
+    /// gates; logs it when it doesn't, so a bad coordinate is a line in the
+    /// output rather than a girder standing in the roadway.</summary>
+    private void DressProp(string asset, Vector3 at, float yaw = 0f)
+    {
+        if (Blocked(at, 7f))
+        {
+            GD.Print($"[map] dressing refused: {asset} at {at} is too close to play space");
+            return;
+        }
+        MapKit.Prop(this, asset, at, yaw);
     }
 
     /// <summary>Anchor at each end plus the stretched cable. The graybox cable
@@ -1333,35 +1514,58 @@ public partial class GameRoot : Node3D
         MapKit.Prop(this, "shared_zipline_trolley", from + (to - from) * 0.06f);
     }
 
-    /// <summary>Boundary wall run around the play area, from the same 10.8 m
-    /// segment on all four sides.</summary>
+    /// <summary>Boundary wall around the play area, laid so the run closes
+    /// exactly on the corners rather than overshooting them.
+    ///
+    /// Segments are skipped where a lane mouth sits, which is what turns a gate
+    /// into an opening in the wall instead of a shed parked in an empty field.
+    /// Call this after BuildLaneMouths.</summary>
     private void BuildBoundary(string asset, float halfX, float halfZ)
     {
         if (!AssetLibrary.Has(asset)) return;
-        for (float x = -halfX; x <= halfX; x += 10.8f)
+        const float segment = 10.8f;
+
+        void Run(Vector3 from, Vector3 to, float yaw)
         {
-            MapKit.Prop(this, asset, new Vector3(x, 0, -halfZ), 0f);
-            MapKit.Prop(this, asset, new Vector3(x, 0, halfZ), 180f);
+            int count = Mathf.Max(1, Mathf.RoundToInt(from.DistanceTo(to) / segment));
+            for (int i = 0; i < count; i++)
+            {
+                var at = from.Lerp(to, (i + 0.5f) / count);
+                // Leave a hole where enemies come in or the core sits.
+                if (_laneMouths.Any(m => Flat(m).DistanceTo(Flat(at)) < 7f)) continue;
+                MapKit.Prop(this, asset, at, yaw);
+            }
         }
-        for (float z = -halfZ; z <= halfZ; z += 10.8f)
-        {
-            MapKit.Prop(this, asset, new Vector3(-halfX, 0, z), 90f);
-            MapKit.Prop(this, asset, new Vector3(halfX, 0, z), -90f);
-        }
+
+        Run(new Vector3(-halfX, 0, -halfZ), new Vector3(halfX, 0, -halfZ), 0f);
+        Run(new Vector3(-halfX, 0, halfZ), new Vector3(halfX, 0, halfZ), 180f);
+        Run(new Vector3(-halfX, 0, -halfZ), new Vector3(-halfX, 0, halfZ), 90f);
+        Run(new Vector3(halfX, 0, -halfZ), new Vector3(halfX, 0, halfZ), -90f);
     }
 
     /// <summary>Ground clutter on a fixed lattice — deterministic placement so
-    /// two clients render the same world without syncing anything.</summary>
-    private void ScatterTerrain(string asset)
+    /// two clients render the same world without syncing anything.
+    ///
+    /// Kept to the outfield and refused anywhere near the lane, a socket or a
+    /// gate. Scattering into the playable middle is what made the first pass
+    /// look like litter rather than a working yard.</summary>
+    private void ScatterTerrain(string asset, float halfX, float halfZ)
     {
         if (!AssetLibrary.Has(asset)) return;
-        for (int i = 0; i < 14; i++)
+        int placed = 0, refused = 0;
+
+        for (int i = 0; i < 22; i++)
         {
-            float x = -44f + (i * 37 % 89);
-            float z = -30f + (i * 53 % 61);
-            if (Mathf.Abs(z) < 8f) z += 16f;            // keep the lane clear
-            MapKit.Prop(this, asset, new Vector3(x, 0, z), i * 47f);
+            // Fixed lattice, no RNG: the sim's streams stay untouched and every
+            // client draws the identical world.
+            float x = -halfX + 4f + (i * 31 % (int)(halfX * 2 - 8));
+            float z = -halfZ + 4f + (i * 43 % (int)(halfZ * 2 - 8));
+            var at = new Vector3(x, 0, z);
+            if (Blocked(at, 9f)) { refused++; continue; }
+            MapKit.Prop(this, asset, at, i * 47f % 360f);
+            placed++;
         }
+        GD.Print($"[map] scatter {asset}: {placed} placed, {refused} refused for clearance");
     }
 
     /// <summary>Three tiers: mid deck over the yard, catwalk over the air lane.
@@ -1374,21 +1578,31 @@ public partial class GameRoot : Node3D
         var midColumn = AddStaticBox(new Vector3(-6, 2.4f, -18), new Vector3(1.2f, 4.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
         MapKit.Mount(midColumn, "switchyard_column", MapKit.GroundLocal(midColumn));
 
-        // Upper catwalk (y=10) carrying w3/w4 over the air lane.
-        var catwalk = AddStaticBox(new Vector3(3, 9.8f, 3), new Vector3(22, 0.4f, 5), new Color(0.5f, 0.52f, 0.6f), layer: 1);
-        MapKit.MountRun(catwalk, "switchyard_catwalk", 22f, 4f, alongX: true, MapKit.GroundLocal(catwalk));
-        var columnWest = AddStaticBox(new Vector3(-6, 4.9f, 3), new Vector3(1.2f, 9.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
-        MapKit.Mount(columnWest, "switchyard_column", MapKit.GroundLocal(columnWest));
-        var columnEast = AddStaticBox(new Vector3(12, 4.9f, 3), new Vector3(1.2f, 9.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
-        MapKit.Mount(columnEast, "switchyard_column", MapKit.GroundLocal(columnEast));
+        // Upper catwalk (y=10) carrying w3/w4 over the air lane. Extended west
+        // to x=-16 so its climb has somewhere to land clear of the lane.
+        // Depth 8 rather than 5: w3 (z=6) and w4 (z=0) were both half a metre
+        // off the edge, so a tower built on either hung in space.
+        var catwalk = AddStaticBox(new Vector3(-1, 9.8f, 3), new Vector3(30, 0.4f, 8), new Color(0.5f, 0.52f, 0.6f), layer: 1);
+        MapKit.MountRun(catwalk, "switchyard_catwalk", 30f, 4f, alongX: true, MapKit.GroundLocal(catwalk));
+        foreach (float columnX in new[] { -14f, -6f, 12f })
+        {
+            var column = AddStaticBox(new Vector3(columnX, 4.9f, 3), new Vector3(1.2f, 9.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
+            MapKit.Mount(column, "switchyard_column", MapKit.GroundLocal(column));
+        }
 
-        // Ladders: yard → mid deck, mid deck → catwalk.
+        // Ladders: yard → mid deck, and ground → catwalk.
         var ladder1 = AddStaticBox(new Vector3(-14f, 2.5f, -14.2f), new Vector3(1.2f, 5f, 0.15f), new Color(0.7f, 0.6f, 0.3f), layer: 0);
         ladder1.AddChild(MakeArea("ladder", new BoxShape3D { Size = new Vector3(1.6f, 5.6f, 1.4f) }));
         MapKit.Mount(ladder1, "shared_ladder", MapKit.GroundLocal(ladder1));
-        var ladder2 = AddStaticBox(new Vector3(-4f, 7.5f, 1.2f), new Vector3(1.2f, 5.4f, 0.15f), new Color(0.7f, 0.6f, 0.3f), layer: 0);
-        ladder2.AddChild(MakeArea("ladder", new BoxShape3D { Size = new Vector3(1.6f, 6.2f, 1.4f) }));
-        MapKit.Mount(ladder2, "shared_ladder", MapKit.GroundLocal(ladder2) + 4.8f);
+
+        // This one used to start at y=4.8 in open air: it was drawn as a
+        // mid-deck-to-catwalk climb, but those two decks are eight metres apart
+        // in Z and never touch. It now runs from the ground to the catwalk's
+        // west end, which is a climb you can actually begin.
+        var ladder2 = AddStaticBox(new Vector3(-13f, 5f, 0.6f), new Vector3(1.2f, 10f, 0.15f), new Color(0.7f, 0.6f, 0.3f), layer: 0);
+        ladder2.AddChild(MakeArea("ladder", new BoxShape3D { Size = new Vector3(1.6f, 10.4f, 1.4f) }));
+        MapKit.Mount(ladder2, "shared_ladder", MapKit.GroundLocal(ladder2));
+        MapKit.Prop(ladder2, "shared_ladder", new Vector3(0, MapKit.GroundLocal(ladder2) + 6.5f, 0));
 
         // Launcher pad: spawn yard straight onto the mid deck.
         var launcher = AddStaticBox(new Vector3(8, 0.15f, -22), new Vector3(2.2f, 0.3f, 2.2f), new Color(0.9f, 0.5f, 0.9f), layer: 1);
@@ -1412,18 +1626,44 @@ public partial class GameRoot : Node3D
             MapKit.Prop(this, "shared_zipline_trolley", zipStart + (zipEnd - zipStart) * 0.06f);
         }
 
-        // Rail-yard identity: the freight cut, retaining walls and rolling stock.
-        MapKit.Prop(this, "switchyard_cut_channel", new Vector3(0, 0, 12));
-        MapKit.Prop(this, "switchyard_retainingwall", new Vector3(-26, 0, -8), 90f);
-        MapKit.Prop(this, "switchyard_retainingwall", new Vector3(28, 0, -8), -90f);
-        BuildBoundary("foundry_wall_boundary", 52f, 38f);
-        MapKit.Prop(this, "switchyard_dress_railcar", new Vector3(-32, 0, 20));
-        MapKit.Prop(this, "switchyard_dress_railcar", new Vector3(30, 0, 26), 12f);
-        MapKit.Prop(this, "switchyard_dress_container", new Vector3(-38, 0, -20), 30f);
-        MapKit.Prop(this, "switchyard_dress_container", new Vector3(38, 0, 4), -15f);
-        MapKit.Prop(this, "switchyard_dress_signaltower", new Vector3(-20, 0, 26));
-        MapKit.Prop(this, "switchyard_dress_buffer", new Vector3(40, 0, -14), -90f);
-        ScatterTerrain("switchyard_terrain_scatter");
+        // The freight cut is the map's whole lesson — the fast shortcut b1
+        // closes — so the channel is laid *along* it rather than parked in the
+        // middle of the yard where it means nothing.
+        var shortcut = System.Array.Find(_map.Routes.ToArray(), r => r.Id == "groundShort");
+        if (shortcut is not null && AssetLibrary.Has("switchyard_cut_channel"))
+        {
+            for (int i = 0; i < shortcut.Waypoints.Count - 1; i++)
+            {
+                var a = ToGd(shortcut.Waypoints[i]);
+                var b = ToGd(shortcut.Waypoints[i + 1]);
+                float span = (b - a).Length();
+                int count = Mathf.Max(1, Mathf.RoundToInt(span / 9.6f));
+                for (int s = 0; s < count; s++)
+                {
+                    var at = a.Lerp(b, (s + 0.5f) / count);
+                    MapKit.Prop(this, "switchyard_cut_channel", new Vector3(at.X, 0, at.Z),
+                        MapKit.YawTowards(b - a));
+                }
+            }
+        }
+
+        // Retaining walls flank the switchbacks; boundary matches the lane,
+        // which runs x −45 → +40.
+        DressProp("switchyard_retainingwall", new Vector3(-33, 0, 20), 0f);
+        DressProp("switchyard_retainingwall", new Vector3(33, 0, -22), 180f);
+        BuildBoundary("foundry_wall_boundary", 47f, 32f);
+
+        DressProp("switchyard_dress_railcar", new Vector3(-36, 0, 22));
+        DressProp("switchyard_dress_railcar", new Vector3(26, 0, 26), 8f);
+        DressProp("switchyard_dress_railcar", new Vector3(-30, 0, -26), 4f);
+        DressProp("switchyard_dress_container", new Vector3(-42, 0, -22), 30f);
+        DressProp("switchyard_dress_container", new Vector3(42, 0, 2), -15f);
+        DressProp("switchyard_dress_container", new Vector3(20, 0, 27), 60f);
+        DressProp("switchyard_dress_signaltower", new Vector3(-24, 0, 27));
+        DressProp("switchyard_dress_signaltower", new Vector3(36, 0, -12));
+        DressProp("switchyard_dress_buffer", new Vector3(44, 0, -18), -90f);
+        DressProp("switchyard_dress_buffer", new Vector3(-44, 0, 12), 90f);
+        ScatterTerrain("switchyard_terrain_scatter", 47f, 32f);
     }
 
     private static Area3D MakeArea(string kind, Shape3D shape)
