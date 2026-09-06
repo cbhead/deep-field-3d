@@ -1,0 +1,164 @@
+{
+  "version": "1.0",
+  "authored": "2026-09-06",
+  "source": "ds/tokens/colors.css (UI ramps) + models/tower-kit.js (material + energy hues)",
+  "notes": [
+    "Albedo values are flat colours; the engine modulates them at runtime (hp, status, elite). Nothing is baked.",
+    "Every tower owns one energy hue, spaced 25–60° apart, and its projectile / muzzle / impact inherit it.",
+    "Status tints replace the enemy albedo; mark drives emissive. Strongest status per channel wins (Statuses.cs)."
+  ],
+  "ui": {
+    "obsidian": [
+      "#080B11",
+      "#0D1119",
+      "#131926",
+      "#1B2233",
+      "#242E43",
+      "#313C55"
+    ],
+    "steel": [
+      "#3E4A63",
+      "#5A6880",
+      "#7D8BA3",
+      "#A6B2C6",
+      "#CFD7E4",
+      "#ECF0F7"
+    ],
+    "brass": [
+      "#6F4C15",
+      "#9A6D1E",
+      "#C89B3C",
+      "#E3BC66",
+      "#F4DCA4"
+    ],
+    "arcane": [
+      "#12525A",
+      "#1B7C86",
+      "#2FB4BE",
+      "#65DCE4",
+      "#A8F0F4"
+    ]
+  },
+  "semantics": {
+    "danger": "#C93B28",
+    "warning": "#E8862B",
+    "success": "#7BC043",
+    "info": "#2FB4BE",
+    "hp": "#7BC043",
+    "hpLow": "#C93B28",
+    "shield": "#2FB4BE",
+    "armor": "#7D8BA3",
+    "currency": "#C89B3C",
+    "upgrade": "#2FB4BE",
+    "elite": "#9B5BE8",
+    "boss": "#9B5BE8"
+  },
+  "factions": {
+    "forge": {
+      "accent": "#C89B3C",
+      "ability_overdrive": "#FF6F1A",
+      "note": "Industrial brass; Overdrive shares Overclock buff orange so buffed towers, the pylon and the ability read as one thing."
+    },
+    "ember": {
+      "accent": "#E8622B",
+      "ability_ignitionwave": "#E8622B",
+      "note": "Fire. Same hue as the burn status."
+    },
+    "tempest": {
+      "accent": "#5B76E8",
+      "ability_chainsurge": "#5B76E8",
+      "note": "Storm blue. Distinct from Arc magenta so a Chainsurge and a tower arc are tellable."
+    }
+  },
+  "scrap": {
+    "alloy": "#A6B2C6",
+    "flux": "#2FB4BE",
+    "plating": "#C89B3C",
+    "gravium": "#9B5BE8",
+    "primecore": "#F4DCA4"
+  },
+  "statuses": {
+    "burn": {
+      "tint": "#E8622B",
+      "emissive": true
+    },
+    "chill": {
+      "tint": "#4FC0E8",
+      "emissive": false
+    },
+    "freeze": {
+      "tint": "#A8F0F4",
+      "emissive": false
+    },
+    "shock": {
+      "tint": "#F05AE6",
+      "emissive": true
+    },
+    "shred": {
+      "tint": "#E9614C",
+      "emissive": false
+    },
+    "mark": {
+      "tint": null,
+      "emissive": "#E3BC66"
+    },
+    "reveal": {
+      "tint": null,
+      "emissive": "#7FE65A"
+    },
+    "tar": {
+      "tint": "#1B2233",
+      "emissive": false
+    }
+  },
+  "reactions": {
+    "thermalshock": [
+      "#E8622B",
+      "#4FC0E8"
+    ],
+    "flashfreeze": [
+      "#4FC0E8",
+      "#F05AE6"
+    ]
+  },
+  "enemies": {
+    "baseAlbedo": "#7D8BA3",
+    "hpLowAlbedo": "#C93B28",
+    "weakPoint": "#E9614C",
+    "shieldBubble": "#2FB4BE",
+    "eliteRims": {
+      "gilded": "#C89B3C",
+      "juggernaut": "#5A6880",
+      "voltaic": "#F05AE6",
+      "swift": "#65DCE4",
+      "umbral": "#9B5BE8"
+    }
+  },
+  "towers": {
+    "materials": {
+      "steel_hull": "#606A7C",
+      "steel_plate": "#9AA6B7",
+      "chassis": "#2B3A5C",
+      "trim": "#1B2436",
+      "chrome": "#C3CCD8",
+      "brass": "#B08A3E",
+      "rubber": "#14181F",
+      "hazard": "#D8A13A",
+      "optic_glass": "#14314A",
+      "ceramic": "#D9D2C3",
+      "concrete": "#7A7F88"
+    },
+    "energy": {
+      "lance": "#2B5CFF",
+      "skywatch": "#22D3EE",
+      "detector": "#7FE65A",
+      "nova": "#F0C83A",
+      "overclock": "#FF6F1A",
+      "filament": "#FF2E4A",
+      "arc": "#F05AE6",
+      "singularity": "#9B5BE8",
+      "barricade": "#F0C83A"
+    },
+    "emissiveIntensity": 0.95
+  }
+}

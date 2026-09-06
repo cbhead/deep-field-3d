@@ -1,0 +1,86 @@
+{
+  "$schema": "deepfield-forward-manifest/1",
+  "note": "DESIGN-BRIEF §4 — titles fixed now so nothing renames later. Same conventions as shipped assets: metres, +Y up, −Z forward, origin at feet / grip / footprint centre. Every entry is status=planned until it lands in game/assets/.",
+  "conventions": { "units": "metres", "up": "+Y", "forward": "-Z", "icons": "SVG or 256px PNG in ui/", "states": "one file per visible state, suffix after the base id" },
+  "milestones": {
+    "M3": {
+      "theme": "Detection, toxin, elites, conditions",
+      "enemies": [
+        { "id": "shade", "files": ["enemy_shade.glb", "enemy_shade_shimmer.glb"], "icon": "icon_enemy_shade", "note": "Invisible to towers until revealed; _shimmer is the hero-visible rendering (heat-haze silhouette, no albedo)." },
+        { "id": "mender", "files": ["enemy_mender.glb"], "icon": "icon_enemy_mender", "note": "Heals neighbours; exposed dorsal emitter is the tell." },
+        { "id": "broodmother", "files": ["enemy_broodmother.glb"], "icon": "icon_enemy_broodmother", "note": "Periodic Mote spawner; sac ring like Cluster but refilling." }
+      ],
+      "statuses": [ { "id": "poison", "channel": "Toxin", "files": ["vfx_status_poison.glb"], "icon": "icon_status_poison", "note": "Ignores armor and shield — the burn-vs-poison identity; venom green." }, { "id": "reveal", "channel": "Detection", "files": ["vfx_status_reveal.glb"], "icon": "icon_status_reveal" } ],
+      "towers": [
+        { "id": "detector", "files": ["tower_detector_chassis.glb", "tower_detector_<path>_s1…s10.glb", "vfx_detector_pulse.glb"], "icon": "icon_tower_detector", "paths": ["range", "rate", "damage"], "note": "Reveal pulse ring; chassis already prototyped in Detector.html." }
+      ],
+      "weapons": [
+        { "id": "poisonstream", "files": ["weapon_poisonstream_vm.glb", "weapon_poisonstream_world.glb"], "icon": "icon_weapon_poisonstream" },
+        { "id": "lmg", "files": ["weapon_lmg_vm.glb", "weapon_lmg_world.glb"], "icon": "icon_weapon_lmg" },
+        { "id": "burstdmr", "files": ["weapon_burstdmr_vm.glb", "weapon_burstdmr_world.glb"], "icon": "icon_weapon_burstdmr" }
+      ],
+      "elites": [
+        { "id": "gilded", "files": ["elite_gilded (material treatment + brass filigree attach)"], "icon": "icon_elite_gilded", "note": "Bounty ×3; brass trim overlay + gold eye." },
+        { "id": "juggernaut", "files": ["elite_juggernaut (plate overlay set)"], "icon": "icon_elite_juggernaut", "note": "Extra armour plates bolted over the base mesh; slower." },
+        { "id": "voltaic", "files": ["elite_voltaic (arc-node attach + emissive)"], "icon": "icon_elite_voltaic", "note": "Discharges shock on death; magenta nodes on the spine." }
+      ],
+      "conditions": [
+        { "id": "fog", "files": ["cond_fog (fog volume + desaturated sky treatment)"], "icon": "icon_cond_fog", "note": "Tower range −25%; Detector/sightline relays matter." },
+        { "id": "night", "files": ["cond_night (lighting rig)", "vfx_flashlight_cone.glb", "enemy eye-glow treatment"], "icon": "icon_cond_night" }
+      ],
+      "map_elements": [ { "id": "teleporter_pad", "files": ["shared_teleporter_pad_idle.glb", "shared_teleporter_pad_charged.glb", "shared_teleporter_pad_cooldown.glb"] }, { "id": "snipernest", "files": ["shared_snipernest.glb"] }, { "id": "cache", "files": ["shared_cache_hidden.glb", "shared_cache_opened.glb"] } ],
+      "pickups": [ { "id": "alloy", "files": ["pickup_alloy.glb"] }, { "id": "flux", "files": ["pickup_flux.glb"] }, { "id": "plating", "files": ["pickup_plating.glb"] }, { "id": "gravium", "files": ["pickup_gravium.glb"] } ]
+    },
+    "M4": {
+      "theme": "Control, melee, the first boss, map 3",
+      "enemies": [
+        { "id": "leaper", "files": ["enemy_leaper.glb", "enemy_leaper_windup.glb", "enemy_leaper_airborne.glb"], "icon": "icon_enemy_leaper", "note": "Jumps barricades; _windup is the tell pose, _airborne the arc pose." },
+        { "id": "ram", "files": ["enemy_ram.glb", "enemy_ram_enraged.glb"], "icon": "icon_enemy_ram", "note": "Charges barricades; _enraged swaps the head plate emissive to threat red." },
+        { "id": "carapace", "files": ["enemy_carapace.glb", "enemy_carapace_plate.glb"], "icon": "icon_enemy_carapace", "note": "Detachable plates over glowing weak points — plates get shot OFF; plate is its own mesh with a socket name per slot (carapace_plate_0…5)." },
+        { "id": "boss_frame01", "files": ["boss_frame01_p1.glb", "boss_frame01_p2.glb", "boss_frame01_p3.glb"], "icon": "icon_boss_frame01", "note": "Arena scale (≈12 m). Per-phase variants shed armour and expose more core." }
+      ],
+      "statuses": [ { "id": "stun", "channel": "Control", "files": ["vfx_status_stun.glb"], "icon": "icon_status_stun" } ],
+      "towers": [
+        { "id": "filament", "files": ["tower_filament_chassis.glb", "tower_filament_<path>_s1…s10.glb", "proj_filament_beam.glb"], "icon": "icon_tower_filament", "note": "Beam must read 'ramping' — visible heat build-up along the emitter (crimson → white)." },
+        { "id": "overclock", "files": ["tower_overclock_chassis.glb", "tower_overclock_<path>_s1…s10.glb", "vfx_overclock_link.glb"], "icon": "icon_tower_overclock", "note": "Link lines to every fed tower; buff-orange." }
+      ],
+      "weapons": [
+        { "id": "cryosprayer", "files": ["weapon_cryosprayer_vm.glb", "weapon_cryosprayer_world.glb"], "icon": "icon_weapon_cryosprayer" },
+        { "id": "flakcannon", "files": ["weapon_flakcannon_vm.glb", "weapon_flakcannon_world.glb"], "icon": "icon_weapon_flakcannon" },
+        { "id": "chargesniper", "files": ["weapon_chargesniper_vm.glb", "weapon_chargesniper_world.glb"], "icon": "icon_weapon_chargesniper" },
+        { "id": "autoscattergun", "files": ["weapon_autoscattergun_vm.glb", "weapon_autoscattergun_world.glb"], "icon": "icon_weapon_autoscattergun" }
+      ],
+      "melee": [
+        { "id": "blade", "files": ["melee_blade_vm.glb", "melee_blade_world.glb"], "icon": "icon_melee_blade" },
+        { "id": "maul", "files": ["melee_maul_vm.glb", "melee_maul_world.glb"], "icon": "icon_melee_maul" },
+        { "id": "spear", "files": ["melee_spear_vm.glb", "melee_spear_world.glb"], "icon": "icon_melee_spear" },
+        { "id": "meleemods", "files": ["meleemod_edge_<name>.glb", "meleemod_grip_<name>.glb", "meleemod_infusion_<name>.glb", "meleemod_counterweight_<name>.glb", "meleemod_chargecell_<name>.glb"], "note": "Five visible module slots on every melee viewmodel — same mount-node convention as the gunsmith (<w>_mount_<slot>)." }
+      ],
+      "elites": [ { "id": "swift", "files": ["elite_swift (leg-fin attach + trail)"], "icon": "icon_elite_swift" } ],
+      "conditions": [ { "id": "storm", "files": ["cond_storm (sky + lightning rig + wind cloth)"], "icon": "icon_cond_storm" }, { "id": "heatwave", "files": ["cond_heatwave (heat-haze post + ember sky)"], "icon": "icon_cond_heatwave" } ],
+      "map_elements": [
+        { "id": "elevator", "files": ["shared_elevator.glb", "shared_elevator_shaft.glb"] }, { "id": "floodgate", "files": ["shared_floodgate.glb", "vfx_lanewash.glb"] }, { "id": "crusher", "files": ["shared_crusher.glb"] },
+        { "id": "gate_operated", "files": ["shared_gate_operated.glb"] }, { "id": "wall_destructible", "files": ["shared_wall_destructible.glb", "shared_wall_destructible_broken.glb", "shared_wall_destructible_debris.glb"] },
+        { "id": "props", "files": ["prop_barrel_explosive.glb", "prop_container_droppable.glb"] },
+        { "id": "switchyard_morph", "files": ["switchyard_bridge_intact.glb", "switchyard_bridge_collapsed.glb"], "note": "Map-morph states; same footprint, swap on event." }
+      ],
+      "maps": [ { "id": "map3", "files": ["maps/<theme>/… (full kit: terrain, path, decks, walls, skybox, 4–5 dressing)"], "note": "Theme TBD with the user — budget a third full environment on the Foundry/Switchyard pattern." } ],
+      "pickups": [ { "id": "primecore", "files": ["pickup_primecore.glb"], "note": "Boss drop; soul-violet, must read as the rarest thing on the floor." } ]
+    },
+    "M5": {
+      "theme": "Tether, phasing, late weapons, cold",
+      "enemies": [
+        { "id": "skater", "files": ["enemy_skater.glb", "enemy_skater_phased.glb"], "icon": "icon_enemy_skater", "note": "_phased is the untargetable rendering (arcane wireframe)." },
+        { "id": "nullifier", "files": ["enemy_nullifier.glb", "vfx_nullifier_tether.glb"], "icon": "icon_enemy_nullifier", "note": "Tethers a tower and drains it; the tether VFX is a unit-length beam like proj_arc_beam." }
+      ],
+      "statuses": [ { "id": "magnetize", "channel": "Tether", "files": ["vfx_status_magnetize.glb"], "icon": "icon_status_magnetize" } ],
+      "weapons": [
+        { "id": "concussionmortar", "files": ["weapon_concussionmortar_vm.glb", "weapon_concussionmortar_world.glb"], "icon": "icon_weapon_concussionmortar" },
+        { "id": "acidstream", "files": ["weapon_acidstream_vm.glb", "weapon_acidstream_world.glb"], "icon": "icon_weapon_acidstream" }
+      ],
+      "melee": [ { "id": "gauntlets", "files": ["melee_gauntlets_vm.glb", "melee_gauntlets_world.glb"], "icon": "icon_melee_gauntlets" }, { "id": "chainblade", "files": ["melee_chainblade_vm.glb", "melee_chainblade_world.glb"], "icon": "icon_melee_chainblade" } ],
+      "elites": [ { "id": "umbral", "files": ["elite_umbral (shadow material + soul-violet eye)"], "icon": "icon_elite_umbral" } ],
+      "conditions": [ { "id": "coldsnap", "files": ["cond_coldsnap (rime overlay set + breath VFX)"], "icon": "icon_cond_coldsnap" }, { "id": "tremor", "files": ["cond_tremor (camera rig + dust VFX + socket-shake)"], "icon": "icon_cond_tremor" } ]
+    }
+  }
+}
