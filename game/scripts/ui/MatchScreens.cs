@@ -96,6 +96,7 @@ public partial class MatchScreens : CanvasLayer
                     Modulate = UiTheme.Ink,
                     CustomMinimumSize = new Vector2(22, 22),
                     StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
                     TooltipText = group.Key,
                 });
                 chip.AddChild(UiTheme.Text($"{group.Key} ×{group.Count()}", 12));
@@ -182,6 +183,7 @@ public partial class MatchScreens : CanvasLayer
                 Modulate = UiTheme.Faction(player.FactionId),
                 CustomMinimumSize = new Vector2(20, 20),
                 StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
             });
             var name = UiTheme.Text(player.Name, 14);
             name.CustomMinimumSize = new Vector2(120, 0);

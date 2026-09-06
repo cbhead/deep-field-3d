@@ -160,6 +160,7 @@ public partial class LobbyScreen : Control
                 Modulate = accent,
                 CustomMinimumSize = new Vector2(24, 24),
                 StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
             });
             header.AddChild(UiTheme.Text(faction.Id.ToUpperInvariant(), 16, accent));
             header.AddChild(UiTheme.Text($"Lv{level}", 13,

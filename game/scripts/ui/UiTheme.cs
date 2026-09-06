@@ -17,25 +17,26 @@ public static class UiTheme
 {
     private static Color Hex(string rgb) => new(rgb);
 
-    // ---- Semantics (PALETTE.md §Semantics) --------------------------------
-    public static readonly Color Danger = Hex("C93B28");
-    public static readonly Color Warn = Hex("E8862B");
-    public static readonly Color Good = Hex("7BC043");
-    public static readonly Color Accent = Hex("2FB4BE");      // info
-    public static readonly Color Hp = Hex("7BC043");
-    public static readonly Color HpLow = Hex("C93B28");
-    public static readonly Color Shield = Hex("2FB4BE");
-    public static readonly Color Armor = Hex("7D8BA3");
-    public static readonly Color Currency = Hex("C89B3C");
-    public static readonly Color Elite = Hex("9B5BE8");
+    // ---- Semantics --------------------------------------------------------
+    // Aliases onto Tokens, which is the transcription of ds/tokens/colors.css.
+    // Nothing is defined here any more; this is the vocabulary the game code
+    // already speaks, pointed at design's system.
+    public static readonly Color Danger = Tokens.StateDanger;
+    public static readonly Color Warn = Tokens.StateWarning;
+    public static readonly Color Good = Tokens.StateSuccess;
+    public static readonly Color Accent = Tokens.StateInfo;
+    public static readonly Color Hp = Tokens.BarHp;
+    public static readonly Color HpLow = Tokens.BarHpLow;
+    public static readonly Color Shield = Tokens.BarShield;
+    public static readonly Color Armor = Tokens.BarArmor;
+    public static readonly Color Currency = Tokens.ResGold;
+    public static readonly Color Elite = Tokens.Soul500;
 
-    // Chrome the spec doesn't legislate — kept neutral so design's accents
-    // carry the identity rather than competing with a coloured panel.
-    public static readonly Color Ink = new(0.93f, 0.95f, 0.98f);
-    public static readonly Color InkDim = new(0.62f, 0.66f, 0.72f);
-    public static readonly Color Panel = new(0.07f, 0.08f, 0.10f, 0.88f);
-    public static readonly Color PanelRaised = new(0.13f, 0.15f, 0.18f, 0.95f);
-    public static readonly Color Disabled = new(0.49f, 0.55f, 0.64f);
+    public static readonly Color Ink = Tokens.TextPrimary;
+    public static readonly Color InkDim = Tokens.TextMuted;
+    public static readonly Color Panel = Tokens.SurfaceGlass;
+    public static readonly Color PanelRaised = Tokens.SurfaceRaised;
+    public static readonly Color Disabled = Tokens.TextDisabled;
 
     public static Color Faction(string id) => id switch
     {
@@ -145,23 +146,22 @@ public static class UiTheme
 
     // ---- Widget helpers ---------------------------------------------------
 
-    public static StyleBoxFlat PanelBox(Color? fill = null, Color? border = null)
-    {
-        var box = new StyleBoxFlat
+    /// <summary>Chamfered, not rounded — design's corners are cut at 45° on
+    /// the top-left and bottom-right and square elsewhere. Every surface in
+    /// the game routes through here, so this one change restyles all of them.</summary>
+    public static StyleBox PanelBox(Color? fill = null, Color? border = null)
+        => new ChamferBox
         {
-            BgColor = fill ?? Panel,
-            CornerRadiusTopLeft = 6, CornerRadiusTopRight = 6,
-            CornerRadiusBottomLeft = 6, CornerRadiusBottomRight = 6,
-            ContentMarginLeft = 10, ContentMarginRight = 10,
-            ContentMarginTop = 8, ContentMarginBottom = 8,
+            Fill = fill ?? Tokens.SurfacePanel,
+            Stroke = border ?? Tokens.BorderPanel,
+            StrokeWidth = border is null ? 0f : Tokens.StrokePanel,
+            Chamfer = Tokens.ChamferMd,
+            DropShadow = true,
+            ContentMarginLeft = Tokens.PadPanel,
+            ContentMarginRight = Tokens.PadPanel,
+            ContentMarginTop = Tokens.PadPanelTight,
+            ContentMarginBottom = Tokens.PadPanelTight,
         };
-        if (border is { } b)
-        {
-            box.BorderColor = b;
-            box.BorderWidthLeft = box.BorderWidthRight = box.BorderWidthTop = box.BorderWidthBottom = 1;
-        }
-        return box;
-    }
 
     public static PanelContainer Card(Color? fill = null, Color? border = null)
     {
@@ -170,25 +170,28 @@ public static class UiTheme
         return panel;
     }
 
+    /// <summary>Body copy in Barlow. Numbers should go through
+    /// <see cref="Kit.Numeral"/> instead — design wants every numeral mono and
+    /// tabular so counters don't jitter.</summary>
     public static Label Text(string text, int size = 14, Color? color = null)
     {
         var label = new Label { Text = text };
+        if (Tokens.Body is { } font) label.AddThemeFontOverride("font", font);
         label.AddThemeFontSizeOverride("font_size", size);
         label.AddThemeColorOverride("font_color", color ?? Ink);
         return label;
     }
 
-    /// <summary>Horizontal meter used for hp, shields, progress, stat deltas.</summary>
-    public static ProgressBar Meter(float value, float max, Color fill, Vector2 size)
+    /// <summary>Horizontal meter used for hp, shields, progress, stat deltas.
+    /// Track, fill and the inner top highlight per the kit's `.bar`.</summary>
+    public static KitBar Meter(float value, float max, Color fill, Vector2 size)
     {
-        var bar = new ProgressBar
+        var bar = new KitBar
         {
-            MinValue = 0, MaxValue = max, Value = value,
-            ShowPercentage = false,
+            Value = max <= 0f ? 0f : Mathf.Clamp(value / max, 0f, 1f),
+            FillColor = fill,
             CustomMinimumSize = size,
         };
-        bar.AddThemeStyleboxOverride("background", new StyleBoxFlat { BgColor = new Color(0, 0, 0, 0.55f) });
-        bar.AddThemeStyleboxOverride("fill", new StyleBoxFlat { BgColor = fill });
         return bar;
     }
 
@@ -202,6 +205,7 @@ public static class UiTheme
             Modulate = color,
             CustomMinimumSize = new Vector2(16, 16),
             StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
             TooltipText = iconId,
         });
         bool short_ = need >= 0 && amount < need;

@@ -1,0 +1,73 @@
+:root{
+/* --- Base ramps ------------------------------------------------------ */
+/* Obsidian: the battlefield night. Every surface is cut from this ramp. */
+--obsidian-900:#080B11;--obsidian-800:#0D1119;--obsidian-700:#131926;--obsidian-600:#1B2233;--obsidian-500:#242E43;--obsidian-400:#313C55;
+/* Steel: strokes, bevels, secondary type. */
+--steel-500:#3E4A63;--steel-400:#5A6880;--steel-300:#7D8BA3;--steel-200:#A6B2C6;--steel-100:#CFD7E4;--steel-050:#ECF0F7;
+/* Brass: the primary brand accent. Currency, primary actions, victory. */
+--brass-700:#6F4C15;--brass-600:#9A6D1E;--brass-500:#C89B3C;--brass-400:#E3BC66;--brass-300:#F4DCA4;
+/* Arcane: the secondary accent. Magic, upgrades, selection, info. */
+--arcane-700:#12525A;--arcane-600:#1B7C86;--arcane-500:#2FB4BE;--arcane-400:#65DCE4;--arcane-300:#A8F0F4;
+/* Signal hues */
+--threat-600:#8E2318;--threat-500:#C93B28;--threat-400:#E9614C;
+--ember-500:#E8862B;--ember-400:#F3A85B;
+--venom-500:#7BC043;--venom-400:#9FDC6C;
+--mana-500:#5B76E8;--mana-400:#8A9DF2;
+--soul-500:#9B5BE8;--soul-400:#BE8DF5;
+
+/* --- Semantic surfaces ---------------------------------------------- */
+--surface-base:var(--obsidian-900);
+--surface-panel:var(--obsidian-700);
+--surface-raised:var(--obsidian-600);
+--surface-inset:var(--obsidian-800);
+--surface-slot:#0A0E16;
+--surface-overlay:rgba(8,11,17,.78);
+--surface-scrim:rgba(8,11,17,.92);
+--surface-glass:rgba(19,25,38,.72);
+
+/* --- Semantic strokes ----------------------------------------------- */
+--border-panel:#2A3348;
+--border-bevel-top:rgba(207,215,228,.14);
+--border-bevel-bottom:rgba(8,11,17,.7);
+--border-strong:#3E4A63;
+--border-accent:var(--brass-500);
+--border-focus:var(--arcane-400);
+
+/* --- Semantic text --------------------------------------------------- */
+--text-primary:var(--steel-050);
+--text-secondary:var(--steel-200);
+--text-muted:var(--steel-400);
+--text-disabled:#4A5568;
+--text-accent:var(--brass-400);
+--text-arcane:var(--arcane-400);
+--text-inverse:var(--obsidian-900);
+
+/* --- Semantic states ------------------------------------------------- */
+--state-danger:var(--threat-500);
+--state-warning:var(--ember-500);
+--state-success:var(--venom-500);
+--state-info:var(--arcane-500);
+
+/* --- Game semantics -------------------------------------------------- */
+--res-gold:var(--brass-500);
+--res-mana:var(--mana-500);
+--res-cores:var(--soul-500);
+--bar-hp:var(--venom-500);
+--bar-hp-low:var(--threat-500);
+--bar-shield:var(--arcane-500);
+--bar-armor:var(--steel-300);
+--bar-track:#0A0E16;
+--lives:var(--threat-400);
+--wave-idle:var(--steel-400);
+--wave-active:var(--ember-500);
+--wave-boss:var(--soul-500);
+
+/* --- Rarity / tier --------------------------------------------------- */
+--tier-common:#8A94A8;
+--tier-rare:var(--mana-500);
+--tier-epic:var(--soul-500);
+--tier-legendary:var(--brass-500);
+
+/* --- Element affinities ---------------------------------------------- */
+--el-fire:#E8622B;--el-frost:#4FC0E8;--el-storm:#C9A227;--el-nature:#7BC043;--el-void:#9B5BE8;--el-arcane:#2FB4BE;
+}

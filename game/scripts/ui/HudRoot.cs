@@ -22,18 +22,28 @@ public partial class HudRoot : CanvasLayer
 
     // Wave (top-center)
     private Label _waveLine = null!;
+    private Label _phaseLabel = null!;
     private Label _phaseLine = null!;
+    private Label _aliveLine = null!;
+    private KitPips _wavePips = null!;
+    private KitDiamond _coreDiamond = null!;
 
     // Vitals (bottom-left)
-    private ProgressBar _hpBar = null!;
+    private KitBar _hpBar = null!;
     private Label _hpText = null!;
     private Label _downedText = null!;
+    private PanelContainer _abilitySlot = null!;
+    private KitDiamond _factionChip = null!;
 
     // Loadout (bottom-right)
     private Label _weaponName = null!;
     private Label _buildSummary = null!;
     private Label _abilityText = null!;
+    private Label _ammoLabel = null!;
     private TextureRect _abilityIcon = null!;
+    private TextureRect _weaponIcon = null!;
+    private TextureRect _ammoIcon = null!;
+    private VBoxContainer _weaponSlots = null!;
     private Control _abilityCooldown = null!;
     private float _abilityFraction;
 
@@ -160,131 +170,236 @@ public partial class HudRoot : CanvasLayer
     // Construction
     // =====================================================================
 
+    /// <summary>Top-left: the wallet. A brass diamond and one big tabular
+    /// numeral, then the scrap types as icon + count, dimmed at zero so an
+    /// empty type reads as "none" rather than as a live resource.</summary>
     private void BuildEconomy(Control root)
     {
-        var card = UiTheme.Card();
-        card.Position = new Vector2(16, 14);
+        var card = Kit.Glass();
+        card.Position = new Vector2(Tokens.HudEdge, Tokens.HudEdge);
         root.AddChild(card);
 
-        var column = new VBoxContainer();
+        var column = Kit.Col(Tokens.GapInline);
         card.AddChild(column);
 
-        var top = new HBoxContainer();
-        top.AddThemeConstantOverride("separation", 14);
-        _credits = UiTheme.Text("0c", 18, UiTheme.Warn);
-        _lives = UiTheme.Text("20 lives", 18);
+        var top = Kit.Row(10);
+        top.AddChild(new KitDiamond(12f, Tokens.ResGold));
+        _credits = Kit.Numeral("0", 28, Tokens.TextAccent);
         top.AddChild(_credits);
-        top.AddChild(_lives);
+        top.AddChild(Kit.Label("credits"));
         column.AddChild(top);
 
-        column.AddChild(UiTheme.Text("team scrap", 10, UiTheme.InkDim));
-        _teamScrap = new HBoxContainer();
-        _teamScrap.AddThemeConstantOverride("separation", 10);
+        column.AddChild(Kit.Rule());
+
+        _teamScrap = Kit.Row(14);
         column.AddChild(_teamScrap);
 
-        column.AddChild(UiTheme.Text("yours", 10, UiTheme.InkDim));
-        _personalScrap = new HBoxContainer();
-        _personalScrap.AddThemeConstantOverride("separation", 10);
+        column.AddChild(Kit.Label("yours", Tokens.TextDisabled));
+        _personalScrap = Kit.Row(14);
         column.AddChild(_personalScrap);
     }
 
+    /// <summary>Top-centre: wave, phase clock, a pip per wave in the campaign,
+    /// enemies alive, and the core. Design puts three diamonds here for lives;
+    /// this map carries twenty, so it is a diamond plus a numeral that flips to
+    /// threat red under the alarm threshold.</summary>
     private void BuildWaveCluster(Control root)
     {
-        var card = UiTheme.Card();
+        var card = Kit.Glass();
         card.SetAnchorsPreset(Control.LayoutPreset.CenterTop);
-        card.Position = new Vector2(-110, 14);
-        card.CustomMinimumSize = new Vector2(220, 0);
+        card.Position = new Vector2(-230, Tokens.HudEdge);
+        card.CustomMinimumSize = new Vector2(460, 0);
         root.AddChild(card);
 
-        var column = new VBoxContainer();
-        column.Alignment = BoxContainer.AlignmentMode.Center;
-        card.AddChild(column);
+        var row = Kit.Row(Tokens.Space7);
+        row.Alignment = BoxContainer.AlignmentMode.Center;
+        card.AddChild(row);
 
-        _waveLine = UiTheme.Text("", 17);
-        _waveLine.HorizontalAlignment = HorizontalAlignment.Center;
-        column.AddChild(_waveLine);
+        var wave = Kit.Col(2);
+        wave.Alignment = BoxContainer.AlignmentMode.Center;
+        wave.AddChild(Kit.Label("wave"));
+        _waveLine = Kit.Numeral("--", Tokens.SizeStat, Tokens.WaveIdle);
+        wave.AddChild(_waveLine);
+        row.AddChild(wave);
 
-        _phaseLine = UiTheme.Text("", 12, UiTheme.InkDim);
-        _phaseLine.HorizontalAlignment = HorizontalAlignment.Center;
-        column.AddChild(_phaseLine);
+        row.AddChild(VerticalRule());
+
+        var phase = Kit.Col(2);
+        _phaseLabel = Kit.Label("standby");
+        phase.AddChild(_phaseLabel);
+        _phaseLine = Kit.Numeral("", Tokens.SizeStatSm, Tokens.TextSecondary);
+        phase.AddChild(_phaseLine);
+        _wavePips = new KitPips();
+        _wavePips.Breakpoints = System.Array.Empty<int>();
+        phase.AddChild(_wavePips);
+        row.AddChild(phase);
+
+        row.AddChild(VerticalRule());
+
+        var alive = Kit.Col(2);
+        alive.Alignment = BoxContainer.AlignmentMode.Center;
+        alive.AddChild(Kit.Label("alive"));
+        _aliveLine = Kit.Numeral("0", Tokens.SizeStatSm, Tokens.TextPrimary);
+        alive.AddChild(_aliveLine);
+        row.AddChild(alive);
+
+        var core = Kit.Col(2);
+        core.Alignment = BoxContainer.AlignmentMode.Center;
+        core.AddChild(Kit.Label("core"));
+        var coreRow = Kit.Row(4);
+        coreRow.Alignment = BoxContainer.AlignmentMode.Center;
+        _coreDiamond = new KitDiamond(14f, Tokens.Lives);
+        coreRow.AddChild(_coreDiamond);
+        _lives = Kit.Numeral("20", Tokens.SizeStatSm, Tokens.Lives);
+        coreRow.AddChild(_lives);
+        core.AddChild(coreRow);
+        row.AddChild(core);
     }
 
+    private static Control VerticalRule() => new ColorRect
+    {
+        Color = Tokens.BorderPanel,
+        CustomMinimumSize = new Vector2(1, 36),
+    };
+
+    /// <summary>Bottom-left: the faction ability as a 72px slot that glows when
+    /// it is off cooldown, beside hp. The ability is the thing that makes one
+    /// player different from another, so it gets the largest single element on
+    /// the bar.</summary>
     private void BuildVitals(Control root)
     {
-        var card = UiTheme.Card();
+        var card = Kit.Glass();
         card.SetAnchorsPreset(Control.LayoutPreset.BottomLeft);
-        card.Position = new Vector2(16, -96);
+        card.Position = new Vector2(Tokens.HudEdge, -110);
+        card.CustomMinimumSize = new Vector2(420, 0);
         root.AddChild(card);
 
-        var column = new VBoxContainer();
-        card.AddChild(column);
+        var row = Kit.Row(14);
+        card.AddChild(row);
 
-        var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 8);
-        _hpBar = UiTheme.Meter(100, Balance.PlayerMaxHp, UiTheme.Good, new Vector2(180, 14));
-        row.AddChild(_hpBar);
-        _hpText = UiTheme.Text("100", 14);
-        row.AddChild(_hpText);
-        column.AddChild(row);
+        _abilitySlot = Kit.SlotBox(size: Tokens.SlotLg);
+        row.AddChild(_abilitySlot);
 
-        _downedText = UiTheme.Text("", 13, UiTheme.Danger);
+        _abilityIcon = Kit.SlotIcon(null, Tokens.TextPrimary, 36);
+        _abilitySlot.AddChild(_abilityIcon);
+
+        // The sweep and the "Q" cap sit over the icon.
+        _abilityCooldown = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
+        _abilityCooldown.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        _abilityCooldown.Draw += DrawAbilityCooldown;
+        _abilitySlot.AddChild(_abilityCooldown);
+
+        var column = Kit.Col(6);
+        column.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        row.AddChild(column);
+
+        var identity = Kit.Row(6);
+        _factionChip = new KitDiamond(12f, Tokens.Brass400);
+        identity.AddChild(_factionChip);
+        _abilityText = Kit.Label("", Tokens.TextSecondary);
+        identity.AddChild(_abilityText);
+        column.AddChild(identity);
+
+        var hpRow = Kit.Row();
+        hpRow.AddChild(Kit.Label("hp"));
+        _hpText = Kit.Numeral("100/100", Tokens.SizeCaption, Tokens.TextSecondary);
+        _hpText.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        _hpText.HorizontalAlignment = HorizontalAlignment.Right;
+        hpRow.AddChild(_hpText);
+        column.AddChild(hpRow);
+
+        _hpBar = Kit.Bar(1f, Tokens.BarHp, 14f);
+        column.AddChild(_hpBar);
+
+        _downedText = Kit.Body("", Tokens.SizeCaption, UiTheme.Danger);
         column.AddChild(_downedText);
     }
 
+    /// <summary>Bottom-right: what you are holding. Design's frame carries a
+    /// magazine and reserve count; the sim has neither — weapons fire on a
+    /// cooldown with no ammo pool — so this shows the weapon, its ammo type and
+    /// its build instead of inventing numbers. The mag readout arrives with the
+    /// ammo-quantity system.</summary>
     private void BuildLoadout(Control root)
     {
-        var card = UiTheme.Card();
+        var card = Kit.Glass();
         card.SetAnchorsPreset(Control.LayoutPreset.BottomRight);
-        card.Position = new Vector2(-260, -96);
-        card.CustomMinimumSize = new Vector2(240, 0);
+        card.Position = new Vector2(-436, -110);
+        card.CustomMinimumSize = new Vector2(420, 0);
         root.AddChild(card);
 
-        var column = new VBoxContainer();
-        card.AddChild(column);
+        var row = Kit.Row(14);
+        card.AddChild(row);
 
-        _weaponName = UiTheme.Text("SIDEARM", 16);
-        _weaponName.HorizontalAlignment = HorizontalAlignment.Right;
-        column.AddChild(_weaponName);
+        var column = Kit.Col(6);
+        column.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        column.Alignment = BoxContainer.AlignmentMode.End;
+        row.AddChild(column);
 
-        _buildSummary = UiTheme.Text("", 11, UiTheme.InkDim);
+        var nameRow = Kit.Row(8);
+        nameRow.Alignment = BoxContainer.AlignmentMode.End;
+        _weaponName = Kit.Title("SIDEARM", Tokens.SizeDisplaySm);
+        nameRow.AddChild(_weaponName);
+        _weaponIcon = Kit.SlotIcon(null, Tokens.TextPrimary, 28);
+        nameRow.AddChild(_weaponIcon);
+        column.AddChild(nameRow);
+
+        var ammoRow = Kit.Row(8);
+        ammoRow.Alignment = BoxContainer.AlignmentMode.End;
+        _ammoIcon = Kit.SlotIcon(null, Tokens.TextPrimary, 18);
+        ammoRow.AddChild(_ammoIcon);
+        _ammoLabel = Kit.Label("standard", Tokens.TextSecondary);
+        ammoRow.AddChild(_ammoLabel);
+        column.AddChild(ammoRow);
+
+        _buildSummary = Kit.Body("", Tokens.SizeCaption, Tokens.TextMuted);
         _buildSummary.HorizontalAlignment = HorizontalAlignment.Right;
         column.AddChild(_buildSummary);
 
-        var abilityRow = new HBoxContainer();
-        abilityRow.Alignment = BoxContainer.AlignmentMode.End;
-        abilityRow.AddThemeConstantOverride("separation", 8);
+        _weaponSlots = Kit.Col(6);
+        row.AddChild(_weaponSlots);
+    }
 
-        _abilityText = UiTheme.Text("", 13);
-        abilityRow.AddChild(_abilityText);
+    /// <summary>The weapons you own as numbered slots, the held one selected.
+    /// Rebuilt only when the set or the selection changes — this runs every
+    /// frame otherwise.</summary>
+    private string _slotSignature = "";
 
-        _abilityCooldown = new Control { CustomMinimumSize = new Vector2(34, 34) };
-        _abilityCooldown.Draw += DrawAbilityCooldown;
-        abilityRow.AddChild(_abilityCooldown);
+    private void RebuildWeaponSlots(PlayerView local)
+    {
+        string signature = string.Join(",", local.OwnedWeapons) + "|" + local.WeaponId;
+        if (signature == _slotSignature) return;
+        _slotSignature = signature;
 
-        _abilityIcon = new TextureRect
+        foreach (var child in _weaponSlots.GetChildren()) child.QueueFree();
+
+        foreach (string weaponId in local.OwnedWeapons)
         {
-            CustomMinimumSize = new Vector2(0, 0),
-            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-        };
-        abilityRow.AddChild(_abilityIcon);
-
-        column.AddChild(abilityRow);
+            bool held = weaponId == local.WeaponId;
+            var slot = Kit.SlotBox(held, 52);
+            slot.AddChild(Kit.SlotIcon(UiTheme.Icon($"weapon_{weaponId}", Tokens.TextSecondary),
+                held ? Tokens.Arcane400 : Tokens.TextDisabled, 26));
+            _weaponSlots.AddChild(slot);
+        }
     }
 
     private void BuildTeammates(Control root)
     {
-        _teammates = new VBoxContainer();
-        _teammates.SetAnchorsPreset(Control.LayoutPreset.TopRight);
-        _teammates.Position = new Vector2(-230, 14);
-        _teammates.CustomMinimumSize = new Vector2(210, 0);
+        _teammates = Kit.Col(Tokens.GapInline);
+        _teammates.Position = new Vector2(Tokens.HudEdge, 140);
+        _teammates.CustomMinimumSize = new Vector2(230, 0);
         root.AddChild(_teammates);
     }
 
+    /// <summary>Toast feed, top-right under the teammate strip in design's
+    /// frame — kept right so it never fights the economy cluster.</summary>
     private void BuildFeed(Control root)
     {
-        _feed = new VBoxContainer();
-        _feed.SetAnchorsPreset(Control.LayoutPreset.CenterLeft);
-        _feed.Position = new Vector2(16, -40);
+        _feed = Kit.Col(6);
+        _feed.SetAnchorsPreset(Control.LayoutPreset.TopRight);
+        _feed.Position = new Vector2(-360, 140);
+        _feed.CustomMinimumSize = new Vector2(344, 0);
+        _feed.Alignment = BoxContainer.AlignmentMode.End;
         root.AddChild(_feed);
     }
 
@@ -323,43 +438,54 @@ public partial class HudRoot : CanvasLayer
         if (!view.Valid) return;
 
         // --- economy
-        _credits.Text = $"{view.Money}c";
-        _lives.Text = $"{view.Lives} lives";
-        _lives.AddThemeColorOverride("font_color",
-            view.Lives <= 5 ? UiTheme.Danger : UiTheme.Ink);
-        // Low-lives alarm pulses so it registers peripherally.
-        if (view.Lives <= 5)
-            _lives.Modulate = new Color(1, 1, 1, 0.55f + 0.45f * Mathf.Abs(Mathf.Sin((float)_elapsed * 4f)));
-        else
-            _lives.Modulate = Colors.White;
+        _credits.Text = view.Money.ToString();
 
         RebuildScrap(_teamScrap, type => view.TeamScrapOf(type));
         RebuildScrap(_personalScrap, type => view.PersonalScrapOf(type));
 
         // --- wave
-        _waveLine.Text = view.Phase switch
+        bool active = view.Phase == MatchPhase.Wave;
+        _waveLine.Text = view.Wave < 0 ? "--" : $"{view.Wave + 1:00}";
+        _waveLine.AddThemeColorOverride("font_color", active ? Tokens.WaveActive : Tokens.WaveIdle);
+
+        _phaseLabel.Text = view.Phase switch
         {
             MatchPhase.Victory => "VICTORY",
             MatchPhase.Defeat => "DEFEAT",
-            _ => view.Wave < 0 ? "STANDBY" : $"WAVE {view.Wave + 1} / {view.TotalWaves}",
+            MatchPhase.Wave => "ACTIVE",
+            _ => "STANDBY",
         };
         _phaseLine.Text = view.Phase switch
         {
-            MatchPhase.Intermission => $"next in {Mathf.Max(0, view.PhaseTimer):0.0}s   ·   [F] start now",
-            MatchPhase.Wave => $"{view.EnemiesRemaining} remaining",
+            MatchPhase.Intermission => $"{Mathf.Max(0, view.PhaseTimer):0.0}s  ·  [F]",
+            MatchPhase.Wave => $"{view.EnemiesRemaining} left",
             _ => "",
         };
+        _wavePips.Set(Mathf.Max(0, view.Wave + 1), Mathf.Max(1, view.TotalWaves));
+        _aliveLine.Text = view.EnemiesRemaining.ToString();
+
+        // Lives: a single tabular numeral beside the core diamond, flipping to
+        // threat red and pulsing under the alarm threshold.
+        _lives.Text = view.Lives.ToString();
+        bool alarm = view.Lives <= 5;
+        _lives.AddThemeColorOverride("font_color", alarm ? UiTheme.Danger : Tokens.Lives);
+        _coreDiamond.Color = alarm ? UiTheme.Danger : Tokens.Lives;
+        _coreDiamond.QueueRedraw();
+        float pulse = alarm
+            ? 0.55f + 0.45f * Mathf.Abs(Mathf.Sin((float)_elapsed * 4f))
+            : 1f;
+        _lives.Modulate = new Color(1, 1, 1, pulse);
+        _coreDiamond.Modulate = new Color(1, 1, 1, pulse);
 
         // --- vitals
         var local = view.Local;
         if (local is not null)
         {
-            _hpBar.Value = local.Hp;
-            _hpBar.AddThemeStyleboxOverride("fill", new StyleBoxFlat
-            {
-                BgColor = local.Hp > 60 ? UiTheme.Good : local.Hp > 25 ? UiTheme.Warn : UiTheme.Danger,
-            });
-            _hpText.Text = $"{local.Hp:0}";
+            // Design's hp rule is a single threshold: green until 30%, then
+            // threat red. No amber middle band.
+            float hpFraction = local.Hp / Balance.PlayerMaxHp;
+            _hpBar.Set(hpFraction, Kit.HpColor(hpFraction));
+            _hpText.Text = $"{local.Hp:0}/{Balance.PlayerMaxHp:0}";
             _downedText.Text = local.Downed ? "DOWNED — a teammate can revive you" : "";
 
             _isDowned = local.Downed;
@@ -373,19 +499,47 @@ public partial class HudRoot : CanvasLayer
                     : "BLEEDING OUT";
             }
 
+            // --- ability (bottom-left, beside hp)
+            var factionColor = UiTheme.Faction(local.FactionId);
+            bool ready = local.AbilityCooldown <= 0f;
+            _abilityFraction = ready ? 0f
+                : Mathf.Clamp(local.AbilityCooldown / AbilityCooldownFor(local.FactionId), 0f, 1f);
+
+            string abilityName = Factions.All.TryGetValue(local.FactionId, out var faction)
+                ? faction.AbilityId : "ability";
+            _abilityText.Text = (ready ? $"{local.FactionId} · {abilityName}"
+                : $"{abilityName} · {local.AbilityCooldown:0.0}s").ToUpperInvariant();
+            _abilityText.AddThemeColorOverride("font_color",
+                ready ? Tokens.TextSecondary : Tokens.TextMuted);
+
+            _factionChip.Color = factionColor;
+            _factionChip.QueueRedraw();
+
+            _abilityIcon.Texture = UiTheme.Icon($"ability_{abilityName.ToLowerInvariant().Replace(" ", "")}", factionColor);
+            _abilityIcon.Modulate = ready ? factionColor : Tokens.TextDisabled;
+            // The slot itself carries the ready state — brass edge and glow off
+            // cooldown, plain stroke while it recharges.
+            _abilitySlot.AddThemeStyleboxOverride("panel", new ChamferBox
+            {
+                Fill = Tokens.SurfaceSlot,
+                Stroke = ready ? Tokens.Brass500 : Tokens.BorderStrong,
+                Glow = ready ? Tokens.GlowBrass : new Color(0, 0, 0, 0),
+                Chamfer = Tokens.ChamferSm,
+                DropShadow = false,
+            });
+            _abilityCooldown.QueueRedraw();
+
             // --- loadout
             _weaponName.Text = local.WeaponId.ToUpperInvariant();
-            _abilityFraction = local.AbilityCooldown <= 0f ? 0f
-                : Mathf.Clamp(local.AbilityCooldown / AbilityCooldownFor(local.FactionId), 0f, 1f);
-            _abilityText.Text = local.AbilityCooldown <= 0f
-                ? "[Q] READY"
-                : $"{local.AbilityCooldown:0.0}s";
-            _abilityText.AddThemeColorOverride("font_color",
-                local.AbilityCooldown <= 0f ? UiTheme.Good : UiTheme.InkDim);
-            _abilityIcon.Texture = UiTheme.Icon($"faction_{local.FactionId}", UiTheme.Faction(local.FactionId));
-            _abilityIcon.Modulate = UiTheme.Faction(local.FactionId);
-            _abilityIcon.CustomMinimumSize = new Vector2(26, 26);
-            _abilityCooldown.QueueRedraw();
+            _weaponIcon.Texture = UiTheme.Icon($"weapon_{local.WeaponId}", Tokens.TextPrimary);
+            _weaponIcon.Modulate = Tokens.TextPrimary;
+
+            string ammo = local.AmmoFor(local.WeaponId);
+            _ammoLabel.Text = ammo.ToUpperInvariant();
+            _ammoIcon.Texture = UiTheme.Icon($"ammo_{ammo}", Tokens.TextSecondary);
+            _ammoIcon.Modulate = Tokens.TextSecondary;
+
+            RebuildWeaponSlots(local);
         }
 
         RebuildTeammates(view);
@@ -452,6 +606,7 @@ public partial class HudRoot : CanvasLayer
                 Modulate = UiTheme.Faction(player.FactionId),
                 CustomMinimumSize = new Vector2(18, 18),
                 StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
             });
 
             var name = UiTheme.Text(player.Name, 12,

@@ -27,8 +27,8 @@ public partial class EnemyOverhead : Node3D
     public override void _Ready()
     {
         _hpBack = MakeBar(new Color(0, 0, 0, 0.65f), 0f);
-        _hpFill = MakeBar(new Color(0.85f, 0.25f, 0.22f), 0.001f);
-        _shieldFill = MakeBar(new Color(0.45f, 0.80f, 1.0f), 0.002f);
+        _hpFill = MakeBar(Tokens.BarHp, 0.001f);
+        _shieldFill = MakeBar(Tokens.BarShield, 0.002f);
         AddChild(_hpBack);
         AddChild(_hpFill);
         AddChild(_shieldFill);
@@ -75,6 +75,14 @@ public partial class EnemyOverhead : Node3D
 
         _hpBack.Visible = true;
         SetBar(_hpBack, 1f, alpha * 0.65f);
+        // Design's single hp threshold: venom green until 30%, threat red under
+        // it. Same rule as the player's own bar, so one colour means one thing.
+        if (_hpFill.MaterialOverride is StandardMaterial3D hpMaterial)
+        {
+            var want = Kit.HpColor(hpFraction);
+            hpMaterial.AlbedoColor = want with { A = hpMaterial.AlbedoColor.A };
+            hpMaterial.Emission = want;
+        }
         SetBar(_hpFill, hpFraction, alpha);
         _hpFill.Visible = hpFraction > 0.001f;
 

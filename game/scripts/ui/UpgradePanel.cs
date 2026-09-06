@@ -136,16 +136,15 @@ public partial class UpgradePanel : Control
             var row = new HBoxContainer();
             row.AddThemeConstantOverride("separation", 8);
 
-            row.AddChild(UiTheme.Text($"[{i + 1}]", 13, UiTheme.Accent));
-            var name = UiTheme.Text(path.Id.ToUpperInvariant(), 13);
+            row.AddChild(Kit.Numeral($"{i + 1}", 13, UiTheme.Accent));
+            var name = Kit.Label(path.Id, Tokens.TextSecondary);
             name.CustomMinimumSize = new Vector2(70, 0);
             row.AddChild(name);
 
-            // Level pips: filled to current level, capped at what M2 ships (5)
-            // with the remaining endless-mode stages shown as faint ghosts.
-            var pips = UiTheme.Text(Pips(level, path.LevelCosts.Count), 13,
-                maxed ? UiTheme.Good : UiTheme.Ink);
-            pips.CustomMinimumSize = new Vector2(64, 0);
+            // Design's pips: arcane for a bought level, brass at the L4/L7/L10
+            // breakpoints, empty wells for the endless band that opens at M4.
+            var pips = new KitPips();
+            pips.Set(level, path.LevelCosts.Count);
             row.AddChild(pips);
 
             if (maxed)
