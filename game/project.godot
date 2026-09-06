@@ -18,3 +18,7 @@ project/assembly_name="DeepField.Game"
 
 window/size/viewport_width=1440
 window/size/viewport_height=810
+
+[rendering]
+
+textures/vram_compression/import_etc2_astc=true
