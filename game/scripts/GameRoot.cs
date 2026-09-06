@@ -922,6 +922,19 @@ public partial class GameRoot : Node3D
         if (_matchOver) return;
         _matchOver = true;
         BankLocalXp();
+
+        // Campaign progress. A loss records how deep the run got, because
+        // "best wave 9 of 12" is what tells a player whether they are close;
+        // a win additionally opens the next sector.
+        //
+        // Every mode records, clients included. Profiles are per-player and
+        // local, so someone who joined a friend's match and helped clear
+        // sector two has cleared sector two — locking them out of it at home
+        // because the world lived on the host's machine would be absurd. The
+        // wave number is safe to read here in any mode: it rides the meta
+        // channel, and MatchEnded reaches clients the same as anyone.
+        _profile.RecordResult(_map.Id, _view.Wave + 1, victory);
+
         _screens.HideIntermission();
         _screens.ShowEnd(_view, victory, _bankedXp, _factionId, _killsByPlayer, _reactionCount);
         Input.MouseMode = Input.MouseModeEnum.Visible;

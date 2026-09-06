@@ -172,10 +172,16 @@ public partial class LobbyScreen : Control
         {
             if (map.Id == "testlane") continue;      // harness fixture, not a sector
             bool selected = map.Id == _map.Id;
+            bool unlocked = Campaign.IsUnlocked(map.Id, _profile.ClearedSectors);
+            bool cleared = _profile.ClearedSectors.Contains(map.Id);
+            int best = _profile.BestWave.GetValueOrDefault(map.Id, 0);
 
-            var panel = new KitPanel(map.Id, selected ? Tokens.Brass500 : null);
+            var panel = new KitPanel(map.Id, selected && unlocked ? Tokens.Brass500 : null);
             panel.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            panel.HeaderTrailing(Kit.Tag($"{map.TotalWaves} waves"));
+            panel.HeaderTrailing(cleared ? Kit.TagBrass("cleared")
+                : !unlocked ? Kit.Tag("locked")
+                : Kit.Tag($"{map.TotalWaves} waves"));
+            panel.Modulate = unlocked ? Colors.White : new Color(1, 1, 1, 0.45f);
             _columns.AddChild(panel);
 
             var sketch = new KitRouteSketch { Map = map };
@@ -197,6 +203,12 @@ public partial class LobbyScreen : Control
                 panel.Body.AddChild(Kit.Toast(
                     $"the short route needs {gated.BarricadeGate}", Tokens.Threat500));
 
+            // Best result: the number that tells a player whether they are
+            // close. Shown for a loss too, which is when it matters most.
+            if (best > 0 && !cleared)
+                panel.Body.AddChild(Kit.Toast(
+                    $"best: wave {best} of {map.TotalWaves}", Tokens.Brass500));
+
             var counts = Kit.Row(Tokens.Space5);
             counts.AddChild(Kit.Label($"{map.Sockets.Count} sockets"));
             counts.AddChild(Kit.Label($"{map.HeroStations.Count} stations"));
@@ -205,9 +217,18 @@ public partial class LobbyScreen : Control
 
             string captured = map.Id;
             var footer = Kit.Row();
-            footer.AddChild(Kit.Label(selected ? "selected" : "available"));
+            footer.AddChild(Kit.Label(
+                !unlocked ? "locked" : selected ? "selected" : "available"));
             footer.AddChild(Kit.Spacer());
-            if (selected)
+            if (!unlocked)
+            {
+                // Name what opens it. A locked door with no sign is a bug
+                // report; a locked door that says which key is a goal.
+                int i = Campaign.IndexOf(map.Id);
+                footer.AddChild(Kit.Label($"clear {Campaign.Sectors[i - 1]} first",
+                    Tokens.TextSecondary));
+            }
+            else if (selected)
             {
                 footer.AddChild(Kit.TagBrass("selected"));
             }

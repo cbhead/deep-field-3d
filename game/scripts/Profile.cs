@@ -25,11 +25,29 @@ public sealed class Profile
     public float MasterVolume = 0.8f;
     public Dictionary<string, int> FactionXp = new();
     // weaponId → { "slots": {slot: attachmentId}, "ammo": ammoId }
+    // --- Campaign progress. mapId -> best wave reached; presence in Cleared
+    // is what unlocks the next sector. Kept as two fields rather than one
+    // record so an older profile.json missing them deserialises to "nothing
+    // played" instead of throwing.
+    public List<string> ClearedSectors = new();
+    public Dictionary<string, int> BestWave = new();
+
     public Dictionary<string, Dictionary<string, string>> BlueprintSlots = new();
     public Dictionary<string, string> BlueprintAmmo = new();
 
     public int LevelFor(string factionId) =>
         DeepField.Sim.Content.Factions.LevelForXp(FactionXp.GetValueOrDefault(factionId, 0));
+
+    /// <summary>Called at end of match, win or lose. A defeat still records how
+    /// deep the run got, because "best wave 9 of 12" is the thing that tells a
+    /// player whether they are close.</summary>
+    public void RecordResult(string mapId, int waveReached, bool victory)
+    {
+        if (waveReached > BestWave.GetValueOrDefault(mapId, 0))
+            BestWave[mapId] = waveReached;
+        if (victory && !ClearedSectors.Contains(mapId)) ClearedSectors.Add(mapId);
+        Save();
+    }
 
     public void BankXp(string factionId, int xp)
     {
