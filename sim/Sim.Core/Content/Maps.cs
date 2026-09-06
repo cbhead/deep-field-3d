@@ -52,12 +52,17 @@ public static class Maps
                 new Vec3(18f, 0f, 6f),
                 new Vec3(36f, 0f, 6f),
             }),
+            // The strand enters and leaves low — ground Skywatches answer the
+            // dips — but climbs to 13 m across the middle, where the only
+            // sockets that reach it are on the upper deck. Before this it flew
+            // at a flat 8 m straight over the yard, which put 100% of it inside
+            // ground range and left the deck with nothing of its own to do.
             new RouteDef("air", EnemyLayer.Air, new[]
             {
-                new Vec3(-40f, 8f, -6f),
-                new Vec3(-10f, 9f, -2f),
-                new Vec3(14f, 8f, 4f),
-                new Vec3(36f, 8f, 5f),
+                new Vec3(-40f, 9f, -4f),
+                new Vec3(-14f, 13f, -14f),
+                new Vec3(8f, 13f, -16f),
+                new Vec3(36f, 9f, 4f),
             }),
         },
         // Twelve sockets left exactly one defence to build, so every match
@@ -91,7 +96,7 @@ public static class Maps
 
             // --- Ground, the elbow and the run to the core (legs E, F, G).
             new SocketDef("g5", new Vec3(12f, 0f, -2f), SocketTag.Ground),
-            new SocketDef("g17", new Vec3(6f, 0f, -14f), SocketTag.Ground),
+            new SocketDef("g17", new Vec3(0f, 0f, -13f), SocketTag.Ground),
             new SocketDef("g18", new Vec3(22f, 0f, -13f), SocketTag.Ground),
             new SocketDef("g6", new Vec3(24f, 0f, 0f), SocketTag.Ground),
             new SocketDef("g19", new Vec3(30f, 0f, 0f), SocketTag.Ground),
@@ -110,6 +115,10 @@ public static class Maps
             new SocketDef("w7", new Vec3(14f, 6f, -12.8f), SocketTag.Wall),
             new SocketDef("w8", new Vec3(-10f, 6f, -19.5f), SocketTag.Wall),
             new SocketDef("w9", new Vec3(6f, 6f, -19.5f), SocketTag.Wall),
+            // Gantry bridge — it reaches out over the lane's elbow, so these
+            // two look straight down at the corner enemies have to turn.
+            new SocketDef("w10", new Vec3(9f, 6f, -7f), SocketTag.Wall),
+            new SocketDef("w11", new Vec3(9f, 6f, -1f), SocketTag.Wall),
 
             // --- Path plates. Traps are consumable, so density here is about
             // choosing where to spend them, not about holding every metre.
@@ -164,11 +173,14 @@ public static class Maps
                 new Vec3(5f, 0f, 0f),
                 new Vec3(40f, 0f, 8f),
             }, BarricadeGate: "b1", FallbackRouteId: "ground"),
+            // Same shape as Foundry: low at the mouths, 15 m across the middle
+            // where only the upper catwalk reaches. The comment on w3/w4 had
+            // always claimed this; the geometry never backed it up.
             new RouteDef("air", EnemyLayer.Air, new[]
             {
                 new Vec3(-45f, 9f, 4f),
-                new Vec3(-12f, 10f, 0f),
-                new Vec3(16f, 9f, -4f),
+                new Vec3(-14f, 15f, 1f),
+                new Vec3(14f, 15f, -2f),
                 new Vec3(40f, 9f, 6f),
             }),
         },

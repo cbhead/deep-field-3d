@@ -165,6 +165,7 @@ public partial class GameRoot : Node3D
                 "tunnel" => (new Vector3(11, 5, -3), new Vector3(0, 1, -8)),
                 "air" => (new Vector3(-14, 24, 38), new Vector3(0, 8, 0)),
                 "core" => (new Vector3(20, 10, 26), new Vector3(36, 2, 6)),
+                "deck" => (new Vector3(30, 15, 6), new Vector3(6, 6, -10)),
                 _ => (new Vector3(0, 60, 60), Vector3.Zero),
             };
             var camera = new Camera3D { Position = from, Far = 500f };
@@ -1280,9 +1281,10 @@ public partial class GameRoot : Node3D
     }
 
     /// <summary>Masts under the air lane, standing on the ground, spaced along
-    /// the strand. The pylon is 9.6 m and the lane flies at 8–9, so a mast
-    /// planted at y=0 meets it — which is the whole point of the silhouette.
-    /// Skipped where a mast would spear the deck or land on the ground lane.</summary>
+    /// the strand. The mast is authored 9.66 m tall; the lane now climbs to 13
+    /// or 15 across the middle of a map, so each one is stretched to meet the
+    /// height it is holding up — which also makes the climb legible from the
+    /// ground. Skipped where a mast would land on the lane or a socket.</summary>
     private void BuildAirLaneSupports(RouteDef route)
     {
         if (!AssetLibrary.Has("shared_airlane_pylon")) return;
@@ -1301,7 +1303,9 @@ public partial class GameRoot : Node3D
                 var at = a.Lerp(b, count == 0 ? 0f : (float)step / count);
                 var foot = new Vector3(at.X, 0, at.Z);
                 if (Blocked(foot, 6f)) continue;
-                MapKit.Prop(this, "shared_airlane_pylon", foot);
+                const float mastHeight = 9.66f;
+                MapKit.Prop(this, "shared_airlane_pylon", foot, 0f,
+                    new Vector3(1f, Mathf.Max(1f, at.Y / mastHeight), 1f));
             }
         }
     }
@@ -1407,6 +1411,28 @@ public partial class GameRoot : Node3D
         MapKit.Mount(pillarWest, "foundry_pillar", MapKit.GroundLocal(pillarWest));
         var pillarEast = AddStaticBox(new Vector3(14, 2.9f, -17), new Vector3(1.2f, 5.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
         MapKit.Mount(pillarEast, "foundry_pillar", MapKit.GroundLocal(pillarEast));
+
+        // Gantry bridge: the deck reaches north across the lane's elbow. This
+        // is what gives the upper level a job — sockets w10/w11 hang directly
+        // over the corner enemies have to turn, and a hero standing here is
+        // shooting down into it. Without the bridge the deck was a flat slab
+        // whose sightlines the ground already had.
+        var bridge = AddStaticBox(new Vector3(9, 5.8f, -6), new Vector3(4, 0.4f, 12), new Color(0.45f, 0.48f, 0.55f), layer: 1);
+        MapKit.MountRun(bridge, "foundry_deck", 12f, 4f, alongX: false, MapKit.GroundLocal(bridge), 90f);
+        foreach (float railX in new[] { -2.1f, 2.1f })
+        {
+            var bridgeRail = AddStaticBox(new Vector3(9 + railX, 6.6f, -6), new Vector3(0.2f, 1.0f, 12), new Color(0.5f, 0.53f, 0.6f), layer: 0);
+            MapKit.MountRun(bridgeRail, "foundry_deck_rail", 12f, 4f, alongX: false, MapKit.GroundLocal(bridgeRail) + 6.0f, 90f);
+        }
+        var bridgeLeg = AddStaticBox(new Vector3(9, 2.9f, -1.2f), new Vector3(1.2f, 5.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
+        MapKit.Mount(bridgeLeg, "foundry_pillar", MapKit.GroundLocal(bridgeLeg));
+
+        // Two ways up, so the deck isn't a one-way trip ending in the zipline.
+        // The back ladder is safe; this one puts you on the bridge tip in the
+        // middle of the fight.
+        var bridgeLadder = AddStaticBox(new Vector3(9f, 3f, 0.5f), new Vector3(1.2f, 6f, 0.15f), new Color(0.7f, 0.6f, 0.3f), layer: 0);
+        bridgeLadder.AddChild(MakeArea("ladder", new BoxShape3D { Size = new Vector3(1.6f, 6.4f, 1.4f) }));
+        MapKit.Mount(bridgeLadder, "shared_ladder", MapKit.GroundLocal(bridgeLadder));
 
         // Ladder up the deck's south face. Moved off x=-8 so it no longer
         // shares a footprint with the vent tunnel's mouth.

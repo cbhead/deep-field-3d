@@ -90,13 +90,15 @@ public static class MapKit
 
     /// <summary>Free-standing dressing: no collision, never on a sightline the
     /// sim cares about. Placed straight into the world, not onto a graybox.</summary>
-    public static Node3D? Prop(Node parent, string asset, Vector3 position, float yawDegrees = 0f)
+    public static Node3D? Prop(Node parent, string asset, Vector3 position, float yawDegrees = 0f,
+        Vector3? scale = null)
     {
         var piece = AssetLibrary.TryInstantiate(asset);
         if (piece is null) return null;
 
         piece.Position = position;
         piece.RotationDegrees = new Vector3(0, yawDegrees, 0);
+        if (scale is { } s) piece.Scale = s;
         parent.AddChild(piece);
         return piece;
     }

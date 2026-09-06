@@ -38,8 +38,12 @@ public static class MatchRunner
         },
         ["switchyard"] = new[]
         {
-            "lance:g3", "skywatch:g5", "arc:g6", "skywatch:w3",
-            "barricade:b1", "nova:g4", "singularity:g2", "lance:w1",
+            // Air moved up: a Skywatch parked mid-map on the ground can no
+            // longer touch the strand's high middle, so the scripted team buys
+            // its first anti-air at the west mouth where the lane still dips
+            // low, and covers the middle from the catwalk.
+            "lance:g3", "skywatch:g8", "arc:g6", "skywatch:w3",
+            "barricade:b1", "nova:g4", "skywatch:w9", "singularity:g2", "lance:w1",
             "tar:t2", "nova:g7", "lance:w2", "lance:g1",
             "spike:t4", "skywatch:w4",
         },
