@@ -378,12 +378,16 @@ public partial class GameRoot : Node3D
         canvas.AddChild(_toastLabel);
 
         // Crosshair (pivot centered so the hit-flash swell stays centered).
+        // MouseFilter MUST be Ignore: in captured mode the hidden cursor is pinned
+        // at screen center — right on this rect — and ColorRect's default filter
+        // (Stop) would eat every mouse-motion event before the player sees it.
         _crosshair = new ColorRect
         {
             Color = new Color(1, 1, 1, 0.8f),
             AnchorLeft = 0.5f, AnchorTop = 0.5f, AnchorRight = 0.5f, AnchorBottom = 0.5f,
             OffsetLeft = -2, OffsetTop = -2, OffsetRight = 2, OffsetBottom = 2,
             PivotOffset = new Vector2(2, 2),
+            MouseFilter = Control.MouseFilterEnum.Ignore,
         };
         canvas.AddChild(_crosshair);
 

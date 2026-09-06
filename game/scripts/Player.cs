@@ -41,7 +41,9 @@ public partial class Player : CharacterBody3D
 
     private void CaptureMouse() => Input.MouseMode = Input.MouseModeEnum.Captured;
 
-    public override void _UnhandledInput(InputEvent @event)
+    // Mouse look lives in _Input, not _UnhandledInput, so no Control node can
+    // ever consume the motion events out from under the camera.
+    public override void _Input(InputEvent @event)
     {
         switch (@event)
         {
@@ -51,15 +53,21 @@ public partial class Player : CharacterBody3D
                 _camera.Rotation = new Vector3(_pitch, 0, 0);
                 break;
 
+            case InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }
+                when Input.MouseMode != Input.MouseModeEnum.Captured:
+                Input.MouseMode = Input.MouseModeEnum.Captured;
+                break;
+        }
+    }
+
+    public override void _UnhandledInput(InputEvent @event)
+    {
+        switch (@event)
+        {
             case InputEventKey { Pressed: true, Keycode: Key.Escape }:
                 Input.MouseMode = Input.MouseMode == Input.MouseModeEnum.Captured
                     ? Input.MouseModeEnum.Visible
                     : Input.MouseModeEnum.Captured;
-                break;
-
-            case InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }
-                when Input.MouseMode != Input.MouseModeEnum.Captured:
-                Input.MouseMode = Input.MouseModeEnum.Captured;
                 break;
 
             case InputEventKey { Pressed: true, Echo: false, Keycode: Key.E }:
