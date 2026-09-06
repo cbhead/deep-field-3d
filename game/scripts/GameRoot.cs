@@ -285,6 +285,8 @@ public partial class GameRoot : Node3D
     {
         if (!_view.Valid) return;
 
+        if (_world is not null && _world.Players.TryGetValue(LocalPlayerId, out var me))
+            _hud.SetBleedout(me.BleedoutTimer);
         _hud.Refresh(_view, delta, Input.MouseMode == Input.MouseModeEnum.Captured, _hint);
         if (_wheel.IsOpen) _wheel.Refresh(_view);
         if (_upgrade.IsOpen) _upgrade.Refresh(_view);
@@ -492,9 +494,10 @@ public partial class GameRoot : Node3D
                 case SimEvent.WaveCleared cleared:
                     Post($"wave {cleared.WaveIndex + 1} cleared", UiTheme.Good);
                     break;
-                case SimEvent.EnemyLeaked:
+                case SimEvent.EnemyLeaked leaked:
                     _lastWaveLeaks++;
                     Post("BREACH — core hit", UiTheme.Danger);
+                    OnBreach(leaked.EnemyId);
                     break;
 
                 case SimEvent.ReactionTriggered reaction:
@@ -563,7 +566,11 @@ public partial class GameRoot : Node3D
                 Post($"wave {int.Parse(p[2]) + 1} — {p[3]} inbound");
                 break;
             case "waveCleared": Post($"wave {int.Parse(p[2]) + 1} cleared", UiTheme.Good); break;
-            case "enemyLeaked": _lastWaveLeaks++; Post("BREACH — core hit", UiTheme.Danger); break;
+            case "enemyLeaked":
+                _lastWaveLeaks++;
+                Post("BREACH — core hit", UiTheme.Danger);
+                OnBreach(int.Parse(p[2]));
+                break;
             case "reaction": _reactionCount++; OnReaction(int.Parse(p[2]), p[3]); break;
             case "playerDowned":
                 Post(int.Parse(p[2]) == LocalPlayerId
@@ -640,6 +647,15 @@ public partial class GameRoot : Node3D
         _screens.HideIntermission();
         _screens.ShowEnd(_view, victory, _bankedXp, _factionId, _killsByPlayer, _reactionCount);
         Input.MouseMode = Input.MouseModeEnum.Visible;
+    }
+
+    /// <summary>Point the player at a leak they didn't see. The leaking enemy's
+    /// view is already gone this frame, so fall back to the route's goal.</summary>
+    private void OnBreach(int enemyId)
+    {
+        var where = EnemyWorldPos(enemyId)
+            ?? ToGd(_map.Routes[0].Waypoints[^1]);
+        _hud.FlagBreach(where, GetViewport().GetCamera3D());
     }
 
     private Vector3? EnemyWorldPos(int enemyId) =>

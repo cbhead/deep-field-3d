@@ -49,6 +49,15 @@ public partial class HudRoot : CanvasLayer
     private Label _capturePrompt = null!;
     private Label _hint = null!;
 
+    // Downed presentation + off-screen breach direction.
+    private Control _vignette = null!;
+    private Label _downedTimer = null!;
+    private Control _breachArrow = null!;
+    private float _breachAngle;
+    private double _breachHold;
+    private float _downedFraction;
+    private bool _isDowned;
+
     private double _elapsed;
 
     public override void _Ready()
@@ -67,6 +76,84 @@ public partial class HudRoot : CanvasLayer
         BuildTeammates(root);
         BuildFeed(root);
         BuildCrosshair(root);
+        BuildDownedOverlay(root);
+        BuildBreachArrow(root);
+    }
+
+    private void BuildDownedOverlay(Control root)
+    {
+        _vignette = new Control { MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false };
+        _vignette.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        _vignette.Draw += DrawVignette;
+        root.AddChild(_vignette);
+
+        _downedTimer = UiTheme.Text("", 20, UiTheme.Danger);
+        _downedTimer.SetAnchorsPreset(Control.LayoutPreset.Center);
+        _downedTimer.Position = new Vector2(-140, 70);
+        _downedTimer.CustomMinimumSize = new Vector2(280, 0);
+        _downedTimer.HorizontalAlignment = HorizontalAlignment.Center;
+        _downedTimer.Visible = false;
+        root.AddChild(_downedTimer);
+    }
+
+    private void BuildBreachArrow(Control root)
+    {
+        _breachArrow = new Control
+        {
+            AnchorLeft = 0.5f, AnchorTop = 0.5f, AnchorRight = 0.5f, AnchorBottom = 0.5f,
+            OffsetLeft = -120, OffsetTop = -120, OffsetRight = 120, OffsetBottom = 120,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            Visible = false,
+        };
+        _breachArrow.Draw += DrawBreachArrow;
+        root.AddChild(_breachArrow);
+    }
+
+    /// <summary>Points at where the core was hit when it happened off-screen —
+    /// a leak you didn't see is the one you most need to locate.</summary>
+    public void FlagBreach(Vector3 worldPos, Camera3D? camera)
+    {
+        if (camera is null) return;
+        if (!camera.IsPositionBehind(worldPos))
+        {
+            var onScreen = camera.UnprojectPosition(worldPos);
+            var viewport = _breachArrow.GetViewportRect().Size;
+            if (onScreen.X > 0 && onScreen.X < viewport.X && onScreen.Y > 0 && onScreen.Y < viewport.Y)
+                return;   // visible: the player can see it happen
+        }
+
+        var toTarget = worldPos - camera.GlobalPosition;
+        var local = camera.GlobalTransform.Basis.Inverse() * toTarget;
+        _breachAngle = Mathf.Atan2(local.X, -local.Z);
+        _breachHold = 2.5;
+    }
+
+    private void DrawVignette()
+    {
+        var size = _vignette.Size;
+        float pulse = 0.35f + 0.15f * Mathf.Sin((float)_elapsed * 3f);
+        // Cheap vignette: stacked translucent border bands.
+        for (int i = 0; i < 10; i++)
+        {
+            float inset = i * 16f;
+            var color = new Color(0.5f, 0.03f, 0.05f, pulse * (1f - i / 10f) * 0.25f);
+            _vignette.DrawRect(new Rect2(inset, inset, size.X - inset * 2, size.Y - inset * 2),
+                color, filled: false, width: 16f);
+        }
+    }
+
+    private void DrawBreachArrow()
+    {
+        var center = _breachArrow.Size * 0.5f;
+        var dir = new Vector2(Mathf.Sin(_breachAngle), -Mathf.Cos(_breachAngle));
+        var tip = center + dir * 110f;
+        var left = center + dir.Rotated(2.5f) * 26f;
+        var right = center + dir.Rotated(-2.5f) * 26f;
+
+        float alpha = Mathf.Clamp((float)_breachHold, 0f, 1f);
+        var color = UiTheme.Danger with { A = alpha };
+        _breachArrow.DrawColoredPolygon(new[] { tip, tip + (left - center) * 0.35f, tip + (right - center) * 0.35f }, color);
+        _breachArrow.DrawLine(center + dir * 70f, tip, color, 3f);
     }
 
     // =====================================================================
@@ -275,6 +362,17 @@ public partial class HudRoot : CanvasLayer
             _hpText.Text = $"{local.Hp:0}";
             _downedText.Text = local.Downed ? "DOWNED — a teammate can revive you" : "";
 
+            _isDowned = local.Downed;
+            _vignette.Visible = _isDowned;
+            _downedTimer.Visible = _isDowned;
+            if (_isDowned)
+            {
+                _vignette.QueueRedraw();
+                _downedTimer.Text = _downedFraction > 0
+                    ? $"BLEEDING OUT — {_downedFraction:0}s"
+                    : "BLEEDING OUT";
+            }
+
             // --- loadout
             _weaponName.Text = local.WeaponId.ToUpperInvariant();
             _abilityFraction = local.AbilityCooldown <= 0f ? 0f
@@ -307,7 +405,18 @@ public partial class HudRoot : CanvasLayer
 
         _capturePrompt.Visible = !mouseCaptured;
         _hint.Text = hint;
+
+        if (_breachHold > 0)
+        {
+            _breachHold -= delta;
+            _breachArrow.Visible = _breachHold > 0;
+            _breachArrow.QueueRedraw();
+        }
     }
+
+    /// <summary>Bleedout seconds remaining, for the downed overlay (authoritative
+    /// modes only; clients see the state without the exact clock).</summary>
+    public void SetBleedout(float seconds) => _downedFraction = seconds;
 
     private static float AbilityCooldownFor(string factionId) =>
         Factions.All.TryGetValue(factionId, out var faction) ? faction.CooldownSeconds : 30f;
