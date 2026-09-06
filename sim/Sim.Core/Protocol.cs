@@ -10,6 +10,12 @@ namespace DeepField.Sim;
 public static class Protocol
 {
     public const int Version = 1;
+
+    /// <summary>Human-readable build identity, sent alongside the protocol
+    /// number. The number decides compatibility — determinism requires an exact
+    /// match — but a refusal that can name both builds is one a player can
+    /// actually act on.</summary>
+    public static string BuildLabel(string appVersion) => $"{appVersion} · p{Version}";
     public const int DefaultPort = 8787;
 
     // ------------------------------------------------------------------

@@ -32,6 +32,8 @@ public partial class NetworkManager : Node
     public readonly List<string> PendingEvents = new();
     public Godot.Collections.Dictionary? Meta;       // money/lives/phase/scrap/players
     public string? JoinError;
+    public string JoinErrorYours = "";
+    public string JoinErrorHost = "";
 
     public System.Action<Command>? ServerEnqueue;    // host mode: loopback into GameRoot's sim
 
@@ -74,18 +76,19 @@ public partial class NetworkManager : Node
     // ---------------------------------------------------------------------
 
     public void SendHello(string name, string factionId, int factionLevel) =>
-        RpcId(1, nameof(HelloRpc), Protocol.Version, name, factionId, factionLevel);
+        RpcId(1, nameof(HelloRpc), Protocol.Version, name, factionId, factionLevel, BuildLabel());
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    private void HelloRpc(int version, string name, string factionId, int factionLevel)
+    private void HelloRpc(int version, string name, string factionId, int factionLevel, string build)
     {
         if (!IsServer || _world is null) return;
         long peerId = Multiplayer.GetRemoteSenderId();
 
         if (version != Protocol.Version)
         {
-            RpcId(peerId, nameof(RejectedRpc),
-                $"version mismatch: server v{Protocol.Version}, you v{version} — grab the matching release");
+            // Name both builds: "your version is wrong" is not actionable,
+            // "you are on X, the host is on Y" is.
+            RpcId(peerId, nameof(RejectedRpc), "versionMismatch", build, BuildLabel());
             return;
         }
 
@@ -112,7 +115,17 @@ public partial class NetworkManager : Node
     }
 
     [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    private void RejectedRpc(string reason) => JoinError = reason;
+    private void RejectedRpc(string reason, string yourBuild, string hostBuild)
+    {
+        JoinError = reason;
+        JoinErrorYours = yourBuild;
+        JoinErrorHost = hostBuild;
+    }
+
+    /// <summary>What this client is running, for the handshake and for any
+    /// refusal that has to explain itself.</summary>
+    public static string BuildLabel() =>
+        Protocol.BuildLabel((string)ProjectSettings.GetSetting("application/config/version", "dev"));
 
     // ---------------------------------------------------------------------
     // Client → server commands

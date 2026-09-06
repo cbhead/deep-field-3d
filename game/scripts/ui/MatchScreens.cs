@@ -31,6 +31,10 @@ public partial class MatchScreens : CanvasLayer
     private Control _pause = null!;
     private Control _howTo = null!;
     private KitPanel _pausePanel = null!;
+    private KitPanel _statusPanel = null!;
+
+    /// <summary>Raised when a connection modal's button is pressed.</summary>
+    public System.Action<string>? OnConnectionAction;
     private VBoxContainer _settingsPane = null!;
     private Profile _profile = new();
 
@@ -40,8 +44,6 @@ public partial class MatchScreens : CanvasLayer
     public System.Action<float>? OnHudScale;
     public System.Action<float>? OnVolume;
     private Control _status = null!;
-    private Label _statusText = null!;
-    private Label _statusDetail = null!;
 
     public bool PauseOpen => _pause.Visible;
 
@@ -633,35 +635,71 @@ public partial class MatchScreens : CanvasLayer
 
     private void BuildStatus()
     {
-        _status = new Control { MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false };
+        _status = new Control { MouseFilter = Control.MouseFilterEnum.Stop, Visible = false };
         _status.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         AddChild(_status);
 
-        var card = UiTheme.Card();
-        card.SetAnchorsPreset(Control.LayoutPreset.Center);
-        card.Position = new Vector2(-230, -60);
-        card.CustomMinimumSize = new Vector2(460, 0);
-        _status.AddChild(card);
+        var backdrop = new ColorRect { Color = Tokens.SurfaceOverlay };
+        backdrop.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        _status.AddChild(backdrop);
 
-        var body = new VBoxContainer();
-        _statusText = UiTheme.Text("", 18);
-        _statusText.HorizontalAlignment = HorizontalAlignment.Center;
-        body.AddChild(_statusText);
-
-        _statusDetail = UiTheme.Text("", 12, UiTheme.InkDim);
-        _statusDetail.HorizontalAlignment = HorizontalAlignment.Center;
-        _statusDetail.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        _statusDetail.CustomMinimumSize = new Vector2(430, 0);
-        body.AddChild(_statusDetail);
-
-        card.AddChild(body);
+        _statusPanel = new KitPanel("Connection");
+        _statusPanel.SetAnchorsPreset(Control.LayoutPreset.Center);
+        _statusPanel.Position = new Vector2(-280, -140);
+        _statusPanel.CustomMinimumSize = new Vector2(560, 0);
+        _status.AddChild(_statusPanel);
     }
 
+    /// <summary>The connection modal. Design gives five states; each says what
+    /// happened and, where the player has to do something, what. Danger tone is
+    /// reserved for the two that need action — the rest are informational, so
+    /// a slow handshake does not look like a failure.</summary>
     public void ShowStatus(string headline, string detail = "")
+        => ShowConnection(headline, detail, ConnectionTone.Info);
+
+    public enum ConnectionTone { Info, Progress, Danger }
+
+    public void ShowConnection(string headline, string detail,
+        ConnectionTone tone, string? yourBuild = null, string? hostBuild = null,
+        float progress = -1f, string[]? actions = null)
     {
         _status.Visible = true;
-        _statusText.Text = headline;
-        _statusDetail.Text = detail;
+        foreach (var child in _statusPanel.Body.GetChildren()) child.QueueFree();
+
+        _statusPanel.Body.AddChild(Kit.Title(headline, Tokens.SizeDisplaySm,
+            tone == ConnectionTone.Danger ? Tokens.Threat400 : Tokens.TextPrimary));
+
+        if (detail.Length > 0)
+            _statusPanel.Body.AddChild(Kit.Paragraph(detail, Tokens.SizeBody, Tokens.TextSecondary));
+
+        if (progress >= 0f)
+            _statusPanel.Body.AddChild(Kit.Bar(progress, Tokens.BarShield, 8f));
+
+        // Version mismatch names both sides, because "wrong version" alone
+        // leaves the player guessing which way to move.
+        if (yourBuild is not null && hostBuild is not null)
+        {
+            var builds = Kit.Row(Tokens.Space5);
+            builds.AddChild(Kit.Tag($"you · {yourBuild}"));
+            builds.AddChild(Kit.TagDanger($"host · {hostBuild}"));
+            _statusPanel.Body.AddChild(builds);
+            _statusPanel.Body.AddChild(Kit.Paragraph(
+                "Sim determinism requires an exact protocol match.",
+                Tokens.SizeCaption, Tokens.TextMuted));
+        }
+
+        if (actions is { Length: > 0 })
+        {
+            var row = Kit.Row(Tokens.Space4);
+            foreach (string action in actions)
+            {
+                var button = new KitButton(action, KitButton.Tone.Secondary, Tokens.ControlSm);
+                string captured = action;
+                button.Pressed += () => OnConnectionAction?.Invoke(captured);
+                row.AddChild(button);
+            }
+            _statusPanel.Body.AddChild(row);
+        }
     }
 
     public void HideStatus() => _status.Visible = false;

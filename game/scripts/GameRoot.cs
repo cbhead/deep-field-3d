@@ -169,6 +169,20 @@ public partial class GameRoot : Node3D
         _shotPath = null;
 
         // Surface shots: open the UI being reviewed, then capture next frame.
+        if (_shotView == "connection")
+        {
+            _shotPath = path;
+            _shotView = "eye";
+            _shotCountdown = 4;
+            _hud.Visible = false;
+            _screens.ShowConnection("Version mismatch",
+                "The host is running a different build.",
+                MatchScreens.ConnectionTone.Danger,
+                NetworkManager.BuildLabel(), "0.2.1 · p2",
+                actions: new[] { "Back" });
+            return;
+        }
+
         if (_shotView == "pause")
         {
             _shotPath = path;
@@ -546,7 +560,23 @@ public partial class GameRoot : Node3D
     {
         if (_net.JoinError is { } error)
         {
-            Toast(error);
+            // A refusal is a screen, not a toast — the player has to act on it.
+            if (error == "versionMismatch")
+                _screens.ShowConnection("Version mismatch",
+                    "The host is running a different build.",
+                    MatchScreens.ConnectionTone.Danger,
+                    _net.JoinErrorYours, _net.JoinErrorHost,
+                    actions: new[] { "Back" });
+            else if (error == "factionTaken")
+                _screens.ShowConnection("Faction taken",
+                    "One faction per player — pick another and rejoin.",
+                    MatchScreens.ConnectionTone.Danger,
+                    actions: new[] { "Back" });
+            else
+                _screens.ShowConnection("Could not join", error,
+                    MatchScreens.ConnectionTone.Danger, actions: new[] { "Back" });
+
+            Input.MouseMode = Input.MouseModeEnum.Visible;
             _net.JoinError = null;
             return;
         }
@@ -1936,6 +1966,12 @@ public partial class GameRoot : Node3D
         _screens.OnSave = SaveGame;
         _screens.OnLoad = LoadGame;
         // Settings that need something outside the pause screen to apply them.
+        _screens.OnConnectionAction = _ =>
+        {
+            _screens.HideStatus();
+            GetTree().Quit();       // same exit the leave button uses
+        };
+
         _screens.OnFieldOfView = degrees => _player?.SetFieldOfView(degrees);
         _screens.OnSensitivity = scale => { if (_player is not null) _player.SensitivityScale = scale; };
         _screens.OnHudScale = scale => _hud.Scale = new Vector2(scale, scale);
