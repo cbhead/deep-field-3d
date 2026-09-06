@@ -129,7 +129,12 @@ public partial class GameRoot : Node3D
                 _shotCountdown = 90;
                 // Lobby and other pre-match surfaces are captured where they
                 // live — starting a match would tear them down.
-                if (_shotView == "lobby") { _shotView = "eye"; return; }
+                if (_shotView is "lobby" or "sector")
+                {
+                    if (_shotView == "sector") _lobby.ShowSectorTab();
+                    _shotView = "eye";
+                    return;
+                }
                 StartSolo("ember");
                 return;
             }

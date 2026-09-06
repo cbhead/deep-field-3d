@@ -31,6 +31,9 @@ public partial class LobbyScreen : Control
     private Label _status = null!;
     private Label _sectorLine = null!;
     private HBoxContainer _columns = null!;
+    private MarginContainer _pageHost = null!;
+    private string _page = "factions";
+    private readonly Dictionary<string, KitButton> _tabs = new();
 
     public string PlayerName => _nameEdit.Text.Length > 0 ? _nameEdit.Text : "player";
     public MapDef SelectedMap => _map;
@@ -61,6 +64,21 @@ public partial class LobbyScreen : Control
         header.AddChild(Kit.Label("callsign"));
         header.AddChild(_nameEdit);
         header.AddChild(Kit.Spacer());
+
+        // Design splits the lobby into tabs; factions and sector are the two
+        // that have anything behind them. Loadout is the in-match armory, so
+        // it is not offered here rather than shown as a dead tab.
+        foreach (var (id, label) in new[] { ("factions", "Factions"), ("sector", "Sector") })
+        {
+            string captured = id;
+            var tab = new KitButton(label,
+                id == _page ? KitButton.Tone.Primary : KitButton.Tone.Ghost, Tokens.ControlSm);
+            tab.Pressed += () => { _page = captured; RebuildPage(); };
+            header.AddChild(tab);
+            _tabs[id] = tab;
+        }
+
+        header.AddChild(Kit.Spacer());
         _status = Kit.Body("", Tokens.SizeCaption, UiTheme.Warn);
         header.AddChild(_status);
 
@@ -72,6 +90,7 @@ public partial class LobbyScreen : Control
 
         _columns = Kit.Row(Tokens.Space7);
         margin.AddChild(_columns);
+        _pageHost = margin;
 
         // --- launch strip
         var strip = Kit.Surface(Tokens.SurfacePanel, Tokens.BorderPanel);
@@ -121,11 +140,107 @@ public partial class LobbyScreen : Control
         stripMargin.AddChild(strip);
         frame.AddChild(stripMargin);
 
-        RebuildFactions();
+        RebuildPage();
         RefreshSector();
     }
 
+    /// <summary>Swaps the body between the faction columns and sector select.
+    /// Both are grids of panels, so the page host just gets a new row.</summary>
+    private void RebuildPage()
+    {
+        foreach (var (id, tab) in _tabs)
+            tab.AddThemeStyleboxOverride("normal", new ChamferBox
+            {
+                Fill = id == _page ? Tokens.Brass500 : new Color(0, 0, 0, 0),
+                Stroke = id == _page ? Tokens.Brass300 : Tokens.BorderPanel,
+                Chamfer = 7f,
+                DropShadow = id == _page,
+            });
+
+        foreach (var child in _columns.GetChildren()) child.QueueFree();
+        if (_page == "sector") RebuildSectors();
+        else RebuildFactions();
+    }
+
+    // =====================================================================
+    // Sector select
+    // =====================================================================
+
+    private void RebuildSectors()
+    {
+        foreach (var map in Maps.All.Values)
+        {
+            if (map.Id == "testlane") continue;      // harness fixture, not a sector
+            bool selected = map.Id == _map.Id;
+
+            var panel = new KitPanel(map.Id, selected ? Tokens.Brass500 : null);
+            panel.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            panel.HeaderTrailing(Kit.Tag($"{map.TotalWaves} waves"));
+            _columns.AddChild(panel);
+
+            var sketch = new KitRouteSketch { Map = map };
+            panel.Body.AddChild(sketch);
+
+            // Legend, so the sketch is readable without a caption.
+            var legend = Kit.Row(Tokens.Space5);
+            legend.AddChild(Kit.Label("ground", Tokens.Brass400));
+            legend.AddChild(Kit.Label("air", Tokens.Arcane400));
+            if (map.Routes.Any(r => r.BarricadeGate is not null))
+                legend.AddChild(Kit.Label("shortcut", Tokens.Threat400));
+            panel.Body.AddChild(legend);
+
+            panel.Body.AddChild(Kit.Paragraph(Blurb(map.Id), Tokens.SizeCaption, Tokens.TextSecondary));
+
+            // The barricade map's lesson is stated, because a player who does
+            // not know about b1 will lose to the shortcut without seeing why.
+            if (map.Routes.FirstOrDefault(r => r.BarricadeGate is not null) is { } gated)
+                panel.Body.AddChild(Kit.Toast(
+                    $"the short route needs {gated.BarricadeGate}", Tokens.Threat500));
+
+            var counts = Kit.Row(Tokens.Space5);
+            counts.AddChild(Kit.Label($"{map.Sockets.Count} sockets"));
+            counts.AddChild(Kit.Label($"{map.HeroStations.Count} stations"));
+            counts.AddChild(Kit.Label($"{map.Routes.Count} lanes"));
+            panel.Body.AddChild(counts);
+
+            string captured = map.Id;
+            var footer = Kit.Row();
+            footer.AddChild(Kit.Label(selected ? "selected" : "available"));
+            footer.AddChild(Kit.Spacer());
+            if (selected)
+            {
+                footer.AddChild(Kit.TagBrass("selected"));
+            }
+            else
+            {
+                var pick = new KitButton("Select", KitButton.Tone.Secondary, Tokens.ControlSm);
+                pick.Pressed += () =>
+                {
+                    _map = Maps.All[captured];
+                    RefreshSector();
+                    RebuildPage();
+                };
+                footer.AddChild(pick);
+            }
+            panel.SetFooter(footer);
+        }
+    }
+
+    /// <summary>One line on what the sector asks of you. Kept here rather than
+    /// in MapDef because it is copy, not content the sim reads.</summary>
+    private static string Blurb(string mapId) => mapId switch
+    {
+        "foundry" => "Two tiers. The ground lane winds under the deck and an air "
+            + "strand climbs out of ground-tower reach across the middle.",
+        "switchyard" => "Three tiers. The freight cut is fast and badly covered; "
+            + "a barricade closes it and forces the long switchback past the kill-boxes.",
+        _ => "",
+    };
+
     public void SetStatus(string message) => _status.Text = message;
+
+    /// <summary>Used by --shot so the sector page can be reviewed.</summary>
+    public void ShowSectorTab() { _page = "sector"; RebuildPage(); }
 
     private void Persist()
     {

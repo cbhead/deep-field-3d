@@ -1,5 +1,6 @@
 using Godot;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace DeepField.Game.Ui;
 
@@ -236,6 +237,18 @@ public static class Kit
         return label;
     }
 
+    /// <summary>Wrapping body copy. A Label sizes to its longest line by
+    /// default, so an unwrapped paragraph silently forces its whole column
+    /// wider than the grid it sits in.</summary>
+    public static Label Paragraph(string text, int size = Tokens.SizeCaption, Color? color = null)
+    {
+        var label = Body(text, size, color);
+        label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        label.CustomMinimumSize = new Vector2(80, 0);
+        label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        return label;
+    }
+
     public static Label Body(string text, int size = Tokens.SizeBody, Color? color = null)
     {
         var label = new Label { Text = text };
@@ -290,7 +303,7 @@ public static class Kit
     public static PanelContainer Toast(string text, Color? edge = null)
     {
         var toast = Surface(Tokens.SurfaceGlass, edge ?? Tokens.BorderPanel, Tokens.ChamferSm, shadow: false);
-        toast.AddChild(Body(text, Tokens.SizeCaption, Tokens.TextSecondary));
+        toast.AddChild(Paragraph(text, Tokens.SizeCaption, Tokens.TextSecondary));
         return toast;
     }
 
@@ -590,6 +603,112 @@ public partial class KitRing : Control
         var size = font.GetStringSize(Caption, HorizontalAlignment.Center, -1, Tokens.SizeStat);
         DrawString(font, centre + new Vector2(-size.X * 0.5f, size.Y * 0.3f), Caption,
             HorizontalAlignment.Center, -1, Tokens.SizeStat, Fill);
+    }
+}
+
+/// <summary>A map at a glance: its lanes, its sockets, and — where one exists
+/// — the shortcut and the barricade that closes it.
+///
+/// Drawn from MapDef rather than authored per map, so a route change or a new
+/// socket shows up here without anyone remembering to redraw a thumbnail. That
+/// matters because this is the picture a player chooses a sector from.</summary>
+public partial class KitRouteSketch : Control
+{
+    public DeepField.Sim.Content.MapDef? Map;
+
+    public KitRouteSketch() => CustomMinimumSize = new Vector2(0, 210);
+
+    public override void _Draw()
+    {
+        if (Map is not { } map || Size.X < 20) return;
+
+        DrawRect(new Rect2(Vector2.Zero, Size), Tokens.SurfaceInset);
+        var grid = new Color(Tokens.Steel500.R, Tokens.Steel500.G, Tokens.Steel500.B, 0.16f);
+        for (float x = 0; x < Size.X; x += 20) DrawLine(new Vector2(x, 0), new Vector2(x, Size.Y), grid, 1f);
+        for (float y = 0; y < Size.Y; y += 20) DrawLine(new Vector2(0, y), new Vector2(Size.X, y), grid, 1f);
+
+        // Fit every waypoint and socket, preserving aspect so the lane's shape
+        // is honest rather than stretched to the card.
+        float minX = float.MaxValue, maxX = float.MinValue, minZ = float.MaxValue, maxZ = float.MinValue;
+        void Include(float x, float z)
+        {
+            minX = Mathf.Min(minX, x); maxX = Mathf.Max(maxX, x);
+            minZ = Mathf.Min(minZ, z); maxZ = Mathf.Max(maxZ, z);
+        }
+        foreach (var route in map.Routes)
+            foreach (var w in route.Waypoints) Include(w.X, w.Z);
+        foreach (var socket in map.Sockets) Include(socket.Pos.X, socket.Pos.Z);
+
+        const float pad = 14f;
+        float spanX = Mathf.Max(1f, maxX - minX), spanZ = Mathf.Max(1f, maxZ - minZ);
+        float scale = Mathf.Min((Size.X - pad * 2) / spanX, (Size.Y - pad * 2) / spanZ);
+        var origin = new Vector2(
+            (Size.X - spanX * scale) * 0.5f - minX * scale,
+            (Size.Y - spanZ * scale) * 0.5f - minZ * scale);
+        Vector2 At(float x, float z) => origin + new Vector2(x * scale, z * scale);
+
+        // Sockets first, so lanes read on top of them.
+        foreach (var socket in map.Sockets)
+        {
+            var tint = socket.Tag switch
+            {
+                DeepField.Sim.Content.SocketTag.Wall => Tokens.Arcane500,
+                DeepField.Sim.Content.SocketTag.Trap => Tokens.Ember500,
+                DeepField.Sim.Content.SocketTag.Barricade => Tokens.Threat400,
+                _ => Tokens.Venom500,
+            };
+            DrawCircle(At(socket.Pos.X, socket.Pos.Z), 2.2f, tint with { A = 0.75f });
+        }
+
+        foreach (var route in map.Routes)
+        {
+            bool air = route.Layer == DeepField.Sim.Content.EnemyLayer.Air;
+            bool shortcut = route.BarricadeGate is not null;
+            var colour = shortcut ? Tokens.Threat400 : air ? Tokens.Arcane400 : Tokens.Brass400;
+
+            for (int i = 0; i < route.Waypoints.Count - 1; i++)
+            {
+                var a = At(route.Waypoints[i].X, route.Waypoints[i].Z);
+                var b = At(route.Waypoints[i + 1].X, route.Waypoints[i + 1].Z);
+                if (air || shortcut) DashedLine(a, b, colour, shortcut ? 2f : 1.5f);
+                else DrawLine(a, b, colour, 2.5f);
+            }
+
+            // The gate that closes the shortcut is the whole lesson of a map
+            // that has one, so it gets a marker rather than a line style.
+            if (route.BarricadeGate is { } gateId)
+            {
+                var gate = map.Sockets.FirstOrDefault(s => s.Id == gateId);
+                if (gate is not null)
+                {
+                    var at = At(gate.Pos.X, gate.Pos.Z);
+                    DrawRect(new Rect2(at - new Vector2(4, 4), new Vector2(8, 8)), Tokens.Threat500);
+                }
+            }
+        }
+
+        // Mouths: where they come in, where they are going.
+        foreach (var route in map.Routes)
+        {
+            if (route.Waypoints.Count < 2) continue;
+            var start = At(route.Waypoints[0].X, route.Waypoints[0].Z);
+            var end = At(route.Waypoints[^1].X, route.Waypoints[^1].Z);
+            DrawCircle(start, 4f, Tokens.Ember500);
+            DrawCircle(end, 4f, Tokens.Arcane300);
+        }
+    }
+
+    private void DashedLine(Vector2 a, Vector2 b, Color colour, float width)
+    {
+        float length = a.DistanceTo(b);
+        var step = (b - a).Normalized() * 5f;
+        for (float travelled = 0; travelled < length; travelled += 10f)
+        {
+            var from = a + step * (travelled / 5f);
+            var to = from + step;
+            if (from.DistanceTo(a) > length) break;
+            DrawLine(from, to, colour, width);
+        }
     }
 }
 
