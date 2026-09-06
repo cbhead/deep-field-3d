@@ -1,28 +1,35 @@
 using Godot;
+using System.Linq;
+using DeepField.Sim;
 using DeepField.Sim.Content;
 
 namespace DeepField.Game;
 
-/// <summary>Client-authoritative FPS controller (M0: keys polled directly, no
-/// input map). Movement never touches the sim; shooting and building enter it
-/// as commands via GameRoot.</summary>
+/// <summary>Client-authoritative FPS controller. Movement and traversal never
+/// touch the sim; shooting, building, abilities and revives enter it as
+/// commands via GameRoot.Submit.</summary>
 public partial class Player : CharacterBody3D
 {
     private const float MoveSpeed = 6.5f;
     private const float SprintSpeed = 10f;
     private const float JumpVelocity = 4.8f;
+    private const float ClimbSpeed = 4f;
+    private const float ZipSpeed = 14f;
     private const float MouseSensitivity = 0.0022f;
 
     private Camera3D _camera = null!;
     private GameRoot _root = null!;
+    private Area3D _sensor = null!;   // overlaps traversal/armory areas (layer 6)
     private float _pitch;
     private double _fireCooldown;
+
+    private bool _onLadder;
+    private Vector3? _zipTarget;
 
     public override void _Ready()
     {
         _root = GetParent<GameRoot>();
 
-        // Own collision: layer 5, collide with world (1).
         CollisionLayer = 1 << 4;
         CollisionMask = 1;
         AddChild(new CollisionShape3D
@@ -31,18 +38,25 @@ public partial class Player : CharacterBody3D
             Position = new Vector3(0, 0.9f, 0),
         });
 
+        // Area sensor: traversal volumes and the armory detect the player, and
+        // the player queries what it's inside of.
+        _sensor = new Area3D { CollisionLayer = 1 << 4, CollisionMask = 1 << 5 };
+        _sensor.AddChild(new CollisionShape3D
+        {
+            Shape = new CapsuleShape3D { Radius = 0.5f, Height = 1.9f },
+            Position = new Vector3(0, 0.9f, 0),
+        });
+        AddChild(_sensor);
+
         _camera = new Camera3D { Position = new Vector3(0, 1.6f, 0), Fov = 80 };
         AddChild(_camera);
 
-        // Capturing during _Ready is silently ignored on macOS before the window
-        // has focus — defer it, and let any click recapture (see _UnhandledInput).
         CallDeferred(nameof(CaptureMouse));
     }
 
     private void CaptureMouse() => Input.MouseMode = Input.MouseModeEnum.Captured;
 
-    // Mouse look lives in _Input, not _UnhandledInput, so no Control node can
-    // ever consume the motion events out from under the camera.
+    // Mouse look lives in _Input so no Control node can consume motion events.
     public override void _Input(InputEvent @event)
     {
         switch (@event)
@@ -62,32 +76,75 @@ public partial class Player : CharacterBody3D
 
     public override void _UnhandledInput(InputEvent @event)
     {
-        switch (@event)
+        if (@event is not InputEventKey { Pressed: true, Echo: false } key) return;
+
+        switch (key.Keycode)
         {
-            case InputEventKey { Pressed: true, Keycode: Key.Escape }:
+            case Key.Escape:
                 Input.MouseMode = Input.MouseMode == Input.MouseModeEnum.Captured
                     ? Input.MouseModeEnum.Visible
                     : Input.MouseModeEnum.Captured;
                 break;
 
-            case InputEventKey { Pressed: true, Echo: false, Keycode: Key.E }:
-                TryBuild();
-                break;
-
-            case InputEventKey { Pressed: true, Echo: false, Keycode: Key.F }:
-                _root.EnqueueStartWave();
-                break;
+            case Key.E: TryBuildOrRide(); break;
+            case Key.U: TryUpgrade(); break;
+            case Key.F: _root.Submit(new Command.StartWave(_root.LocalPlayerId)); break;
+            case Key.Q: UseAbility(); break;
+            case Key.Key1: ArmoryKey("sidearm"); break;
+            case Key.Key2: ArmoryKey("rifle"); break;
+            case Key.Key3: ArmoryKey("scattergun"); break;
+            case Key.Key4: ArmoryKey("emberPistol"); break;
         }
     }
 
     public override void _PhysicsProcess(double delta)
     {
+        // Zipline ride: kinematic slide to the end point, cancel on arrival.
+        if (_zipTarget is { } zip)
+        {
+            var toEnd = zip - GlobalPosition;
+            if (toEnd.Length() < 1.2f)
+            {
+                _zipTarget = null;
+            }
+            else
+            {
+                Velocity = toEnd.Normalized() * ZipSpeed;
+                MoveAndSlide();
+                return;
+            }
+        }
+
+        _onLadder = _sensor.GetOverlappingAreas().Any(a => (string)a.GetMeta("kind", "") == "ladder");
+
         var velocity = Velocity;
 
-        if (!IsOnFloor())
+        if (_onLadder)
+        {
+            // W climbs, S descends; gravity off while on the ladder.
+            float climb = 0f;
+            if (Input.IsPhysicalKeyPressed(Key.W)) climb = ClimbSpeed;
+            else if (Input.IsPhysicalKeyPressed(Key.S)) climb = -ClimbSpeed;
+            velocity.Y = climb;
+        }
+        else if (!IsOnFloor())
+        {
             velocity.Y -= 9.8f * (float)delta;
+        }
         else if (Input.IsPhysicalKeyPressed(Key.Space))
+        {
             velocity.Y = JumpVelocity;
+        }
+
+        // Launcher pads fling on contact.
+        foreach (var area in _sensor.GetOverlappingAreas())
+        {
+            if ((string)area.GetMeta("kind", "") == "launcher" && IsOnFloor())
+            {
+                var launch = (Vector3)area.GetMeta("launch_velocity");
+                velocity = launch;
+            }
+        }
 
         var input = Vector2.Zero;
         if (Input.IsPhysicalKeyPressed(Key.W)) input.Y -= 1;
@@ -97,40 +154,115 @@ public partial class Player : CharacterBody3D
 
         float speed = Input.IsPhysicalKeyPressed(Key.Shift) ? SprintSpeed : MoveSpeed;
         var direction = (Transform.Basis * new Vector3(input.X, 0, input.Y)).Normalized();
-        velocity.X = direction.X * speed;
-        velocity.Z = direction.Z * speed;
+        if (!_onLadder || input.X != 0)
+        {
+            velocity.X = direction.X * speed;
+            velocity.Z = direction.Z * speed;
+        }
+        else
+        {
+            velocity.X = 0; velocity.Z = 0;
+        }
 
         Velocity = velocity;
         MoveAndSlide();
 
-        // Fire: held LMB, client-side rate matching the sidearm.
+        // Held actions.
         _fireCooldown -= delta;
         if (Input.MouseMode == Input.MouseModeEnum.Captured
             && Input.IsMouseButtonPressed(MouseButton.Left)
             && _fireCooldown <= 0)
         {
-            _fireCooldown = 1.0 / Weapons.Sidearm.ShotsPerSecond;
-            Fire();
+            var weapon = Weapons.All[_root.CurrentWeaponId()];
+            _fireCooldown = 1.0 / weapon.ShotsPerSecond;
+            Fire(weapon);
         }
+
+        if (Input.IsPhysicalKeyPressed(Key.R))
+            TryRevive();
     }
 
-    private void Fire()
+    private void Fire(WeaponDef weapon)
     {
-        // Client raycast for instant feel; the sim validates and applies.
-        var hit = Raycast(Weapons.Sidearm.RangeMeters, worldMask: 1, areaMask: 1 << 1);
+        var hit = Raycast(weapon.RangeMeters, worldMask: 1, areaMask: 1 << 1);
         if (hit is { } result && result.Collider is Area3D area && area.HasMeta("enemy_id"))
-            _root.EnqueuePlayerHit(area.GetMeta("enemy_id").AsInt32());
+            _root.Submit(new Command.PlayerHit(_root.LocalPlayerId, area.GetMeta("enemy_id").AsInt32(), weapon.Id));
     }
 
-    private void TryBuild()
+    private void TryBuildOrRide()
     {
+        // Zipline first: standing in the start volume rides it.
+        foreach (var area in _sensor.GetOverlappingAreas())
+        {
+            if ((string)area.GetMeta("kind", "") == "zipline")
+            {
+                _zipTarget = (Vector3)area.GetMeta("zip_end");
+                return;
+            }
+        }
+
         var hit = Raycast(8f, worldMask: 1 | (1 << 3), areaMask: 0);
         if (hit is { } result && result.Collider is StaticBody3D body && body.HasMeta("socket_id"))
         {
             string socketId = body.GetMeta("socket_id").AsString();
             if (!_root.SocketOccupied(socketId))
-                _root.EnqueuePlaceTower(socketId);
+                _root.Submit(new Command.PlaceTower(_root.LocalPlayerId, PickTowerFor(socketId), socketId));
         }
+    }
+
+    /// <summary>M1 build palette: number of towers is small enough that context
+    /// picks — wall sockets get Skywatch (they overlook the air lane), trap
+    /// sockets refuse sim-side, ground sockets cycle by what's placed already.</summary>
+    private string PickTowerFor(string socketId)
+    {
+        var map = _root.CurrentMap();
+        var socket = map.Sockets.First(s => s.Id == socketId);
+        if (socket.Tag == SocketTag.Wall) return "skywatch";
+
+        // Cycle: lance, lance, singularity, nova, then lances.
+        int placed = map.Sockets.Count(s => s.Tag == SocketTag.Ground && _root.SocketOccupied(s.Id));
+        return placed switch { 2 => "singularity", 3 => "nova", _ => "lance" };
+    }
+
+    private void TryUpgrade()
+    {
+        // Aim at a tower's socket to level its damage path (full path picker
+        // arrives with the real build UI).
+        var hit = Raycast(8f, worldMask: 1 | (1 << 3), areaMask: 0);
+        if (hit is { } result && result.Collider is StaticBody3D body && body.HasMeta("socket_id"))
+        {
+            string socketId = body.GetMeta("socket_id").AsString();
+            int towerId = _root.TowerIdAtSocket(socketId);
+            if (towerId >= 0)
+                _root.Submit(new Command.UpgradeTower(_root.LocalPlayerId, towerId, 0));
+        }
+    }
+
+    private void UseAbility()
+    {
+        var aim = Raycast(40f, worldMask: 1, areaMask: 1 << 1);
+        var target = aim?.Position ?? (_camera.GlobalPosition + (-_camera.GlobalTransform.Basis.Z) * 20f);
+        _root.Submit(new Command.UseAbility(_root.LocalPlayerId, new Vec3(target.X, target.Y, target.Z)));
+    }
+
+    private void TryRevive()
+    {
+        int downed = _root.NearestDownedPlayer(GlobalPosition, Balance.ReviveRangeMeters);
+        if (downed >= 0)
+            _root.Submit(new Command.Revive(_root.LocalPlayerId, downed));
+    }
+
+    private void ArmoryKey(string weaponId)
+    {
+        bool nearArmory = _sensor.GetOverlappingAreas().Any(a => (string)a.GetMeta("kind", "") == "armory");
+        if (!nearArmory)
+        {
+            _root.Toast("armory keys work at the armory station");
+            return;
+        }
+        // Buy if unowned (sim refuses politely if broke), then select.
+        _root.Submit(new Command.BuyWeapon(_root.LocalPlayerId, weaponId));
+        _root.Submit(new Command.SelectWeapon(_root.LocalPlayerId, weaponId));
     }
 
     private (GodotObject Collider, Vector3 Position)? Raycast(float range, uint worldMask, uint areaMask)

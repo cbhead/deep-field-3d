@@ -118,6 +118,11 @@ public sealed class World
     public MatchPhase Phase = MatchPhase.Intermission;
     public float PhaseTimer = Balance.IntermissionSeconds;
 
+    /// <summary>Servers set this so an empty lobby idles in intermission instead
+    /// of burning waves before anyone joins. Harness worlds leave it false —
+    /// towers-only runs legitimately have zero players.</summary>
+    public bool WaitForPlayers;
+
     /// <summary>Index of the current (or just-cleared) wave; -1 before the first.</summary>
     public int WaveIndex = -1;
     public List<SpawnEntry> PendingSpawns = new();

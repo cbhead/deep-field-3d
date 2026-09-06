@@ -339,6 +339,7 @@ public static class Step
     {
         if (w.Phase == MatchPhase.Intermission)
         {
+            if (w.WaitForPlayers && w.ConnectedPlayerCount == 0) return;
             w.PhaseTimer -= Balance.Dt;
             if (w.PhaseTimer <= 0f)
             {
