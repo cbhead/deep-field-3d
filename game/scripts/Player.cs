@@ -34,8 +34,12 @@ public partial class Player : CharacterBody3D
         _camera = new Camera3D { Position = new Vector3(0, 1.6f, 0), Fov = 80 };
         AddChild(_camera);
 
-        Input.MouseMode = Input.MouseModeEnum.Captured;
+        // Capturing during _Ready is silently ignored on macOS before the window
+        // has focus — defer it, and let any click recapture (see _UnhandledInput).
+        CallDeferred(nameof(CaptureMouse));
     }
+
+    private void CaptureMouse() => Input.MouseMode = Input.MouseModeEnum.Captured;
 
     public override void _UnhandledInput(InputEvent @event)
     {

@@ -20,7 +20,10 @@ public partial class GameRoot : Node3D
 
     private Label _hudLabel = null!;
     private Label _toastLabel = null!;
+    private Label _capturePrompt = null!;
+    private ColorRect _crosshair = null!;
     private double _toastTimer;
+    private double _hitFlashTimer;
 
     private const uint Seed = 12345;
     private const float SimTierY = 0f;
@@ -38,6 +41,8 @@ public partial class GameRoot : Node3D
         var player = new Player { Name = "Player" };
         AddChild(player);
         player.GlobalPosition = ToGd(Maps.TestLane.HeroSpawn) + new Vector3(0, 1.2f, 0);
+        // Face the lane (it sits at +Z from the hero spawn; default forward is -Z).
+        player.RotationDegrees = new Vector3(0, 180, 0);
     }
 
     public override void _Process(double delta)
@@ -94,6 +99,13 @@ public partial class GameRoot : Node3D
                     break;
                 case SimEvent.EnemyLeaked:
                     Toast("breach! core hit");
+                    break;
+                case SimEvent.EnemyDamaged damaged when damaged.Source.StartsWith("player"):
+                    _hitFlashTimer = 0.12;
+                    break;
+                case SimEvent.EnemyDied died when died.Source.StartsWith("player"):
+                    _hitFlashTimer = 0.3;
+                    Toast($"+{died.Bounty} credits");
                     break;
                 case SimEvent.MatchEnded ended:
                     Toast(ended.Victory ? "VICTORY" : "DEFEAT");
@@ -177,6 +189,21 @@ public partial class GameRoot : Node3D
             _toastTimer -= delta;
             if (_toastTimer <= 0) _toastLabel.Text = "";
         }
+
+        // Hit feedback: crosshair flashes and swells on player damage/kill.
+        if (_hitFlashTimer > 0)
+        {
+            _hitFlashTimer -= delta;
+            _crosshair.Color = new Color(1f, 0.35f, 0.2f, 1f);
+            _crosshair.Scale = new Vector2(2.2f, 2.2f);
+        }
+        else
+        {
+            _crosshair.Color = new Color(1, 1, 1, 0.8f);
+            _crosshair.Scale = Vector2.One;
+        }
+
+        _capturePrompt.Visible = Input.MouseMode != Input.MouseModeEnum.Captured;
     }
 
     private void Toast(string message)
@@ -350,15 +377,27 @@ public partial class GameRoot : Node3D
         };
         canvas.AddChild(_toastLabel);
 
-        // Crosshair.
-        var crosshair = new ColorRect
+        // Crosshair (pivot centered so the hit-flash swell stays centered).
+        _crosshair = new ColorRect
         {
             Color = new Color(1, 1, 1, 0.8f),
-            Size = new Vector2(4, 4),
             AnchorLeft = 0.5f, AnchorTop = 0.5f, AnchorRight = 0.5f, AnchorBottom = 0.5f,
             OffsetLeft = -2, OffsetTop = -2, OffsetRight = 2, OffsetBottom = 2,
+            PivotOffset = new Vector2(2, 2),
         };
-        canvas.AddChild(crosshair);
+        canvas.AddChild(_crosshair);
+
+        // Shown whenever the OS cursor is loose (macOS ignores capture until the
+        // window has focus, and Esc releases it) — one click recaptures.
+        _capturePrompt = new Label
+        {
+            Text = "CLICK TO CAPTURE MOUSE",
+            Modulate = new Color(1f, 0.9f, 0.3f),
+            AnchorLeft = 0.5f, AnchorTop = 0.5f, AnchorRight = 0.5f, AnchorBottom = 0.5f,
+            OffsetLeft = -110, OffsetTop = 30,
+            Visible = false,
+        };
+        canvas.AddChild(_capturePrompt);
 
         AddChild(canvas);
     }
