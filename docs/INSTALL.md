@@ -27,8 +27,11 @@
    ```sh
    git clone <repo> deepfield-3d && cd deepfield-3d
    make check    # sim build + unit tests + harness gates + game build
-   make run      # windowed game: WASD/mouse, E build on socket, F start wave, LMB fire
+   ./play        # windowed game: WASD/mouse, E build on socket, F start wave, LMB fire
    ```
+
+`./play` is self-contained (absolute paths to dotnet + Godot) and works from any
+shell regardless of PATH; `make run` does the same but needs the PATH line above.
 
 ## Layout
 

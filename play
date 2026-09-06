@@ -1,0 +1,14 @@
+#!/bin/zsh
+# Self-contained launcher: builds and runs the game with zero PATH assumptions.
+# This is the M0 ancestor of the one-command host script from the plan.
+set -e
+
+DOTNET="$HOME/.dotnet/dotnet"
+GODOT="$HOME/Applications/Godot_mono.app/Contents/MacOS/Godot"
+HERE="$(cd "$(dirname "$0")" && pwd)"
+
+[ -x "$DOTNET" ] || { echo "missing .NET SDK at $DOTNET — see docs/INSTALL.md"; exit 1; }
+[ -x "$GODOT" ]  || { echo "missing Godot at $GODOT — see docs/INSTALL.md"; exit 1; }
+
+"$DOTNET" build "$HERE/game/DeepField.Game.csproj" -v quiet
+exec "$GODOT" --path "$HERE/game" "$@"
