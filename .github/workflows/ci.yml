@@ -50,6 +50,18 @@ jobs:
           grep -q '"app":"deepfield-3d"' info.json
           grep -q "\[client\] joined seat" client.log
 
+      # Builds one view of every enemy, tower, trap, upgrade stage, projectile
+      # and hero, then checks that every asset name the code asks for is a name
+      # the design brief actually gives design. Silent drift here means art
+      # gets delivered and never loads.
+      - name: Asset seam audit
+        run: |
+          godot --headless --path game -- --asset-audit > audit.log 2>&1
+          grep -q "\[asset-audit\] built" audit.log
+          ! grep -qiE "^ERROR|SCRIPT ERROR|Unhandled exception" audit.log
+          ./tools/asset-report.sh --verify audit.log
+          ./tools/asset-report.sh
+
       # A real solo match on each map: drives the sim, every UI surface, and
       # the view/event plumbing that only runs once a world exists.
       - name: Solo match smoke (both maps)

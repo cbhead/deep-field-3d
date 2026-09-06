@@ -65,6 +65,11 @@ public partial class GameRoot : Node3D
     public int LocalPlayerId => _net.LocalPlayerId;
     public GameView View => _view;
 
+    /// <summary>Art coverage, printed once per run. Headless smoke lanes grep
+    /// this, and it answers "is the build actually using the new models?"
+    /// without opening the game.</summary>
+    public override void _ExitTree() => GD.Print(AssetLibrary.Summary());
+
     public override void _Ready()
     {
         _net = new NetworkManager { Name = "Net" };
@@ -101,7 +106,58 @@ public partial class GameRoot : Node3D
                 GD.Print($"[solo] started on {_map.Id}");
                 return;
             }
+            if (args[i] == "--asset-audit")
+            {
+                AuditAssets();
+                GetTree().Quit();
+                return;
+            }
         }
+    }
+
+    /// <summary>Instantiates one view of every enemy, structure, projectile and
+    /// hero in the content tables, then reports coverage.
+    ///
+    /// A normal solo smoke run only touches whatever happens to spawn in thirty
+    /// seconds, which left the structure and projectile paths untested. This
+    /// walks the tables directly, so a def whose view construction throws — or
+    /// a model whose name doesn't match what the code asks for — fails CI
+    /// instead of failing in front of a player.</summary>
+    private void AuditAssets()
+    {
+        _map = Maps.All["foundry"];
+        int views = 0;
+
+        foreach (var def in Enemies.All.Values)
+        {
+            SpawnEnemyView(views++, def.Id);
+        }
+
+        foreach (var def in Towers.All.Values)
+        {
+            var view = SpawnStructureView(def.Id, Vector3.Zero);
+            for (int p = 0; p < def.UpgradePaths.Count; p++)
+                for (int level = 1; level <= 10; level++)
+                    StackPathModule(view, def.Id, def.UpgradePaths[p].Id, p, level);
+            SpawnProjectileView(def.Id);
+            views++;
+        }
+
+        foreach (var def in Traps.All.Values)
+        {
+            SpawnStructureView(def.Id, Vector3.Zero);
+            views++;
+        }
+
+        foreach (var def in Factions.All.Values)
+        {
+            AssetLibrary.Instantiate($"hero_{def.Id}", () => Placeholders.Hero(def.Id));
+            views++;
+        }
+
+        GD.Print($"[asset-audit] built {views} views over {AssetLibrary.Requested.Count} asset names");
+        foreach (string name in AssetLibrary.Missing)
+            GD.Print($"[asset-audit] placeholder: {name} -> {AssetLibrary.PathFor(name)}");
     }
 
     private static int ParsePort(string[] args)
@@ -237,8 +293,9 @@ public partial class GameRoot : Node3D
         // Rebuild structure views from the restored world.
         foreach (var view in _towerViews.Values) view.QueueFree();
         _towerViews.Clear();
-        foreach (var tower in _world.Towers) OnTowerPlaced(tower.Id, tower.SocketId);
-        foreach (var trap in _world.Traps) OnTowerPlaced(trap.Id, trap.SocketId);
+        foreach (var tower in _world.Towers)
+            OnTowerPlaced(tower.Id, tower.DefId, tower.SocketId, tower.PathLevels);
+        foreach (var trap in _world.Traps) OnTowerPlaced(trap.Id, trap.DefId, trap.SocketId);
         _xpBanked = false;
         Toast($"loaded — wave {_world.WaveIndex + 1}, {_world.Lives} lives");
     }
@@ -361,8 +418,12 @@ public partial class GameRoot : Node3D
             _shadow = Serialization.Deserialize(json);
             _map = _shadow.Map;
             BuildLevel(_map);
+            // Traps were missing from this loop, so a late joiner saw an empty
+            // path plate where the host had a Spike.
             foreach (var tower in _shadow.Towers)
-                _towerViews[tower.Id] = SpawnTowerView(ToGd(tower.Pos));
+                OnTowerPlaced(tower.Id, tower.DefId, tower.SocketId, tower.PathLevels);
+            foreach (var trap in _shadow.Traps)
+                OnTowerPlaced(trap.Id, trap.DefId, trap.SocketId);
             SpawnLocalPlayer();
             GD.Print($"[client] joined seat {LocalPlayerId} on map {_map.Id}");
             Toast($"joined as seat {LocalPlayerId}");
@@ -458,7 +519,10 @@ public partial class GameRoot : Node3D
             switch (e)
             {
                 case SimEvent.TowerPlaced placed:
-                    OnTowerPlaced(placed.TowerId, placed.SocketId);
+                    OnTowerPlaced(placed.TowerId, placed.DefId, placed.SocketId);
+                    break;
+                case SimEvent.TowerUpgraded upgraded:
+                    OnTowerUpgraded(upgraded.TowerId, upgraded.PathId, upgraded.NewLevel);
                     break;
                 case SimEvent.TowerSold sold:
                     if (_towerViews.Remove(sold.TowerId, out var view)) view.QueueFree();
@@ -545,7 +609,8 @@ public partial class GameRoot : Node3D
         if (p.Length < 2) return;
         switch (p[1])
         {
-            case "towerPlaced": OnTowerPlaced(int.Parse(p[2]), p[4]); break;
+            case "towerPlaced": OnTowerPlaced(int.Parse(p[2]), p[3], p[4]); break;
+            case "towerUpgraded": OnTowerUpgraded(int.Parse(p[2]), p[3], int.Parse(p[4])); break;
             case "towerSold":
                 if (_towerViews.Remove(int.Parse(p[2]), out var view)) view.QueueFree();
                 break;
@@ -687,46 +752,75 @@ public partial class GameRoot : Node3D
         _ => reason,
     };
 
-    private void OnTowerPlaced(int towerId, string socketId)
+    private void OnTowerPlaced(int towerId, string defId, string socketId, int[]? pathLevels = null)
     {
         var socket = _map.Sockets.FirstOrDefault(s => s.Id == socketId);
         if (socket is null) return;
-        var view = socket.Tag switch
-        {
-            SocketTag.Trap => SpawnFlatView(ToGd(socket.Pos), new Color(0.8f, 0.55f, 0.25f)),
-            SocketTag.Barricade => SpawnBarricadeView(ToGd(socket.Pos)),
-            _ => SpawnTowerView(ToGd(socket.Pos)),
-        };
+        if (_towerViews.Remove(towerId, out var existing)) existing.QueueFree();
+
+        var view = SpawnStructureView(defId, ToGd(socket.Pos));
         view.SetMeta("socket_id", socketId);
+        view.SetMeta("def_id", defId);
         _towerViews[towerId] = view;
+
+        // A restored save or a late join arrives with levels already spent.
+        if (pathLevels is null || !Towers.All.TryGetValue(defId, out var def)) return;
+        for (int i = 0; i < pathLevels.Length && i < def.UpgradePaths.Count; i++)
+            if (pathLevels[i] > 0)
+                StackPathModule(view, defId, def.UpgradePaths[i].Id, i, pathLevels[i]);
     }
 
-    private Node3D SpawnFlatView(Vector3 pos, Color color)
+    /// <summary>Every tower, trap and barricade in the game comes from here —
+    /// design's model if it has shipped, the graybox otherwise. Named per
+    /// docs/DESIGN-BRIEF.md; traps request their armed state, which is the one
+    /// they spend most of their life in.</summary>
+    private Node3D SpawnStructureView(string defId, Vector3 pos)
     {
-        var root = new Node3D();
-        root.AddChild(new MeshInstance3D
-        {
-            Mesh = new CylinderMesh { TopRadius = 1.5f, BottomRadius = 1.5f, Height = 0.15f },
-            MaterialOverride = new StandardMaterial3D { AlbedoColor = color, EmissionEnabled = true, Emission = color * 0.3f },
-            Position = new Vector3(0, 0.2f, 0),
-        });
-        root.Position = pos;
+        var root = new Node3D { Position = pos };
+        var body = AssetLibrary.Instantiate(
+            AssetLibrary.StructureAsset(defId), () => Placeholders.Structure(defId));
+        body.Name = "Body";
+        root.AddChild(body);
         AddChild(root);
         return root;
     }
 
-    private Node3D SpawnBarricadeView(Vector3 pos)
+    /// <summary>Upgrades were invisible before this: a level-5 Lance looked
+    /// exactly like the one you just paid 75 for. Towers are composed as a
+    /// chassis plus one stage module per upgrade path, which is also the shape
+    /// the design brief asks for — so a shipped tower_lance_damage_s7.glb
+    /// simply appears in place of the graybox block.</summary>
+    private void OnTowerUpgraded(int towerId, string pathId, int newLevel)
     {
-        var root = new Node3D();
-        root.AddChild(new MeshInstance3D
+        if (!_towerViews.TryGetValue(towerId, out var view)) return;
+        string defId = (string)view.GetMeta("def_id", "");
+        if (defId.Length == 0 || !Towers.All.TryGetValue(defId, out var def)) return;
+
+        int index = -1;
+        for (int i = 0; i < def.UpgradePaths.Count; i++)
+            if (def.UpgradePaths[i].Id == pathId) index = i;
+        if (index < 0) return;
+
+        StackPathModule(view, defId, pathId, index, newLevel);
+    }
+
+    private static void StackPathModule(Node3D view, string defId, string pathId, int pathIndex, int level)
+    {
+        // Remove before adding: QueueFree is deferred, so the old node would
+        // still own the name and Godot would silently rename the new module.
+        string slot = $"path_{pathId}";
+        if (view.HasNode(slot))
         {
-            Mesh = new BoxMesh { Size = new Vector3(4.5f, 2.2f, 0.8f) },
-            MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color(0.6f, 0.45f, 0.3f) },
-            Position = new Vector3(0, 1.1f, 0),
-        });
-        root.Position = pos;
-        AddChild(root);
-        return root;
+            var stale = view.GetNode<Node3D>(slot);
+            view.RemoveChild(stale);
+            stale.QueueFree();
+        }
+
+        var module = AssetLibrary.Instantiate(
+            $"tower_{defId}_{pathId}_s{level}",
+            () => Placeholders.TowerModule(pathId, pathIndex, level));
+        module.Name = slot;
+        view.AddChild(module);
     }
 
     // =====================================================================
@@ -747,8 +841,11 @@ public partial class GameRoot : Node3D
             TintEnemy(view, enemy.Hp / enemy.MaxHp, bits);
 
             float maxShield = Enemies.All[enemy.DefId].Shield;
-            UpdateOverhead(enemy.Id, view, enemy.Hp / enemy.MaxHp,
-                maxShield > 0f ? enemy.Shield / (maxShield * (enemy.MaxHp / Enemies.All[enemy.DefId].Hp)) : 0f,
+            float shieldFraction = maxShield > 0f
+                ? enemy.Shield / (maxShield * (enemy.MaxHp / Enemies.All[enemy.DefId].Hp))
+                : 0f;
+            UpdateEnemyStates(view, enemy.Burrowed, shieldFraction);
+            UpdateOverhead(enemy.Id, view, enemy.Hp / enemy.MaxHp, shieldFraction,
                 bits, enemy.Burrowed);
         }
         SweepViews(_enemyViews, _world.Enemies.Select(e => e.Id));
@@ -808,6 +905,7 @@ public partial class GameRoot : Node3D
             // still has shield reads as full hp with the shield bit unset, so
             // the client shows hp only and lets the crosshair report shielded.
             bool burrowed = snap.HpFraction <= 0f;
+            UpdateEnemyStates(view, burrowed, 0f);
             UpdateOverhead(snap.Id, view, snap.HpFraction, 0f, snap.StatusBits, burrowed);
             _lastSnapshotBits[snap.Id] = (burrowed, Shielded: false);
         }
@@ -821,7 +919,8 @@ public partial class GameRoot : Node3D
         {
             if (!_projectileViews.TryGetValue(projectile.Id, out var view))
             {
-                view = SpawnProjectileView();
+                string firedBy = _world.Towers.FirstOrDefault(t => t.Id == projectile.FiredBy)?.DefId ?? "lance";
+                view = SpawnProjectileView(firedBy);
                 _projectileViews[projectile.Id] = view;
             }
             view.Position = ToGd(projectile.Pos);
@@ -834,7 +933,7 @@ public partial class GameRoot : Node3D
         foreach (var p in _world!.Players.Values)
         {
             if (p.Id == LocalPlayerId || !p.Connected) continue;
-            UpdateAvatarView(p.Id, new Vector3(p.Pos.X, p.Pos.Y, p.Pos.Z), p.Downed);
+            UpdateAvatarView(p.Id, new Vector3(p.Pos.X, p.Pos.Y, p.Pos.Z), p.Downed, p.FactionId);
         }
         SweepViews(_avatarViews,
             _world.Players.Values.Where(p => p.Id != LocalPlayerId && p.Connected).Select(p => p.Id));
@@ -851,30 +950,27 @@ public partial class GameRoot : Node3D
             seen.Add(id);
             UpdateAvatarView(id,
                 new Vector3((float)entry["x"], (float)entry["y"], (float)entry["z"]),
-                (bool)entry["downed"]);
+                (bool)entry["downed"], (string)entry["faction"]);
         }
         SweepViews(_avatarViews, seen);
     }
 
-    private void UpdateAvatarView(int playerId, Vector3 pos, bool downed)
+    private void UpdateAvatarView(int playerId, Vector3 pos, bool downed, string factionId)
     {
         if (!_avatarViews.TryGetValue(playerId, out var view))
         {
             view = new Node3D();
-            view.AddChild(new MeshInstance3D
-            {
-                Name = "Mesh",
-                Mesh = new CapsuleMesh { Radius = 0.4f, Height = 1.8f },
-                MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color(0.3f, 0.8f, 0.9f) },
-                Position = new Vector3(0, 0.9f, 0),
-            });
+            var body = AssetLibrary.Instantiate($"hero_{factionId}", () => Placeholders.Hero(factionId));
+            body.Name = "Body";
+            view.AddChild(body);
             AddChild(view);
             _avatarViews[playerId] = view;
         }
         // Smooth the 8 Hz meta rate.
         view.Position = view.Position.Lerp(pos, 0.35f);
-        var mesh = view.GetNode<MeshInstance3D>("Mesh");
-        mesh.RotationDegrees = downed ? new Vector3(0, 0, 90) : Vector3.Zero;
+        // Downed pose. Design ships a real one; tipping the model over is the
+        // stand-in, and it works on a shipped mesh as well as on the capsule.
+        view.GetNode<Node3D>("Body").RotationDegrees = downed ? new Vector3(0, 0, 90) : Vector3.Zero;
     }
 
     private static void SweepViews(Dictionary<int, Node3D> views, IEnumerable<int> liveIds)
@@ -888,22 +984,39 @@ public partial class GameRoot : Node3D
         }
     }
 
+    /// <summary>Status and damage as a modulation of whatever the model
+    /// shipped with — never a replacement. See TintableView for why.</summary>
     private static void TintEnemy(Node3D view, float hpFraction, byte statusBits)
     {
-        var mesh = view.GetNode<MeshInstance3D>("Mesh");
-        if (mesh.MaterialOverride is not StandardMaterial3D mat) return;
+        if (view is not TintableView tintable) return;
 
         bool chilled = (statusBits & (1 << (int)Channel.Movement)) != 0;
         bool burning = (statusBits & (1 << (int)Channel.Thermal)) != 0;
         bool marked = (statusBits & (1 << (int)Channel.Vulnerability)) != 0;
 
-        // Status tint beats hp tint (shader pass replaces this at the art pass).
-        if (burning) mat.AlbedoColor = new Color(1f, 0.45f, 0.1f);
-        else if (chilled) mat.AlbedoColor = new Color(0.5f, 0.75f, 1f);
-        else mat.AlbedoColor = new Color(0.9f, 0.25f + 0.55f * hpFraction, 0.2f + 0.5f * hpFraction);
+        // Thermal reads over movement: a burning enemy is the more urgent fact.
+        Color? blend = burning ? UiTheme.Status("burn")
+            : chilled ? UiTheme.Status("chill")
+            : null;
 
-        mat.EmissionEnabled = marked;
-        if (marked) mat.Emission = new Color(1f, 0.9f, 0.2f);
+        // Damage darkens and pushes warm, so wounded reads at a glance without
+        // discarding the unit's own colour.
+        float darken = 0.55f + 0.45f * hpFraction;
+        Color? emission = marked ? UiTheme.Status("mark") : null;
+
+        tintable.Apply(blend, blend is null ? 0f : 0.7f, darken, emission);
+    }
+
+    /// <summary>Shows the state variant that matches the sim: shield bubble
+    /// while a Warden still has one, dirt mound while a Mole is under.</summary>
+    private static void UpdateEnemyStates(Node3D view, bool burrowed, float shieldFraction)
+    {
+        if (view.GetNodeOrNull<Node3D>("Shield") is { } shield)
+            shield.Visible = shieldFraction > 0.01f;
+
+        if (view.GetNodeOrNull<Node3D>("Burrowed") is not { } mound) return;
+        mound.Visible = burrowed;
+        if (view.GetNodeOrNull<Node3D>("Body") is { } body) body.Visible = !burrowed;
     }
 
     // =====================================================================
@@ -1088,19 +1201,32 @@ public partial class GameRoot : Node3D
 
     private Node3D SpawnEnemyView(int enemyId, string defId)
     {
-        var root = new Node3D();
-        float scale = defId switch
+        var root = new TintableView();
+        float scale = Placeholders.EnemyScale(defId);
+
+        // The Mole's default state is named in the brief as its own model
+        // because it has a second one; every other enemy is just enemy_<id>.
+        string bodyAsset = defId == "mole" ? "enemy_mole_surfaced" : $"enemy_{defId}";
+        var body = AssetLibrary.Instantiate(bodyAsset, () => Placeholders.Enemy(defId));
+        body.Name = "Body";
+        root.AddChild(body);
+
+        // State variants ship as their own models (brief §3): the shield is a
+        // separate mesh so it can pop and regrow, and the Mole swaps silhouette
+        // rather than vanishing. Absent art, both degrade to a graybox.
+        if (defId == "warden")
         {
-            "mote" => 0.55f, "monolith" => 2.4f, "aegis" => 1.4f, "skiff" => 0.9f, _ => 1f,
-        };
-        var mesh = new MeshInstance3D
+            var shield = AssetLibrary.Instantiate("enemy_warden_shield", () => ShieldBubble(scale));
+            shield.Name = "Shield";
+            root.AddChild(shield);
+        }
+        else if (defId == "mole")
         {
-            Name = "Mesh",
-            Mesh = new CapsuleMesh { Radius = 0.45f * scale, Height = 1.6f * scale },
-            MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color(0.9f, 0.8f, 0.7f) },
-            Position = new Vector3(0, 0.8f * scale, 0),
-        };
-        root.AddChild(mesh);
+            var burrowed = AssetLibrary.Instantiate("enemy_mole_burrowed", () => DirtMound(scale));
+            burrowed.Name = "Burrowed";
+            burrowed.Visible = false;
+            root.AddChild(burrowed);
+        }
 
         var area = new Area3D { CollisionLayer = 1 << 1, CollisionMask = 0 };
         area.AddChild(new CollisionShape3D
@@ -1114,38 +1240,60 @@ public partial class GameRoot : Node3D
         // Overheads sit just above the silhouette; scale drives the offset so a
         // Monolith's bar doesn't sit inside its chest.
         root.SetMeta("head_height", 1.9f * scale);
+        root.SetMeta("def_id", defId);
 
         AddChild(root);
+        root.Prepare();
         return root;
     }
 
-    private Node3D SpawnTowerView(Vector3 socketPos)
+    /// <summary>Graybox shield bubble — a separate node so it pops and regrows
+    /// independently, exactly as enemy_warden_shield.glb will.</summary>
+    private static Node3D ShieldBubble(float scale)
     {
         var root = new Node3D();
         root.AddChild(new MeshInstance3D
         {
-            Mesh = new BoxMesh { Size = new Vector3(1.2f, 2.6f, 1.2f) },
-            MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color(0.55f, 0.6f, 0.85f) },
-            Position = new Vector3(0, 1.3f, 0),
-        });
-        root.Position = socketPos;
-        AddChild(root);
-        return root;
-    }
-
-    private Node3D SpawnProjectileView()
-    {
-        var root = new Node3D();
-        root.AddChild(new MeshInstance3D
-        {
-            Mesh = new SphereMesh { Radius = 0.15f, Height = 0.3f },
+            Mesh = new SphereMesh { Radius = 0.95f * scale, Height = 1.9f * scale },
             MaterialOverride = new StandardMaterial3D
             {
-                AlbedoColor = new Color(1f, 0.9f, 0.3f),
+                AlbedoColor = new Color(0.35f, 0.85f, 0.95f, 0.30f),
+                Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
                 EmissionEnabled = true,
-                Emission = new Color(1f, 0.8f, 0.2f),
+                Emission = new Color(0.30f, 0.75f, 0.95f),
             },
+            Position = new Vector3(0, 0.85f * scale, 0),
         });
+        return root;
+    }
+
+    private static Node3D DirtMound(float scale)
+    {
+        var root = new Node3D();
+        root.AddChild(new MeshInstance3D
+        {
+            Mesh = new CylinderMesh { TopRadius = 0.1f, BottomRadius = 0.85f * scale, Height = 0.4f * scale },
+            MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color(0.38f, 0.29f, 0.20f) },
+            Position = new Vector3(0, 0.2f * scale, 0),
+        });
+        return root;
+    }
+
+    /// <summary>Each tower's round is its own asset (proj_lance_bolt,
+    /// proj_nova_shell, …) so a Nova shell never reads as a Lance bolt.</summary>
+    private Node3D SpawnProjectileView(string towerDefId)
+    {
+        string asset = towerDefId switch
+        {
+            "nova" => "proj_nova_shell",
+            "arc" => "proj_arc_beam",
+            "skywatch" => "proj_skywatch_bolt",
+            "filament" => "proj_filament_beam",
+            _ => "proj_lance_bolt",
+        };
+
+        var root = new Node3D();
+        root.AddChild(AssetLibrary.Instantiate(asset, () => Placeholders.Projectile(towerDefId)));
         AddChild(root);
         return root;
     }

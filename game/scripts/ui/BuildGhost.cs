@@ -13,7 +13,8 @@ namespace DeepField.Game.Ui;
 /// shoot" surprise.</summary>
 public partial class BuildGhost : Node3D
 {
-    private MeshInstance3D _body = null!;
+    private Node3D _body = null!;
+    private StandardMaterial3D _bodyMaterial = null!;
     private MeshInstance3D _rangeRing = null!;
     private MeshInstance3D _minRing = null!;
     private MeshInstance3D _airDome = null!;
@@ -24,7 +25,8 @@ public partial class BuildGhost : Node3D
     {
         Visible = false;
 
-        _body = new MeshInstance3D { MaterialOverride = GhostMaterial(UiTheme.Accent) };
+        _bodyMaterial = GhostMaterial(UiTheme.Accent);
+        _body = new Node3D();
         AddChild(_body);
 
         _rangeRing = new MeshInstance3D { MaterialOverride = RingMaterial(UiTheme.Accent) };
@@ -45,18 +47,18 @@ public partial class BuildGhost : Node3D
         Visible = true;
 
         var tint = affordable ? UiTheme.Accent : UiTheme.Danger;
-        ((StandardMaterial3D)_body.MaterialOverride).AlbedoColor = tint with { A = 0.42f };
+        _bodyMaterial.AlbedoColor = tint with { A = 0.42f };
         ((StandardMaterial3D)_rangeRing.MaterialOverride).AlbedoColor = tint with { A = 0.30f };
 
         if (defId == _shownDef) return;
         _shownDef = defId;
 
-        // Body proxy — replaced by design's real models via the same seam that
-        // GameRoot.SpawnTowerView uses (docs/DESIGN-BRIEF.md §3.2/§3.3).
+        // The ghost is the real structure model (or the same graybox the world
+        // uses), rendered translucent — so what you preview is what you get.
+        SwapBody(defId);
+
         if (Traps.All.TryGetValue(defId, out var trap))
         {
-            _body.Mesh = new CylinderMesh { TopRadius = 1.5f, BottomRadius = 1.5f, Height = 0.2f };
-            _body.Position = new Vector3(0, 0.2f, 0);
             SetRing(_rangeRing, trap.TriggerRadius);
             SetRing(_minRing, 0f);
             SetDome(0f);
@@ -64,20 +66,31 @@ public partial class BuildGhost : Node3D
         }
 
         var def = Towers.All[defId];
-        if (def.Kind == TowerKind.Barricade)
-        {
-            _body.Mesh = new BoxMesh { Size = new Vector3(4.5f, 2.2f, 0.8f) };
-            _body.Position = new Vector3(0, 1.1f, 0);
-        }
-        else
-        {
-            _body.Mesh = new BoxMesh { Size = new Vector3(1.2f, 2.6f, 1.2f) };
-            _body.Position = new Vector3(0, 1.3f, 0);
-        }
-
         SetRing(_rangeRing, def.RangeMeters);
         SetRing(_minRing, def.MinRangeMeters);
         SetDome(def.TargetLayers.Contains(EnemyLayer.Air) ? def.RangeMeters : 0f);
+    }
+
+    /// <summary>Rebuilds the ghost body from whichever asset the def resolves
+    /// to, forcing the translucent material onto every surface it contains.</summary>
+    private void SwapBody(string defId)
+    {
+        foreach (var child in _body.GetChildren())
+        {
+            _body.RemoveChild(child);
+            child.QueueFree();
+        }
+
+        var model = AssetLibrary.Instantiate(
+            AssetLibrary.StructureAsset(defId), () => Placeholders.Structure(defId));
+        _body.AddChild(model);
+        Ghostify(model);
+    }
+
+    private void Ghostify(Node node)
+    {
+        if (node is MeshInstance3D mesh) mesh.MaterialOverride = _bodyMaterial;
+        foreach (var child in node.GetChildren()) Ghostify(child);
     }
 
     private void SetRing(MeshInstance3D ring, float radius)

@@ -6,8 +6,10 @@ Bloons-depth counters and machine-swept balance, Sanctum-style build-and-shoot.
 
 **Status: M2.5 — two maps, eight enemies, six towers, three factions, and a
 full build/gunsmith UI, all in graybox.** Art is in production against
-[docs/DESIGN-BRIEF.md](docs/DESIGN-BRIEF.md); the code picks assets up as they
-land. 22 harness gates + 19 unit tests green.
+[docs/DESIGN-BRIEF.md](docs/DESIGN-BRIEF.md); dropping a model into
+[game/assets/](game/assets/) is the entire integration step — see
+[docs/ART-INTEGRATION.md](docs/ART-INTEGRATION.md). 22 harness gates + 19 unit
+tests green.
 
 ## Play
 
@@ -46,6 +48,7 @@ shell. `make run` does the same if your PATH is set up — see
 
 ```sh
 make check    # sim build + unit tests + harness gates + game build
+make assets   # art delivered vs what the design brief names
 ```
 
 CI additionally exports the game headless and runs two smoke lanes: a dedicated

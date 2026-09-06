@@ -6,9 +6,11 @@ consumes it. The full game plan (milestones M0–M5) lives outside the repo;
 everything referenced here is either shipped or specced there.
 
 **Current state**: the game is fully playable graybox — code-built boxes and
-capsules stand in for every asset named below. Every placeholder has a named
-construction site in `game/scripts/GameRoot.cs`, so integration is mechanical:
-a delivered asset replaces one code-built stand-in.
+capsules stand in for every asset named below. The loader is already in place
+and asks for each of these files by name, so **integration is copying the file
+into `game/assets/`** — no code change, no ordering, partial batches fine.
+`make assets` reports what has landed; see §2 and
+[ART-INTEGRATION.md](ART-INTEGRATION.md).
 
 ---
 
@@ -36,10 +38,28 @@ a delivered asset replaces one code-built stand-in.
 
 ## 2. Integration contract
 
-- **Format**: glTF binary (`.glb`) into `game/assets/<category>/`
-  (`enemies/`, `towers/`, `traps/`, `weapons/`, `heroes/`, `maps/foundry/`,
-  `maps/switchyard/`, `shared/`, `vfx/`); icons as SVG or 256 px PNG into
-  `game/assets/ui/`.
+- **Format**: glTF binary (`.glb`); icons as 256 px PNG named `icon_<id>.png`.
+- **Folders** — the loader picks the folder from the name prefix, so a file
+  only lands correctly in one place:
+
+  | Folder | Prefixes |
+  |---|---|
+  | `game/assets/enemies/` | `enemy_`, `boss_` |
+  | `game/assets/structures/` | `tower_`, `trap_`, `socket_` |
+  | `game/assets/weapons/` | `weapon_`, `attach_`, `ammo_`, `hands_` |
+  | `game/assets/heroes/` | `hero_` |
+  | `game/assets/maps/` | `foundry_`, `switchyard_`, `shared_`, `prop_` |
+  | `game/assets/vfx/` | `vfx_`, `proj_` |
+  | `game/assets/economy/` | `pickup_` |
+  | `game/assets/ui/` | `icon_`, `ui_` |
+
+- **Dropping the file in is the whole integration step** — no code change, no
+  particular order, partial batches fine. Until a file exists the game draws a
+  graybox in its place. `make assets` reports what has landed and flags
+  filenames that don't match anything named here. Full detail:
+  [ART-INTEGRATION.md](ART-INTEGRATION.md).
+- A `.tscn` of the same name overrides the `.glb`, for models that need an
+  import tweak (collision, animation, material) wrapped around them.
 - **Scale**: 1 unit = 1 meter, matching the sim exactly. Sizes given below
   are gameplay-load-bearing (collision + readability), not suggestions.
 - **Orientation**: Y-up, **-Z forward** (Godot convention). Enemies face -Z.
@@ -50,13 +70,18 @@ a delivered asset replaces one code-built stand-in.
   incrementally; stages 4, 7, and 10 are silhouette jumps (they carry
   mechanics). Code composes chassis + the current stage of each path, so any
   level combination renders without bespoke meshes.
-- **Replacement sites** in `game/scripts/GameRoot.cs`: `SpawnEnemyView`,
-  `SpawnTowerView`, `SpawnFlatView` (traps), `SpawnBarricadeView`,
-  `SpawnProjectileView`, `BuildLevel` / `BuildFoundryStructures` /
-  `BuildSwitchyardStructures` (all graybox geometry), `UpdateAvatarView`
-  (hero capsules), and the HUD/lobby in `BuildHud` / `BuildLobby`. Sim-side
-  dimensions come from `sim/Sim.Core/Content/*.cs` (source of truth for
-  ranges, radii, speeds).
+- **Materials**: `StandardMaterial3D` for anything that shows status. The game
+  blends albedo toward the status colour and darkens it with damage rather
+  than replacing it (`game/scripts/TintableView.cs`), so baked lighting or
+  baked state will fight it. `ShaderMaterial` opts a unit out of tinting — it
+  then owns its own look entirely, and status reads through overhead icons.
+- **Replacement sites**: units, structures, projectiles and heroes all resolve
+  through `game/scripts/AssetLibrary.cs` — nothing to wire per asset. The
+  graybox each one replaces lives in `game/scripts/Placeholders.cs`. Map
+  geometry is still built in code (`BuildLevel` / `BuildFoundryStructures` /
+  `BuildSwitchyardStructures`) and gets its seam when the environment kits
+  land. Sim-side dimensions come from `sim/Sim.Core/Content/*.cs` (source of
+  truth for ranges, radii, speeds).
 
 ## 3. Named asset manifest — shipped content
 
@@ -76,7 +101,7 @@ Every deliverable is called out by its exact title below.
 | `enemy_mole_burrowed.glb` | dirt mound + tremor-trail element |
 | `enemy_cluster.glb` | 1.8 m — visibly gravid with its five Motes |
 
-### 3.2 Towers (`game/assets/towers/`) — chassis + staged path modules
+### 3.2 Towers (`game/assets/structures/`) — chassis + staged path modules
 Chassis (one each):
 `tower_lance_chassis.glb` · `tower_nova_chassis.glb` ·
 `tower_arc_chassis.glb` · `tower_singularity_chassis.glb` ·
@@ -96,7 +121,7 @@ Projectiles & fire effects:
 `proj_<tower>_bolt_t2.glb` / `_t3.glb` (L7/L10 escalation) and
 `vfx_muzzle_<tower>.glb` + `vfx_impact_<tower>.glb` per firing tower.
 
-### 3.3 Traps (`game/assets/traps/`) — states are gameplay information
+### 3.3 Traps (`game/assets/structures/`) — states are gameplay information
 `trap_spike_armed.glb` · `trap_spike_triggered.glb` · `trap_spike_spent.glb`
 `trap_tar_full.glb` · `trap_tar_depleted.glb`
 `trap_launcher_charged.glb` · `trap_launcher_fired.glb` · `trap_launcher_rearming.glb`
@@ -136,7 +161,7 @@ Coordinates in `sim/Sim.Core/Content/Maps.cs`; the graybox builders in
 `GameRoot.cs` give exact platform/ladder/zipline positions. Dressing must
 never block socket→route sightlines (the harness's coverage math is truth).
 
-**Foundry** (`game/assets/maps/foundry/`, industrial works theme):
+**Foundry** (`game/assets/maps/`, industrial works theme):
 `foundry_terrain.glb` · `foundry_path_ground.glb` (roadway surface kit) ·
 `foundry_deck.glb` · `foundry_deck_rail.glb` · `foundry_pillar.glb` ·
 `foundry_vent_tunnel.glb` · `foundry_wall_boundary.glb` ·
@@ -144,14 +169,14 @@ never block socket→route sightlines (the harness's coverage math is truth).
 `foundry_dress_pipes.glb`, `foundry_dress_gantry.glb`,
 `foundry_dress_lightrig.glb`, `foundry_dress_steamvent.glb`
 
-**Switchyard** (`game/assets/maps/switchyard/`, rail-yard theme):
+**Switchyard** (`game/assets/maps/`, rail-yard theme):
 `switchyard_terrain.glb` (three tiers) · `switchyard_cut_channel.glb`
 (the freight cut) · `switchyard_middeck.glb` · `switchyard_catwalk.glb` ·
 `switchyard_retainingwall.glb` · `switchyard_skybox.(hdr|glb)` · dressing
 set: `switchyard_dress_railcar.glb`, `switchyard_dress_container.glb`,
 `switchyard_dress_signaltower.glb`, `switchyard_dress_buffer.glb`
 
-**Shared traversal & interactive kit** (`game/assets/shared/`):
+**Shared traversal & interactive kit** (`game/assets/maps/`):
 `shared_ladder.glb` · `shared_zipline_anchor.glb` · `shared_zipline_cable.glb`
 · `shared_zipline_trolley.glb` · `shared_launcher_idle.glb` ·
 `shared_launcher_charging.glb` · `shared_launcher_fired.glb` ·
