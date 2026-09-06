@@ -38,6 +38,11 @@ public static class Balance
     /// <summary>Forge passive: tower placement cost factor.</summary>
     public const float ForgeBuildDiscount = 0.9f;
 
+    // Filament's ramp: multiplier climbs by RampPerSecond while it holds one
+    // target and is capped at RampCap. Both are what the ramp/peak paths scale.
+    public const float BeamRampPerSecond = 0.6f;
+    public const float BeamRampCap = 3.0f;
+
     /// <summary>Ember passive: burn duration factor for that player's applications.</summary>
     public const float EmberBurnDurationFactor = 1.3f;
 

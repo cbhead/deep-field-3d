@@ -49,9 +49,12 @@ public enum TowerKind
 {
     Bolt,       // homing single-target (Lance M0 behavior; pierce arrives M2)
     Mortar,     // arcing splash, ground-only, min range (Nova)
-    ChillAura,  // no damage; applies chill to everything in range (Singularity)
+    Aura,       // no damage; applies its Applies[] to everything in range
+                // (Singularity chills, Detector reveals — same mechanism)
     Flak,       // fast bolts, air-only (Skywatch)
     Tesla,      // instant chain arc, jumps between nearby targets (Arc)
+    Beam,       // continuous single-target damage that ramps while held and
+                // resets on target switch (Filament)
     Barricade,  // no weapon: closes its route gate while alive
 }
 

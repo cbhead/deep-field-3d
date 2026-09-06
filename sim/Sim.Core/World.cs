@@ -55,6 +55,12 @@ public sealed class Tower
     /// <summary>Level per upgrade path, parallel to TowerDef.UpgradePaths (0 = unbought).</summary>
     public int[] PathLevels = System.Array.Empty<int>();
 
+    // Beam ramp: which target it is holding and for how long. Serialized,
+    // because a resumed world with a half-charged Filament must continue
+    // identically — the determinism gate compares event logs across a save.
+    public int RampTargetId = -1;
+    public float RampSeconds;
+
     /// <summary>Forge Overdrive: fire-rate factor and remaining time.</summary>
     public float BuffTimer;
     public float BuffFactor = 1f;

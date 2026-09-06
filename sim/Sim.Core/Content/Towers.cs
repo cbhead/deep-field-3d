@@ -17,6 +17,13 @@ public static class Towers
         "rate", PerLevelFactor: 1.10f, LevelCosts: costs,
         BreakpointRecipe: new Dictionary<ScrapType, int> { [ScrapType.Flux] = 3 });
 
+    /// <summary>Named paths for the M3 towers. The ids match the stage-module
+    /// filenames design delivered (tower_detector_field_s1…10 etc.), so wiring
+    /// the tower is all it takes for its art to appear.</summary>
+    private static UpgradePathDef Path(string id, float perLevel, params int[] costs) => new(
+        id, PerLevelFactor: perLevel, LevelCosts: costs,
+        BreakpointRecipe: new Dictionary<ScrapType, int> { [ScrapType.Flux] = 4 });
+
     // M1 ships levels 1–5 (L4 is the breakpoint); costs grow ~×1.35 per level.
     private static readonly int[] StdCosts = { 40, 54, 73, 98, 132 };
 
@@ -47,7 +54,7 @@ public static class Towers
     /// <summary>Gravity well: no damage, chills everything in its sphere every
     /// tick. Support identity — marginal contribution, not a damage row.</summary>
     public static readonly TowerDef Singularity = new(
-        Id: "singularity", Kind: TowerKind.ChillAura,
+        Id: "singularity", Kind: TowerKind.Aura,
         Cost: 110, RangeMeters: 9f, MinRangeMeters: 0f,
         Damage: 0f, ShotsPerSecond: 0f, ProjectileSpeed: 0f,
         SplashRadius: 0f, SplashFalloff: 1f,
@@ -92,6 +99,37 @@ public static class Towers
         TargetLayers: System.Array.Empty<EnemyLayer>(),
         UpgradePaths: System.Array.Empty<UpgradePathDef>());
 
+    /// <summary>M3 — sees what towers cannot. No damage: it applies reveal to
+    /// everything in range, which is the whole answer to a Shade, and reveal is
+    /// worthless against anything else. A pure information purchase.</summary>
+    public static readonly TowerDef Detector = new(
+        Id: "detector", Kind: TowerKind.Aura,
+        Cost: 70, RangeMeters: 13f, MinRangeMeters: 0f,
+        Damage: 0f, ShotsPerSecond: 0f, ProjectileSpeed: 0f,
+        SplashRadius: 0f, SplashFalloff: 1f,
+        ChainJumps: 0, ChainRange: 0f, ChainFalloff: 1f, StructureHp: 0f,
+        Applies: new[] { "reveal" },
+        TargetLayers: new[] { EnemyLayer.Ground, EnemyLayer.Air },
+        UpgradePaths: new[] { Path("field", 1.14f, StdCosts), Path("analysis", 1.10f, StdCosts) });
+
+    /// <summary>M3 — ramp beam. Damage climbs the longer it holds one target and
+    /// resets the moment it switches, so it is the answer to one big thing and
+    /// actively bad against a swarm. The opposite question to Nova.</summary>
+    public static readonly TowerDef Filament = new(
+        Id: "filament", Kind: TowerKind.Beam,
+        Cost: 125, RangeMeters: 12f, MinRangeMeters: 0f,
+        Damage: 7f, ShotsPerSecond: 0f, ProjectileSpeed: 0f,
+        SplashRadius: 0f, SplashFalloff: 1f,
+        ChainJumps: 0, ChainRange: 0f, ChainFalloff: 1f, StructureHp: 0f,
+        Applies: System.Array.Empty<string>(),
+        TargetLayers: new[] { EnemyLayer.Ground, EnemyLayer.Air },
+        UpgradePaths: new[]
+        {
+            Path("ramp", 1.12f, StdCosts),      // how fast it climbs
+            Path("peak", 1.15f, StdCosts),      // how high it climbs
+            Path("optics", 1.10f, StdCosts),    // range
+        });
+
     public static readonly IReadOnlyDictionary<string, TowerDef> All =
         new Dictionary<string, TowerDef>
         {
@@ -99,6 +137,8 @@ public static class Towers
             [Barricade.Id] = Barricade,
             [Lance.Id] = Lance,
             [Nova.Id] = Nova,
+            [Detector.Id] = Detector,
+            [Filament.Id] = Filament,
             [Singularity.Id] = Singularity,
             [Skywatch.Id] = Skywatch,
         };

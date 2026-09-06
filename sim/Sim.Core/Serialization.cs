@@ -16,7 +16,8 @@ public static class Serialization
         float Shield, float ShieldTimer, float CcResist, bool Burrowed);
     private sealed record TowerState(
         int Id, string DefId, string SocketId, float Cooldown, int Spent, int Kills,
-        float DamageDealt, int[] PathLevels, float BuffTimer, float BuffFactor);
+        float DamageDealt, int[] PathLevels, float BuffTimer, float BuffFactor,
+        int RampTargetId = -1, float RampSeconds = 0f);
     private sealed record TrapState(int Id, string DefId, string SocketId, int ChargesLeft, float RearmTimer);
     private sealed record ProjectileState(
         int Id, int FiredBy, int TargetId, float X, float Y, float Z,
@@ -52,7 +53,8 @@ public static class Serialization
                 e.Shield, e.ShieldTimer, e.CcResist, e.Burrowed)).ToList(),
             w.Towers.Select(t => new TowerState(
                 t.Id, t.DefId, t.SocketId, t.Cooldown, t.Spent, t.Kills,
-                t.DamageDealt, t.PathLevels, t.BuffTimer, t.BuffFactor)).ToList(),
+                t.DamageDealt, t.PathLevels, t.BuffTimer, t.BuffFactor,
+                t.RampTargetId, t.RampSeconds)).ToList(),
             w.Projectiles.Where(p => !p.Dead).Select(p => new ProjectileState(
                 p.Id, p.FiredBy, p.TargetId, p.Pos.X, p.Pos.Y, p.Pos.Z,
                 p.Speed, p.Damage, p.SplashRadius, p.SplashFalloff)).ToList(),
@@ -123,6 +125,7 @@ public static class Serialization
                 Id = t.Id, DefId = t.DefId, SocketId = t.SocketId, Pos = socket.Pos,
                 Cooldown = t.Cooldown, Spent = t.Spent, Kills = t.Kills, DamageDealt = t.DamageDealt,
                 PathLevels = t.PathLevels, BuffTimer = t.BuffTimer, BuffFactor = t.BuffFactor,
+                RampTargetId = t.RampTargetId, RampSeconds = t.RampSeconds,
             });
         }
 

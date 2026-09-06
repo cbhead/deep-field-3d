@@ -874,7 +874,36 @@ public static class Step
                 continue;
             }
 
-            if (def.Kind == TowerKind.ChillAura)
+            if (def.Kind == TowerKind.Beam)
+            {
+                var beamTarget = PickTarget(w, tower, def);
+                if (beamTarget is null)
+                {
+                    // Lost the target: the charge bleeds off rather than
+                    // persisting, or a beam would be free burst on the next one.
+                    tower.RampTargetId = -1;
+                    tower.RampSeconds = 0f;
+                    continue;
+                }
+
+                if (beamTarget.Id != tower.RampTargetId)
+                {
+                    tower.RampTargetId = beamTarget.Id;
+                    tower.RampSeconds = 0f;      // switching costs the ramp
+                }
+                tower.RampSeconds += Balance.Dt;
+
+                float rampRate = Balance.BeamRampPerSecond * PathFactor(tower, def, "ramp");
+                float rampCap = Balance.BeamRampCap * PathFactor(tower, def, "peak");
+                float ramp = MathF.Min(rampCap, 1f + rampRate * tower.RampSeconds);
+
+                w.Emit(new SimEvent.TowerFired(tower.Id, beamTarget.Id));
+                Damage(w, beamTarget, EffectiveDamage(tower, def) * ramp * Balance.Dt,
+                    $"tower{tower.Id}", tower.Pos, def.Applies, null);
+                continue;
+            }
+
+            if (def.Kind == TowerKind.Aura)
             {
                 float auraRange = EffectiveRange(tower, def);
                 foreach (var enemy in w.Enemies)
@@ -965,8 +994,14 @@ public static class Step
     private static float EffectiveDamage(Tower tower, TowerDef def) =>
         def.Damage * PathFactor(tower, def, "damage");
 
+    /// <summary>Range, whatever the tower calls the path that grows it —
+    /// Detector's is "field", Filament's is "optics". Only one exists per
+    /// tower, so multiplying all three is a lookup, not a stack.</summary>
     private static float EffectiveRange(Tower tower, TowerDef def) =>
-        def.RangeMeters * PathFactor(tower, def, "range");
+        def.RangeMeters
+        * PathFactor(tower, def, "range")
+        * PathFactor(tower, def, "field")
+        * PathFactor(tower, def, "optics");
 
     private static float EffectiveRate(Tower tower, TowerDef def) =>
         def.ShotsPerSecond * PathFactor(tower, def, "rate") * tower.BuffFactor;

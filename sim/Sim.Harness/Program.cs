@@ -541,6 +541,84 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
         $"{reactions.Count} reactions, emits [{string.Join(",", emitted)}]");
 }
 
+// --- Gate 26 (M3): the Filament ramps, and switching targets costs it.
+//
+// A beam whose damage did not climb would just be a worse Lance, and one that
+// kept its charge across targets would be free burst on every new arrival. Both
+// halves are the tower's identity, so both are asserted.
+{
+    (float Early, float Late, float AfterSwitch) BeamOutput()
+    {
+        var world = new World(Seed, Maps.Foundry);
+        world.Money = 1000;
+        world.Enqueue(new Command.PlaceTower(0, "filament", "g4"));
+        Step.Advance(world);
+
+
+        // Leg 3 runs (0,14) → (0,-8); 14 along it puts the enemy at (0,0),
+        // four metres from socket g4 and well inside the beam's reach.
+        Enemy Spawn() => new()
+        {
+            Id = world.NextId(), DefId = "drifter",
+            Hp = 4000f, MaxHp = 4000f,
+            Facing = new Vec3(1, 0, 0),
+            Bounty = 0, LeakDamage = 1, RouteIndex = 0, Leg = 3, LegProgress = 14f,
+        };
+
+        var first = Spawn();
+        world.Enemies.Add(first);
+
+        // One second of contact from cold.
+        float mark = first.Hp;
+        for (int i = 0; i < Balance.TickHz; i++) Step.Advance(world);
+        float early = mark - first.Hp;
+
+        // Three more seconds on the same target: the ramp should be higher.
+        for (int i = 0; i < Balance.TickHz * 3; i++) Step.Advance(world);
+        mark = first.Hp;
+        for (int i = 0; i < Balance.TickHz; i++) Step.Advance(world);
+        float late = mark - first.Hp;
+
+        // Swap the target out; the next second should look cold again.
+        first.Dead = true;
+        world.Enemies.Clear();
+        var second = Spawn();
+        world.Enemies.Add(second);
+        mark = second.Hp;
+        for (int i = 0; i < Balance.TickHz; i++) Step.Advance(world);
+        return (early, late, mark - second.Hp);
+    }
+
+    var (early, late, afterSwitch) = BeamOutput();
+    Gate("filament: damage ramps while held and resets on target switch",
+        late > early * 1.4f && afterSwitch < late * 0.75f,
+        $"first second {early:0.0}, held {late:0.0}, after switch {afterSwitch:0.0}");
+}
+
+// --- Gate 27 (M3): the Detector buys information, not damage.
+{
+    var world = new World(Seed, Maps.Foundry);
+    world.Money = 1000;
+    world.Enqueue(new Command.PlaceTower(0, "detector", "g4"));
+    Step.Advance(world);
+
+    var enemy = new Enemy
+    {
+        Id = world.NextId(), DefId = "drifter", Hp = 100f, MaxHp = 100f,
+        Facing = new Vec3(1, 0, 0),
+        Bounty = 0, LeakDamage = 1, RouteIndex = 0, Leg = 3, LegProgress = 14f,
+    };
+    world.Enemies.Add(enemy);
+
+    float before = enemy.Hp;
+    for (int i = 0; i < Balance.TickHz; i++) Step.Advance(world);
+
+    bool revealed = enemy.Statuses[(int)Channel.Detection].Active;
+    Gate("detector: reveals without dealing damage",
+        revealed && MathF.Abs(before - enemy.Hp) < 0.01f,
+        $"revealed {revealed}, hp delta {before - enemy.Hp:0.00}");
+}
+
 // --- Gate 23: socket placement is legal and generous.
 //
 // Build density is a player-freedom dial: too few sockets and there is only
