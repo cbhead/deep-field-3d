@@ -1,0 +1,44 @@
+# Install
+
+> This file is a first-class deliverable: it gets updated at every milestone.
+> Right now (M0) it covers **developer setup** only. Player installs (download a
+> release, open, paste invite link) arrive with the first tagged release at M1.
+
+## Developer setup (macOS)
+
+1. **.NET 8 SDK** (user-local, no sudo):
+   ```sh
+   curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0
+   export PATH="$HOME/.dotnet:$PATH"   # add to your shell profile
+   ```
+2. **Godot 4.7.x mono (C#)**:
+   ```sh
+   curl -fsSL -o /tmp/godot-mono.zip \
+     "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_mono_macos.universal.zip"
+   unzip -o /tmp/godot-mono.zip -d ~/Applications/
+   ```
+   (Or `brew install --cask godot-mono dotnet-sdk` if you're fine with sudo.)
+3. **GNU make** (this machine's Xcode CLT shim is broken; brew's make sidesteps it):
+   ```sh
+   brew install make
+   export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
+   ```
+4. Clone and verify:
+   ```sh
+   git clone <repo> deepfield-3d && cd deepfield-3d
+   make check    # sim build + unit tests + harness gates + game build
+   make run      # windowed game: WASD/mouse, E build on socket, F start wave, LMB fire
+   ```
+
+## Layout
+
+| Path | What |
+|---|---|
+| `sim/Sim.Core` | The pure headless sim — no Godot references, ever |
+| `sim/Sim.Harness` | Gate suite + PlayerBot + match runner (`make gates`) |
+| `sim/Sim.Core.Tests` | xUnit unit tests |
+| `game/` | Godot 4 client (graybox M0) |
+
+## Server hosting
+
+Arrives at M1 (dedicated server export + Tailscale invite links + runbook).

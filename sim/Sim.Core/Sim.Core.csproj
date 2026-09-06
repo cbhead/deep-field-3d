@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Plain SDK, never Godot.NET.Sdk: this project must compile with zero engine
+       references so the harness and CI can run it standalone. A Godot type leaking
+       in is a build break, not a code-review catch. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>DeepField.Sim</RootNamespace>
+  </PropertyGroup>
+
+</Project>

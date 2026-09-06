@@ -1,0 +1,23 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # Fast lane: no engine. Sim.Core compiles standalone (a Godot type leaking
+  # into the sim is a build break here), unit tests run, then the harness gates.
+  sim:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build Sim.Core (standalone, enforces no-Godot boundary)
+        run: dotnet build sim/Sim.Core --configuration Release
+      - name: Unit tests
+        run: dotnet test sim/Sim.Core.Tests --configuration Release
+      - name: Harness gates
+        run: dotnet run --project sim/Sim.Harness --configuration Release
