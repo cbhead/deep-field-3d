@@ -2,23 +2,37 @@ using DeepField.Sim.Content;
 
 namespace DeepField.Sim;
 
-/// <summary>Flat mutable entity archetypes, exactly the 2D game's shape:
-/// three typed lists with inline systems, marked dead during the tick,
-/// removed in cleanup. No ECS ceremony at these entity counts.</summary>
+/// <summary>One exclusive status slot per channel. Strongest wins, re-hit
+/// refreshes, never stacks; Source survives for DoT kill attribution.</summary>
+public struct StatusSlot
+{
+    public string? StatusId;
+    public float TimeLeft;
+    public string Source;
+
+    public readonly bool Active => StatusId is not null && TimeLeft > 0f;
+}
+
 public sealed class Enemy
 {
     public int Id;
     public string DefId = "";
     public float Hp;
     public float MaxHp;
+    public int RouteIndex;        // which map route this enemy walks
     public int Leg;               // index into route legs
     public float LegProgress;     // meters along current leg
     public float TotalTraveled;   // meters along whole route — the "first" targeting metric
-    public Vec3 Pos;
+    public Vec3 Pos;              // spine position + lateral offset applied
+    public Vec3 Facing;           // normalized travel direction (Aegis front arc)
+    public float LateralOffset;   // scatter across the path width (seeded at spawn)
     public int Bounty;
     public int LeakDamage;
     public int WaveIndex;
     public bool Dead;
+
+    /// <summary>Indexed by (int)Channel — fixed size, no allocation per status.</summary>
+    public StatusSlot[] Statuses = new StatusSlot[8];
 }
 
 public sealed class Tower
@@ -28,9 +42,16 @@ public sealed class Tower
     public string SocketId = "";
     public Vec3 Pos;
     public float Cooldown;
-    public int Spent;
+    public int Spent;             // money sunk (placement + upgrades) for sell refunds
     public int Kills;
     public float DamageDealt;
+
+    /// <summary>Level per upgrade path, parallel to TowerDef.UpgradePaths (0 = unbought).</summary>
+    public int[] PathLevels = System.Array.Empty<int>();
+
+    /// <summary>Forge Overdrive: fire-rate factor and remaining time.</summary>
+    public float BuffTimer;
+    public float BuffFactor = 1f;
 }
 
 public sealed class Projectile
@@ -41,7 +62,33 @@ public sealed class Projectile
     public Vec3 Pos;
     public float Speed;
     public float Damage;
+    public float SplashRadius;
+    public float SplashFalloff;
     public bool Dead;
+}
+
+/// <summary>Players are command sources with authoritative vitals — never
+/// entities inside the tick's targeting/movement systems.</summary>
+public sealed class PlayerState
+{
+    public int Id;
+    public string Name = "";
+    public string FactionId = "";
+    public Vec3 Pos;
+    public float Hp = Balance.PlayerMaxHp;
+    public bool Downed;
+    public float BleedoutTimer;
+    public float ReviveProgress;
+    public float RespawnTimer;
+    public float RegenDelay;
+    public float WeaponCooldown;
+    public float AbilityCooldown;
+    public string WeaponId = "sidearm";
+    public HashSet<string> OwnedWeapons = new() { "sidearm" };
+    public Dictionary<ScrapType, int> Scrap = new();
+    public bool Connected = true;
+
+    public bool Alive => !Downed && RespawnTimer <= 0f;
 }
 
 public enum MatchPhase
@@ -53,7 +100,7 @@ public enum MatchPhase
 }
 
 /// <summary>One entry in a wave's spawn schedule (ticks relative to wave start).</summary>
-public readonly record struct SpawnEntry(string DefId, int TickOffset, float HpFactor);
+public readonly record struct SpawnEntry(string DefId, int TickOffset, float HpFactor, int RouteIndex, float LateralOffset);
 
 public sealed class World
 {
@@ -63,6 +110,10 @@ public sealed class World
 
     public int Money;
     public int Lives;
+
+    /// <summary>Team scrap pool — funds tower upgrades. Personal shares live on
+    /// each PlayerState and fund the gunsmith.</summary>
+    public Dictionary<ScrapType, int> TeamScrap = new();
 
     public MatchPhase Phase = MatchPhase.Intermission;
     public float PhaseTimer = Balance.IntermissionSeconds;
@@ -75,19 +126,15 @@ public sealed class World
     public List<Enemy> Enemies = new();
     public List<Tower> Towers = new();
     public List<Projectile> Projectiles = new();
-
-    /// <summary>Per-player weapon cooldowns (seconds remaining), keyed by player id.
-    /// Players are not sim entities — they are command sources.</summary>
-    public Dictionary<int, float> WeaponCooldowns = new();
+    public Dictionary<int, PlayerState> Players = new();
 
     public List<Command> PendingCommands = new();
 
     /// <summary>Events emitted this tick; drained by the shell/harness after each step.</summary>
     public List<SimEvent> Events = new();
 
-    /// <summary>Cumulative route leg lengths, precomputed once.</summary>
-    public float[] LegLengths;
-    public float RouteLength;
+    /// <summary>Per-route cumulative leg lengths, precomputed once.</summary>
+    public float[][] RouteLegLengths;
 
     private int _nextId = 1;
     public int NextId() => _nextId++;
@@ -108,12 +155,14 @@ public sealed class World
         Money = Balance.StartingMoney;
         Lives = Balance.StartingLives;
 
-        LegLengths = new float[map.Route.Count - 1];
-        RouteLength = 0f;
-        for (int i = 0; i < LegLengths.Length; i++)
+        RouteLegLengths = new float[map.Routes.Count][];
+        for (int r = 0; r < map.Routes.Count; r++)
         {
-            LegLengths[i] = map.Route[i].DistanceTo(map.Route[i + 1]);
-            RouteLength += LegLengths[i];
+            var waypoints = map.Routes[r].Waypoints;
+            var legs = new float[waypoints.Count - 1];
+            for (int i = 0; i < legs.Length; i++)
+                legs[i] = waypoints[i].DistanceTo(waypoints[i + 1]);
+            RouteLegLengths[r] = legs;
         }
     }
 
@@ -122,4 +171,15 @@ public sealed class World
     public void Emit(SimEvent e) => Events.Add(e with { Tick = Tick });
 
     public bool IsOver => Phase is MatchPhase.Victory or MatchPhase.Defeat;
+
+    public int ConnectedPlayerCount
+    {
+        get
+        {
+            int n = 0;
+            foreach (var p in Players.Values)
+                if (p.Connected) n++;
+            return n;
+        }
+    }
 }

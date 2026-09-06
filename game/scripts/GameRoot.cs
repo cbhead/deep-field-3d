@@ -30,19 +30,23 @@ public partial class GameRoot : Node3D
 
     public MapDef Map => _world.Map;
 
+    private Player _player = null!;
+
     public override void _Ready()
     {
         _world = new SimWorld(Seed, Maps.TestLane);
+        // Local loopback join — the lobby/faction picker replaces this hardcode.
+        _world.Enqueue(new Command.Join(1, "host", "ember"));
 
         BuildEnvironment();
         BuildGraybox();
         BuildHud();
 
-        var player = new Player { Name = "Player" };
-        AddChild(player);
-        player.GlobalPosition = ToGd(Maps.TestLane.HeroSpawn) + new Vector3(0, 1.2f, 0);
+        _player = new Player { Name = "Player" };
+        AddChild(_player);
+        _player.GlobalPosition = ToGd(Maps.TestLane.HeroSpawn) + new Vector3(0, 1.2f, 0);
         // Face the lane (it sits at +Z from the hero spawn; default forward is -Z).
-        player.RotationDegrees = new Vector3(0, 180, 0);
+        _player.RotationDegrees = new Vector3(0, 180, 0);
     }
 
     public override void _Process(double delta)
@@ -51,6 +55,8 @@ public partial class GameRoot : Node3D
         _accumulator = Mathf.Min(_accumulator + delta, 0.25);
         while (_accumulator >= Balance.Dt)
         {
+            var p = _player.GlobalPosition;
+            _world.Enqueue(new Command.PlayerSync(1, new Vec3(p.X, p.Y, p.Z)));
             Step.Advance(_world);
             DrainEvents();
             _accumulator -= Balance.Dt;
@@ -236,7 +242,7 @@ public partial class GameRoot : Node3D
         AddStaticBox(new Vector3(0, -0.5f, 0), new Vector3(90, 1, 60), new Color(0.35f, 0.38f, 0.4f), layer: 1);
 
         // Path ribbon: one thin box per route leg, slightly raised so it reads.
-        var route = Maps.TestLane.Route;
+        var route = Maps.TestLane.Routes[0].Waypoints;
         for (int i = 0; i < route.Count - 1; i++)
         {
             var a = ToGd(route[i]);

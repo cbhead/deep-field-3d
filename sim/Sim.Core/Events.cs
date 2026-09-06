@@ -69,4 +69,76 @@ public abstract record SimEvent
     {
         public override string LogLine() => $"{Tick} matchEnded {(Victory ? "victory" : "defeat")} {WavesCleared} {LivesLeft}";
     }
+
+    // ---- M1 additions ------------------------------------------------------
+
+    public sealed record PlayerJoined(int PlayerId, string Name, string FactionId) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} playerJoined {PlayerId} {Name} {FactionId}";
+    }
+
+    public sealed record JoinRejected(int PlayerId, string Reason) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} joinRejected {PlayerId} {Reason}";
+    }
+
+    public sealed record StatusApplied(int EnemyId, string StatusId, string Source) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} statusApplied {EnemyId} {StatusId} {Source}";
+    }
+
+    public sealed record ReactionTriggered(int EnemyId, string ReactionId, float Damage) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} reaction {EnemyId} {ReactionId} {F(Damage)}";
+    }
+
+    public sealed record TowerUpgraded(int TowerId, string PathId, int NewLevel) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} towerUpgraded {TowerId} {PathId} {NewLevel}";
+    }
+
+    public sealed record UpgradeRejected(int PlayerId, int TowerId, string Reason) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} upgradeRejected {PlayerId} {TowerId} {Reason}";
+    }
+
+    public sealed record ScrapDropped(int EnemyId, string ScrapCounts) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} scrapDropped {EnemyId} {ScrapCounts}";
+    }
+
+    public sealed record WeaponBought(int PlayerId, string WeaponId) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} weaponBought {PlayerId} {WeaponId}";
+    }
+
+    public sealed record PurchaseRejected(int PlayerId, string WeaponId, string Reason) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} purchaseRejected {PlayerId} {WeaponId} {Reason}";
+    }
+
+    public sealed record AbilityUsed(int PlayerId, string AbilityId) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} abilityUsed {PlayerId} {AbilityId}";
+    }
+
+    public sealed record PlayerDamaged(int PlayerId, float Amount, string Source) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} playerDamaged {PlayerId} {F(Amount)} {Source}";
+    }
+
+    public sealed record PlayerDowned(int PlayerId) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} playerDowned {PlayerId}";
+    }
+
+    public sealed record PlayerRevived(int PlayerId, int ByPlayerId) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} playerRevived {PlayerId} {ByPlayerId}";
+    }
+
+    public sealed record PlayerRespawned(int PlayerId) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} playerRespawned {PlayerId}";
+    }
 }

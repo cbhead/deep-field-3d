@@ -13,32 +13,62 @@ public sealed record MatchResult(
     int TowerKills,
     int PlayerKills,
     int Leaked,
+    int Reactions,
     long Ticks,
+    Dictionary<ScrapType, int> TeamScrapEnd,
     string EventLogHash,
     List<string> EventLog);
 
-/// <summary>Runs a full seeded match headlessly with a greedy builder and an
-/// optional PlayerBot — the M0 seed of what grows into campaign.ts/sweep.ts.</summary>
+/// <summary>Runs a full seeded match headlessly with a scripted builder and any
+/// number of PlayerBots — the M1 seed of campaign.ts/sweep.ts.</summary>
 public static class MatchRunner
 {
-    private const long MaxTicks = Balance.TickHz * 600; // 10 min safety cap
+    private const long MaxTicks = Balance.TickHz * 1800; // 30 min safety cap
 
-    public static MatchResult Run(uint seed, PlayerBot? bot)
+    /// <summary>Deterministic build orders per map: "tower:socket" placed as
+    /// money allows, then damage-path upgrades with the surplus. A floor policy,
+    /// not a forecast — same doctrine as the 2D greedy builder.</summary>
+    private static readonly Dictionary<string, string[]> BuildOrders = new()
     {
-        var world = new World(seed, Maps.TestLane);
+        ["testlane"] = new[] { "lance:s2", "lance:s3", "lance:s1", "lance:s4" },
+        ["foundry"] = new[]
+        {
+            "lance:g2", "lance:g5", "skywatch:g4", "singularity:g3",
+            "nova:g1", "skywatch:w2", "lance:g6", "lance:w1",
+        },
+    };
+
+    public static MatchResult Run(uint seed, MapDef map, params PlayerBot[] bots)
+    {
+        var world = new World(seed, map);
         var log = new List<string>();
-        int spawned = 0, towerKills = 0, playerKills = 0, leaked = 0, wavesCleared = 0;
+        int spawned = 0, towerKills = 0, playerKills = 0, leaked = 0, reactions = 0, wavesCleared = 0;
         bool victory = false;
+        var buildOrder = BuildOrders[map.Id];
+        int buildCursor = 0;
 
         while (!world.IsOver && world.Tick < MaxTicks)
         {
-            // Greedy builder: buy a Lance for the first free socket whenever affordable.
-            var freeSocket = world.Map.Sockets.FirstOrDefault(
-                s => world.Towers.All(t => t.SocketId != s.Id));
-            if (freeSocket is not null && world.Money >= Towers.Lance.Cost)
-                world.Enqueue(new Command.PlaceTower(0, Towers.Lance.Id, freeSocket.Id));
+            // Scripted builder (attributed to no player: team policy).
+            if (buildCursor < buildOrder.Length)
+            {
+                var parts = buildOrder[buildCursor].Split(':');
+                var def = Towers.All[parts[0]];
+                if (world.Money >= def.Cost)
+                {
+                    world.Enqueue(new Command.PlaceTower(0, parts[0], parts[1]));
+                    buildCursor++;
+                }
+            }
+            else if (world.Money > 250 && world.Towers.Count > 0)
+            {
+                // Surplus into damage paths, round-robin by tick for determinism.
+                var tower = world.Towers[(int)(world.Tick % world.Towers.Count)];
+                world.Enqueue(new Command.UpgradeTower(0, tower.Id, 0));
+            }
 
-            bot?.Act(world);
+            foreach (var bot in bots)
+                bot.Act(world);
 
             Step.Advance(world);
 
@@ -50,6 +80,7 @@ public static class MatchRunner
                     case SimEvent.EnemySpawned: spawned++; break;
                     case SimEvent.EnemyLeaked: leaked++; break;
                     case SimEvent.WaveCleared: wavesCleared++; break;
+                    case SimEvent.ReactionTriggered: reactions++; break;
                     case SimEvent.EnemyDied died:
                         if (died.Source.StartsWith("tower")) towerKills++;
                         else playerKills++;
@@ -60,8 +91,8 @@ public static class MatchRunner
         }
 
         return new MatchResult(
-            victory, wavesCleared, world.Lives, spawned, towerKills, playerKills, leaked,
-            world.Tick, HashLog(log), log);
+            victory, wavesCleared, world.Lives, spawned, towerKills, playerKills, leaked, reactions,
+            world.Tick, new Dictionary<ScrapType, int>(world.TeamScrap), HashLog(log), log);
     }
 
     public static string HashLog(IEnumerable<string> log)

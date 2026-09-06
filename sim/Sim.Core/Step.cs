@@ -3,9 +3,11 @@ using DeepField.Sim.Content;
 namespace DeepField.Sim;
 
 /// <summary>The deterministic tick. Phase order is a spec carried from the 2D
-/// game's step.ts and must not be reordered casually:
-/// ApplyCommands → UpdateWaves → UpdateStatuses → MoveEnemies → FireTowers →
-/// StepTowerProjectiles → StepPlayerOrdnance → ResolveDeaths → Cleanup → CheckEndState.</summary>
+/// game's step.ts (statuses before movement, fire before projectile step,
+/// cleanup last). M1 adds UpdatePlayers between movement and tower fire:
+/// ApplyCommands → UpdateWaves → UpdateStatuses → MoveEnemies → UpdatePlayers →
+/// FireTowers → StepTowerProjectiles → StepPlayerOrdnance → ResolveDeaths →
+/// Cleanup → CheckEndState.</summary>
 public static class Step
 {
     public static void Advance(World w)
@@ -19,6 +21,7 @@ public static class Step
         UpdateWaves(w);
         UpdateStatuses(w);
         MoveEnemies(w);
+        UpdatePlayers(w);
         FireTowers(w);
         StepTowerProjectiles(w);
         StepPlayerOrdnance(w);
@@ -27,36 +30,92 @@ public static class Step
         CheckEndState(w);
     }
 
+    // =====================================================================
+    // Commands
+    // =====================================================================
+
     private static void ApplyCommands(World w)
     {
         foreach (var command in w.PendingCommands)
         {
             switch (command)
             {
-                case Command.PlaceTower place:
-                    ApplyPlaceTower(w, place);
-                    break;
-
-                case Command.SellTower sell:
-                    ApplySellTower(w, sell);
-                    break;
-
+                case Command.Join join: ApplyJoin(w, join); break;
+                case Command.Leave leave: ApplyLeave(w, leave); break;
+                case Command.PlayerSync sync: ApplyPlayerSync(w, sync); break;
+                case Command.PlaceTower place: ApplyPlaceTower(w, place); break;
+                case Command.SellTower sell: ApplySellTower(w, sell); break;
+                case Command.UpgradeTower upgrade: ApplyUpgradeTower(w, upgrade); break;
                 case Command.StartWave:
-                    if (w.Phase == MatchPhase.Intermission)
-                        w.PhaseTimer = 0f;
+                    if (w.Phase == MatchPhase.Intermission) w.PhaseTimer = 0f;
                     break;
+                case Command.PlayerHit hit: ApplyPlayerHit(w, hit); break;
+                case Command.BuyWeapon buy: ApplyBuyWeapon(w, buy); break;
+                case Command.SelectWeapon select: ApplySelectWeapon(w, select); break;
+                case Command.UseAbility ability: ApplyUseAbility(w, ability); break;
+                case Command.Revive revive: ApplyRevive(w, revive); break;
+            }
+        }
+        w.PendingCommands.Clear();
+    }
 
-                case Command.PlayerHit hit:
-                    ApplyPlayerHit(w, hit);
-                    break;
+    private static void ApplyJoin(World w, Command.Join join)
+    {
+        if (w.Players.TryGetValue(join.PlayerId, out var existing))
+        {
+            existing.Connected = true;   // reconnect keeps seat and faction
+            return;
+        }
+
+        if (!Factions.All.ContainsKey(join.FactionId))
+        {
+            w.Emit(new SimEvent.JoinRejected(join.PlayerId, "unknownFaction"));
+            return;
+        }
+
+        // Faction exclusivity is a sim rule, not a lobby courtesy.
+        foreach (var other in w.Players.Values)
+        {
+            if (other.FactionId == join.FactionId)
+            {
+                w.Emit(new SimEvent.JoinRejected(join.PlayerId, "factionTaken"));
+                return;
             }
         }
 
-        w.PendingCommands.Clear();
+        var player = new PlayerState
+        {
+            Id = join.PlayerId,
+            Name = join.Name,
+            FactionId = join.FactionId,
+            Pos = w.Map.HeroSpawn,
+        };
 
-        // Weapon cooldowns tick down here so a hit later in this tick sees fresh state.
-        foreach (int playerId in w.WeaponCooldowns.Keys.ToList())
-            w.WeaponCooldowns[playerId] = MathF.Max(0f, w.WeaponCooldowns[playerId] - Balance.Dt);
+        // Catch-up scrap: team-median personal totals per type.
+        foreach (ScrapType type in System.Enum.GetValues<ScrapType>())
+        {
+            var amounts = w.Players.Values.Select(p => p.Scrap.GetValueOrDefault(type, 0))
+                .OrderBy(v => v).ToList();
+            if (amounts.Count > 0)
+                player.Scrap[type] = amounts[amounts.Count / 2];
+        }
+
+        w.Players[join.PlayerId] = player;
+        w.Emit(new SimEvent.PlayerJoined(join.PlayerId, join.Name, join.FactionId));
+    }
+
+    private static void ApplyLeave(World w, Command.Leave leave)
+    {
+        // Seat and faction held for rejoin; scaling steps down at the next
+        // wave boundary. The sim otherwise doesn't care.
+        if (w.Players.TryGetValue(leave.PlayerId, out var player))
+            player.Connected = false;
+    }
+
+    private static void ApplyPlayerSync(World w, Command.PlayerSync sync)
+    {
+        if (w.Players.TryGetValue(sync.PlayerId, out var player))
+            player.Pos = sync.Pos;
     }
 
     private static void ApplyPlaceTower(World w, Command.PlaceTower place)
@@ -74,26 +133,37 @@ public static class Step
             return;
         }
 
+        if (socket.Tag == SocketTag.Trap)
+        {
+            w.Emit(new SimEvent.BuildRejected(place.PlayerId, place.TowerId, place.SocketId, "trapSocket"));
+            return;
+        }
+
         if (w.Towers.Any(t => t.SocketId == place.SocketId))
         {
             w.Emit(new SimEvent.BuildRejected(place.PlayerId, place.TowerId, place.SocketId, "occupied"));
             return;
         }
 
-        if (w.Money < def.Cost)
+        int cost = def.Cost;
+        if (w.Players.TryGetValue(place.PlayerId, out var placer) && placer.FactionId == Factions.Forge.Id)
+            cost = (int)(cost * Balance.ForgeBuildDiscount);
+
+        if (w.Money < cost)
         {
             w.Emit(new SimEvent.BuildRejected(place.PlayerId, place.TowerId, place.SocketId, "insufficientFunds"));
             return;
         }
 
-        w.Money -= def.Cost;
+        w.Money -= cost;
         var tower = new Tower
         {
             Id = w.NextId(),
             DefId = def.Id,
             SocketId = socket.Id,
             Pos = socket.Pos,
-            Spent = def.Cost,
+            Spent = cost,
+            PathLevels = new int[def.UpgradePaths.Count],
         };
         w.Towers.Add(tower);
         w.Emit(new SimEvent.TowerPlaced(tower.Id, def.Id, socket.Id, place.PlayerId));
@@ -104,26 +174,166 @@ public static class Step
         var tower = w.Towers.FirstOrDefault(t => t.Id == sell.TowerId);
         if (tower is null) return;
 
-        int refund = tower.Spent * 7 / 10;
+        int refund = tower.Spent * Balance.SellRefundPercent / 100;
         w.Money += refund;
         w.Towers.Remove(tower);
         w.Emit(new SimEvent.TowerSold(tower.Id, refund));
     }
 
+    private static void ApplyUpgradeTower(World w, Command.UpgradeTower upgrade)
+    {
+        var tower = w.Towers.FirstOrDefault(t => t.Id == upgrade.TowerId);
+        if (tower is null)
+        {
+            w.Emit(new SimEvent.UpgradeRejected(upgrade.PlayerId, upgrade.TowerId, "unknownTower"));
+            return;
+        }
+
+        var def = Towers.All[tower.DefId];
+        if (upgrade.PathIndex < 0 || upgrade.PathIndex >= def.UpgradePaths.Count)
+        {
+            w.Emit(new SimEvent.UpgradeRejected(upgrade.PlayerId, upgrade.TowerId, "unknownPath"));
+            return;
+        }
+
+        var path = def.UpgradePaths[upgrade.PathIndex];
+        int currentLevel = tower.PathLevels[upgrade.PathIndex];
+        if (currentLevel >= path.LevelCosts.Count)
+        {
+            w.Emit(new SimEvent.UpgradeRejected(upgrade.PlayerId, upgrade.TowerId, "maxLevel"));
+            return;
+        }
+
+        int moneyCost = path.LevelCosts[currentLevel];
+        if (w.Money < moneyCost)
+        {
+            w.Emit(new SimEvent.UpgradeRejected(upgrade.PlayerId, upgrade.TowerId, "insufficientFunds"));
+            return;
+        }
+
+        // L4 is the breakpoint level: it also costs the scrap recipe, from the
+        // team pool — the enemy-dependent economy loop.
+        bool isBreakpoint = currentLevel + 1 == 4;
+        if (isBreakpoint)
+        {
+            foreach (var (type, amount) in path.BreakpointRecipe)
+            {
+                if (w.TeamScrap.GetValueOrDefault(type, 0) < amount)
+                {
+                    w.Emit(new SimEvent.UpgradeRejected(upgrade.PlayerId, upgrade.TowerId, "insufficientScrap"));
+                    return;
+                }
+            }
+            foreach (var (type, amount) in path.BreakpointRecipe)
+                w.TeamScrap[type] -= amount;
+        }
+
+        w.Money -= moneyCost;
+        tower.Spent += moneyCost;
+        tower.PathLevels[upgrade.PathIndex] = currentLevel + 1;
+        w.Emit(new SimEvent.TowerUpgraded(tower.Id, path.Id, currentLevel + 1));
+    }
+
     private static void ApplyPlayerHit(World w, Command.PlayerHit hit)
     {
+        if (!w.Players.TryGetValue(hit.PlayerId, out var player) || !player.Alive) return;
         if (!Weapons.All.TryGetValue(hit.WeaponId, out var weapon)) return;
-
-        // Sanity check, not anti-cheat: rate-limit to the weapon's fire rate.
-        float cooldown = w.WeaponCooldowns.GetValueOrDefault(hit.PlayerId, 0f);
-        if (cooldown > 0f) return;
+        if (!player.OwnedWeapons.Contains(hit.WeaponId)) return;
+        if (player.WeaponCooldown > 0f) return;
 
         var enemy = w.Enemies.FirstOrDefault(e => e.Id == hit.EnemyId && !e.Dead);
         if (enemy is null) return;
 
-        w.WeaponCooldowns[hit.PlayerId] = 1f / weapon.ShotsPerSecond;
-        Damage(w, enemy, weapon.Damage, $"player{hit.PlayerId}");
+        player.WeaponCooldown = 1f / weapon.ShotsPerSecond;
+        Damage(w, enemy, weapon.Damage, $"player{hit.PlayerId}", player.Pos, weapon.Applies, hit.PlayerId);
     }
+
+    private static void ApplyBuyWeapon(World w, Command.BuyWeapon buy)
+    {
+        if (!w.Players.TryGetValue(buy.PlayerId, out var player)) return;
+        if (!Weapons.All.TryGetValue(buy.WeaponId, out var weapon))
+        {
+            w.Emit(new SimEvent.PurchaseRejected(buy.PlayerId, buy.WeaponId, "unknownWeapon"));
+            return;
+        }
+        if (player.OwnedWeapons.Contains(buy.WeaponId))
+        {
+            w.Emit(new SimEvent.PurchaseRejected(buy.PlayerId, buy.WeaponId, "alreadyOwned"));
+            return;
+        }
+        if (w.Money < weapon.Cost)
+        {
+            w.Emit(new SimEvent.PurchaseRejected(buy.PlayerId, buy.WeaponId, "insufficientFunds"));
+            return;
+        }
+
+        w.Money -= weapon.Cost;
+        player.OwnedWeapons.Add(buy.WeaponId);
+        player.WeaponId = buy.WeaponId;
+        w.Emit(new SimEvent.WeaponBought(buy.PlayerId, buy.WeaponId));
+    }
+
+    private static void ApplySelectWeapon(World w, Command.SelectWeapon select)
+    {
+        if (w.Players.TryGetValue(select.PlayerId, out var player)
+            && player.OwnedWeapons.Contains(select.WeaponId))
+            player.WeaponId = select.WeaponId;
+    }
+
+    private static void ApplyUseAbility(World w, Command.UseAbility ability)
+    {
+        if (!w.Players.TryGetValue(ability.PlayerId, out var player) || !player.Alive) return;
+        if (player.AbilityCooldown > 0f) return;
+        if (!Factions.All.TryGetValue(player.FactionId, out var faction)) return;
+
+        player.AbilityCooldown = faction.CooldownSeconds;
+        w.Emit(new SimEvent.AbilityUsed(ability.PlayerId, faction.AbilityId));
+
+        switch (faction.AbilityId)
+        {
+            case "overdrive":
+                foreach (var tower in w.Towers)
+                {
+                    if (tower.Pos.DistanceTo(player.Pos) <= faction.RadiusMeters)
+                    {
+                        tower.BuffTimer = faction.DurationSeconds;
+                        tower.BuffFactor = faction.Magnitude;
+                    }
+                }
+                break;
+
+            case "ignitionWave":
+                foreach (var enemy in w.Enemies)
+                {
+                    if (!enemy.Dead && enemy.Pos.DistanceTo(ability.TargetPos) <= faction.RadiusMeters)
+                        ApplyStatus(w, enemy, Statuses.Burn.Id, $"player{player.Id}", player.Id);
+                }
+                break;
+        }
+    }
+
+    private static void ApplyRevive(World w, Command.Revive revive)
+    {
+        if (!w.Players.TryGetValue(revive.PlayerId, out var reviver) || !reviver.Alive) return;
+        if (!w.Players.TryGetValue(revive.TargetPlayerId, out var target) || !target.Downed) return;
+        if (reviver.Pos.DistanceTo(target.Pos) > Balance.ReviveRangeMeters) return;
+
+        // Held interaction: the client streams Revive while the key is held;
+        // each command advances progress by one tick's worth.
+        target.ReviveProgress += Balance.Dt;
+        if (target.ReviveProgress >= Balance.ReviveSeconds)
+        {
+            target.Downed = false;
+            target.BleedoutTimer = 0f;
+            target.ReviveProgress = 0f;
+            target.Hp = Balance.PlayerMaxHp * 0.5f;
+            w.Emit(new SimEvent.PlayerRevived(target.Id, reviver.Id));
+        }
+    }
+
+    // =====================================================================
+    // Waves
+    // =====================================================================
 
     private static void UpdateWaves(World w)
     {
@@ -132,8 +342,16 @@ public static class Step
             w.PhaseTimer -= Balance.Dt;
             if (w.PhaseTimer <= 0f)
             {
+                // Anyone in bleedout comes back at the wave boundary.
+                foreach (var player in w.Players.Values)
+                {
+                    if (player.Downed && player.BleedoutTimer <= 0f)
+                        RespawnPlayer(w, player);
+                }
+
                 w.WaveIndex++;
-                w.PendingSpawns = WavePlan.PlanWave(w.Seed, w.WaveIndex);
+                int playerCount = System.Math.Max(1, w.ConnectedPlayerCount);
+                w.PendingSpawns = WavePlan.PlanWave(w.Seed, w.Map, w.WaveIndex, playerCount);
                 w.WaveStartTick = w.Tick;
                 w.Phase = MatchPhase.Wave;
                 w.Emit(new SimEvent.WaveStarted(w.WaveIndex, w.PendingSpawns.Count));
@@ -150,13 +368,17 @@ public static class Step
             if (entry.TickOffset > waveTick) continue;
 
             var def = Enemies.All[entry.DefId];
+            var route = w.Map.Routes[entry.RouteIndex];
             var enemy = new Enemy
             {
                 Id = w.NextId(),
                 DefId = def.Id,
                 Hp = def.Hp * entry.HpFactor,
                 MaxHp = def.Hp * entry.HpFactor,
-                Pos = w.Map.Route[0],
+                RouteIndex = entry.RouteIndex,
+                LateralOffset = entry.LateralOffset,
+                Pos = route.Waypoints[0],
+                Facing = (route.Waypoints[1] - route.Waypoints[0]).Normalized(),
                 Bounty = def.Bounty,
                 LeakDamage = def.LeakDamage,
                 WaveIndex = w.WaveIndex,
@@ -167,11 +389,89 @@ public static class Step
         }
     }
 
-    /// <summary>M0 stub — grows into the channel system (DoT ticks, expiry, cc decay,
-    /// reactions) at M1+. Positioned before movement, per the 2D tick-order spec.</summary>
+    // =====================================================================
+    // Statuses
+    // =====================================================================
+
     private static void UpdateStatuses(World w)
     {
+        foreach (var enemy in w.Enemies)
+        {
+            if (enemy.Dead) continue;
+
+            for (int c = 0; c < enemy.Statuses.Length; c++)
+            {
+                ref var slot = ref enemy.Statuses[c];
+                if (!slot.Active) continue;
+
+                var def = Statuses.All[slot.StatusId!];
+                if (def.DamagePerSecond > 0f)
+                {
+                    // DoT attributes to whoever applied it — bounty and scrap
+                    // credit survive the burn.
+                    Damage(w, enemy, def.DamagePerSecond * Balance.Dt, slot.Source, enemy.Pos, null,
+                        SourcePlayerId(slot.Source));
+                }
+
+                slot.TimeLeft -= Balance.Dt;
+                if (slot.TimeLeft <= 0f)
+                    slot.StatusId = null;
+            }
+        }
     }
+
+    /// <summary>Application-time resolution: reactions first (consume the active
+    /// status, skip the incoming one), then strongest-wins within the channel.</summary>
+    private static void ApplyStatus(World w, Enemy enemy, string statusId, string source, int? playerId)
+    {
+        var incoming = Statuses.All[statusId];
+
+        // Reaction scan across all active channels.
+        for (int c = 0; c < enemy.Statuses.Length; c++)
+        {
+            ref var slot = ref enemy.Statuses[c];
+            if (!slot.Active) continue;
+
+            var reaction = Reactions.Match(slot.StatusId!, statusId);
+            if (reaction is null) continue;
+
+            slot.StatusId = null;   // consume the active half
+            float burst = enemy.MaxHp * reaction.BurstFraction;
+            w.Emit(new SimEvent.ReactionTriggered(enemy.Id, reaction.Id, burst));
+            Damage(w, enemy, burst, source, enemy.Pos, null, playerId);
+            return;                 // incoming status consumed by the reaction
+        }
+
+        float duration = incoming.MaxDurationSeconds;
+        // Ember passive: that player's burns last longer.
+        if (statusId == Statuses.Burn.Id && playerId is int pid
+            && w.Players.TryGetValue(pid, out var applier)
+            && applier.FactionId == Factions.Ember.Id)
+            duration *= Balance.EmberBurnDurationFactor;
+
+        ref var target = ref enemy.Statuses[(int)incoming.Channel];
+        if (target.Active)
+        {
+            var active = Statuses.All[target.StatusId!];
+            if (active.Id == incoming.Id)
+            {
+                target.TimeLeft = duration;   // refresh
+                target.Source = source;
+                return;
+            }
+            if (active.Magnitude >= incoming.Magnitude)
+                return;                       // strongest wins, weaker ignored
+        }
+
+        target.StatusId = incoming.Id;
+        target.TimeLeft = duration;
+        target.Source = source;
+        w.Emit(new SimEvent.StatusApplied(enemy.Id, incoming.Id, source));
+    }
+
+    // =====================================================================
+    // Movement
+    // =====================================================================
 
     private static void MoveEnemies(World w)
     {
@@ -180,11 +480,19 @@ public static class Step
             if (enemy.Dead) continue;
 
             var def = Enemies.All[enemy.DefId];
-            float remaining = def.SpeedMetersPerSec * Balance.Dt;
+            float speed = def.SpeedMetersPerSec;
 
-            while (remaining > 0f && enemy.Leg < w.LegLengths.Length)
+            ref var movement = ref enemy.Statuses[(int)Channel.Movement];
+            if (movement.Active)
+                speed *= Statuses.All[movement.StatusId!].SpeedFactor;
+
+            var legs = w.RouteLegLengths[enemy.RouteIndex];
+            var waypoints = w.Map.Routes[enemy.RouteIndex].Waypoints;
+            float remaining = speed * Balance.Dt;
+
+            while (remaining > 0f && enemy.Leg < legs.Length)
             {
-                float legLeft = w.LegLengths[enemy.Leg] - enemy.LegProgress;
+                float legLeft = legs[enemy.Leg] - enemy.LegProgress;
                 if (remaining < legLeft)
                 {
                     enemy.LegProgress += remaining;
@@ -200,47 +508,144 @@ public static class Step
                 }
             }
 
-            if (enemy.Leg >= w.LegLengths.Length)
+            if (enemy.Leg >= legs.Length)
             {
-                // Reached the goal: leak.
                 enemy.Dead = true;
                 w.Lives -= enemy.LeakDamage;
                 w.Emit(new SimEvent.EnemyLeaked(enemy.Id, enemy.DefId, enemy.LeakDamage));
                 continue;
             }
 
-            var a = w.Map.Route[enemy.Leg];
-            var b = w.Map.Route[enemy.Leg + 1];
-            enemy.Pos = Vec3.Lerp(a, b, enemy.LegProgress / w.LegLengths[enemy.Leg]);
+            var a = waypoints[enemy.Leg];
+            var b = waypoints[enemy.Leg + 1];
+            enemy.Facing = (b - a).Normalized();
+            var spine = Vec3.Lerp(a, b, enemy.LegProgress / legs[enemy.Leg]);
+
+            // Lateral scatter: offset perpendicular to travel on the XZ plane.
+            var perp = new Vec3(-enemy.Facing.Z, 0f, enemy.Facing.X);
+            enemy.Pos = spine + perp * enemy.LateralOffset;
         }
     }
+
+    // =====================================================================
+    // Players
+    // =====================================================================
+
+    private static void UpdatePlayers(World w)
+    {
+        foreach (var player in w.Players.Values)
+        {
+            player.WeaponCooldown = MathF.Max(0f, player.WeaponCooldown - Balance.Dt);
+            player.AbilityCooldown = MathF.Max(0f, player.AbilityCooldown - Balance.Dt);
+
+            if (player.RespawnTimer > 0f)
+            {
+                player.RespawnTimer -= Balance.Dt;
+                if (player.RespawnTimer <= 0f)
+                    RespawnPlayer(w, player);
+                continue;
+            }
+
+            if (player.Downed)
+            {
+                player.BleedoutTimer -= Balance.Dt;
+                // Progress decays if nobody is holding the revive.
+                player.ReviveProgress = MathF.Max(0f, player.ReviveProgress - Balance.Dt * 0.5f);
+                continue;
+            }
+
+            if (!player.Connected) continue;
+
+            // Contact damage from ground enemies standing in the hero.
+            float contact = 0f;
+            foreach (var enemy in w.Enemies)
+            {
+                if (enemy.Dead) continue;
+                var def = Enemies.All[enemy.DefId];
+                if (def.ContactDamage <= 0f) continue;
+                if (enemy.Pos.DistanceTo(player.Pos) <= Balance.ContactRadiusMeters + 0.6f)
+                    contact += def.ContactDamage;
+            }
+
+            if (contact > 0f)
+            {
+                player.Hp -= contact * Balance.Dt;
+                player.RegenDelay = Balance.PlayerRegenDelaySeconds;
+                w.Emit(new SimEvent.PlayerDamaged(player.Id, contact * Balance.Dt, "contact"));
+
+                if (player.Hp <= 0f)
+                {
+                    player.Hp = 0f;
+                    if (w.ConnectedPlayerCount <= 1)
+                    {
+                        player.RespawnTimer = Balance.SoloRespawnSeconds;
+                    }
+                    else
+                    {
+                        player.Downed = true;
+                        player.BleedoutTimer = Balance.BleedoutSeconds;
+                        player.ReviveProgress = 0f;
+                    }
+                    w.Emit(new SimEvent.PlayerDowned(player.Id));
+                }
+            }
+            else
+            {
+                player.RegenDelay = MathF.Max(0f, player.RegenDelay - Balance.Dt);
+                if (player.RegenDelay <= 0f && player.Hp < Balance.PlayerMaxHp)
+                    player.Hp = MathF.Min(Balance.PlayerMaxHp, player.Hp + Balance.PlayerRegenPerSecond * Balance.Dt);
+            }
+        }
+    }
+
+    private static void RespawnPlayer(World w, PlayerState player)
+    {
+        player.Downed = false;
+        player.RespawnTimer = 0f;
+        player.BleedoutTimer = 0f;
+        player.ReviveProgress = 0f;
+        player.Hp = Balance.PlayerMaxHp;
+        player.Pos = w.Map.HeroSpawn;
+        w.Emit(new SimEvent.PlayerRespawned(player.Id));
+    }
+
+    // =====================================================================
+    // Towers
+    // =====================================================================
 
     private static void FireTowers(World w)
     {
         foreach (var tower in w.Towers)
         {
+            var def = Towers.All[tower.DefId];
+
+            if (tower.BuffTimer > 0f)
+            {
+                tower.BuffTimer -= Balance.Dt;
+                if (tower.BuffTimer <= 0f) tower.BuffFactor = 1f;
+            }
+
+            if (def.Kind == TowerKind.ChillAura)
+            {
+                float auraRange = EffectiveRange(tower, def);
+                foreach (var enemy in w.Enemies)
+                {
+                    if (enemy.Dead) continue;
+                    if (!def.TargetLayers.Contains(Enemies.All[enemy.DefId].Layer)) continue;
+                    if (tower.Pos.DistanceTo(enemy.Pos) > auraRange) continue;
+                    foreach (var statusId in def.Applies)
+                        ApplyStatus(w, enemy, statusId, $"tower{tower.Id}", null);
+                }
+                continue;
+            }
+
             tower.Cooldown = MathF.Max(0f, tower.Cooldown - Balance.Dt);
             if (tower.Cooldown > 0f) continue;
 
-            var def = Towers.All[tower.DefId];
-
-            // "First" targeting: furthest along the route, within range.
-            Enemy? target = null;
-            float best = -1f;
-            foreach (var enemy in w.Enemies)
-            {
-                if (enemy.Dead) continue;
-                if (tower.Pos.DistanceTo(enemy.Pos) > def.RangeMeters) continue;
-                if (enemy.TotalTraveled > best)
-                {
-                    best = enemy.TotalTraveled;
-                    target = enemy;
-                }
-            }
-
+            var target = PickTarget(w, tower, def);
             if (target is null) continue;
 
-            tower.Cooldown = 1f / def.ShotsPerSecond;
+            tower.Cooldown = 1f / EffectiveRate(tower, def);
             w.Projectiles.Add(new Projectile
             {
                 Id = w.NextId(),
@@ -248,11 +653,86 @@ public static class Step
                 TargetId = target.Id,
                 Pos = tower.Pos + new Vec3(0f, 1.5f, 0f),
                 Speed = def.ProjectileSpeed,
-                Damage = def.Damage,
+                Damage = EffectiveDamage(tower, def),
+                SplashRadius = def.SplashRadius,
+                SplashFalloff = def.SplashFalloff,
             });
             w.Emit(new SimEvent.TowerFired(tower.Id, target.Id));
         }
     }
+
+    private static Enemy? PickTarget(World w, Tower tower, TowerDef def)
+    {
+        float range = EffectiveRange(tower, def);
+        Enemy? best = null;
+        float bestTraveled = -1f;
+
+        foreach (var enemy in w.Enemies)
+        {
+            if (enemy.Dead) continue;
+            if (!def.TargetLayers.Contains(Enemies.All[enemy.DefId].Layer)) continue;
+
+            float distance = tower.Pos.DistanceTo(enemy.Pos);
+            if (distance > range || distance < def.MinRangeMeters) continue;
+            if (SightBlocked(w, tower.Pos, enemy)) continue;
+
+            if (enemy.TotalTraveled > bestTraveled)
+            {
+                bestTraveled = enemy.TotalTraveled;
+                best = enemy;
+            }
+        }
+        return best;
+    }
+
+    /// <summary>Monolith is living cover: a sight-blocker standing between the
+    /// tower and its target shields whatever walks behind it.</summary>
+    private static bool SightBlocked(World w, Vec3 from, Enemy target)
+    {
+        foreach (var blocker in w.Enemies)
+        {
+            if (blocker.Dead || blocker.Id == target.Id) continue;
+            if (!Enemies.All[blocker.DefId].BlocksSight) continue;
+
+            var toTarget = target.Pos - from;
+            var toBlocker = blocker.Pos - from;
+            float targetDist = toTarget.Length();
+            float blockerDist = toBlocker.Length();
+            if (blockerDist >= targetDist) continue;
+
+            // Perpendicular distance of the blocker from the fire line.
+            var dir = toTarget * (1f / targetDist);
+            float along = toBlocker.X * dir.X + toBlocker.Y * dir.Y + toBlocker.Z * dir.Z;
+            if (along <= 0f) continue;
+            var closest = from + dir * along;
+            if (closest.DistanceTo(blocker.Pos) < 1.6f)
+                return true;
+        }
+        return false;
+    }
+
+    private static float EffectiveDamage(Tower tower, TowerDef def) =>
+        def.Damage * PathFactor(tower, def, "damage");
+
+    private static float EffectiveRange(Tower tower, TowerDef def) =>
+        def.RangeMeters * PathFactor(tower, def, "range");
+
+    private static float EffectiveRate(Tower tower, TowerDef def) =>
+        def.ShotsPerSecond * PathFactor(tower, def, "rate") * tower.BuffFactor;
+
+    private static float PathFactor(Tower tower, TowerDef def, string pathId)
+    {
+        for (int i = 0; i < def.UpgradePaths.Count; i++)
+        {
+            if (def.UpgradePaths[i].Id == pathId)
+                return MathF.Pow(def.UpgradePaths[i].PerLevelFactor, tower.PathLevels[i]);
+        }
+        return 1f;
+    }
+
+    // =====================================================================
+    // Projectiles
+    // =====================================================================
 
     private static void StepTowerProjectiles(World w)
     {
@@ -275,11 +755,24 @@ public static class Step
             {
                 projectile.Dead = true;
                 var tower = w.Towers.FirstOrDefault(t => t.Id == projectile.FiredBy);
-                Damage(w, target, projectile.Damage, $"tower{projectile.FiredBy}");
-                if (tower is not null)
+                var applies = tower is not null ? Towers.All[tower.DefId].Applies : null;
+
+                if (projectile.SplashRadius > 0f)
                 {
-                    tower.DamageDealt += projectile.Damage;
-                    if (target.Dead) tower.Kills++;
+                    foreach (var enemy in w.Enemies)
+                    {
+                        if (enemy.Dead) continue;
+                        float splashDist = enemy.Pos.DistanceTo(target.Pos);
+                        if (splashDist > projectile.SplashRadius) continue;
+
+                        float falloff = 1f - (1f - projectile.SplashFalloff)
+                            * (splashDist / projectile.SplashRadius);
+                        DealProjectileDamage(w, tower, projectile, enemy, projectile.Damage * falloff, applies);
+                    }
+                }
+                else
+                {
+                    DealProjectileDamage(w, tower, projectile, target, projectile.Damage, applies);
                 }
             }
             else
@@ -289,12 +782,23 @@ public static class Step
         }
     }
 
-    /// <summary>M0 stub — physical player ordnance (grenades etc.) arrives with M2+.</summary>
+    private static void DealProjectileDamage(
+        World w, Tower? tower, Projectile projectile, Enemy enemy, float amount, IReadOnlyList<string>? applies)
+    {
+        Damage(w, enemy, amount, $"tower{projectile.FiredBy}", projectile.Pos, applies, null);
+        if (tower is not null)
+        {
+            tower.DamageDealt += amount;
+            if (enemy.Dead) tower.Kills++;
+        }
+    }
+
+    /// <summary>M1 stub — physical player ordnance (grenades etc.) arrives with M2+.</summary>
     private static void StepPlayerOrdnance(World w)
     {
     }
 
-    /// <summary>M0 stub — split-on-death (Cluster) and death auras arrive with the roster.</summary>
+    /// <summary>M1 stub — split-on-death (Cluster) and death auras arrive with the roster.</summary>
     private static void ResolveDeaths(World w)
     {
     }
@@ -332,18 +836,88 @@ public static class Step
         }
     }
 
-    private static void Damage(World w, Enemy enemy, float amount, string source)
+    // =====================================================================
+    // Damage
+    // =====================================================================
+
+    private static void Damage(
+        World w, Enemy enemy, float amount, string source, Vec3 sourcePos,
+        IReadOnlyList<string>? applies, int? playerId)
     {
         if (enemy.Dead) return;
+
+        var def = Enemies.All[enemy.DefId];
+
+        // Directional armor (Aegis): reduced inside the front arc, amplified
+        // from directly behind. DoT/reactions pass sourcePos == enemy.Pos and
+        // skip the check.
+        var fromSource = enemy.Pos - sourcePos;
+        float sourceDist = fromSource.Length();
+        if (def.FrontArmorArcDegrees > 0f && sourceDist > 0.01f)
+        {
+            var toSource = fromSource * (-1f / sourceDist);
+            float dot = toSource.X * enemy.Facing.X + toSource.Y * enemy.Facing.Y + toSource.Z * enemy.Facing.Z;
+            float angleDegrees = MathF.Acos(System.Math.Clamp(dot, -1f, 1f)) * (180f / MathF.PI);
+
+            if (angleDegrees <= def.FrontArmorArcDegrees / 2f)
+                amount *= def.FrontArmorFactor;
+            else if (angleDegrees >= 150f)
+                amount *= def.RearWeakFactor;
+        }
+
+        // Vulnerability channel (mark).
+        ref var vulnerability = ref enemy.Statuses[(int)Channel.Vulnerability];
+        if (vulnerability.Active)
+            amount *= Statuses.All[vulnerability.StatusId!].DamageTakenFactor;
 
         enemy.Hp -= amount;
         w.Emit(new SimEvent.EnemyDamaged(enemy.Id, amount, source));
 
-        if (enemy.Hp <= 0f)
+        if (applies is not null)
+        {
+            foreach (var statusId in applies)
+            {
+                if (enemy.Dead) break;
+                ApplyStatus(w, enemy, statusId, source, playerId);
+            }
+        }
+
+        if (enemy.Hp <= 0f && !enemy.Dead)
         {
             enemy.Dead = true;
             w.Money += enemy.Bounty;
             w.Emit(new SimEvent.EnemyDied(enemy.Id, enemy.DefId, enemy.Bounty, source));
+            DropScrap(w, enemy, def, playerId);
         }
     }
+
+    /// <summary>Scrap split: a team share funds tower upgrades; the personal
+    /// share funds the killer's gunsmith. M1 simplification: personal share goes
+    /// to the killing player only (participation tracking arrives at M2); tower
+    /// kills bank everything to the team.</summary>
+    private static void DropScrap(World w, Enemy enemy, EnemyDef def, int? killerPlayerId)
+    {
+        if (def.ScrapYield.Count == 0) return;
+
+        var parts = new List<string>();
+        foreach (var (type, amount) in def.ScrapYield)
+        {
+            int teamShare = killerPlayerId is null
+                ? amount
+                : (int)MathF.Round(amount * Balance.ScrapTeamShare, MidpointRounding.AwayFromZero);
+            int personal = amount - teamShare;
+
+            if (teamShare > 0)
+                w.TeamScrap[type] = w.TeamScrap.GetValueOrDefault(type, 0) + teamShare;
+            if (personal > 0 && killerPlayerId is int pid && w.Players.TryGetValue(pid, out var killer))
+                killer.Scrap[type] = killer.Scrap.GetValueOrDefault(type, 0) + personal;
+
+            parts.Add($"{type}:{amount}");
+        }
+
+        w.Emit(new SimEvent.ScrapDropped(enemy.Id, string.Join(",", parts)));
+    }
+
+    private static int? SourcePlayerId(string source) =>
+        source.StartsWith("player") && int.TryParse(source.AsSpan(6), out int id) ? id : null;
 }
