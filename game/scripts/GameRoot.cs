@@ -178,6 +178,15 @@ public partial class GameRoot : Node3D
     /// walks the tables directly, so a def whose view construction throws — or
     /// a model whose name doesn't match what the code asks for — fails CI
     /// instead of failing in front of a player.</summary>
+    /// <summary>Headless runs use the dummy audio driver, where the bus list can
+    /// be empty — touching bus 0 unconditionally is a crash waiting for a CI
+    /// machine without a sound device.</summary>
+    private static void SetMasterVolume(float volume)
+    {
+        if (AudioServer.GetBusCount() < 1) return;
+        AudioServer.SetBusVolumeDb(0, volume <= 0.001f ? -80f : Mathf.LinearToDb(volume));
+    }
+
     private void CaptureShot()
     {
         string path = _shotPath!;
@@ -426,8 +435,7 @@ public partial class GameRoot : Node3D
         SpawnLocalPlayer();
         _markers.ShowDamageNumbers = _profile.ShowDamageNumbers;
         _hud.Scale = new Vector2(_profile.HudScale, _profile.HudScale);
-        AudioServer.SetBusVolumeDb(0, _profile.MasterVolume <= 0.001f
-            ? -80f : Mathf.LinearToDb(_profile.MasterVolume));
+        SetMasterVolume(_profile.MasterVolume);
     }
 
     private void SpawnLocalPlayer()
@@ -2069,8 +2077,7 @@ public partial class GameRoot : Node3D
         _screens.OnFieldOfView = degrees => _player?.SetFieldOfView(degrees);
         _screens.OnSensitivity = scale => { if (_player is not null) _player.SensitivityScale = scale; };
         _screens.OnHudScale = scale => _hud.Scale = new Vector2(scale, scale);
-        _screens.OnVolume = volume => AudioServer.SetBusVolumeDb(0,
-            volume <= 0.001f ? -80f : Mathf.LinearToDb(volume));
+        _screens.OnVolume = SetMasterVolume;
 
         _screens.OnToggleDamageNumbers = on =>
         {
