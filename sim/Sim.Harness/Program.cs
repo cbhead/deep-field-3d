@@ -545,18 +545,19 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
                          : "inert: " + string.Join(", ", inert));
 }
 
-// --- Gate 30 (M3): no condition may blind a tower outright.
+// --- Gate 30 (M3): no condition may blind a whole route's defence.
 //
-// Conditions are specified as factors over the swept baseline, and the whole
-// value of that rule is that weather can never be the thing that decides a
-// wave. Geometry can break the rule without breaking the formula: a tower
-// sitting at the edge of its reach does not lose margin to a range factor, it
-// loses the route. Fog at the design's 0.7 took switchyard from 28 sockets
-// covering the ground route to 17 — eleven towers switched off, not reduced.
+// Conditions are specified as factors over the swept baseline, and the value
+// of that rule is that weather can never be the thing that decides a wave.
+// Geometry can break it without breaking the formula: a socket at the edge of
+// its reach does not lose margin to a range factor, it loses the route.
 //
-// This gate is why the shipped factor is 0.9. It is also what makes restoring
-// 0.7 safe once the maps give their sockets margin: fix the geometry and the
-// gate goes quiet on its own.
+// Honest note on what this gate did and did not do. It was written believing
+// it was the reason Fog could not run at the specced 0.7, and it was not — it
+// passed at 0.7 the whole time. The actual cause was a reference build placing
+// towers on a deck row 4 m too far back. This gate guards the map; it cannot
+// guard a build order, and mistaking one for the other cost a round of tuning
+// the wrong dial.
 {
     var offenders = new List<string>();
     foreach (var map in new[] { Maps.Foundry, Maps.Switchyard })

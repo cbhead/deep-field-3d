@@ -65,6 +65,13 @@ public static class Maps
                 new Vec3(36f, 9f, 4f),
             }),
         },
+        // The deck is deliberately three rows deep — a front lip (w4-w7) that
+        // overlooks the lane with reach to spare, a middle row (w1-w3), and a
+        // back row (w8/w9) that trades the lane for the air strand. That spread
+        // is the placement decision the deck exists to offer, so it survived
+        // the margin pass untouched: pulling every socket forward would have
+        // collapsed three choices into one.
+        //
         // Twelve sockets left exactly one defence to build, so every match
         // looked the same. The graph is now dense enough that placement is a
         // decision: both flanks of most legs are buildable, corners are

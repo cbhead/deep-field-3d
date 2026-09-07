@@ -39,8 +39,14 @@ public static class MatchRunner
         ["testlane"] = new[] { "lance:s2", "lance:s3", "lance:s1", "lance:s4" },
         ["foundry"] = new[]
         {
+            // Deck picks are the front lip (w5/w6), not the middle row. The
+            // rows are 4 m apart and both reach the lane in clear weather, so
+            // the old choice looked equivalent and measured worse: under Fog a
+            // middle-row lance stops reaching the lane entirely, and the floor
+            // died on Foundry's weather wave every time. The lip is also just
+            // where a player would stand.
             "lance:g2", "lance:g5", "skywatch:g4", "singularity:g3",
-            "nova:g1", "skywatch:w2", "lance:g6", "lance:w1",
+            "nova:g1", "skywatch:w6", "lance:g6", "lance:w5",
         },
         ["switchyard"] = new[]
         {

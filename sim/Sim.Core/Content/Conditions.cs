@@ -48,30 +48,33 @@ public static class Conditions
     /// its full range, and it is also the answer to the Shades that Night
     /// brings.
     ///
-    /// The range factor is 0.9, not the 0.7 the design called for, and the
-    /// reason is measured rather than felt. On switchyard, 28 of 30 sockets
-    /// reach the ground route at full range; at x0.7 only 17 do. Fog at the
-    /// specced number does not reduce eleven towers, it switches them off —
-    /// which is an absolute override wearing a factor's clothing, and the one
-    /// thing this framework is supposed to make impossible. The cliff showed up
-    /// in the sweep as a cliff: 0.85 loses the campaign, 0.9 clears it, with
-    /// nothing in between.
+    /// The range factor is the 0.7 design specced. It shipped at 0.9 for a
+    /// while on the belief that the maps could not take 0.7 — 28 of
+    /// switchyard's 30 sockets reach the ground route at full range and only
+    /// 17 do at 0.7 — and that reading was wrong about the cause. The maps were
+    /// fine. What could not take 0.7 was the harness's own reference build,
+    /// which had put two Foundry towers on the deck's middle row: 4 m behind
+    /// the front lip, reaching the lane in clear weather and not reaching it
+    /// under fog. The floor died on Foundry's weather wave every time, and the
+    /// number took the blame for the build order. Moving those two picks to the
+    /// lip let 0.7 ship, and the floor now clears all ten waves rather than
+    /// nine.
     ///
-    /// 0.9 is therefore a symptom fix. The real one is map geometry — sockets
-    /// placed with enough margin that losing a third of a radius costs coverage
-    /// instead of erasing it. Until that lands, the gate below holds the line.
+    /// The lesson is worth more than the number: a socket graph with a spread
+    /// of ranges is doing its job, and weather is what turns "these two sockets
+    /// are equivalent" into a decision. The deck stayed exactly as it was.
     ///
     /// Skywatch is exempt for a reason that is design rather than balance: fog
     /// lies low. Flyers are above it and so is the anti-air looking up at them.
-    /// This also removes the sharpest edge the gate found — the air lane is
-    /// covered by only seven sockets on switchyard, because it was deliberately
-    /// raised so the elevated tiers would own a stretch of it, and a lane with
-    /// no redundancy cannot survive any range factor at all.</summary>
+    /// The air lane needs that exemption more than most, being covered by only
+    /// seven sockets on switchyard — it was raised deliberately so the elevated
+    /// tiers would own a stretch, and a lane with no redundancy survives no
+    /// range factor at all.</summary>
     public static readonly ConditionDef Fog = new(
         Id: "fog",
         Name: "FOG",
         Effect: "Tower range reduced. Detectors see through it.",
-        TowerRangeFactor: 0.9f,
+        TowerRangeFactor: 0.7f,
         RangeExemptTowerIds: new[] { "detector", "skywatch" },
         AcquisitionDelaySeconds: 0f,
         AcquisitionDelayExemptsMarked: false,
