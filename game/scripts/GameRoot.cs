@@ -40,6 +40,12 @@ public partial class GameRoot : Node3D
     private bool _auditSockets;
     private bool _dumpAssets;
     private bool _dumpHits;
+    private List<string>? _aimReport;         // --shot aim: per-frame tracking samples
+    private string _aimReportPath = "";
+    private float _aimHeld;                   // seconds this turret has held a target
+    private float _aimWorst;                  // worst |angle| between a turret and its target
+    private int _aimSettled;                  // samples taken after the turn settled
+    private float _aimElapsed;                // seconds the probe has been running
     private string? _shotPath;
     private string _shotView = "eye";
     private int _shotCountdown;
@@ -250,6 +256,42 @@ public partial class GameRoot : Node3D
             RebuildView();
             _screens.ShowEnd(_view, victory: true, 140, me.FactionId,
                 new Dictionary<int, int>(), 41);
+            return;
+        }
+
+        // Aim check: build a lance on the socket nearest the route, start the
+        // wave, and let it run while the probe reports how far the turret's
+        // forward is from the enemy it picked. Zero means it points at what it
+        // is shooting; 180 was the bug.
+        if (_shotView == "aim" && _world is not null)
+        {
+            // Nearest to any waypoint of the walked ground route, not to one
+            // route's midpoint: the first pick sat 28 m off the lane the
+            // enemies actually took, so nothing ever entered the lance's range.
+            string best = _map.Sockets[0].Id; float bestD = float.MaxValue;
+            foreach (var s in _map.Sockets)
+            {
+                if (s.Tag is not (SocketTag.Ground or SocketTag.Wall)) continue;
+                foreach (var route in _map.Routes)
+                {
+                    if (route.Layer != EnemyLayer.Ground) continue;
+                    foreach (var w in route.Waypoints)
+                    {
+                        float d = s.Pos.DistanceTo(w);
+                        if (d < bestD) { bestD = d; best = s.Id; }
+                    }
+                }
+            }
+            // Submit and let the normal loop tick and drain. Advancing the sim
+            // by hand here consumed the TowerPlaced event before the view layer
+            // saw it, so the tower existed with nothing to turn.
+            Submit(new Command.PlaceTower(LocalPlayerId, "lance", best));
+            Submit(new Command.StartWave(LocalPlayerId));
+            // Godot's stdout is buffered and mono's headless teardown aborts
+            // before it flushes, so the verdict goes to a file or it is lost.
+            _aimReportPath = path;
+            _aimReport = new List<string> { $"lance on {best}, {bestD:0.0} m from the route" };
+            _shotView = "eye";
             return;
         }
 
@@ -1253,7 +1295,7 @@ public partial class GameRoot : Node3D
             view.Position = ToGd(target);
             // Snapshots carry the yaw the server computed, so a client sees the
             // same turn rather than a differently-oriented crowd.
-            TurnTowards(view, snap.Yaw, delta);
+            TurnTowards(view, GodotYaw(snap.Yaw), delta);
             TintEnemy(view, snap.HpFraction, snap.StatusBits);
 
             // Snapshots carry no shield channel of their own; a Warden that
@@ -1397,7 +1439,7 @@ public partial class GameRoot : Node3D
     private static void FaceAlong(Node3D view, Vec3 facing, double delta)
     {
         if (facing.X * facing.X + facing.Z * facing.Z < 1e-4f) return;
-        TurnTowards(view, Mathf.Atan2(facing.X, facing.Z), delta);
+        TurnTowards(view, GodotYaw(Mathf.Atan2(facing.X, facing.Z)), delta);
     }
 
     private static void TurnTowards(Node3D view, float yaw, double delta)
@@ -1412,6 +1454,14 @@ public partial class GameRoot : Node3D
 
     private const float TurnRateRadians = 9f;
 
+    /// <summary>The sim and the wire both express a heading as atan2(x, z).
+    /// Godot models face -Z, so that heading is half a turn from the yaw a node
+    /// actually needs — towers tracked correctly and pointed their backs at
+    /// what they were shooting. Converted here, at the one place both the local
+    /// and the snapshot paths pass through, rather than by changing the wire
+    /// format and bumping the protocol over a rendering convention.</summary>
+    private static float GodotYaw(float heading) => heading + Mathf.Pi;
+
     /// <summary>Towers track what they are shooting at. A turret frozen on its
     /// build angle while firing reads as broken, and the swing is the only cue
     /// a player has for what a tower has decided to prioritise.
@@ -1423,6 +1473,27 @@ public partial class GameRoot : Node3D
     private void AimTowers(double delta)
     {
         if (_world is null) return;
+        // The probe stops itself. A verification run that can outlive the thing
+        // it is verifying is how eight Godot processes once ran for a day.
+        if (_aimReport is not null)
+        {
+            float was = _aimElapsed;
+            _aimElapsed += (float)delta;
+            if (Mathf.FloorToInt(_aimElapsed) > Mathf.FloorToInt(was))
+            {
+                float near = float.MaxValue;
+                foreach (var t in _world.Towers)
+                    foreach (var e in _world.Enemies)
+                        near = Mathf.Min(near, t.Pos.DistanceTo(e.Pos));
+                _aimReport.Add($"{_aimElapsed:0}s wave {_world.WaveIndex} {_world.Phase} " +
+                               $"enemies={_world.Enemies.Count} towers={_world.Towers.Count} " +
+                               $"views={_towerViews.Count} nearest={near:0.0}m");
+                // A wave that has not started yields no target and the probe
+                // reports nothing rather than an answer. Keep asking.
+                if (_world.Enemies.Count == 0) Submit(new Command.StartWave(LocalPlayerId));
+            }
+            if (_aimElapsed > 90f) { FinishAimProbe(); return; }
+        }
 
         foreach (var tower in _world.Towers)
         {
@@ -1442,11 +1513,46 @@ public partial class GameRoot : Node3D
                 best = enemy;
             }
             if (best is null) continue;               // hold the last heading
+            if (_aimReport is not null)
+            {
+                var fwd = (-view.GlobalTransform.Basis.Z) with { Y = 0 };
+                var want = (ToGd(best.Pos) - ToGd(tower.Pos)) with { Y = 0 };
+                if (fwd.Length() > 0.01f && want.Length() > 0.01f)
+                {
+                    float err = Mathf.Abs(Mathf.RadToDeg(
+                        fwd.Normalized().SignedAngleTo(want.Normalized(), Vector3.Up)));
+                    // The turn is eased, so the first frames on a new target are
+                    // legitimately off. Only samples taken after it has had time
+                    // to settle say whether it faces what it is shooting.
+                    _aimHeld += (float)delta;
+                    _aimReport.Add($"{_aimHeld:0.00}s {tower.DefId} -> {best.DefId} error={err:0.0} deg");
+                    if (_aimHeld > 0.5f) { _aimWorst = Mathf.Max(_aimWorst, err); _aimSettled++; }
+                }
+                if (_aimSettled >= 200) { FinishAimProbe(); return; }
+            }
 
             var to = best.Pos - tower.Pos;
             if (to.X * to.X + to.Z * to.Z < 1e-4f) continue;
-            TurnTowards(view, Mathf.Atan2(to.X, to.Z), delta);
+            TurnTowards(view, GodotYaw(Mathf.Atan2(to.X, to.Z)), delta);
         }
+    }
+
+    /// <summary>Writes the aim probe's samples and its verdict, then quits with
+    /// a failing status if any settled sample was more than five degrees off.
+    /// Five is generous — the eased turn overshoots slightly — but it is two
+    /// orders of magnitude away from the 180 this was written to catch.</summary>
+    private void FinishAimProbe()
+    {
+        var report = _aimReport!;
+        _aimReport = null;
+        bool aimed = _aimSettled > 0 && _aimWorst < 5f;
+        report.Add($"worst error once settled: {_aimWorst:0.0} deg over {_aimSettled} samples");
+        report.Add(_aimSettled == 0
+            ? "INCONCLUSIVE: no tower ever held a target long enough to measure"
+            : aimed ? "PASS: the turret faces what it is shooting"
+                    : "FAIL: the turret is tracking but pointed away");
+        System.IO.File.WriteAllLines(_aimReportPath, report);
+        GetTree().Quit(aimed ? 0 : 1);
     }
 
     private static void UpdateEnemyStates(Node3D view, bool burrowed, float shieldFraction)

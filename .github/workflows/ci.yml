@@ -75,6 +75,18 @@ jobs:
           grep -q "\[probe\] gunsmith slot click works" probe.log
           ! grep -qiE "^ERROR|SCRIPT ERROR" probe.log
 
+      # Turrets tracked correctly and pointed the wrong way for a whole
+      # milestone, because "it swings to follow" reads as working. This
+      # measures the angle rather than trusting a screenshot. The verdict goes
+      # to a file: Godot buffers stdout and mono's headless teardown aborts
+      # before it flushes, so prints from a run like this are routinely lost.
+      - name: Aim probe (turrets face what they shoot)
+        run: |
+          godot --headless --path game --quit-after 7200 -- \
+            --shot foundry /tmp/aim.txt aim > aim.log 2>&1 || true
+          tail -5 /tmp/aim.txt
+          grep -q "^PASS" /tmp/aim.txt
+
       # A real solo match on each map: drives the sim, every UI surface, and
       # the view/event plumbing that only runs once a world exists.
       - name: Solo match smoke (every sector)
