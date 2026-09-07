@@ -124,6 +124,19 @@ public sealed class PlayerState
     public float RespawnTimer;
     public float RegenDelay;
     public float WeaponCooldown;
+
+    /// <summary>Rounds left in the magazine, per weapon. The reserve is
+    /// unlimited — a player is never disarmed — but the magazine is not, so
+    /// firing has a rhythm instead of being a held button. Absent means full.</summary>
+    public Dictionary<string, int> Magazine = new();
+
+    /// <summary>Seconds left on a reload. Firing is refused while this runs,
+    /// which is the cost that makes the magazine mean something.</summary>
+    public float ReloadTimer;
+    public string ReloadingWeapon = "";
+
+    public int RoundsIn(string weaponId) =>
+        Magazine.TryGetValue(weaponId, out int n) ? n : Weapons.All[weaponId].MagazineSize;
     public float AbilityCooldown;
     public string WeaponId = "sidearm";
     public HashSet<string> OwnedWeapons = new() { "sidearm" };

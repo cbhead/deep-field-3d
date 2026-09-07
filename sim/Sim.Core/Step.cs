@@ -53,6 +53,10 @@ public static class Step
                     break;
                 case Command.PlayerHit hit: ApplyPlayerHit(w, hit); break;
                 case Command.PlayerMelee swing: ApplyPlayerMelee(w, swing); break;
+                case Command.Reload reload:
+                    if (w.Players.TryGetValue(reload.PlayerId, out var reloader) && reloader.Alive)
+                        BeginReload(w, reloader, reloader.WeaponId);
+                    break;
                 case Command.BuyMelee buyMelee: ApplyBuyMelee(w, buyMelee); break;
                 case Command.CraftMeleeAttachment craftMelee: ApplyCraftMeleeAttachment(w, craftMelee); break;
                 case Command.UpgradeMelee upMelee: ApplyUpgradeMelee(w, upMelee); break;
@@ -303,6 +307,18 @@ public static class Step
         if (!Weapons.All.TryGetValue(hit.WeaponId, out var weapon)) return;
         if (!player.OwnedWeapons.Contains(hit.WeaponId)) return;
         if (player.WeaponCooldown > 0f) return;
+        if (player.ReloadTimer > 0f) return;              // hands are busy
+
+        // Empty magazine: start the reload rather than firing. Auto-reloading
+        // on the dry click is the forgiving half of this — the punishing half
+        // is that it takes real seconds, during which the lane keeps walking.
+        int rounds = player.RoundsIn(weapon.Id);
+        if (rounds <= 0)
+        {
+            BeginReload(w, player, weapon.Id);
+            return;
+        }
+        player.Magazine[weapon.Id] = rounds - 1;
 
         var enemy = w.Enemies.FirstOrDefault(e => e.Id == hit.EnemyId && !e.Dead);
         if (enemy is null || enemy.Burrowed) return;
@@ -465,6 +481,17 @@ public static class Step
         w.Money -= cost;
         build.MasteryLevel++;
         w.Emit(new SimEvent.MeleeMastery(up.PlayerId, def.Id, build.MasteryLevel));
+    }
+
+    /// <summary>Starts a reload if one is worth starting.</summary>
+    private static void BeginReload(World w, PlayerState player, string weaponId)
+    {
+        if (player.ReloadTimer > 0f) return;
+        var def = Weapons.All[weaponId];
+        if (player.RoundsIn(weaponId) >= def.MagazineSize) return;   // already full
+        player.ReloadTimer = def.ReloadSeconds;
+        player.ReloadingWeapon = weaponId;
+        w.Emit(new SimEvent.ReloadStarted(player.Id, weaponId, def.ReloadSeconds));
     }
 
     private static void ApplyBuyWeapon(World w, Command.BuyWeapon buy)
@@ -944,6 +971,19 @@ public static class Step
         {
             player.WeaponCooldown = MathF.Max(0f, player.WeaponCooldown - Balance.Dt);
             player.MeleeCooldown = MathF.Max(0f, player.MeleeCooldown - Balance.Dt);
+
+            // Reload ticks down wherever the player is; finishing it refills the
+            // magazine from the unlimited reserve.
+            if (player.ReloadTimer > 0f)
+            {
+                player.ReloadTimer = MathF.Max(0f, player.ReloadTimer - Balance.Dt);
+                if (player.ReloadTimer <= 0f && player.ReloadingWeapon is { Length: > 0 } done)
+                {
+                    player.Magazine[done] = Weapons.All[done].MagazineSize;
+                    player.ReloadingWeapon = "";
+                    w.Emit(new SimEvent.Reloaded(player.Id, done));
+                }
+            }
             player.AbilityCooldown = MathF.Max(0f, player.AbilityCooldown - Balance.Dt);
 
             if (player.RespawnTimer > 0f)

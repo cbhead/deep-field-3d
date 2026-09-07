@@ -713,6 +713,10 @@ public partial class GameRoot : Node3D
     /// <summary>The wrench until someone buys otherwise, and never empty —
     /// which is the whole point of it: a player with no money and no scrap is
     /// still armed.</summary>
+    /// <summary>The local player's faction, for anything that needs to pick a
+    /// per-faction asset — the first-person hands, today.</summary>
+    public string LocalFactionId => _factionId;
+
     public string CurrentMeleeId()
     {
         if (Mode != RunMode.Client && _world is not null
