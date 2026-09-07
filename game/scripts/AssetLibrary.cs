@@ -47,6 +47,11 @@ public static class AssetLibrary
     };
 
     private static readonly Dictionary<string, PackedScene?> Cache = new();
+
+    /// <summary>See UiTheme.ReleaseCaches: static Godot resources must be let
+    /// go before the SceneTree tears down, or mono aborts at shutdown.</summary>
+    public static void ReleaseCaches() => Cache.Clear();
+
     private static readonly SortedSet<string> RequestedNames = new();
     private static readonly SortedSet<string> ResolvedNames = new();
 

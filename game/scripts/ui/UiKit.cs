@@ -149,6 +149,11 @@ public static class Kit
 {
     private static readonly Dictionary<string, FontVariation> Tracked = new();
 
+    /// <summary>See UiTheme.ReleaseCaches: static Godot resources must be let
+    /// go before the SceneTree tears down, or mono aborts at shutdown.</summary>
+    public static void ReleaseCaches() => Tracked.Clear();
+
+
     /// <summary>Design's labels are widely tracked all-caps micro type, which
     /// Godot expresses as glyph spacing on a font variation.</summary>
     public static FontVariation? TrackedDisplay(float spacing)

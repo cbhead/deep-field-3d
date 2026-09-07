@@ -108,6 +108,13 @@ public static class UiTheme
 
     /// <summary>Design's icon if present, else a generated labeled chip.
     /// Ids match docs/DESIGN-BRIEF.md §3.8 (e.g. "tower_lance", "scrap_flux").</summary>
+    /// <summary>Drop every cached Godot resource. Static caches outlive the
+    /// SceneTree, so at shutdown the mono bindings are still populated and the
+    /// engine aborts with "script_bindings.is_empty()" — after the match has
+    /// already finished successfully, which is why it read as flaky rather than
+    /// as a bug. Called from GameRoot._ExitTree.</summary>
+    public static void ReleaseCaches() => IconCache.Clear();
+
     public static Texture2D Icon(string id, Color? tint = null)
     {
         // Same lower-casing rule as AssetLibrary: design's filenames are all

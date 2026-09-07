@@ -148,6 +148,11 @@ public static class Tokens
     // only the weight and size roles survive.
     private static readonly Dictionary<string, FontFile?> FontCache = new();
 
+    /// <summary>See UiTheme.ReleaseCaches: static Godot resources must be let
+    /// go before the SceneTree tears down, or mono aborts at shutdown.</summary>
+    public static void ReleaseCaches() => FontCache.Clear();
+
+
     private static FontFile? Load(string file)
     {
         if (FontCache.TryGetValue(file, out var cached)) return cached;

@@ -89,9 +89,28 @@ public partial class GameRoot : Node3D
         // --dump-assets makes a played match report everything it asked for,
         // which is the only way to see the map kit: the audit walks content
         // tables and never builds a level.
-        if (!_dumpAssets) return;
-        foreach (string name in AssetLibrary.Requested) GD.Print($"[asset-audit] requested {name}");
-        foreach (string id in UiTheme.RequestedIcons) GD.Print($"[asset-audit] requested icon_{id}");
+        if (_dumpAssets)
+        {
+            foreach (string name in AssetLibrary.Requested) GD.Print($"[asset-audit] requested {name}");
+            foreach (string id in UiTheme.RequestedIcons) GD.Print($"[asset-audit] requested icon_{id}");
+        }
+
+        // Let the cached Godot resources go before the runtime does. Godot
+        // tears down the SceneTree ahead of mono, and a static cache holding a
+        // Texture2D or a FontFile keeps its binding alive past that point — at
+        // which the engine aborts with "script_bindings.is_empty()" and spews
+        // leaked-reference errors. It fires after the match has already
+        // finished successfully, so CI read it as flake rather than as a
+        // teardown bug, and it got steadily worse as the UI grew because more
+        // of the design system ended up cached.
+        //
+        // This runs unconditionally, which is why the dump above is now a
+        // block rather than an early return: a diagnostic flag must not decide
+        // whether the engine shuts down cleanly.
+        UiTheme.ReleaseCaches();
+        Tokens.ReleaseCaches();
+        Kit.ReleaseCaches();
+        AssetLibrary.ReleaseCaches();
     }
 
     public override void _Ready()
