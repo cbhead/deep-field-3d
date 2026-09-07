@@ -331,6 +331,15 @@ public partial class ArmoryScreen : Control
             var captured = slot;
             pick.Pressed += () => { _slot = captured; Refresh(_view); };
             well.AddChild(pick);
+
+            // Give the column a real rect. It is positioned by hand inside a
+            // plain Control, which lays nothing out, so without this it keeps
+            // its default zero size — and Godot draws children outside a
+            // zero-sized parent quite happily while giving them no hit area.
+            // Every slot on this bench looked correct and could not be clicked,
+            // which is the worst shape a bug can take: the screen is not
+            // broken-looking, it is inert.
+            column.ResetSize();
         }
     }
 
