@@ -308,7 +308,20 @@ public partial class GameRoot : Node3D
         // A UI probe runs before the capture, so --shot armory doubles as the
         // only automated check that this screen is operable rather than merely
         // drawn. CI greps for ERROR, so an inert control fails the build.
-        if (_dumpHits && !_armory.ProbeClick()) _armory.DumpHitAreas();
+        if (_dumpHits)
+        {
+            // Everything sitting above the armory in the tree, which is where a
+            // click gets eaten before it ever reaches the screen.
+            void WalkTop(Node n, int d)
+            {
+                if (n is Control c && c.IsVisibleInTree() && c.MouseFilter != Control.MouseFilterEnum.Ignore)
+                    GD.Print($"[layer] {new string('.', d)}{n.Name} ({n.GetType().Name}) " +
+                        $"rect={c.GetGlobalRect()} filter={c.MouseFilter} idx={n.GetIndex()}");
+                if (d < 3) foreach (var ch in n.GetChildren()) WalkTop(ch, d + 1);
+            }
+            WalkTop(GetTree().Root, 0);
+            if (!_armory.ProbeClick()) _armory.DumpHitAreas();
+        }
         var image = GetViewport().GetTexture().GetImage();
         image.SavePng(path);
         GD.Print($"[shot] wrote {path}  ({image.GetWidth()}x{image.GetHeight()})");

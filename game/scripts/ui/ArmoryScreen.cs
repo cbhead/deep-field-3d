@@ -32,6 +32,25 @@ public partial class ArmoryScreen : Control
     private VBoxContainer _platformRail = null!;
     private Control _bench = null!;
     private bool _bought;
+    private string _signature = "";
+
+    /// <summary>Everything this screen renders, flattened. Cheap to build and
+    /// compared before touching a single node.</summary>
+    private string Signature(GameView view, PlayerView local)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append(view.Money).Append('|').Append(local.WeaponId).Append('|')
+          .Append(_weaponId).Append('|').Append(_slot).Append('|').Append(_notice).Append('|');
+        foreach (string owned in local.OwnedWeapons.OrderBy(x => x, System.StringComparer.Ordinal))
+            sb.Append(owned).Append(',');
+        sb.Append('|');
+        foreach (var (slot, id) in local.AttachmentsFor(_weaponId).OrderBy(kv => kv.Key))
+            sb.Append(slot).Append('=').Append(id).Append(',');
+        sb.Append('|').Append(local.AmmoFor(_weaponId)).Append('|');
+        foreach (ScrapType type in System.Enum.GetValues<ScrapType>())
+            sb.Append(view.PersonalScrapOf(type)).Append(',');
+        return sb.ToString();
+    }
     private HFlowContainer _ammoRow = null!;
     private KitPanel _statPanel = null!;
     private KitPanel _recipePanel = null!;
@@ -230,6 +249,23 @@ public partial class ArmoryScreen : Control
 
         _economyLabel.Text = view.Money.ToString();
         _noticeLabel.Text = _notice;
+
+        // Rebuild only when something it draws has actually changed.
+        //
+        // This ran every frame, and rebuilding means QueueFree on every button
+        // and a fresh one in its place. A Godot Button only emits Pressed if the
+        // same instance saw both the press and the release, so any click that
+        // spanned a frame boundary — which is nearly all of them — landed on a
+        // node that no longer existed. The screen was not missing handlers or
+        // hit areas; it was being destroyed underneath the cursor sixty times a
+        // second.
+        //
+        // It also explains why a synthesised click passed while a real one
+        // failed: PushInput delivers down and up inside one frame, so the probe
+        // was the only clicker fast enough to beat the rebuild.
+        string signature = Signature(view, local);
+        if (signature == _signature) return;
+        _signature = signature;
 
         RebuildPlatforms(local);
         LayoutBench();
