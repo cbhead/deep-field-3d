@@ -427,8 +427,17 @@ public partial class MatchScreens : CanvasLayer
         // truth outright — pausing does not stop anyone else's match.
         _pausePanel = new KitPanel("Paused · match continues", Tokens.Brass500);
         _pausePanel.SetAnchorsPreset(Control.LayoutPreset.Center);
-        _pausePanel.Position = new Vector2(-500, -320);
-        _pausePanel.CustomMinimumSize = new Vector2(1000, 620);
+        // Sized to its content, but stated rather than derived. Letting the
+        // height go to zero and re-centring on Resized looked cleaner and put
+        // the modal off the top-left corner of the screen: with no minimum the
+        // panel takes a size from its parent before the settings pane is
+        // filled, and half of that wrong size is a wrong offset. A dialog whose
+        // contents are known at build time can just say how big it is.
+        //
+        // 430 is the four sliders, four toggles and the button rail. The 620 it
+        // used to claim left a quarter of the panel empty.
+        _pausePanel.Position = new Vector2(-500, -215);
+        _pausePanel.CustomMinimumSize = new Vector2(1000, 430);
         _pause.AddChild(_pausePanel);
 
         var columns = Kit.Row(Tokens.Space8);
@@ -574,7 +583,13 @@ public partial class MatchScreens : CanvasLayer
 
         var title = Kit.Col(Tokens.Space2);
         title.Alignment = BoxContainer.AlignmentMode.Center;
-        title.AddChild(Kit.Label("how to play", Tokens.TextAccent));
+        // Centred like the headline under it. A Label fills its container and
+        // draws left unless told otherwise, so this one sat hard against x=0
+        // with the tracking pushing its first glyph off the screen edge — the
+        // column's Center alignment governs the stack, not the text inside it.
+        var kicker = Kit.Label("how to play", Tokens.TextAccent);
+        kicker.HorizontalAlignment = HorizontalAlignment.Center;
+        title.AddChild(kicker);
         var headline = Kit.Title("Build. Shoot. React.", Tokens.SizeDisplayLg);
         headline.HorizontalAlignment = HorizontalAlignment.Center;
         title.AddChild(headline);
@@ -589,7 +604,14 @@ public partial class MatchScreens : CanvasLayer
             cardsMargin.AddThemeConstantOverride($"margin_{side}", Tokens.Space12);
         frame.AddChild(cardsMargin);
 
+        // Content-height cards, centred in the band between the title and the
+        // Back button. The lobby and sector cards grow instead, because their
+        // picture is a hero portrait and a route diagram — things that are
+        // better bigger. Three fixed-size icons are not, and expanding the well
+        // to fit the screen just traded a gap under each card for a huge empty
+        // box inside it.
         var cards = Kit.Row(Tokens.Space7);
+        cards.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
         cardsMargin.AddChild(cards);
 
         var steps = new (string Key, string Title, string Body, string[] Icons)[]
