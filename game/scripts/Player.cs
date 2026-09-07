@@ -34,6 +34,37 @@ public partial class Player : CharacterBody3D
     private float _pitch;
     private double _fireCooldown;
     private double _meleeCooldown;
+    private bool _triggerHeld;
+    private Node3D? _viewModel;
+    private string _viewModelFor = "";
+
+    /// <summary>The gun in your hands. Design ships weapon_&lt;id&gt;_vm.glb and
+    /// hands_&lt;faction&gt;.glb and nothing had ever instanced either, so the
+    /// first-person view was a floating crosshair — you could not see what you
+    /// were holding, which is most of what a shooter's feel is.
+    ///
+    /// Parented to the camera at a fixed offset rather than framed by one: a
+    /// viewmodel is authored to sit exactly here, which is why this needs none
+    /// of the bounds-fitting the gunsmith bench does.</summary>
+    private void RefreshViewModel(string weaponId, string factionId)
+    {
+        if (_viewModelFor == weaponId && GodotObject.IsInstanceValid(_viewModel)) return;
+        if (GodotObject.IsInstanceValid(_viewModel)) _viewModel!.QueueFree();
+        _viewModelFor = weaponId;
+
+        var rig = new Node3D { Position = new Vector3(0.24f, -0.20f, -0.5f) };
+        var gun = AssetLibrary.TryInstantiate($"weapon_{weaponId}_vm");
+        if (gun is not null) rig.AddChild(gun);
+
+        var hands = AssetLibrary.TryInstantiate($"hands_{factionId}")
+                    ?? AssetLibrary.TryInstantiate("hands_firstperson");
+        if (hands is not null) rig.AddChild(hands);
+
+        if (gun is null && hands is null) { _viewModel = null; return; }
+
+        _viewModel = rig;
+        _camera.AddChild(rig);
+    }
 
     private bool _onLadder;
     private Vector3? _zipTarget;
@@ -101,6 +132,14 @@ public partial class Player : CharacterBody3D
             case Key.Tab: _root.ToggleArmory(); break;
             case Key.F: _root.Submit(new Command.StartWave(_root.LocalPlayerId)); break;
             case Key.Q: UseAbility(); break;
+            // R is contextual: it revives when somebody needs reviving and
+            // reloads otherwise. Reload wants R — it is where every hand
+            // already expects it — and revive was there first, so the two share
+            // it on the only rule that never guesses wrong: a downed teammate
+            // in range is always the more urgent of the two.
+            case Key.R when _root.NearestDownedPlayer(GlobalPosition, Balance.ReviveRangeMeters) < 0:
+                _root.Submit(new Command.Reload(_root.LocalPlayerId));
+                break;
             case Key.F9: _root.SaveGame(); break;
             case Key.F10: _root.LoadGame(); break;
 
@@ -193,16 +232,31 @@ public partial class Player : CharacterBody3D
         Velocity = velocity;
         MoveAndSlide();
 
+        RefreshViewModel(_root.CurrentWeaponId(), _root.LocalFactionId);
+
         // Fire: blocked while a menu owns the mouse or a build surface is open.
         _fireCooldown -= delta;
         if (!uiOwnsInput && !_root.WheelOpen && !_root.UpgradeOpen
             && Input.MouseMode == Input.MouseModeEnum.Captured
-            && Input.IsMouseButtonPressed(MouseButton.Left)
             && _fireCooldown <= 0)
         {
             var weapon = Weapons.All[_root.CurrentWeaponId()];
-            _fireCooldown = 1.0 / weapon.ShotsPerSecond;
-            Fire(weapon);
+            bool held = Input.IsMouseButtonPressed(MouseButton.Left);
+            // Semi-automatic weapons want a click each. Holding the button in
+            // front of the lane should not be a strategy, and for a pistol it
+            // was the strongest one available.
+            bool wants = weapon.Automatic ? held : (held && !_triggerHeld);
+            _triggerHeld = held;
+
+            if (wants)
+            {
+                _fireCooldown = 1.0 / weapon.ShotsPerSecond;
+                Fire(weapon);
+            }
+        }
+        else if (Input.MouseMode == Input.MouseModeEnum.Captured)
+        {
+            _triggerHeld = Input.IsMouseButtonPressed(MouseButton.Left);
         }
 
         // Melee on right mouse. The server resolves the arc from the aim

@@ -474,6 +474,7 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
         new Command.Revive(1, 2),
         new Command.CraftAttachment(1, "rifle", "longBarrel"),
         new Command.SelectAmmo(1, "rifle", "ap"),
+        new Command.Reload(1),
         new Command.PlayerMelee(1, new Vec3(3f, 0f, 4f)),
         new Command.BuyMelee(1, "maul"),
         new Command.CraftMeleeAttachment(1, "maul", "cryoCore"),

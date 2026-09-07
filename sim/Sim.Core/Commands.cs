@@ -52,6 +52,11 @@ public abstract record Command
     /// <summary>Spend personal scrap on the next mastery level for a platform.</summary>
     public sealed record UpgradeMelee(int PlayerId, string MeleeId) : Command;
 
+    /// <summary>Reload the held weapon. Fired on a dry trigger automatically,
+    /// and bound to a key so a player can top up before a wave rather than
+    /// discovering the magazine is short halfway through one.</summary>
+    public sealed record Reload(int PlayerId) : Command;
+
     /// <summary>Buy a weapon at the armory (money) and/or switch to an owned one.</summary>
     public sealed record BuyWeapon(int PlayerId, string WeaponId) : Command;
 

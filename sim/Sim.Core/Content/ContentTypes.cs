@@ -99,7 +99,16 @@ public sealed record WeaponDef(
     float Damage,
     float ShotsPerSecond,
     float RangeMeters,
-    IReadOnlyList<string> Applies);
+    IReadOnlyList<string> Applies,
+    // Ammo is a magazine, not a pool: the reserve is unlimited so nobody is
+    // ever disarmed, but a magazine runs dry and refilling it costs seconds you
+    // do not have. That is what stops holding the trigger in front of the lane
+    // from being a strategy.
+    int MagazineSize = 12,
+    float ReloadSeconds = 1.6f,
+    // Semi-automatic weapons fire once per click. A pistol you can hold down is
+    // a worse pistol than one you cannot.
+    bool Automatic = true);
 
 public enum SocketTag
 {
