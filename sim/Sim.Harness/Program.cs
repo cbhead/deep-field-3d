@@ -450,6 +450,207 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
         $"apCrafted {apCrafted}, reachable {reachable}");
 }
 
+// --- Gate 33b: every command survives the wire.
+//
+// Commands are encoded to text and parsed back by hand, in two switch
+// statements that have to be kept in step by memory. Miss the decode half and
+// the command does not error — it parses to null and is dropped, so the action
+// simply never happens for network clients while working perfectly in solo.
+// Melee added four verbs at once, which is exactly when that goes wrong.
+{
+    var samples = new Command[]
+    {
+        new Command.Join(1, "p", "forge"),
+        new Command.Leave(1),
+        new Command.PlayerSync(1, new Vec3(1.5f, 2f, -3.25f)),
+        new Command.PlaceTower(1, "lance", "g1"),
+        new Command.SellTower(1, 7),
+        new Command.UpgradeTower(1, 7, 2),
+        new Command.StartWave(1),
+        new Command.PlayerHit(1, 42, "rifle"),
+        new Command.BuyWeapon(1, "rifle"),
+        new Command.SelectWeapon(1, "rifle"),
+        new Command.UseAbility(1, new Vec3(0f, 1f, 2f)),
+        new Command.Revive(1, 2),
+        new Command.CraftAttachment(1, "rifle", "longBarrel"),
+        new Command.SelectAmmo(1, "rifle", "ap"),
+        new Command.PlayerMelee(1, new Vec3(3f, 0f, 4f)),
+        new Command.BuyMelee(1, "maul"),
+        new Command.CraftMeleeAttachment(1, "maul", "cryoCore"),
+        new Command.UpgradeMelee(1, "maul"),
+    };
+
+    var broken = new List<string>();
+    foreach (var command in samples)
+    {
+        string wire = Protocol.CommandToWire(command);
+        var back = Protocol.CommandFromWire(wire);
+        if (back is null) { broken.Add($"{command.GetType().Name} decodes to null"); continue; }
+        if (back.ToString() != command.ToString())
+            broken.Add($"{command.GetType().Name}: {command} -> {wire} -> {back}");
+    }
+
+    // And the vocabulary must be complete: a command type with no sample here
+    // is a command nobody proved works on the wire.
+    int commandTypes = typeof(Command).Assembly.GetTypes()
+        .Count(x => x.IsSealed && x.BaseType == typeof(Command));
+    if (samples.Select(s => s.GetType()).Distinct().Count() != commandTypes)
+        broken.Add($"{commandTypes} command types but {samples.Select(s => s.GetType()).Distinct().Count()} covered");
+
+    // Seat authorization is a second hand-maintained switch over the same
+    // types, and its fallthrough is `false` — so a command missing from it is
+    // refused for every network client while working perfectly in solo. Melee
+    // was missing from it, found here.
+    foreach (var command in samples)
+        if (!Protocol.CommandClaimsSeat(command, 1))
+            broken.Add($"{command.GetType().Name} is not authorized for its own seat");
+
+    Gate("protocol: every command round-trips and authorizes its own seat",
+        broken.Count == 0,
+        broken.Count == 0 ? $"{samples.Length} commands, protocol v{Protocol.Version}"
+                          : string.Join("; ", broken));
+}
+
+// --- Gate 34: melee swings an arc, and melee kills pay better.
+//
+// Two separate claims, measured separately. The first version of this gate
+// compared total scrap from "a swing" against "some shots" and passed
+// handsomely — 9 against 2 — for entirely the wrong reason: the swing hit
+// three enemies at once while the weapon cooldown let the gun kill one. That
+// is a real melee advantage and it is not the bonus, so it cannot be the
+// evidence for the bonus. The scrap half now kills exactly one enemy each way.
+{
+    // (a) The arc. Three targets ahead, one behind, one swing.
+    var world = new World(Seed, Maps.Foundry);
+    world.Enqueue(new Command.Join(1, "p1", "forge"));
+    Step.Advance(world);
+    world.Players[1].Pos = Vec3.Zero;
+
+    Enemy Place(World w, float x, float y, float z, float hp = 8f, string defId = "drifter")
+    {
+        var e = new Enemy
+        {
+            Id = w.NextId(), DefId = defId, Hp = hp, MaxHp = hp,
+            Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1,
+            RouteIndex = 0, Leg = 0, LegProgress = 0f, Pos = new Vec3(x, y, z),
+        };
+        w.Enemies.Add(e);
+        return e;
+    }
+
+    var ahead = new[] { Place(world, 0f, 0f, 1.2f), Place(world, 0f, 0f, 1.6f), Place(world, 0f, 0f, 2.0f) };
+    var behind = Place(world, 0f, 0f, -1.5f);
+
+    world.Enqueue(new Command.PlayerSync(1, Vec3.Zero));
+    world.Enqueue(new Command.PlayerMelee(1, new Vec3(0f, 0f, 4f)));
+    for (int i = 0; i < 3; i++) Step.Advance(world);
+
+    bool arcRespected = ahead.All(e => e.Dead) && !behind.Dead;
+
+    // (b) The bonus. One Mender each way — chosen because its yield is 2 Flux
+    // and 1 Gravium, and a 1-scrap enemy rounds the bonus clean away.
+    int ScrapFromOneKill(bool useMelee)
+    {
+        var w2 = new World(Seed, Maps.Foundry);
+        w2.Enqueue(new Command.Join(1, "p1", "forge"));
+        Step.Advance(w2);
+        w2.Players[1].Pos = Vec3.Zero;
+
+        var victim = Place(w2, 0f, 0f, 1.5f, hp: 1f, defId: "mender");
+        w2.Enqueue(new Command.PlayerSync(1, Vec3.Zero));
+        if (useMelee) w2.Enqueue(new Command.PlayerMelee(1, new Vec3(0f, 0f, 4f)));
+        else w2.Enqueue(new Command.PlayerHit(1, victim.Id, "sidearm"));
+        for (int i = 0; i < 3; i++) Step.Advance(w2);
+
+        if (!victim.Dead) return -1;      // did not kill: not a comparison
+        return w2.TeamScrap.Values.Sum() + w2.Players[1].Scrap.Values.Sum();
+    }
+
+    int meleeScrap = ScrapFromOneKill(useMelee: true);
+    int rangedScrap = ScrapFromOneKill(useMelee: false);
+
+    Gate("melee: the swing is an arc, and one melee kill pays more than one shot",
+        arcRespected && meleeScrap > rangedScrap && rangedScrap > 0,
+        $"arc: {ahead.Count(e => e.Dead)}/3 ahead died, behind survived {!behind.Dead} | "
+        + $"one kill pays {meleeScrap} melee vs {rangedScrap} ranged");
+}
+
+// --- Gate 34b: a melee build survives a save/resume.
+//
+// Melee state was invisible to serialization when first written, which would
+// have meant a drop-in joiner or a resumed save quietly reverting to a bare
+// wrench — a loss the player would feel and no gate would report, because
+// every existing serialization check compares event logs and a lost mastery
+// level emits no event.
+{
+    var world = new World(Seed, Maps.Foundry);
+    world.Money = 2000;
+    world.Enqueue(new Command.Join(1, "p1", "forge"));
+    Step.Advance(world);
+
+    world.Players[1].Scrap[ScrapType.Flux] = 20;
+    world.Players[1].Scrap[ScrapType.Alloy] = 20;
+    world.Enqueue(new Command.BuyMelee(1, "maul"));
+    Step.Advance(world);
+    world.Enqueue(new Command.CraftMeleeAttachment(1, "maul", "cryoCore"));
+    world.Enqueue(new Command.UpgradeMelee(1, "maul"));
+    Step.Advance(world);
+    world.Enqueue(new Command.UpgradeMelee(1, "maul"));
+    Step.Advance(world);
+
+    var before = world.Players[1];
+    var resumed = Serialization.Deserialize(Serialization.Serialize(world));
+    var after = resumed.Players[1];
+
+    bool platform = after.MeleeId == "maul" && after.OwnedMelee.Contains("maul");
+    bool infusion = after.MeleeBuildFor("maul").Attachments
+        .TryGetValue(MeleeSlot.CoreInfusion, out var core) && core == "cryoCore";
+    bool mastery = after.MeleeBuildFor("maul").MasteryLevel == before.MeleeBuildFor("maul").MasteryLevel
+        && after.MeleeBuildFor("maul").MasteryLevel > 0;
+
+    Gate("melee: platform, infusion and mastery all survive a resume",
+        platform && infusion && mastery,
+        $"platform {after.MeleeId}, infusion {(infusion ? "kept" : "LOST")}, "
+        + $"mastery {after.MeleeBuildFor("maul").MasteryLevel} (was {before.MeleeBuildFor("maul").MasteryLevel})");
+}
+
+// --- Gate 35: every melee platform and attachment is reachable and does
+// something, the same invariant the factions and reactions now carry.
+{
+    var problems = new List<string>();
+
+    var droppable = Enemies.All.Values.SelectMany(e => e.ScrapYield.Keys).ToHashSet();
+    foreach (var att in Melee.Attachments.Values)
+    {
+        foreach (var type in att.Recipe.Keys)
+            if (!droppable.Contains(type))
+                problems.Add($"{att.Id} needs {type}, which nothing drops");
+        bool inert = att.DamageFactor == 1f && att.SpeedFactor == 1f
+            && att.ReachFactor == 1f && att.Applies is null;
+        if (inert) problems.Add($"{att.Id} changes nothing");
+    }
+
+    // Every infusion must name a status that exists, or point-blank reaction
+    // play silently does not happen.
+    foreach (var att in Melee.Attachments.Values.Where(a => a.Slot == MeleeSlot.CoreInfusion))
+        if (att.Applies is null || !Statuses.All.ContainsKey(att.Applies))
+            problems.Add($"{att.Id} is an infusion that applies nothing real");
+
+    foreach (var def in Melee.All.Values)
+    {
+        if (def.Damage <= 0f || def.ReachMeters <= 0f || def.ArcDegrees <= 0f)
+            problems.Add($"{def.Id} cannot connect");
+        if (def.MasteryCosts.Count < Melee.MaxMasteryLevel)
+            problems.Add($"{def.Id} has fewer mastery costs than levels");
+    }
+
+    Gate("melee: platforms and attachments are reachable and all do something",
+        problems.Count == 0,
+        problems.Count == 0
+            ? $"{Melee.All.Count} platforms, {Melee.Attachments.Count} attachments"
+            : string.Join("; ", problems));
+}
+
 // --- Gate 33 (M3): the campaign chain is well-formed and fully reachable.
 //
 // A sector list is exactly the kind of content that rots quietly: rename a map

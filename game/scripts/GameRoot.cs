@@ -685,6 +685,17 @@ public partial class GameRoot : Node3D
         return "sidearm";
     }
 
+    /// <summary>The wrench until someone buys otherwise, and never empty —
+    /// which is the whole point of it: a player with no money and no scrap is
+    /// still armed.</summary>
+    public string CurrentMeleeId()
+    {
+        if (Mode != RunMode.Client && _world is not null
+            && _world.Players.TryGetValue(LocalPlayerId, out var p))
+            return p.MeleeId;
+        return "wrench";
+    }
+
     public MapDef CurrentMap() => _map;
 
     public int TowerIdAtSocket(string socketId)

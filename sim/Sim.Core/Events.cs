@@ -122,6 +122,21 @@ public abstract record SimEvent
         public override string LogLine() => $"{Tick} attachmentCrafted {PlayerId} {WeaponId} {AttachmentId}";
     }
 
+    public sealed record MeleeSwing(int PlayerId, string MeleeId, bool Connected) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} meleeSwing {PlayerId} {MeleeId} {(Connected ? 1 : 0)}";
+    }
+
+    public sealed record MeleeSelected(int PlayerId, string MeleeId) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} meleeSelected {PlayerId} {MeleeId}";
+    }
+
+    public sealed record MeleeMastery(int PlayerId, string MeleeId, int Level) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} meleeMastery {PlayerId} {MeleeId} {Level}";
+    }
+
     public sealed record AmmoSelected(int PlayerId, string WeaponId, string AmmoId) : SimEvent
     {
         public override string LogLine() => $"{Tick} ammoSelected {PlayerId} {WeaponId} {AmmoId}";

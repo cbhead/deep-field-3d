@@ -10,6 +10,10 @@ public readonly record struct Vec3(float X, float Y, float Z)
     public static Vec3 operator -(Vec3 a, Vec3 b) => new(a.X - b.X, a.Y - b.Y, a.Z - b.Z);
     public static Vec3 operator *(Vec3 a, float s) => new(a.X * s, a.Y * s, a.Z * s);
 
+    /// <summary>Needed by the melee arc test: whether a target lies inside the
+    /// cone a swing sweeps.</summary>
+    public static float Dot(Vec3 a, Vec3 b) => a.X * b.X + a.Y * b.Y + a.Z * b.Z;
+
     public float Length() => MathF.Sqrt(X * X + Y * Y + Z * Z);
     public float DistanceTo(Vec3 other) => (other - this).Length();
 

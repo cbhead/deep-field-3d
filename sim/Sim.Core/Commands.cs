@@ -36,6 +36,22 @@ public abstract record Command
     /// damage authoritatively.</summary>
     public sealed record PlayerHit(int PlayerId, int EnemyId, string WeaponId) : Command;
 
+    /// <summary>A swing. Unlike a hitscan hit the client does not name a
+    /// target: melee reach is short enough that the server can decide who is in
+    /// the arc itself, which is both more honest and less to trust. AimPoint is
+    /// where the player is looking; the swing direction is derived from it.</summary>
+    public sealed record PlayerMelee(int PlayerId, Vec3 AimPoint) : Command;
+
+    /// <summary>Buy a melee platform at the armory, and/or switch to an owned
+    /// one. The wrench is owned from spawn and costs nothing.</summary>
+    public sealed record BuyMelee(int PlayerId, string MeleeId) : Command;
+
+    /// <summary>Craft a melee attachment into its slot, paid in personal scrap.</summary>
+    public sealed record CraftMeleeAttachment(int PlayerId, string MeleeId, string AttachmentId) : Command;
+
+    /// <summary>Spend personal scrap on the next mastery level for a platform.</summary>
+    public sealed record UpgradeMelee(int PlayerId, string MeleeId) : Command;
+
     /// <summary>Buy a weapon at the armory (money) and/or switch to an owned one.</summary>
     public sealed record BuyWeapon(int PlayerId, string WeaponId) : Command;
 

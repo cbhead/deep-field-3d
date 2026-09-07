@@ -33,7 +33,8 @@ shell. `make run` does the same if your PATH is set up — see
 | WASD / Shift / Space | move, sprint, jump |
 | **hold E** at a socket | build wheel — steer with the mouse, release to build |
 | **hold U** at a structure | upgrade paths (1–3), **hold X** to sell |
-| LMB | fire · **Q** faction ability · **hold R** revive |
+| LMB / RMB | fire · melee swing (arc; melee kills pay +25% scrap) |
+| **Q** faction ability · **hold R** revive | |
 | **Tab** | armory + gunsmith · **F** start wave early · **Esc** menu |
 | E on a zipline, W on a ladder | traversal |
 

@@ -248,9 +248,14 @@ Same conventions; titles fixed now so nothing renames later.
   `weapon_burstdmr_*` · `weapon_autoscattergun_*` ·
   `weapon_concussionmortar_*` · `weapon_acidstream_*` (each `_vm` +
   `_world` + icon); **melee**: `melee_blade_*` · `melee_maul_*` ·
-  `melee_spear_*` · `melee_gauntlets_*` · `melee_chainblade_*` with visible
-  module sets `meleemod_edge_*` / `_grip_*` / `_infusion_*` /
-  `_counterweight_*` / `_chargecell_*`
+  `melee_spear_*` — **these three are live in the sim now**, buyable at the
+  armory with mastery and infusions, so they have moved ahead of the rest of
+  this list in priority — plus `melee_gauntlets_*` · `melee_chainblade_*` still
+  forward-looking, all with visible module sets `meleemod_edge_*` / `_grip_*` /
+  `_infusion_*` / `_counterweight_*` / `_chargecell_*`.
+  Melee viewmodels join the first-person viewmodel batch rather than shipping
+  alone: the client has no viewmodel rendering yet, so a melee model would have
+  nowhere to appear.
 - **Conditions** (environment treatment sets + banner icons):
   `cond_fog` · `cond_night` (lighting rig + `vfx_flashlight_cone.glb` +
   enemy eye-glow treatment) · `cond_storm` · `cond_heatwave` ·

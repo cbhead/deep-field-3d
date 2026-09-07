@@ -30,7 +30,14 @@ public static class Serialization
         string WeaponId, List<string> OwnedWeapons, Dictionary<string, int> Scrap, bool Connected,
         Dictionary<string, Dictionary<string, string>>? Builds, Dictionary<string, string>? BuildAmmo,
         List<string>? CraftedAmmo,
-        int Kills = 0, float DamageDealt = 0f, int Builds2 = 0, int Revives = 0);
+        int Kills = 0, float DamageDealt = 0f, int Builds2 = 0, int Revives = 0,
+        // Melee rides as trailing optionals for the same reason the match stats
+        // do: a save written before melee existed must still load, and it does
+        // — the player arrives holding the wrench, which is what they would
+        // have had.
+        string? MeleeId = null, List<string>? OwnedMelee = null,
+        Dictionary<string, Dictionary<string, string>>? MeleeBuilds = null,
+        Dictionary<string, int>? MeleeMastery = null, float MeleeCooldown = 0f);
 
     private sealed record WorldState(
         uint Seed, long Tick, string MapId, int Money, int Lives,
@@ -69,7 +76,12 @@ public static class Serialization
                     kv => kv.Value.Attachments.ToDictionary(a => a.Key.ToString(), a => a.Value)),
                 p.Builds.ToDictionary(kv => kv.Key, kv => kv.Value.AmmoId),
                 p.CraftedAmmo.OrderBy(x => x, StringComparer.Ordinal).ToList(),
-                p.Kills, p.DamageDealt, p.TowersBuilt, p.Revives)).ToList(),
+                p.Kills, p.DamageDealt, p.TowersBuilt, p.Revives,
+                p.MeleeId, p.OwnedMelee.OrderBy(x => x, StringComparer.Ordinal).ToList(),
+                p.MeleeBuilds.ToDictionary(kv => kv.Key,
+                    kv => kv.Value.Attachments.ToDictionary(a => a.Key.ToString(), a => a.Value)),
+                p.MeleeBuilds.ToDictionary(kv => kv.Key, kv => kv.Value.MasteryLevel),
+                p.MeleeCooldown)).ToList(),
             w.Traps.Select(t => new TrapState(t.Id, t.DefId, t.SocketId, t.ChargesLeft, t.RearmTimer)).ToList(),
             w.NextIdValue);
         return JsonSerializer.Serialize(state);
@@ -156,7 +168,19 @@ public static class Serialization
                 OwnedWeapons = new HashSet<string>(p.OwnedWeapons), Connected = p.Connected,
                 Kills = p.Kills, DamageDealt = p.DamageDealt,
                 TowersBuilt = p.Builds2, Revives = p.Revives,
+                MeleeId = string.IsNullOrEmpty(p.MeleeId) ? "wrench" : p.MeleeId,
+                MeleeCooldown = p.MeleeCooldown,
             };
+            if (p.OwnedMelee is { Count: > 0 })
+                player.OwnedMelee = new HashSet<string>(p.OwnedMelee);
+            foreach (var (meleeId, slots) in p.MeleeBuilds ?? new())
+            {
+                var mb = player.MeleeBuildFor(meleeId);
+                foreach (var (slotName, attachmentId) in slots)
+                    mb.Attachments[System.Enum.Parse<MeleeSlot>(slotName)] = attachmentId;
+            }
+            foreach (var (meleeId, level) in p.MeleeMastery ?? new())
+                player.MeleeBuildFor(meleeId).MasteryLevel = level;
             foreach (var (typeName, amount) in p.Scrap)
                 player.Scrap[System.Enum.Parse<ScrapType>(typeName)] = amount;
             foreach (var (weaponId, slots) in p.Builds ?? new())

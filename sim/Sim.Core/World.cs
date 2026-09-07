@@ -130,6 +130,23 @@ public sealed class PlayerState
     public Dictionary<ScrapType, int> Scrap = new();
     public bool Connected = true;
 
+    /// <summary>Melee: everyone carries the wrench from spawn and it is never
+    /// taken away, so this is never empty and a player is never unarmed.</summary>
+    public string MeleeId = "wrench";
+    public float MeleeCooldown;
+    public HashSet<string> OwnedMelee = new() { "wrench" };
+    public Dictionary<string, MeleeBuild> MeleeBuilds = new();
+
+    public MeleeBuild MeleeBuildFor(string meleeId)
+    {
+        if (!MeleeBuilds.TryGetValue(meleeId, out var build))
+        {
+            build = new MeleeBuild();
+            MeleeBuilds[meleeId] = build;
+        }
+        return build;
+    }
+
     /// <summary>Gunsmith state: build per owned weapon, ammo crafted once each.</summary>
     public Dictionary<string, WeaponBuild> Builds = new();
     public HashSet<string> CraftedAmmo = new() { "standard" };

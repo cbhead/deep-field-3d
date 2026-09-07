@@ -9,7 +9,12 @@ namespace DeepField.Sim;
 /// Lives in Sim.Core so packing round-trips are fast-lane testable.</summary>
 public static class Protocol
 {
-    public const int Version = 1;
+    /// <summary>Bumped to 2 when melee joined the command vocabulary. An older
+    /// client cannot send a swing and a newer one would send four verbs the old
+    /// server parses as null — silently dropping every melee action rather than
+    /// refusing the connection, which is exactly the failure this number
+    /// exists to make loud.</summary>
+    public const int Version = 2;
 
     /// <summary>Human-readable build identity, sent alongside the protocol
     /// number. The number decides compatibility — determinism requires an exact
@@ -124,6 +129,10 @@ public static class Protocol
         Command.Revive c => $"revive|{c.PlayerId}|{c.TargetPlayerId}",
         Command.CraftAttachment c => $"craft|{c.PlayerId}|{c.WeaponId}|{c.AttachmentId}",
         Command.SelectAmmo c => $"ammo|{c.PlayerId}|{c.WeaponId}|{c.AmmoId}",
+        Command.PlayerMelee c => $"swing|{c.PlayerId}|{F(c.AimPoint.X)}|{F(c.AimPoint.Y)}|{F(c.AimPoint.Z)}",
+        Command.BuyMelee c => $"buyMelee|{c.PlayerId}|{c.MeleeId}",
+        Command.CraftMeleeAttachment c => $"craftMelee|{c.PlayerId}|{c.MeleeId}|{c.AttachmentId}",
+        Command.UpgradeMelee c => $"upMelee|{c.PlayerId}|{c.MeleeId}",
         _ => throw new InvalidOperationException($"unwired command {command.GetType().Name}"),
     };
 
@@ -149,6 +158,10 @@ public static class Protocol
                 "revive" => new Command.Revive(int.Parse(p[1]), int.Parse(p[2])),
                 "craft" => new Command.CraftAttachment(int.Parse(p[1]), p[2], p[3]),
                 "ammo" => new Command.SelectAmmo(int.Parse(p[1]), p[2], p[3]),
+                "swing" => new Command.PlayerMelee(int.Parse(p[1]), new Vec3(Pf(p[2]), Pf(p[3]), Pf(p[4]))),
+                "buyMelee" => new Command.BuyMelee(int.Parse(p[1]), p[2]),
+                "craftMelee" => new Command.CraftMeleeAttachment(int.Parse(p[1]), p[2], p[3]),
+                "upMelee" => new Command.UpgradeMelee(int.Parse(p[1]), p[2]),
                 _ => null,
             };
         }
@@ -175,6 +188,15 @@ public static class Protocol
         Command.Revive c => c.PlayerId == seatPlayerId,
         Command.CraftAttachment c => c.PlayerId == seatPlayerId,
         Command.SelectAmmo c => c.PlayerId == seatPlayerId,
+        Command.PlayerMelee c => c.PlayerId == seatPlayerId,
+        Command.BuyMelee c => c.PlayerId == seatPlayerId,
+        Command.CraftMeleeAttachment c => c.PlayerId == seatPlayerId,
+        Command.UpgradeMelee c => c.PlayerId == seatPlayerId,
+        // Deliberately closed rather than defaulting to true: an unknown
+        // command from a client should be refused, not trusted. The cost is
+        // that a new command forgotten here is silently rejected for network
+        // players while working in solo, so the gate below enumerates types
+        // rather than trusting this list to stay complete.
         _ => false,
     };
 

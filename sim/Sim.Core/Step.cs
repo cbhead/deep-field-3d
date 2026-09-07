@@ -52,6 +52,10 @@ public static class Step
                     if (w.Phase == MatchPhase.Intermission) w.PhaseTimer = 0f;
                     break;
                 case Command.PlayerHit hit: ApplyPlayerHit(w, hit); break;
+                case Command.PlayerMelee swing: ApplyPlayerMelee(w, swing); break;
+                case Command.BuyMelee buyMelee: ApplyBuyMelee(w, buyMelee); break;
+                case Command.CraftMeleeAttachment craftMelee: ApplyCraftMeleeAttachment(w, craftMelee); break;
+                case Command.UpgradeMelee upMelee: ApplyUpgradeMelee(w, upMelee); break;
                 case Command.BuyWeapon buy: ApplyBuyWeapon(w, buy); break;
                 case Command.SelectWeapon select: ApplySelectWeapon(w, select); break;
                 case Command.UseAbility ability: ApplyUseAbility(w, ability); break;
@@ -341,6 +345,126 @@ public static class Step
         var condition = Conditions.ForWave(w.Map, w.WaveIndex);
         if (condition is not null) range *= condition.HeroRangeFactor;
         return range * Balance.HitRangeSlack;
+    }
+
+    /// <summary>A swing: everything alive inside the arc takes it at once.
+    /// The server picks the targets rather than trusting a client list, which
+    /// it can afford to do because melee reach is metres and not sightlines.
+    ///
+    /// No barricade repair yet, and that is a finding rather than an omission.
+    /// The M1 plan pairs the wrench with a repair interaction, but nothing in
+    /// the sim can damage a structure: TowerDef carries StructureHp and no
+    /// Tower carries current health, because the thing that attacks structures
+    /// is the Ram and the Ram is M4. Writing the repair now would mean shipping
+    /// a branch no game state can reach. It lands with tower HP.</summary>
+    private static void ApplyPlayerMelee(World w, Command.PlayerMelee swing)
+    {
+        if (!w.Players.TryGetValue(swing.PlayerId, out var player) || !player.Alive) return;
+        if (player.MeleeCooldown > 0f) return;
+        if (!Melee.All.TryGetValue(player.MeleeId, out var def)) return;
+
+        var build = player.MeleeBuildFor(def.Id);
+        float reach = def.ReachMeters * build.ReachFactor();
+        float rate = def.SwingsPerSecond * build.SpeedFactor();
+        if (player.FactionId == Factions.Tempest.Id) rate *= Balance.TempestRateFactor;
+        player.MeleeCooldown = 1f / rate;
+
+        var aim = swing.AimPoint - player.Pos;
+        if (aim.Length() < 0.01f) aim = new Vec3(0f, 0f, 1f);
+        aim = aim.Normalized();
+
+        float damage = def.Damage * build.DamageFactor();
+        var applies = def.Applies.Concat(build.ExtraApplies()).ToList();
+        float cosArc = MathF.Cos(def.ArcDegrees * MathF.PI / 180f);
+        bool connected = false;
+
+        // Snapshot: a swing that kills a Cluster must not also hit the children
+        // it just spat out. Same rule the splash pass follows.
+        foreach (var enemy in w.Enemies.ToList())
+        {
+            if (enemy.Dead || enemy.Burrowed) continue;
+            var to = enemy.Pos - player.Pos;
+            float distance = to.Length();
+            if (distance > reach || distance < 0.01f) continue;
+            if (Vec3.Dot(to.Normalized(), aim) < cosArc) continue;
+
+            connected = true;
+            if (def.KnockbackMeters > 0f)
+                KnockBack(w, enemy, def.KnockbackMeters / MathF.Max(Enemies.All[enemy.DefId].Mass, 0.25f));
+            Damage(w, enemy, damage, $"player{player.Id}", player.Pos, applies,
+                player.Id, melee: true);
+        }
+
+        w.Emit(new SimEvent.MeleeSwing(player.Id, def.Id, connected));
+    }
+
+    private static void ApplyBuyMelee(World w, Command.BuyMelee buy)
+    {
+        if (!w.Players.TryGetValue(buy.PlayerId, out var player)) return;
+        if (!Melee.All.TryGetValue(buy.MeleeId, out var def))
+        {
+            w.Emit(new SimEvent.PurchaseRejected(buy.PlayerId, buy.MeleeId, "unknownMelee"));
+            return;
+        }
+        if (!player.OwnedMelee.Contains(def.Id))
+        {
+            if (w.Money < def.Cost)
+            {
+                w.Emit(new SimEvent.PurchaseRejected(buy.PlayerId, def.Id, "insufficientFunds"));
+                return;
+            }
+            w.Money -= def.Cost;
+            player.OwnedMelee.Add(def.Id);
+        }
+        player.MeleeId = def.Id;
+        w.Emit(new SimEvent.MeleeSelected(buy.PlayerId, def.Id));
+    }
+
+    private static void ApplyCraftMeleeAttachment(World w, Command.CraftMeleeAttachment craft)
+    {
+        if (!w.Players.TryGetValue(craft.PlayerId, out var player)) return;
+        if (!Melee.Attachments.TryGetValue(craft.AttachmentId, out var att))
+        {
+            w.Emit(new SimEvent.CraftRejected(craft.PlayerId, craft.AttachmentId, "unknownAttachment"));
+            return;
+        }
+        if (!player.OwnedMelee.Contains(craft.MeleeId))
+        {
+            w.Emit(new SimEvent.CraftRejected(craft.PlayerId, craft.AttachmentId, "meleeNotOwned"));
+            return;
+        }
+        if (!PayScrap(player, att.Recipe))
+        {
+            w.Emit(new SimEvent.CraftRejected(craft.PlayerId, craft.AttachmentId, "insufficientScrap"));
+            return;
+        }
+        player.MeleeBuildFor(craft.MeleeId).Attachments[att.Slot] = att.Id;
+        w.Emit(new SimEvent.AttachmentCrafted(craft.PlayerId, craft.MeleeId, att.Id));
+    }
+
+    private static void ApplyUpgradeMelee(World w, Command.UpgradeMelee up)
+    {
+        if (!w.Players.TryGetValue(up.PlayerId, out var player)) return;
+        if (!Melee.All.TryGetValue(up.MeleeId, out var def)) return;
+        if (!player.OwnedMelee.Contains(def.Id)) return;
+
+        var build = player.MeleeBuildFor(def.Id);
+        // Campaign caps at 5; 6-10 open with endless, the same gating the tower
+        // grid uses, so one rule governs both ladders.
+        if (build.MasteryLevel >= Melee.CampaignMasteryCap)
+        {
+            w.Emit(new SimEvent.CraftRejected(up.PlayerId, def.Id, "masteryCapped"));
+            return;
+        }
+        int cost = def.MasteryCosts[build.MasteryLevel];
+        if (w.Money < cost)
+        {
+            w.Emit(new SimEvent.CraftRejected(up.PlayerId, def.Id, "insufficientFunds"));
+            return;
+        }
+        w.Money -= cost;
+        build.MasteryLevel++;
+        w.Emit(new SimEvent.MeleeMastery(up.PlayerId, def.Id, build.MasteryLevel));
     }
 
     private static void ApplyBuyWeapon(World w, Command.BuyWeapon buy)
@@ -819,6 +943,7 @@ public static class Step
         foreach (var player in w.Players.Values)
         {
             player.WeaponCooldown = MathF.Max(0f, player.WeaponCooldown - Balance.Dt);
+            player.MeleeCooldown = MathF.Max(0f, player.MeleeCooldown - Balance.Dt);
             player.AbilityCooldown = MathF.Max(0f, player.AbilityCooldown - Balance.Dt);
 
             if (player.RespawnTimer > 0f)
@@ -1350,7 +1475,7 @@ public static class Step
     private static void Damage(
         World w, Enemy enemy, float amount, string source, Vec3 sourcePos,
         IReadOnlyList<string>? applies, int? playerId, bool ignoreFlatArmor = false,
-        bool ignoreShield = false)
+        bool ignoreShield = false, bool melee = false)
     {
         if (enemy.Dead) return;
 
@@ -1423,7 +1548,7 @@ public static class Step
             enemy.Dead = true;
             w.Money += enemy.Bounty;
             w.Emit(new SimEvent.EnemyDied(enemy.Id, enemy.DefId, enemy.Bounty, source));
-            DropScrap(w, enemy, def, playerId);
+            DropScrap(w, enemy, def, playerId, melee);
 
             // Faction XP: kills bank into the profile at match end.
             if (playerId is int killer && w.Players.TryGetValue(killer, out var killerState))
@@ -1438,13 +1563,20 @@ public static class Step
     /// share funds the killer's gunsmith. M1 simplification: personal share goes
     /// to the killing player only (participation tracking arrives at M2); tower
     /// kills bank everything to the team.</summary>
-    private static void DropScrap(World w, Enemy enemy, EnemyDef def, int? killerPlayerId)
+    private static void DropScrap(World w, Enemy enemy, EnemyDef def, int? killerPlayerId,
+        bool meleeKill = false)
     {
         if (def.ScrapYield.Count == 0) return;
 
         var parts = new List<string>();
-        foreach (var (type, amount) in def.ScrapYield)
+        foreach (var (type, baseAmount) in def.ScrapYield)
         {
+            // Melee's entire economic identity: standing in contact range pays
+            // better. Applied to the whole yield, team share included, so a
+            // melee player funds the team's towers as well as their own bench.
+            int amount = meleeKill
+                ? (int)MathF.Round(baseAmount * Balance.MeleeScrapBonus, MidpointRounding.AwayFromZero)
+                : baseAmount;
             int teamShare = killerPlayerId is null
                 ? amount
                 : (int)MathF.Round(amount * Balance.ScrapTeamShare, MidpointRounding.AwayFromZero);

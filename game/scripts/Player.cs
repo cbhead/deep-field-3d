@@ -33,6 +33,7 @@ public partial class Player : CharacterBody3D
     private Area3D _sensor = null!;
     private float _pitch;
     private double _fireCooldown;
+    private double _meleeCooldown;
 
     private bool _onLadder;
     private Vector3? _zipTarget;
@@ -202,6 +203,22 @@ public partial class Player : CharacterBody3D
             var weapon = Weapons.All[_root.CurrentWeaponId()];
             _fireCooldown = 1.0 / weapon.ShotsPerSecond;
             Fire(weapon);
+        }
+
+        // Melee on right mouse. The server resolves the arc from the aim
+        // point, so the client sends where you are looking and nothing else —
+        // no target list, no raycast, nothing to disagree about.
+        _meleeCooldown -= delta;
+        if (!uiOwnsInput && !_root.WheelOpen && !_root.UpgradeOpen
+            && Input.MouseMode == Input.MouseModeEnum.Captured
+            && Input.IsMouseButtonPressed(MouseButton.Right)
+            && _meleeCooldown <= 0)
+        {
+            var melee = Melee.All[_root.CurrentMeleeId()];
+            _meleeCooldown = 1.0 / melee.SwingsPerSecond;
+            var aim = _camera.GlobalPosition + (-_camera.GlobalTransform.Basis.Z) * melee.ReachMeters;
+            _root.Submit(new Command.PlayerMelee(_root.LocalPlayerId,
+                new Vec3(aim.X, aim.Y, aim.Z)));
         }
 
         if (!uiOwnsInput && Input.IsPhysicalKeyPressed(Key.R))

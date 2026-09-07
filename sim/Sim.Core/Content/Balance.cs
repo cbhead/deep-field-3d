@@ -69,6 +69,11 @@ public static class Balance
 
     /// <summary>Mole cycle, distance-based so it's deterministic and readable:
     /// burrowed for the first stretch of each cycle, surfaced for the rest.</summary>
+    /// <summary>Melee's whole economic identity: kills at contact range pay
+    /// more scrap. Risk the range, fund your builds. Swept dial — this is the
+    /// number that decides whether anyone ever puts the gun away.</summary>
+    public const float MeleeScrapBonus = 1.25f;
+
     public const float BurrowCycleMeters = 14f;
     public const float BurrowedMeters = 8f;
 
