@@ -16,5 +16,24 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 export DOTNET_ROOT="$HOME/.dotnet"
 export PATH="$HOME/.dotnet:$PATH"
 
+# Engine flags after `--` are silently ignored: Godot hands everything past the
+# separator to the game as user args. Getting --quit-after on the wrong side of
+# it means a headless run never exits, and because it still prints its normal
+# output nothing looks wrong — three of these once sat spinning for twenty
+# hours before anyone noticed. Refuse rather than hang.
+seen_sep=0
+for arg in "$@"; do
+  if [ "$arg" = "--" ]; then seen_sep=1; continue; fi
+  if [ $seen_sep -eq 1 ]; then
+    case "$arg" in
+      --quit-after|--quit-after=*|--quit|--headless|--path|--import|--build-solutions)
+        echo "error: '$arg' is an engine flag but sits after '--', where Godot" >&2
+        echo "       ignores it. A headless run would never exit. Move it before" >&2
+        echo "       the separator:  ./play --headless $arg -- --solo <map>" >&2
+        exit 2 ;;
+    esac
+  fi
+done
+
 "$DOTNET" build "$HERE/game/DeepField.Game.csproj" -v quiet
 exec "$GODOT" --path "$HERE/game" "$@"
