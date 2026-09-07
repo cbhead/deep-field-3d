@@ -327,6 +327,96 @@ public partial class LobbyScreen : Control
             .Select(f => $"{f.Id}/{f.Passive}")
             .ToList();
 
+    /// <summary>The hero, actually rendered, with the faction icon beside it.
+    /// The well used to hold a lone 64 px glyph in a box tall enough for a
+    /// person — and design ships hero_forge.glb and its siblings, so the space
+    /// the layout pass reclaimed is spent on the thing it was reclaimed for.
+    ///
+    /// Falls back to the icon alone where no model exists, which today is
+    /// Glacier and Specter: both are on the forward manifest and undelivered,
+    /// and a placeholder chip standing in for a person reads as a bug rather
+    /// than as a gap.</summary>
+    private static Control HeroPortrait(string factionId, Color accent)
+    {
+        var frame = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
+
+        if (AssetLibrary.Has($"hero_{factionId}"))
+        {
+            var viewport = new SubViewport
+            {
+                TransparentBg = true,
+                RenderTargetUpdateMode = SubViewport.UpdateMode.Always,
+                Size = new Vector2I(360, 480),
+            };
+
+            var stage = new Node3D();
+            viewport.AddChild(stage);
+
+            var hero = AssetLibrary.Instantiate($"hero_{factionId}", () => Placeholders.Hero(factionId));
+            // Turned to face the camera, per the brief's stated contract:
+            // models are Y-up, -Z forward, so at zero rotation a hero faces
+            // away from a camera sitting on +Z. 156 is that half-turn with a
+            // little off-axis so a flat-shaded figure does not read as a
+            // silhouette.
+            //
+            // Worth saying plainly: these heroes have no faces at this fidelity
+            // and I could not settle front from back by eye — I went round the
+            // houses trying. This follows the contract design wrote down rather
+            // than my reading of the render, and if a hero turns out to be
+            // presenting its backpack, this is the number to flip.
+            hero.RotationDegrees = new Vector3(0f, 156f, 0f);
+            stage.AddChild(hero);
+
+            // Framed on a 1.8 m capsule from slightly above, which is the pose
+            // a character select uses — looking down a touch is friendlier than
+            // looking up someone's chin.
+            var camera = new Camera3D
+            {
+                Position = new Vector3(0f, 1.15f, 2.9f),
+                RotationDegrees = new Vector3(-6f, 0f, 0f),
+                Fov = 42f,
+                Current = true,
+            };
+            stage.AddChild(camera);
+
+            // A DirectionalLight3D shines along its own -Z, and the camera
+            // looks the same way, so a key near zero yaw lights the side facing
+            // the viewer. At 138 it was shining back at the camera and lighting
+            // the hero's shoulder blades — which flattered the pose only while
+            // the pose was backwards.
+            var key = new DirectionalLight3D
+            {
+                RotationDegrees = new Vector3(-28f, 26f, 0f),
+                LightEnergy = 1.5f,
+                LightColor = accent.Lerp(Colors.White, 0.55f),
+            };
+            stage.AddChild(key);
+
+            var fill = new DirectionalLight3D
+            {
+                RotationDegrees = new Vector3(-8f, -48f, 0f),
+                LightEnergy = 0.45f,
+                LightColor = Tokens.Arcane400.Lerp(Colors.White, 0.4f),
+            };
+            stage.AddChild(fill);
+
+            var container = new SubViewportContainer { Stretch = true };
+            container.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+            container.MouseFilter = Control.MouseFilterEnum.Ignore;
+            container.AddChild(viewport);
+            frame.AddChild(container);
+        }
+
+        // The icon rides in the corner rather than the middle: it is the
+        // faction's mark, and with a figure in the well it stops being the
+        // subject. Design puts it bottom-left of the portrait.
+        var badge = Kit.SlotIcon(UiTheme.Icon($"faction_{factionId}", accent), accent, 44);
+        badge.SetAnchorsPreset(Control.LayoutPreset.BottomLeft);
+        badge.Position = new Vector2(Tokens.Space4, -Tokens.Space4 - 44);
+        frame.AddChild(badge);
+        return frame;
+    }
+
     // =====================================================================
 
     private void RebuildFactions()
@@ -358,10 +448,10 @@ public partial class LobbyScreen : Control
             var well = Kit.Surface(Tokens.SurfaceInset, Tokens.BorderPanel, Tokens.ChamferSm, shadow: false);
             well.CustomMinimumSize = new Vector2(0, 220);
             well.SizeFlagsVertical = SizeFlags.ExpandFill;
-            var wellRow = Kit.Row();
-            wellRow.Alignment = BoxContainer.AlignmentMode.Center;
-            wellRow.AddChild(Kit.SlotIcon(UiTheme.Icon($"faction_{def.Id}", accent), accent, 64));
-            well.AddChild(wellRow);
+            var portrait = HeroPortrait(def.Id, accent);
+            portrait.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            portrait.SizeFlagsVertical = SizeFlags.ExpandFill;
+            well.AddChild(portrait);
             panel.Body.AddChild(well);
 
             // Ability identity: what Q does, and what you get for free.
