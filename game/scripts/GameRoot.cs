@@ -53,6 +53,16 @@ public partial class GameRoot : Node3D
     private int _siegeSawBar;                 // frames with a bar up at partial health
     private bool _siegeCapture;               // photograph it instead of scoring it
     private bool _siegeSawStructure;          // the barricade existed at least once
+
+    /// <summary>Deferred staging for the review shots: each entry waits a
+    /// number of frames, then runs. Commands are queued and applied on the next
+    /// tick, and views are built from the events that tick drains, so a preset
+    /// that does everything in one frame photographs a world where nothing it
+    /// asked for has happened yet. Both surfaces that were unreviewable were
+    /// unreviewable for exactly that reason.</summary>
+    private readonly Queue<(int Frames, System.Action Step)> _shotStages = new();
+    private int _stageWaited;
+    private string? _intermissionShotPath;
     private string? _shotPath;
     private string _shotView = "eye";
     private int _shotCountdown;
@@ -108,6 +118,7 @@ public partial class GameRoot : Node3D
         {
             foreach (string name in AssetLibrary.Requested) GD.Print($"[asset-audit] requested {name}");
             foreach (string id in UiTheme.RequestedIcons) GD.Print($"[asset-audit] requested icon_{id}");
+        foreach (string id in UiTheme.MissingIcons) GD.Print($"[asset-audit] MISSING icon_{id}");
         }
 
         // Let the cached Godot resources go before the runtime does. Godot
@@ -329,6 +340,32 @@ public partial class GameRoot : Node3D
             return;
         }
 
+        // The intermission worth reviewing is the one between waves, not the one
+        // before the first: only that one has a recap to show. So this plays a
+        // wave — towers down, wave started, time scaled up — and shoots when the
+        // phase comes back round with kills, leaks and a scrap delta behind it.
+        if (_shotView == "intermission" && _world is not null)
+        {
+            _shotView = "eye";
+            _shotPath = null;
+            _intermissionShotPath = path;
+            Stage(0, () =>
+            {
+                _world.Money += 600;
+                foreach (var socket in TwoBuildableSockets())
+                    Submit(new Command.PlaceTower(LocalPlayerId, "lance", socket.Id));
+            });
+            Stage(4, () =>
+            {
+                Submit(new Command.StartWave(LocalPlayerId));
+                // Real time would be a minute of nothing happening. The sim
+                // still ticks off delta and every event still drains, so the
+                // recap is built the ordinary way — just sooner.
+                Engine.TimeScale = 8f;
+            });
+            return;
+        }
+
         if (_shotView is "armory" or "wheel" or "upgrade")
         {
             string surface = _shotView;
@@ -350,13 +387,57 @@ public partial class GameRoot : Node3D
                 ToggleArmory();
                 _dumpHits = true;
             }
-            else if (surface == "wheel") OpenBuildWheel(_map.Sockets[0].Id);
+            // Both of these used to open their surface in this one frame and
+            // shoot four frames later, which produced two pictures of the
+            // intermission panel: a fresh match is in intermission, and that
+            // panel draws over everything until a wave is running. Neither
+            // surface has ever actually been reviewed.
+            else if (surface == "wheel")
+            {
+                _shotPath = null;
+                var socket = BuildableSocket();
+                Stage(0, () => Submit(new Command.StartWave(LocalPlayerId)));
+                Stage(4, () =>
+                {
+                    AimAt(socket.Pos, back: 7f, height: 3f);
+                    if (_player is not null) _player.HoldingBuild = true;
+                    OpenBuildWheel(socket.Id);
+                    // Pick a wedge: the ghost and its range ring only exist for
+                    // a selection, and they are half of what this screen is.
+                    WheelSelect(0);
+                });
+                Stage(2, () => ShootSurface(path, "wheel", _wheel.IsOpen));
+            }
             else if (surface == "upgrade" && _world is not null)
             {
-                Submit(new Command.PlaceTower(LocalPlayerId, "lance", _map.Sockets[0].Id));
-                for (int i = 0; i < 3; i++) Step.Advance(_world);
-                RebuildView();
-                OpenUpgradePanel(_map.Sockets[0].Id);
+                _shotPath = null;
+                var socket = BuildableSocket();
+                Stage(0, () =>
+                {
+                    Submit(new Command.StartWave(LocalPlayerId));
+                    Submit(new Command.PlaceTower(LocalPlayerId, "lance", socket.Id));
+                });
+                Stage(4, () =>
+                {
+                    // Levels and scrap, so the panel shows filled pips and a
+                    // breakpoint recipe with have/need rather than a row of
+                    // zeroes and a locked tier nobody can read.
+                    if (_view.AtSocket(socket.Id) is { } placed)
+                    {
+                        _world.Money += 600;
+                        foreach (var type in System.Enum.GetValues<ScrapType>())
+                            _world.TeamScrap[type] = 30;
+                        for (int i = 0; i < 3; i++)
+                            Submit(new Command.UpgradeTower(LocalPlayerId, placed.Id, 0));
+                    }
+                });
+                Stage(6, () =>
+                {
+                    AimAt(socket.Pos, back: 6f, height: 2.5f);
+                    if (_player is not null) _player.HoldingUpgrade = true;
+                    OpenUpgradePanel(socket.Id);
+                });
+                Stage(2, () => ShootSurface(path, "upgrade", _upgrade.IsOpen));
             }
             return;
         }
@@ -462,6 +543,7 @@ public partial class GameRoot : Node3D
         GD.Print($"[asset-audit] built {built.Count} views over {AssetLibrary.Requested.Count} asset names");
         foreach (string name in AssetLibrary.Requested) GD.Print($"[asset-audit] requested {name}");
         foreach (string id in UiTheme.RequestedIcons) GD.Print($"[asset-audit] requested icon_{id}");
+        foreach (string id in UiTheme.MissingIcons) GD.Print($"[asset-audit] MISSING icon_{id}");
         foreach (string name in AssetLibrary.Missing)
             GD.Print($"[asset-audit] placeholder: {name} -> {AssetLibrary.PathFor(name)}");
 
@@ -621,6 +703,8 @@ public partial class GameRoot : Node3D
 
     public override void _Process(double delta)
     {
+        TickShotStages();
+        TickIntermissionShot();
         if (_shotPath is not null && --_shotCountdown <= 0) CaptureShot();
         TickCoreFlash(delta);
 
@@ -1738,6 +1822,99 @@ public partial class GameRoot : Node3D
             ? "INCONCLUSIVE: no tower ever held a target long enough to measure"
             : aimed ? "PASS: the turret faces what it is shooting"
                     : "FAIL: the turret is tracking but pointed away");
+    }
+
+    private void Stage(int frames, System.Action step) => _shotStages.Enqueue((frames, step));
+
+    /// <summary>Arms the capture and records, beside the picture, whether the
+    /// surface it is supposed to be of is actually open. Every one of these
+    /// presets has at some point photographed a different screen than the one
+    /// it was named for, and a png cannot fail a build.</summary>
+    private void ShootSurface(string path, string surface, bool open)
+    {
+        System.IO.File.WriteAllText(path + ".txt",
+            open ? $"{surface.ToUpperInvariant()} OPEN\n" : $"{surface.ToUpperInvariant()} NOT OPEN\n");
+        _shotPath = path;
+        _shotCountdown = 2;
+    }
+
+    /// <summary>Two ground sockets near the lane, for shots that want a defence
+    /// rather than a single tower.</summary>
+    private List<SocketDef> TwoBuildableSockets()
+    {
+        var ranked = new List<(SocketDef Socket, float Distance)>();
+        foreach (var s in _map.Sockets)
+        {
+            if (s.Tag != SocketTag.Ground) continue;
+            float best = float.MaxValue;
+            foreach (var route in _map.Routes)
+            {
+                if (route.Layer != EnemyLayer.Ground) continue;
+                foreach (var w in route.Waypoints) best = Mathf.Min(best, s.Pos.DistanceTo(w));
+            }
+            ranked.Add((s, best));
+        }
+        ranked.Sort((a, b) => a.Distance.CompareTo(b.Distance));
+        return ranked.Take(2).Select(r => r.Socket).ToList();
+    }
+
+    /// <summary>Watches for the wave to end so the intermission shot catches the
+    /// panel with a recap behind it.</summary>
+    private void TickIntermissionShot()
+    {
+        if (_intermissionShotPath is null || _view is not { Valid: true }) return;
+        if (_view.Wave < 0 || _view.Phase != MatchPhase.Intermission) return;
+
+        Engine.TimeScale = 1f;
+        string path = _intermissionShotPath;
+        _intermissionShotPath = null;
+        // One frame at normal speed before the shot, so the panel is laid out
+        // and the world behind it is not mid-blur from the fast-forward.
+        Stage(2, () => ShootSurface(path, "intermission", _view.Phase == MatchPhase.Intermission));
+    }
+
+    private void TickShotStages()
+    {
+        if (_shotStages.Count == 0) return;
+        var (frames, step) = _shotStages.Peek();
+        if (_stageWaited < frames) { _stageWaited++; return; }
+        _shotStages.Dequeue();
+        _stageWaited = 0;
+        step();
+    }
+
+    /// <summary>Stands the hero where a surface's subject is in shot. Sockets
+    /// and towers are on the ground, so this backs off along the map's own
+    /// forward and looks slightly down.</summary>
+    private void AimAt(Vec3 target, float back, float height)
+    {
+        if (_player is null) return;
+        var t = ToGd(target);
+        _player.AimFrom(t + new Vector3(back * 0.7f, height, back * 0.7f), t);
+    }
+
+    /// <summary>The ground socket closest to a walked route — where a player
+    /// would actually build, and therefore what these shots should be of.
+    /// Sockets[0] is whatever the map file happens to list first, which on
+    /// Foundry is nowhere near the fighting.</summary>
+    private SocketDef BuildableSocket()
+    {
+        SocketDef best = _map.Sockets[0];
+        float bestD = float.MaxValue;
+        foreach (var s in _map.Sockets)
+        {
+            if (s.Tag != SocketTag.Ground || _view.SocketOccupied(s.Id)) continue;
+            foreach (var route in _map.Routes)
+            {
+                if (route.Layer != EnemyLayer.Ground) continue;
+                foreach (var w in route.Waypoints)
+                {
+                    float d = s.Pos.DistanceTo(w);
+                    if (d < bestD) { bestD = d; best = s; }
+                }
+            }
+        }
+        return best;
     }
 
     /// <summary>Writes a probe's samples and verdict, then quits with a status

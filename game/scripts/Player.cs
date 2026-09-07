@@ -101,6 +101,33 @@ public partial class Player : CharacterBody3D
 
     private void CaptureMouse() => Input.MouseMode = Input.MouseModeEnum.Captured;
 
+    /// <summary>Set by the review shots to hold the build or upgrade key down
+    /// for as long as the picture needs. Both surfaces exist only while their
+    /// key is held.</summary>
+    public bool HoldingBuild { get; set; }
+    public bool HoldingUpgrade { get; set; }
+
+    /// <summary>Stand at <paramref name="from"/> and look at <paramref
+    /// name="target"/>. Yaw lives on the body and pitch on the camera, which is
+    /// why this cannot be a single LookAt from outside — and why the review
+    /// shots ask for it here instead of reaching into the rig.
+    ///
+    /// The surface being photographed has to have its subject in frame: a build
+    /// wheel whose ghost is off-screen says nothing about the ghost.</summary>
+    public void AimFrom(Vector3 from, Vector3 target)
+    {
+        GlobalPosition = from;
+        var to = target - from;
+        var flat = to with { Y = 0f };
+        if (flat.Length() < 0.01f) return;
+
+        // Same convention as every other heading in the client: a node at yaw
+        // zero faces -Z, so the heading is half a turn from atan2(x, z).
+        Rotation = new Vector3(0f, Mathf.Atan2(flat.X, flat.Z) + Mathf.Pi, 0f);
+        _pitch = Mathf.Clamp(Mathf.Atan2(to.Y - 1.6f, flat.Length()), -1.5f, 1.5f);
+        _camera.Rotation = new Vector3(_pitch, 0f, 0f);
+    }
+
     // Mouse look lives in _Input so no Control node can consume motion events.
     public override void _Input(InputEvent @event)
     {
@@ -331,8 +358,14 @@ public partial class Player : CharacterBody3D
             return;
         }
 
-        bool buildHeld = Input.IsPhysicalKeyPressed(Key.E);
-        bool upgradeHeld = Input.IsPhysicalKeyPressed(Key.U);
+        // Both of these are hold-to-open, and this method is what enforces it:
+        // release the key and the wheel confirms, the panel closes. A review
+        // shot that opened either surface by calling into GameRoot therefore
+        // had it taken away again on the very next frame, which is why both
+        // presets photographed whatever was underneath. The shot holds the key
+        // instead of working around the controller.
+        bool buildHeld = HoldingBuild || Input.IsPhysicalKeyPressed(Key.E);
+        bool upgradeHeld = HoldingUpgrade || Input.IsPhysicalKeyPressed(Key.U);
 
         // E in a zipline volume rides instead of building — traversal wins,
         // since you can't build on a zipline anyway.

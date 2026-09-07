@@ -100,6 +100,23 @@ jobs:
           tail -4 /tmp/siege.txt
           grep -q "^PASS" /tmp/siege.txt
 
+      # The review shots for these three photographed the wrong screen for a
+      # whole milestone: a fresh match sits in intermission and that panel draws
+      # over everything, and both the wheel and the upgrade panel are
+      # hold-to-open, so opening them in code had them closed again on the next
+      # frame. A png cannot fail a build, so each preset now writes down whether
+      # the surface it is named for was actually open.
+      - name: Surface shots open the surface they claim
+        run: |
+          for surface in wheel upgrade intermission; do
+            godot --headless --path game --quit-after 7200 -- \
+              --shot foundry /tmp/$surface.png $surface > $surface.log 2>&1 || true
+            cat /tmp/$surface.png.txt
+            # Both verdicts end in OPEN — match the whole line, or "NOT OPEN"
+            # passes the check that exists to catch it.
+            grep -qE "^[A-Z]+ OPEN$" /tmp/$surface.png.txt
+          done
+
       # A real solo match on each map: drives the sim, every UI surface, and
       # the view/event plumbing that only runs once a world exists.
       - name: Solo match smoke (every sector)

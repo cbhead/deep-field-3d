@@ -56,6 +56,23 @@ design's forward manifest but not delivered, so the banner draws a placeholder
 chip. `make usage` reports them as requested-and-missing rather than the code
 pretending they exist.
 
+### The icon set stops at M2
+
+Design's icon batch predates M3, so **21 icons are requested and missing** —
+every tower, enemy, faction, ammo, status and upgrade path added since. List
+them with `./play --headless --quit-after 600 -- --asset-audit | grep MISSING`.
+
+This was invisible until the build wheel became reviewable. The audit printed
+what the game *asked for* and said nothing about what arrived, and the fallback
+is a labelled chip that reads as a deliberate control rather than as a hole — so
+the Detector and Filament sat on the wheel as blank squares for a whole
+milestone with nobody in a position to notice. `UiTheme.MissingIcons` records
+the fallbacks now and the audit prints them.
+
+Affected surfaces: the build wheel (detector, filament), the upgrade panel (the
+five M3 path icons), the intermission preview and enemy overheads (shade,
+mender, ram), and the lobby (glacier, specter).
+
 ## Naming
 
 Design's filenames are **all lower case**; sim content ids are camelCase

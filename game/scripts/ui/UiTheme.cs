@@ -106,6 +106,14 @@ public static class UiTheme
     /// literals under-reports badly — this is the honest record.</summary>
     public static readonly SortedSet<string> RequestedIcons = new();
 
+    /// <summary>The subset that had no file and fell back to a generated chip.
+    /// Requested-but-missing was invisible before: the audit listed everything
+    /// asked for and said nothing about what arrived, so the Detector and
+    /// Filament shipped onto the build wheel as blank squares and stayed there
+    /// through a whole milestone. A placeholder that reads as a real control is
+    /// worse than one that announces itself.</summary>
+    public static readonly SortedSet<string> MissingIcons = new();
+
     /// <summary>Design's icon if present, else a generated labeled chip.
     /// Ids match docs/DESIGN-BRIEF.md §3.8 (e.g. "tower_lance", "scrap_flux").</summary>
     /// <summary>Drop every cached Godot resource. Static caches outlive the
@@ -127,9 +135,10 @@ public static class UiTheme
         // import); PNG is accepted too so either delivery format just works.
         string svg = $"res://assets/ui/icon_{id}.svg";
         string png = $"res://assets/ui/icon_{id}.png";
-        Texture2D texture = ResourceLoader.Exists(svg) ? GD.Load<Texture2D>(svg)
-            : ResourceLoader.Exists(png) ? GD.Load<Texture2D>(png)
-            : Placeholder(id, tint ?? Accent);
+        Texture2D texture;
+        if (ResourceLoader.Exists(svg)) texture = GD.Load<Texture2D>(svg);
+        else if (ResourceLoader.Exists(png)) texture = GD.Load<Texture2D>(png);
+        else { MissingIcons.Add(id); texture = Placeholder(id, tint ?? Accent); }
 
         IconCache[id] = texture;
         return texture;
