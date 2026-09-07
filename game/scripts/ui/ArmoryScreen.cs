@@ -265,6 +265,7 @@ public partial class ArmoryScreen : Control
         // It also explains why a synthesised click passed while a real one
         // failed: PushInput delivers down and up inside one frame, so the probe
         // was the only clicker fast enough to beat the rebuild.
+        _bench.QueueRedraw();   // cheap; the rebuild below is what we gate
         string signature = Signature(view, local);
         if (signature == _signature) return;
         _signature = signature;
@@ -397,9 +398,7 @@ public partial class ArmoryScreen : Control
     /// — it was, just not the gun's. The same code in the lobby looked correct
     /// only because no level is loaded there.
     ///
-    /// NOT CALLED. Left in place because the diagnosis in it is worth keeping
-    /// and the remaining fault is narrow, but calling it renders nothing at all,
-    /// which is worse than the outline the bench draws instead.</summary>
+    /// Rebuilt on weapon change, not per refresh.</summary>
     private void RebuildWeaponModel()
     {
         if (GodotObject.IsInstanceValid(_modelHost) && _modelFor == _weaponId) return;
@@ -421,6 +420,21 @@ public partial class ArmoryScreen : Control
         var stage = new Node3D();
         viewport.AddChild(stage);
 
+        // An own-world viewport has no environment, so ambient light is zero and
+        // flat-shaded meshes come out black on a transparent background — which
+        // reads as "nothing rendered" and sent me looking at the camera three
+        // times. Preview viewports have to bring their own lighting.
+        stage.AddChild(new WorldEnvironment
+        {
+            Environment = new Godot.Environment
+            {
+                BackgroundMode = Godot.Environment.BGMode.Canvas,
+                AmbientLightSource = Godot.Environment.AmbientSource.Color,
+                AmbientLightColor = new Color(0.62f, 0.68f, 0.82f),
+                AmbientLightEnergy = 1.6f,
+            },
+        });
+
         var gun = AssetLibrary.Instantiate(asset, () => new Node3D());
         gun.RotationDegrees = new Vector3(10f, 208f, 0f);
         stage.AddChild(gun);
@@ -430,13 +444,17 @@ public partial class ArmoryScreen : Control
         _bench.AddChild(_modelHost);
         _bench.MoveChild(_modelHost, 0);
 
-        // Size it here, not only in DrawBench. Stretch makes the container
-        // dictate the viewport's size, so a container left at zero renders a
-        // zero-pixel viewport — and now that Refresh only runs on change,
-        // DrawBench is no longer guaranteed to come along afterwards and fix it.
-        var r = BenchRect();
-        _modelHost.Position = r.Position + new Vector2(r.Size.X * 0.08f, r.Size.Y * 0.26f);
-        _modelHost.Size = new Vector2(r.Size.X * 0.84f, r.Size.Y * 0.44f);
+        // Anchored, not sized. The bench has no size yet when this runs — the
+        // container was coming out 0x0 and the viewport 2x2, which is why the
+        // model never appeared however the camera was placed. Absolute sizing
+        // always lost that race and, now that Refresh only runs on change, there
+        // was no later pass to correct it. Anchors just follow the parent.
+        _modelHost.AnchorLeft = 0.10f;
+        _modelHost.AnchorRight = 0.90f;
+        _modelHost.AnchorTop = 0.30f;
+        _modelHost.AnchorBottom = 0.72f;
+        _modelHost.OffsetLeft = _modelHost.OffsetRight = 0f;
+        _modelHost.OffsetTop = _modelHost.OffsetBottom = 0f;
 
         // Read after attaching: GlobalTransform on a detached node warns and
         // returns identity.
@@ -465,6 +483,7 @@ public partial class ArmoryScreen : Control
 
     private void DrawBench()
     {
+
         var rect = BenchRect();
         var origin = rect.Position;
         var size = rect.Size;
@@ -472,7 +491,6 @@ public partial class ArmoryScreen : Control
 
         var body = new Rect2(origin + new Vector2(size.X * 0.16f, size.Y * 0.40f),
             new Vector2(size.X * 0.66f, size.Y * 0.20f));
-        _bench.DrawRect(body, Tokens.BorderPanel, filled: false, width: 2f);
         // Outline, not a fill. Design's frame puts the weapon's silhouette here
         // and this stands in for it until the viewmodels land — filled, at
         // design's own 900x640, it read as a grey slab across the middle of the
@@ -494,10 +512,18 @@ public partial class ArmoryScreen : Control
     {
         foreach (var child in _bench.GetChildren().OfType<Control>().ToList())
         {
+            // The weapon view outlives a slot rebuild. Purging it took it out of
+            // the tree while _modelFor still matched, so RebuildWeaponModel
+            // skipped itself and the model was never in the scene to render —
+            // which is the whole reason the bench looked empty no matter what
+            // the camera, the lighting or the anchors were doing.
+            if (child == _modelHost) continue;
             _bench.RemoveChild(child);
             child.QueueFree();
         }
         if (_view.Local is not { } local) return;
+
+        RebuildWeaponModel();
 
         var mounted = local.AttachmentsFor(_weaponId);
         var rect = BenchRect();
