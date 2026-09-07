@@ -1,0 +1,11 @@
+/* Minimal element defaults so cards, kits and consumer pages share a floor. */
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--surface-base);color:var(--text-primary);font:var(--text-body-role);-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{margin:0;font-family:var(--font-display);color:var(--text-primary)}
+a{color:var(--text-arcane);text-decoration:none;transition:color var(--dur-fast) var(--ease-snap)}
+a:hover{color:var(--arcane-300)}
+::selection{background:rgba(200,155,60,.35)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:var(--surface-inset)}
+::-webkit-scrollbar-thumb{background:var(--steel-500);border:2px solid var(--surface-inset)}
+::-webkit-scrollbar-thumb:hover{background:var(--steel-400)}

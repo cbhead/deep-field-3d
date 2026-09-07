@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Deep Field 3D — Tower asset pack</title>
+<link rel="stylesheet" href="ds/tokens/fonts.css">
+<link rel="stylesheet" href="ds/tokens/colors.css">
+<link rel="stylesheet" href="ds/tokens/typography.css">
+<link rel="stylesheet" href="ds/tokens/spacing.css">
+<link rel="stylesheet" href="ds/tokens/effects.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.184.0/build/three.module.js",
+    "three/addons/controls/OrbitControls.js": "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js",
+    "three/addons/exporters/OBJExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js",
+    "three/addons/exporters/GLTFExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js"
+  },
+  "integrity": {
+    "https://unpkg.com/three@0.184.0/build/three.module.js": "sha384-8FCZ1eVO6it4+pbec2aDtnTrwjWXZLJRC+MAGCIPDgsYnUrl/E0A2YlF8ioMKI/J",
+    "https://unpkg.com/three@0.184.0/build/three.core.js": "sha384-dw2ooPewaEIrAgl6oFDBmmBWCE9oW9LxRGcfwZ0hLvEprzo202wXl7vCYHRlSnOT",
+    "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js": "sha384-4rziNxOBZKQ69i+w+f89KJ55TCYquwchVbByQwmaOeIOXdOU2PLDn3kOfXHwIJC9",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js": "sha384-nbwtoZENJD3Vq+ACK0CuGQdPMuDWHkamC2KJD70EV5nfg6jQjfppKOea07YJN+N3",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js": "sha384-VofkvpG6HERhFCYbsUOHeNXBCqID2nfqkQqnVzE1jc/oPcz+qJ13ADdXH08hE+cQ"
+  }
+}
+</script>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font:var(--text-body-role);background:var(--surface-base);color:var(--text-primary);display:flex;flex-direction:column;overflow:hidden}
+  a{color:var(--text-arcane);text-decoration:none}
+  a:hover{color:var(--arcane-300)}
+  .label{font:var(--text-label);letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--text-muted)}
+  header{flex:0 0 auto;display:flex;align-items:center;gap:var(--space-7);padding:var(--space-4) var(--space-6);
+    background:var(--surface-panel);border-bottom:var(--stroke-emphasis) solid var(--border-panel);box-shadow:var(--shadow-panel);position:relative;z-index:var(--z-hud)}
+  header::after{content:"";position:absolute;inset:auto 0 -3px 0;height:2px;background:var(--tex-hazard);opacity:.7}
+  .brand h1{font:var(--text-panel-title);margin:0;letter-spacing:var(--tracking-display)}
+  .brand p{margin:2px 0 0;font-size:var(--size-caption);color:var(--text-muted)}
+  .tabs{display:flex;gap:var(--space-2);flex-wrap:wrap;align-items:center;margin-left:auto}
+  .tabs a{font:var(--weight-semibold) var(--size-caption)/1 var(--font-display);letter-spacing:.03em;display:flex;align-items:center;gap:var(--space-2);
+    padding:var(--space-2) var(--space-4);background:var(--surface-raised);color:var(--text-secondary);border:var(--stroke-panel) solid var(--border-panel);
+    border-radius:var(--radius-2);clip-path:var(--clip-chamfer-sm)}
+  .tabs a:hover{background:var(--obsidian-500);color:var(--text-primary)}
+  main{flex:1 1 auto;display:grid;grid-template-columns:minmax(0,1fr) 420px;min-height:0}
+  .left{position:relative;min-height:0}
+  three-d-stage{width:100%;height:100%;display:block}
+  three-d-stage:not(:defined){visibility:hidden}
+  .panel{position:absolute;z-index:var(--z-dock);left:var(--space-6);top:var(--space-6);width:min(560px,calc(100% - var(--space-10)));
+    background:var(--surface-glass);backdrop-filter:blur(var(--blur-glass));border:var(--stroke-panel) solid var(--border-panel);
+    border-top-color:var(--border-bevel-top);box-shadow:var(--shadow-panel);clip-path:var(--clip-chamfer);max-height:calc(100% - var(--space-8));overflow:auto}
+  .panel>h2,aside>h2{font:var(--text-label);letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--text-accent);margin:0;
+    padding:var(--space-3) var(--space-4);background:var(--surface-inset);border-bottom:var(--stroke-panel) solid var(--border-panel);position:sticky;top:0;z-index:1}
+  .body{padding:var(--space-4)}
+  table{width:100%;border-collapse:collapse;font-size:var(--size-micro)}
+  th{font:var(--text-label);letter-spacing:var(--tracking-micro);text-transform:uppercase;color:var(--text-muted);text-align:left;padding:0 var(--space-2) var(--space-2)}
+  td{padding:var(--space-2);border-top:var(--stroke-hairline) solid var(--border-panel);color:var(--text-secondary);vertical-align:top;font-variant-numeric:tabular-nums}
+  td.mono{font-family:var(--font-mono)}
+  tr[data-row]{cursor:pointer}
+  tr[data-row]:hover td{background:var(--obsidian-600)}
+  tr[aria-selected="true"] td{background:var(--obsidian-500);color:var(--text-primary)}
+  .sw{display:inline-block;width:8px;height:8px;transform:rotate(45deg);margin-right:var(--space-2)}
+  .ok{color:var(--state-success)} .warn{color:var(--state-warning)} .bad{color:var(--state-danger)}
+  .chk{display:flex;flex-direction:column;gap:2px}
+  aside{background:var(--surface-panel);border-left:var(--stroke-panel) solid var(--border-panel);display:flex;flex-direction:column;min-height:0}
+  aside .body{flex:1 1 auto;overflow:auto}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3) var(--space-4);margin:0 0 var(--space-4)}
+  .stats dt{font:var(--text-label);letter-spacing:var(--tracking-micro);text-transform:uppercase;color:var(--text-muted);margin:0}
+  .stats dd{margin:3px 0 0;font:var(--weight-bold) var(--size-stat-sm)/1 var(--font-mono);color:var(--text-primary)}
+  .stats dd.accent{color:var(--text-accent)}
+  hr{border:0;border-top:var(--stroke-panel) solid var(--border-panel);margin:var(--space-4) 0}
+  button.primary{width:100%;font:var(--weight-bold) var(--size-body)/1 var(--font-display);letter-spacing:.06em;text-transform:uppercase;
+    padding:var(--space-4);cursor:pointer;color:var(--text-inverse);background:var(--brass-500);border:0;clip-path:var(--clip-chamfer-sm);box-shadow:var(--glow-brass)}
+  button.primary:hover{background:var(--brass-400)}
+  button.primary:disabled{background:var(--steel-500);color:var(--steel-200);box-shadow:none;cursor:default}
+  .track{position:relative;height:8px;background:var(--bar-track);box-shadow:var(--shadow-slot);border:var(--stroke-hairline) solid var(--border-panel);margin:var(--space-3) 0 var(--space-2)}
+  .track .fill{position:absolute;inset:0 auto 0 0;width:0;background:var(--arcane-500);transition:width var(--dur-fast) linear}
+  .status{font:var(--weight-bold) var(--size-caption)/1.3 var(--font-display);letter-spacing:.06em;text-transform:uppercase;padding:var(--space-3);
+    text-align:center;background:var(--surface-inset);border:var(--stroke-hairline) solid var(--border-panel);color:var(--text-muted)}
+  .status[data-tone="run"]{color:var(--state-warning)} .status[data-tone="done"]{color:var(--state-success)} .status[data-tone="fail"]{color:var(--state-danger)}
+  .files{list-style:none;margin:0;padding:0;font:var(--weight-regular) var(--size-micro)/1.7 var(--font-mono);color:var(--text-muted);columns:2}
+  .files li b{color:var(--text-secondary);font-weight:var(--weight-semibold)}
+  .icons{display:grid;grid-template-columns:repeat(10,1fr);gap:var(--space-2);margin:var(--space-3) 0 0}
+  .icons img{width:100%;aspect-ratio:1;background:var(--surface-inset);border:var(--stroke-hairline) solid var(--border-panel);padding:4px;
+    filter:invert(.93) sepia(.1) saturate(.6)}
+  .note{font-size:var(--size-caption);line-height:var(--leading-normal);color:var(--text-muted);margin:var(--space-3) 0 0}
+  code{font:var(--weight-regular) var(--size-micro)/1 var(--font-mono);color:var(--text-arcane)}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>Tower asset pack</h1>
+    <p>Deep Field 3D · DESIGN-BRIEF §3.1–3.8 · towers, enemies, heroes, traps, projectiles, weapons, Foundry + Switchyard + shared kits, VFX, icons → <code>game/assets/</code></p>
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+</header>
+<main>
+  <div class="left">
+    <three-d-stage name="deepfield_tower_pack" background="#0D1119"></three-d-stage>
+    <section class="panel">
+      <h2>Brief alignment — click a row to preview (export orientation, −Z forward)</h2>
+      <div class="body">
+        <table id="align"><thead><tr><th>Tower</th><th>Size (w × h × d)</th><th>Paths</th><th>Checks</th></tr></thead><tbody></tbody></table>
+        <p class="note">Sizes are the L1 chassis bounds. Towers stand on the shared 2.1 m socket pad; the Barricade is the brief's 4.5 × 2.2 m wall. Rig nodes (<code>_yaw</code>/<code>_pitch</code>/<code>_muzzle</code>) and cosmetic <code>_spin</code> are checked by name.</p>
+      </div>
+    </section>
+  </div>
+  <aside>
+    <h2>Export</h2>
+    <div class="body">
+      <dl class="stats" id="stats"></dl>
+      <button class="primary" id="go" disabled>Build pack (.zip)</button>
+      <div class="track"><div class="fill" id="fill"></div></div>
+      <div class="status" id="status">Loading models…</div>
+      <hr>
+      <p class="label">Icons — <code>game/assets/ui/</code></p>
+      <div class="icons" id="icons"></div>
+      <hr>
+      <p class="label" style="margin-bottom:var(--space-3)">Contents</p>
+      <ul class="files" id="files"></ul>
+      <p class="note">Layout mirrors the repo: <code>game/assets/&lt;folder&gt;/</code> per <code>AssetLibrary.Routes</code>, <code>docs/palette.json</code> + <code>docs/PALETTE.md</code>, <code>docs/forward-manifest.json</code>, <code>docs/ASSET-DELIVERY.md</code> (what changed, what is unused), <code>docs/design-system/</code> (tokens, ui-kit, screens, weapon view), <code>game/assets/structures/manifest.json</code> (bounds, tris, rig nodes, cues). Skyboxes are baked from the shader to a 4096×2048 equirect and shipped as unlit textured domes.</p>
+    </div>
+  </aside>
+</main>
+<script src="./three-d-stage.js"></script>
+<script type="module">
+import { applyLevels, triCount, countMeshes } from './models/tower-kit.js';
+import { makeEnemyKit, ENEMIES } from './models/enemies.js';
+import { TRAPS } from './models/traps.js';
+import { PROJECTILES } from './models/projectiles.js';
+import { makeWeaponKit, WEAPONS, ATTACHMENTS, AMMO, TRACERS } from './models/weapons.js';
+import { makeHeroKit, HEROES } from './models/heroes.js';
+import { FOUNDRY, makeFoundryMats } from './models/foundry.js';
+import { SHARED, PICKUPS } from './models/shared.js';
+import { SWITCHYARD, makeSwitchyardMats } from './models/switchyard.js';
+import { VFX, makeVfxMats } from './models/vfx.js';
+const MODS = ['lance', 'nova', 'singularity', 'skywatch', 'arc', 'barricade', 'filament', 'detector', 'overclock'];
+const MS = { lance: 'M1', nova: 'M1', singularity: 'M1', skywatch: 'M1', arc: 'M2', barricade: 'M2', filament: 'M3', detector: 'M3', overclock: 'M4' };
+// Brief §3.2 / §4 expectations per tower.
+const EXPECT = {
+  lance: { paths: ['damage', 'range', 'rate'], rig: true }, nova: { paths: ['damage', 'range', 'rate'], rig: true },
+  arc: { paths: ['damage', 'range', 'rate'], rig: false }, singularity: { paths: ['range', 'rate'], rig: false },
+  skywatch: { paths: ['damage', 'range', 'rate'], rig: true }, barricade: { paths: [], size: [4.5, 2.2], variants: ['damaged', 'broken'] },
+  detector: { paths: null, rig: false }, filament: { paths: null, rig: true }, overclock: { paths: null, rig: false },
+};
+const ICONS = [
+  'icon_tower_lance', 'icon_tower_nova', 'icon_tower_arc', 'icon_tower_singularity', 'icon_tower_skywatch', 'icon_tower_barricade', 'icon_tower_detector', 'icon_tower_filament', 'icon_tower_overclock',
+  'icon_trap_spike', 'icon_trap_tar', 'icon_trap_launcher',
+  'icon_enemy_drifter', 'icon_enemy_mote', 'icon_enemy_monolith', 'icon_enemy_skiff', 'icon_enemy_aegis', 'icon_enemy_warden', 'icon_enemy_mole', 'icon_enemy_cluster',
+  'icon_status_burn', 'icon_status_chill', 'icon_status_mark', 'icon_status_shock', 'icon_status_freeze', 'icon_status_shred', 'icon_reaction_thermalshock', 'icon_reaction_flashfreeze',
+  'icon_scrap_alloy', 'icon_scrap_flux', 'icon_scrap_plating', 'icon_scrap_gravium',
+  'icon_weapon_sidearm', 'icon_weapon_rifle', 'icon_weapon_scattergun', 'icon_weapon_emberpistol', 'icon_weapon_wrench',
+  'icon_ammo_standard', 'icon_ammo_ap', 'icon_ammo_hollowpoint', 'icon_ammo_incendiary', 'icon_ammo_cryo',
+  'icon_attach_longbarrel', 'icon_attach_shortbarrel', 'icon_attach_compensator', 'icon_attach_rangefinder', 'icon_attach_drumfeed', 'icon_attach_bracestock', 'icon_attach_stabilizer', 'icon_attach_embercoil', 'icon_attach_cryocell', 'icon_attach_voltcap',
+  'icon_faction_forge', 'icon_faction_ember', 'icon_faction_tempest', 'icon_faction_glacier', 'icon_faction_specter', 'icon_ability_overdrive', 'icon_ability_ignitionwave', 'icon_ability_chainsurge', 'icon_ability_cryofield', 'icon_ability_revealpulse',
+  'icon_path_damage', 'icon_path_range', 'icon_path_rate'];
+const EXTRA = [
+  { dir: 'enemies/', items: ENEMIES, kind: 'enemy' }, { dir: 'traps/', items: TRAPS, kind: 'trap' }, { dir: 'towers/', items: PROJECTILES, kind: 'projectile' },
+  { dir: 'weapons/', items: WEAPONS, kind: 'weapon' }, { dir: 'weapons/', items: WEAPONS.filter((w) => w.worldFile).map((w) => ({ ...w, file: w.worldFile, id: w.id + '_world' })), kind: 'weapon_world' },
+  { dir: 'heroes/', items: HEROES, kind: 'hero' }, { dir: 'maps/foundry/', items: FOUNDRY, kind: 'map_foundry' }, { dir: 'maps/switchyard/', items: SWITCHYARD, kind: 'map_switchyard' }, { dir: 'shared/', items: SHARED, kind: 'shared' }, { dir: 'vfx/', items: VFX, kind: 'vfx' }, { dir: 'economy/', items: PICKUPS, kind: 'pickup' }, { dir: 'weapons/', items: ATTACHMENTS, kind: 'attachment' }, { dir: 'weapons/', items: AMMO, kind: 'ammo' }, { dir: 'weapons/', items: TRACERS, kind: 'tracer' }];
+const EXTRA_COUNT = EXTRA.reduce((a, c) => a + c.items.length, 0);
+// game/scripts/AssetLibrary.cs → Routes: the name prefix picks the folder under game/assets/. The zip unpacks straight onto the repo root.
+const ROUTES = [['enemy_', 'enemies'], ['boss_', 'enemies'], ['tower_', 'structures'], ['trap_', 'structures'], ['socket_', 'structures'], ['weapon_', 'weapons'], ['attach_', 'weapons'], ['ammo_', 'weapons'], ['hands_', 'weapons'], ['hero_', 'heroes'], ['proj_', 'vfx'], ['vfx_', 'vfx'], ['pickup_', 'economy'], ['foundry_', 'maps'], ['switchyard_', 'maps'], ['shared_', 'maps'], ['prop_', 'maps'], ['ui_', 'ui']];
+const routeFor = (file) => 'game/assets/' + (ROUTES.find(([p]) => file.startsWith(p))?.[1] || 'misc') + '/' + file;
+const el = (id) => document.getElementById(id);
+const TOWERS = (await Promise.all(MODS.map((m) => import(`./models/${m}.js`)))).map((m) => m.TOWER);
+
+el('tabs').innerHTML = TOWERS.map((t) => `<a href="${t.label}.html"><span class="sw" style="background:${t.swatch}"></span>${t.label}</a>`).join('') + `<a href="Deep Field 3D - Roster.html"><span class="sw" style="background:#e9614c"></span>Roster</a><a href="Deep Field 3D - Gunsmith.html"><span class="sw" style="background:#c3ccd8"></span>Gunsmith</a><a href="Deep Field 3D - Maps.html"><span class="sw" style="background:#ff8a1f"></span>Maps</a><a href="Deep Field 3D - UI Screens.html"><span class="sw" style="background:#c89b3c"></span>UI</a><a href="Deep Field 3D - Forward Manifest.html"><span class="sw" style="background:#9b5be8"></span>Forward</a>`;
+el('icons').innerHTML = ICONS.map((n) => `<img src="game/assets/ui/${n}.svg" alt="${n}" title="${n}">`).join('');
+
+const stage = document.querySelector('three-d-stage');
+const { THREE } = await stage.ready;
+const kit = makeEnemyKit(THREE);
+Object.assign(kit.mats, makeWeaponKit(THREE).mats, makeHeroKit(THREE).mats); makeFoundryMats(THREE, kit.mats); makeSwitchyardMats(THREE, kit.mats); makeVfxMats(THREE, kit.mats); kit.mats.threat = kit.mats.weak;
+const { GLTFExporter } = await import('three/addons/exporters/GLTFExporter.js');
+const exporter = new GLTFExporter();
+
+const allLevels = (t, fn) => Object.fromEntries(t.paths.map((p) => [p.id, fn(p.id)]));
+const resetVis = (m) => m.traverse((o) => { o.visible = !o.userData.gizmo; });
+const fmt = (n) => n.toFixed(2);
+/** Bounds over VISIBLE meshes only — Box3.setFromObject would count the hidden upgrade groups. */
+function visBox(root) {
+  root.updateMatrixWorld(true);
+  const b = new THREE.Box3(), tmp = new THREE.Box3();
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    for (let p = o; p; p = p.parent) if (!p.visible) return;
+    if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+    tmp.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld);
+    b.union(tmp);
+  });
+  return b;
+}
+
+/** Hide every mesh outside the path's `_up_<path>_l*` groups; drop empty groups. */
+function pruneToPath(model, id, path) {
+  const re = new RegExp(`^${id}_up_${path}_l\\d+$`);
+  const keep = (o, under) => {
+    if (!o.visible && o !== model) return false; // applyLevels hid this rung — leave it hidden
+    const u = under || re.test(o.name);
+    if (o.isMesh) { o.visible = o.visible && u; return o.visible; }
+    let any = false;
+    for (const c of o.children) any = keep(c, u) || any;
+    o.visible = any || o === model;
+    return any;
+  };
+  keep(model, false);
+}
+
+/** Build the brief-facing chassis: L1 everywhere, −Z forward, named for the file. */
+function chassis(t, variant) {
+  const m = t.build(kit, allLevels(t, () => 1));
+  applyLevels(m, t, allLevels(t, () => 1));
+  if (variant) t.variants[variant](m, kit);
+  m.rotation.y = Math.PI;
+  return m;
+}
+
+function fileList() {
+  const out = [];
+  for (const t of TOWERS) {
+    if (t.id === 'barricade') { out.push('tower_barricade.glb', 'tower_barricade_damaged.glb', 'tower_barricade_broken.glb'); continue; }
+    out.push(`tower_${t.id}_chassis.glb`);
+    for (const p of t.paths) for (let s = 1; s <= 10; s++) out.push(`tower_${t.id}_${p.id}_s${s}.glb`);
+  }
+  return out;
+}
+const FILES = fileList();
+
+/* ── alignment table ─────────────────────────────────────────────────── */
+const previews = {};
+const tbody = el('align').querySelector('tbody');
+let totalTris = 0;
+for (const t of TOWERS) {
+  const m = chassis(t);
+  previews[t.id] = m;
+  const b = visBox(m), s = b.getSize(new THREE.Vector3());
+  const ex = EXPECT[t.id], checks = [];
+  const has = (n) => !!m.getObjectByName(n);
+  checks.push([Math.abs(b.min.y) < .01, `base at y=0 (${fmt(b.min.y)})`]);
+  if (ex.size) checks.push([Math.abs(s.x - ex.size[0]) < .5 && Math.abs(s.y - ex.size[1]) < .2, `${ex.size[0]} × ${ex.size[1]} m wall (footing +0.45)`]);
+  else { const f = m.getObjectByName(t.id + '_foot'); const fb = f ? visBox(f) : b;
+    checks.push([Math.max(Math.abs(fb.min.x), Math.abs(fb.max.x), Math.abs(fb.min.z), Math.abs(fb.max.z)) <= 1.1, `foot inside 2.1 m pad · overhang ${fmt(Math.max(s.x, s.z))} m`]); }
+  if (ex.rig) checks.push([has(t.id + '_yaw') && has(t.id + '_pitch') && has(t.id + '_muzzle'), 'rig: _yaw › _pitch › _muzzle']);
+  else if (ex.rig === false) checks.push([has(t.id + '_spin'), 'no rig · _spin cosmetic']);
+  if (ex.paths) {
+    const ids = t.paths.map((p) => p.id);
+    const same = ex.paths.length === ids.length && ex.paths.every((p) => ids.includes(p));
+    checks.push([same || ex.paths.length === 0, ex.paths.length ? `paths = ${ex.paths.join('/')}` : `no paths in brief${ids.length ? ` · ${ids.length} extra (${ids.join('/')})` : ''}`, ex.paths.length === 0 && ids.length ? 'warn' : null]);
+  } else checks.push([true, 'forward manifest — paths open', 'warn']);
+  if (ex.variants) checks.push([ex.variants.every((v) => t.variants?.[v]), 'damaged + broken states']);
+  checks.push([true, '−Z forward on export']);
+  totalTris += triCount(m);
+  const tr = document.createElement('tr');
+  tr.dataset.row = t.id;
+  tr.innerHTML = `<td><span class="sw" style="background:${t.swatch}"></span>${t.label}<br><span class="label">${MS[t.id]}</span></td>
+    <td class="mono">${fmt(s.x)} × ${fmt(s.y)} × ${fmt(s.z)}</td>
+    <td class="mono">${t.paths.map((p) => p.id).join('<br>') || '—'}</td>
+    <td><div class="chk">${checks.map(([ok, txt, tone]) => `<span class="${tone || (ok ? 'ok' : 'bad')}">${ok ? (tone === 'warn' ? '△' : '✓') : '✗'} ${txt}</span>`).join('')}</div></td>`;
+  tr.addEventListener('click', () => show(t.id));
+  tbody.appendChild(tr);
+}
+function show(id) {
+  for (const r of tbody.children) r.setAttribute('aria-selected', String(r.dataset.row === id));
+  stage.setAttribute('name', `tower_${id}_chassis`);
+  stage.setObject(previews[id]);
+}
+show('lance');
+
+el('stats').innerHTML = `<div><dt>GLB files</dt><dd class="accent">${FILES.length + EXTRA_COUNT}</dd></div><div><dt>Towers</dt><dd>${TOWERS.length}</dd></div>
+  <div><dt>Icons</dt><dd>${ICONS.length}</dd></div><div><dt>Tris @L1 (all)</dt><dd>${totalTris.toLocaleString()}</dd></div>`;
+el('files').innerHTML = `<li style="column-span:all"><b>Unpacks onto the repo root</b> — game/assets/&lt;folder&gt;/ per AssetLibrary.Routes, docs/, docs/design-system/</li>` + TOWERS.map((t) => t.id === 'barricade'
+  ? `<li><b>tower_barricade</b>.glb + _damaged + _broken</li>`
+  : `<li><b>tower_${t.id}</b>_chassis.glb</li>` + t.paths.map((p) => `<li>tower_${t.id}_<b>${p.id}</b>_s1…s10.glb</li>`).join('')).join('')
+  + EXTRA.map((c) => c.items.map((it) => `<li>${c.dir}<b>${it.file}</b></li>`).join('')).join('');
+
+/* ── zip (store) ─────────────────────────────────────────────────────── */
+const CRC = new Uint32Array(256).map((_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+const crc32 = (u8) => { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC[(c ^ u8[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+function zip(entries) {
+  const enc = new TextEncoder(), parts = [], cd = [];
+  let off = 0;
+  const u16 = (v) => [v & 255, (v >>> 8) & 255], u32 = (v) => [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255];
+  for (const { name, data } of entries) {
+    const n = enc.encode(name), crc = crc32(data);
+    const head = new Uint8Array([...u32(0x04034b50), ...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(data.length), ...u32(data.length), ...u16(n.length), ...u16(0), ...n]);
+    parts.push(head, data);
+    cd.push(new Uint8Array([...u32(0x02014b50), ...u16(20), ...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(data.length), ...u32(data.length), ...u16(n.length), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(off), ...n]));
+    off += head.length + data.length;
+  }
+  const cdSize = cd.reduce((a, c) => a + c.length, 0);
+  const eocd = new Uint8Array([...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(cd.length), ...u16(cd.length), ...u32(cdSize), ...u32(off), ...u16(0)]);
+  return new Blob([...parts, ...cd, eocd], { type: 'application/zip' });
+}
+
+/* ── export run ──────────────────────────────────────────────────────── */
+const glb = async (obj) => new Uint8Array(await exporter.parseAsync(obj, { binary: true, trs: true, onlyVisible: true }));
+/* Skyboxes are a ShaderMaterial (models/space-sky.js) — GLTFExporter would ship a blank dome. Bake the shader to an
+   equirect PNG with a cube camera at the origin and hand the sphere an unlit textured material; the UV mapping below is
+   SphereGeometry's own (x = −cos φ sin θ, y = cos θ, z = sin φ sin θ) so the baked image lands exactly where the shader drew it. */
+async function bakeSky(mesh, faceSize = 1536, W = 4096) {
+  const renderer = stage._renderer, H = W / 2;
+  const cubeRT = new THREE.WebGLCubeRenderTarget(faceSize, { generateMipmaps: false }); cubeRT.texture.colorSpace = THREE.SRGBColorSpace;
+  const cubeCam = new THREE.CubeCamera(1, 5000, cubeRT);
+  const sc = new THREE.Scene(); const sky = new THREE.Mesh(mesh.geometry, mesh.material); sky.frustumCulled = false; sc.add(sky); sc.add(cubeCam);
+  cubeCam.update(renderer, sc);
+  const eqRT = new THREE.WebGLRenderTarget(W, H, { depthBuffer: false }); eqRT.texture.colorSpace = THREE.SRGBColorSpace;
+  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
+    uniforms: { tCube: { value: cubeRT.texture } }, depthTest: false, depthWrite: false,
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
+    fragmentShader: 'precision highp float; uniform samplerCube tCube; varying vec2 vUv; void main(){ float ph = vUv.x * 6.28318530718, th = (1. - vUv.y) * 3.14159265359; vec3 d = vec3(-cos(ph) * sin(th), cos(th), sin(ph) * sin(th)); gl_FragColor = textureCube(tCube, d); }' }));
+  const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), qs = new THREE.Scene(); qs.add(quad);
+  const prevRT = renderer.getRenderTarget(); renderer.setRenderTarget(eqRT); renderer.render(qs, cam); 
+  const px = new Uint8Array(W * H * 4); renderer.readRenderTargetPixels(eqRT, 0, 0, W, H, px); renderer.setRenderTarget(prevRT);
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const ctx = c.getContext('2d'), img = ctx.createImageData(W, H);
+  for (let y = 0; y < H; y++) img.data.set(px.subarray((H - 1 - y) * W * 4, (H - y) * W * 4), y * W * 4); // GL rows are bottom-up
+  ctx.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  const mat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide, fog: false, toneMapped: false }); mat.name = mesh.material.name + '_baked';
+  cubeRT.dispose(); eqRT.dispose(); quad.geometry.dispose(); quad.material.dispose();
+  const baked = new THREE.Mesh(mesh.geometry, mat); baked.name = mesh.name; baked.userData = { ...mesh.userData, gizmo: false, bakedEquirect: `${W}x${H} png` };
+  return baked;
+}
+/** Swap any ShaderMaterial sky in `obj` for its baked twin; returns the (possibly new) root. */
+async function bakeSkies(obj) {
+  if (obj.isMesh && obj.material?.isShaderMaterial && obj.userData.sky) return bakeSky(obj);
+  const jobs = [];
+  obj.traverse((o) => { if (o.isMesh && o.material?.isShaderMaterial && o.userData.sky && o.parent) jobs.push(o); });
+  for (const o of jobs) { const b = await bakeSky(o); b.position.copy(o.position); b.rotation.copy(o.rotation); b.scale.copy(o.scale); o.parent.add(b); o.parent.remove(o); }
+  return obj;
+}
+const tick = () => new Promise((r) => setTimeout(r, 0));
+const bounds = (o) => { const b = visBox(o); return b.isEmpty() ? null : { min: b.min.toArray().map((v) => +v.toFixed(3)), max: b.max.toArray().map((v) => +v.toFixed(3)) }; };
+const text = async (p) => new Uint8Array(await (await fetch(p)).arrayBuffer());
+
+el('go').disabled = false;
+el('status').textContent = `Ready — ${FILES.length + EXTRA_COUNT} GLB files`;
+el('go').addEventListener('click', async () => {
+  el('go').disabled = true;
+  const status = el('status'); status.dataset.tone = 'run';
+  const entries = [], manifest = { version: '1.0', generated: new Date().toISOString(), units: 'metres', up: '+Y', forward: '-Z', files: [] };
+  let done = 0;
+  const add = async (name, obj, meta) => {
+    obj.name = name.split('/').pop().replace(/\.glb$/, '');
+    obj = await bakeSkies(obj);
+    const data = await glb(obj);
+    entries.push({ name: routeFor(name), data });
+    manifest.files.push({ file: name, bytes: data.length, tris: triCount(obj), parts: countMeshes(obj), bounds: bounds(obj), ...meta });
+    done++;
+    el('fill').style.width = (done / (FILES.length + EXTRA_COUNT) * 100) + '%';
+    status.textContent = `${done} / ${FILES.length + EXTRA_COUNT} · ${name}`;
+    await tick();
+  };
+  try {
+    for (const t of TOWERS) {
+      const rigMeta = t.rig ? { rig: { yaw: t.id + '_yaw', pitch: t.id + '_pitch', muzzle: t.id + '_muzzle', yawLimits: t.rig.yaw, pitchLimits: t.rig.pitch, traverseDegPerSec: t.rig.traverse, elevateDegPerSec: t.rig.elevate, pitchSign: -1 } } : { spin: t.id + '_spin' };
+      if (t.id === 'barricade') {
+        for (const [file, v] of [['tower_barricade.glb', null], ['tower_barricade_damaged.glb', 'damaged'], ['tower_barricade_broken.glb', 'broken']])
+          await add(file, chassis(t, v), { tower: t.id, kind: 'structure', state: v || 'intact' });
+        continue;
+      }
+      await add(`tower_${t.id}_chassis.glb`, chassis(t), { tower: t.id, kind: 'chassis', ...rigMeta, cues: t.paths.map((p) => p.cue), energy: t.swatch });
+      const staged = t.build(kit, allLevels(t, () => 10));
+      staged.rotation.y = Math.PI;
+      for (const p of t.paths) for (let s = 1; s <= 10; s++) {
+        resetVis(staged);
+        applyLevels(staged, t, allLevels(t, (id) => id === p.id ? s : 1));
+        pruneToPath(staged, t.id, p.id);
+        await add(`tower_${t.id}_${p.id}_s${s}.glb`, staged, { tower: t.id, kind: 'module', path: p.id, stage: s, breakpoint: [4, 7, 10].includes(s), adds: p.steps[s] || null, increments: Array.from({ length: s - 1 }, (_, i) => `${t.id}_up_${p.id}_l${i + 2}`) });
+      }
+    }
+    for (const c of EXTRA) for (const it of c.items) {
+      const m = it.build(kit);
+      await add(it.file, m, { kind: c.kind, id: it.id, note: it.note });
+    }
+    status.textContent = 'Bundling palette, icons, manifest, design system…';
+    entries.push({ name: 'game/assets/structures/manifest.json', data: new TextEncoder().encode(JSON.stringify(manifest, null, 2)) });
+    entries.push({ name: 'docs/forward-manifest.json', data: await text('game/assets/forward-manifest.json') });
+    entries.push({ name: 'game/assets/brand/README.md', data: await text('game/assets/brand/README.md') });
+    for (const n of ['logo_mark.svg', 'logo_mark_mono.svg', 'logo_horizontal.svg', 'logo_horizontal_onbrass.svg', 'logo_stacked.svg']) entries.push({ name: 'game/assets/brand/' + n, data: await text('game/assets/brand/' + n) });
+    for (const s of [16, 32, 48, 64, 128, 256, 512, 1024]) entries.push({ name: `game/assets/brand/appicon_${s}.png`, data: new Uint8Array(await (await fetch(`game/assets/brand/appicon_${s}.png`)).arrayBuffer()) });
+    for (const [p, n] of [['game/assets/palette.json', 'docs/palette.json'], ['game/assets/palette.md', 'docs/PALETTE.md'], ['game/assets/towers/README.md', 'game/assets/structures/README-towers.md'], ['docs/ASSET-DELIVERY.md', 'docs/ASSET-DELIVERY.md']])
+      entries.push({ name: n, data: await text(p) });
+    for (const i of ICONS) entries.push({ name: `game/assets/ui/${i}.svg`, data: await text(`game/assets/ui/${i}.svg`) });
+    // Vendored design system → docs/design-system/ (same layout the repo already carries: flat token files).
+    for (const t of ['base', 'colors', 'effects', 'fonts', 'spacing', 'typography']) entries.push({ name: `docs/design-system/${t}.css`, data: await text(`ds/tokens/${t}.css`) });
+    for (const f of ['ui-kit.css', 'ui-screens.js', 'ui-branding.js', 'ui-weapon-view.js']) entries.push({ name: 'docs/design-system/' + f, data: await text(f) });
+    entries.push({ name: 'docs/design-system/ui-screens.html', data: new TextEncoder().encode((await (await fetch('Deep Field 3D - UI Screens.html')).text()).replaceAll('ds/tokens/', '')) });
+    const blob = zip(entries);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'deepfield-3d-assets.zip';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    status.dataset.tone = 'done';
+    status.textContent = `Done — ${entries.length} files · ${(blob.size / 1048576).toFixed(1)} MB`;
+  } catch (err) {
+    status.dataset.tone = 'fail'; status.textContent = 'Export failed: ' + err.message;
+    console.error(err);
+  }
+  el('go').disabled = false;
+});
+window.__pack = { TOWERS, FILES, chassis, pruneToPath, glb, kit, bakeSky, bakeSkies, routeFor, FOUNDRY, SWITCHYARD };
+</script>
+</body>
+</html>

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Deep Field 3D — Maps</title>
+<link rel="stylesheet" href="ds/tokens/fonts.css">
+<link rel="stylesheet" href="ds/tokens/colors.css">
+<link rel="stylesheet" href="ds/tokens/typography.css">
+<link rel="stylesheet" href="ds/tokens/spacing.css">
+<link rel="stylesheet" href="ds/tokens/effects.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.184.0/build/three.module.js",
+    "three/addons/controls/OrbitControls.js": "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js",
+    "three/addons/exporters/OBJExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js",
+    "three/addons/exporters/GLTFExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js"
+  },
+  "integrity": {
+    "https://unpkg.com/three@0.184.0/build/three.module.js": "sha384-8FCZ1eVO6it4+pbec2aDtnTrwjWXZLJRC+MAGCIPDgsYnUrl/E0A2YlF8ioMKI/J",
+    "https://unpkg.com/three@0.184.0/build/three.core.js": "sha384-dw2ooPewaEIrAgl6oFDBmmBWCE9oW9LxRGcfwZ0hLvEprzo202wXl7vCYHRlSnOT",
+    "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js": "sha384-4rziNxOBZKQ69i+w+f89KJ55TCYquwchVbByQwmaOeIOXdOU2PLDn3kOfXHwIJC9",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js": "sha384-nbwtoZENJD3Vq+ACK0CuGQdPMuDWHkamC2KJD70EV5nfg6jQjfppKOea07YJN+N3",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js": "sha384-VofkvpG6HERhFCYbsUOHeNXBCqID2nfqkQqnVzE1jc/oPcz+qJ13ADdXH08hE+cQ"
+  }
+}
+</script>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font:var(--text-body-role);background:var(--surface-base);color:var(--text-primary);display:flex;flex-direction:column;overflow:hidden}
+  a{color:var(--text-arcane);text-decoration:none} a:hover{color:var(--arcane-300)}
+  .label{font:var(--text-label);letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--text-muted)}
+  header{flex:0 0 auto;display:flex;align-items:center;gap:var(--space-7);padding:var(--space-4) var(--space-6);background:var(--surface-panel);
+    border-bottom:var(--stroke-emphasis) solid var(--border-panel);box-shadow:var(--shadow-panel);position:relative;z-index:var(--z-hud)}
+  header::after{content:"";position:absolute;inset:auto 0 -3px 0;height:2px;background:var(--tex-hazard);opacity:.7}
+  .brand h1{font:var(--text-panel-title);margin:0;letter-spacing:var(--tracking-display)}
+  .brand p{margin:2px 0 0;font-size:var(--size-caption);color:var(--text-muted)}
+  .tabs{display:flex;gap:var(--space-2);flex-wrap:wrap;align-items:center;margin-left:auto}
+  .tabs a,.tabs button{font:var(--weight-semibold) var(--size-caption)/1 var(--font-display);letter-spacing:.03em;display:flex;align-items:center;gap:var(--space-2);
+    padding:var(--space-2) var(--space-4);background:var(--surface-raised);color:var(--text-secondary);border:var(--stroke-panel) solid var(--border-panel);
+    border-radius:var(--radius-2);clip-path:var(--clip-chamfer-sm);cursor:pointer}
+  .tabs a:hover,.tabs button:hover{background:var(--obsidian-500);color:var(--text-primary)}
+  .tabs button[aria-pressed="true"]{background:var(--obsidian-500);color:var(--text-accent);border-color:var(--border-accent);box-shadow:var(--glow-brass)}
+  main{flex:1 1 auto;position:relative;min-height:0}
+  three-d-stage{width:100%;height:100%;display:block}
+  three-d-stage:not(:defined){visibility:hidden}
+  .panel{position:absolute;z-index:var(--z-dock);width:300px;background:var(--surface-glass);backdrop-filter:blur(var(--blur-glass));
+    border:var(--stroke-panel) solid var(--border-panel);border-top-color:var(--border-bevel-top);box-shadow:var(--shadow-panel);clip-path:var(--clip-chamfer);
+    max-height:calc(100% - var(--space-8));overflow:auto}
+  .panel>h2{font:var(--text-label);letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--text-accent);margin:0;padding:var(--space-3) var(--space-4);
+    background:var(--surface-inset);border-bottom:var(--stroke-panel) solid var(--border-panel);position:sticky;top:0}
+  .body{padding:var(--space-4)}
+  #list{left:var(--space-6);top:var(--space-6)} #info{right:var(--space-6);top:var(--space-6)}
+  .items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+  .items button{width:100%;text-align:left;display:flex;align-items:center;gap:var(--space-3);font:var(--weight-semibold) var(--size-caption)/1.2 var(--font-display);
+    padding:var(--space-2) var(--space-3);background:transparent;color:var(--text-secondary);border:var(--stroke-hairline) solid transparent;cursor:pointer}
+  .items button:hover{background:var(--obsidian-600);color:var(--text-primary)}
+  .items button[aria-pressed="true"]{background:var(--obsidian-500);color:var(--text-accent);border-color:var(--border-accent)}
+  .items button small{margin-left:auto;font:var(--weight-regular) var(--size-micro)/1 var(--font-mono);color:var(--text-muted)}
+  .items li.head{font:var(--text-label);letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--text-muted);padding:var(--space-3) var(--space-3) var(--space-1)}
+  .swatch{width:8px;height:8px;flex:0 0 auto;transform:rotate(45deg)}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3) var(--space-4);margin:0}
+  .stats dt{font:var(--text-label);letter-spacing:var(--tracking-micro);text-transform:uppercase;color:var(--text-muted);margin:0}
+  .stats dd{margin:3px 0 0;font:var(--weight-bold) var(--size-stat-sm)/1 var(--font-mono);color:var(--text-primary)} .stats dd.arcane{color:var(--text-arcane)}
+  hr{border:0;border-top:var(--stroke-panel) solid var(--border-panel);margin:var(--space-4) 0}
+  .note{font-size:var(--size-caption);line-height:var(--leading-normal);color:var(--text-muted);margin:var(--space-3) 0 0}
+  code{font:var(--weight-regular) var(--size-micro)/1 var(--font-mono);color:var(--text-arcane)}
+  .checks label{display:flex;align-items:center;gap:var(--space-3);font-size:var(--size-caption);color:var(--text-secondary);cursor:pointer;margin-top:var(--space-3)}
+  input[type="checkbox"]{accent-color:var(--arcane-500);width:14px;height:14px;margin:0}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><h1 id="title">Maps</h1><p>Deep Field 3D · brief §3.6 · kit pieces + full assembly from Maps.cs / GameRoot.cs coordinates</p></div>
+  <nav class="tabs" id="tabs"></nav>
+</header>
+<main>
+  <three-d-stage name="deepfield_map" background="#04050a"></three-d-stage>
+  <section class="panel" id="list"><h2 id="list-title">Foundry kit</h2><div class="body"><ul class="items" id="items"></ul></div></section>
+  <section class="panel" id="info"><h2 id="info-title">—</h2><div class="body">
+    <dl class="stats" id="stats"></dl><hr>
+    <p class="label">File</p><p class="note" style="margin-top:var(--space-2)"><code id="file"></code></p>
+    <p class="note" id="note"></p>
+    <div class="checks" id="assemblyChecks" hidden>
+      <label><input type="checkbox" id="showRoutes" checked> Route ribbons + sockets (sim truth)</label>
+      <label><input type="checkbox" id="showSight" checked> Socket → route sightlines</label>
+      <label><input type="checkbox" id="showDress" checked> Dressing set</label>
+      <label><input type="checkbox" id="showSky" checked> Skybox</label>
+      <label><input type="checkbox" id="showAtmo" checked> Atmosphere — fog, lights, particles, haze</label>
+    </div>
+  </div></section>
+</main>
+<script src="./three-d-stage.js"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+<script type="text/babel" src="./tweaks-panel.jsx"></script>
+<div id="tweaks-host"></div>
+<script type="text/babel">
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "condition": "clear",
+  "vantage": "overview",
+  "dressing": "full"
+}/*EDITMODE-END*/;
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  React.useEffect(() => {
+    const apply = () => window.__maps?.applyTweaks(t);
+    apply(); window.addEventListener('maps-ready', apply);
+    return () => window.removeEventListener('maps-ready', apply);
+  }, [t]);
+  return (
+    <TweaksPanel title="Map tweaks">
+      <TweakSection label="Wave condition" />
+      <TweakSelect label="Weather" value={t.condition} options={['clear', 'fog', 'night', 'storm']} onChange={(v) => setTweak('condition', v)} />
+      <TweakSection label="Read the map as" />
+      <TweakRadio label="Vantage" value={t.vantage} options={['overview', 'hero', 'socket']} onChange={(v) => setTweak('vantage', v)} />
+      <TweakRadio label="Dressing" value={t.dressing} options={['bare', 'sparse', 'full']} onChange={(v) => setTweak('dressing', v)} />
+    </TweaksPanel>
+  );
+}
+ReactDOM.createRoot(document.getElementById('tweaks-host')).render(<App />);
+</script>
+<script type="module">
+import { makeEnemyKit } from './models/enemies.js';
+import { FOUNDRY, makeFoundryMats } from './models/foundry.js';
+import { SHARED } from './models/shared.js';
+import { SWITCHYARD, makeSwitchyardMats } from './models/switchyard.js';
+import { LEVELS } from './models/levels.js';
+import { applyAtmosphere, clearAtmosphere } from './models/atmosphere.js';
+import { triCount, countMeshes } from './models/tower-kit.js';
+import { applyStudio } from './models/studio.js';
+
+const el = (id) => document.getElementById(id);
+const stage = document.querySelector('three-d-stage');
+const { THREE } = await stage.ready;
+applyStudio(stage, THREE, { intensity: .55 });
+const K = makeEnemyKit(THREE); makeFoundryMats(THREE, K.mats); makeSwitchyardMats(THREE, K.mats);
+K.mats.grip_rubber = K.mats.rubber; K.mats.threat = K.mats.weak;
+const ALL = Object.fromEntries([...FOUNDRY, ...SWITCHYARD, ...SHARED].map((m) => [m.id, m]));
+const CATS = [
+  { id: 'foundry', label: 'Foundry', groups: [['Assembly', [{ id: '__assembly_foundry', label: 'Full level', size: '110×80', swatch: '#ff8a1f', assembly: 'foundry' }]], ['Foundry kit', FOUNDRY], ['Shared kit', SHARED]] },
+  { id: 'switchyard', label: 'Switchyard', groups: [['Assembly', [{ id: '__assembly_switchyard', label: 'Full level', size: '110×80', swatch: '#d8a13a', assembly: 'switchyard' }]], ['Switchyard kit', SWITCHYARD], ['Shared kit', SHARED]] },
+];
+let cat = CATS[0], cur = null, model = null;
+const tweaks = { condition: 'clear', vantage: 'overview', dressing: 'full' };
+let condBase = null, stormRaf = 0;
+
+el('tabs').innerHTML = CATS.map((c) => `<button type="button" data-cat="${c.id}">${c.label}</button>`).join('') +
+  `<a href="Deep Field 3D - Asset Export.html"><span class="swatch" style="background:var(--arcane-400)"></span>Export pack</a><a href="Deep Field 3D - Roster.html"><span class="swatch" style="background:#e9614c"></span>Roster</a><a href="Deep Field 3D - Gunsmith.html"><span class="swatch" style="background:#c3ccd8"></span>Gunsmith</a><a href="Lance.html"><span class="swatch" style="background:#2b5cff"></span>Towers</a>`;
+
+el('tabs').addEventListener('click', (e) => { const c = CATS.find((x) => x.id === e.target.dataset.cat); if (c) setCat(c); });
+function setCat(c) {
+  cat = c;
+  for (const b of el('tabs').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.cat === c.id));
+  el('title').textContent = c.label; el('list-title').textContent = c.label + ' kit';
+  renderList();
+  select('__assembly_' + c.id);
+}
+function renderList() { el('items').innerHTML = cat.groups.map(([h, items]) => `<li class="head">${h}</li>` + items.map((it) => `<li><button type="button" data-id="${it.id}"><span class="swatch" style="background:${it.swatch}"></span>${it.label}<small>${it.size || ''}</small></button></li>`).join('')).join(''); }
+el('items').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; select(b.dataset.id); });
+for (const id of ['showRoutes', 'showSight', 'showDress', 'showSky', 'showAtmo']) el(id).addEventListener('change', () => cur?.assembly && select(cur.id));
+
+function find(id) { for (const [, items] of cat.groups) { const it = items.find((x) => x.id === id); if (it) return it; } }
+function select(id) {
+  cur = find(id);
+  for (const b of el('items').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.id === id));
+  clearAtmosphere(stage, THREE);
+  model = cur.assembly ? buildAssembly(LEVELS[cur.assembly]) : cur.build(K);
+  stage.setAttribute('name', cur.assembly ? cur.assembly + '_assembly' : cur.file.replace(/\.glb$/, ''));
+  stage.setObject(model);
+  if (cur.assembly) { // frame the playfield, not the 400 m sky dome
+    const cam = stage._camera, ctl = stage._controls, L = LEVELS[cur.assembly];
+    cam.near = .15; cam.far = 1500; cam.position.set(L.field[0] * .55, 38, L.field[1] * .9); ctl.target.set(0, 2, 0); cam.updateProjectionMatrix(); ctl.update();
+    const span = 70; for (const k of ['left', 'right', 'top', 'bottom']) stage._key.shadow.camera[k] = (k === 'left' || k === 'bottom' ? -1 : 1) * span; stage._key.shadow.camera.updateProjectionMatrix();
+    stage._ground.position.y = -.02;
+  }
+  if (cur.assembly && el('showAtmo').checked) { const L = LEVELS[cur.assembly]; applyAtmosphere(stage, THREE, L.kit, model, L.field[0], L.field[1]); }
+  if (cur.assembly) { condBase = null; applyCondition(); applyVantage(); }
+  el('assemblyChecks').hidden = !cur.assembly;
+  el('info-title').textContent = cur.label;
+  el('file').textContent = cur.assembly ? 'sim/Sim.Core/Content/Maps.cs · game/scripts/GameRoot.cs' : 'game/assets/' + cur.dir + cur.file;
+  el('note').textContent = cur.note || 'Every kit piece instanced at its GameRoot.cs graybox coordinate. Cyan lines are socket→route sightlines: dressing must never cross them.';
+  const b = new THREE.Box3(); model.traverse((o) => { if (o.isMesh && !o.userData.gizmo && !o.name.startsWith('sky_')) b.expandByObject(o); }); const s = b.getSize(new THREE.Vector3());
+  el('stats').innerHTML = Object.entries({ ...(cur.stats || {}), Bounds: `${s.x.toFixed(1)}×${s.y.toFixed(1)}×${s.z.toFixed(1)}`, Tris: triCount(model).toLocaleString(), Parts: String(countMeshes(model)) })
+    .map(([k, v]) => `<div><dt>${k}</dt><dd class="${k === 'Tris' || k === 'Parts' ? 'arcane' : ''}">${v}</dd></div>`).join('');
+}
+
+function buildAssembly(L) {
+  const g = new THREE.Group(); g.name = L.label + '_assembly';
+  const [W, H] = L.field;
+  // Terrain tiles.
+  const kit = L.kit, TERRAIN = ALL[kit + '_terrain'], WALL = ALL[kit === 'foundry' ? 'foundry_wall_boundary' : 'switchyard_retainingwall'], ROAD = ALL[kit + '_path_ground'];
+  const nx = Math.ceil(W / 20), nz = Math.ceil(H / 20);
+  for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) { const t = TERRAIN.buildVariant ? TERRAIN.buildVariant(K, (i * 3 + j * 2 + (i * j)) % 4) : TERRAIN.build(K); t.position.set(-W / 2 + 10 + i * 20, 0, -H / 2 + 10 + j * 20); t.scale.set(Math.min(1, (W / 2 - (-W / 2 + i * 20)) / 20), 1, Math.min(1, (H / 2 - (-H / 2 + j * 20)) / 20)); t.position.x = -W / 2 + i * 20 + 10 * t.scale.x; t.position.z = -H / 2 + j * 20 + 10 * t.scale.z; g.add(t); }
+  // Boundary walls.
+  for (let x = -W / 2 + 5; x < W / 2; x += 10) for (const s of [-1, 1]) { const w = WALL.build(K); w.position.set(x, 0, s * (H / 2 + .6)); w.rotation.y = s > 0 ? Math.PI : 0; g.add(w); }
+  for (let z = -H / 2 + 5; z < H / 2; z += 10) for (const s of [-1, 1]) { const w = WALL.build(K); w.position.set(s * (W / 2 + .6), 0, z); w.rotation.y = s > 0 ? Math.PI / 2 : -Math.PI / 2; g.add(w); }
+  // Roadway along the ground route.
+  const gr = L.routes.ground;
+  const roads = L.cut ? [L.routes.ground, L.routes[L.cut.route]] : [gr];
+  for (const rt of roads) for (let i = 0; i < rt.length - 1; i++) {
+    const a = new THREE.Vector3(...rt[i]), b = new THREE.Vector3(...rt[i + 1]), d = b.clone().sub(a), len = d.length(), n = Math.ceil(len / 4);
+    for (let k = 0; k < n; k++) { const p = ROAD.build(K); p.position.copy(a).addScaledVector(d, (k + .5) / n); p.position.y = .06; p.rotation.y = Math.atan2(d.x, d.z) + Math.PI / 2; p.scale.x = (len / n) / 4; g.add(p); }
+  }
+  // Freight cut (Switchyard): channel pieces only along the x-range of the short route no other route/socket touches.
+  if (L.cut) {
+    const cr = L.routes[L.cut.route];
+    for (let i = 0; i < cr.length - 1; i++) {
+      const a = new THREE.Vector3(...cr[i]), b = new THREE.Vector3(...cr[i + 1]);
+      const lo = Math.max(Math.min(a.x, b.x), L.cut.from), hi = Math.min(Math.max(a.x, b.x), L.cut.to); if (hi - lo < 1) continue;
+      const t0 = (lo - a.x) / (b.x - a.x), t1 = (hi - a.x) / (b.x - a.x), A = a.clone().lerp(b, t0), B = a.clone().lerp(b, t1), d = B.clone().sub(A), len = d.length(), n = Math.ceil(len / 4);
+      for (let k = 0; k < n; k++) { const p = ALL.switchyard_cut_channel.build(K); p.position.copy(A).addScaledVector(d, (k + .5) / n); p.rotation.y = Math.atan2(d.x, d.z) + Math.PI / 2; p.scale.x = (len / n) / 4; g.add(p); }
+    }
+  }
+  // Sockets.
+  for (const [id, pos, tag] of L.sockets) { const s = ALL[`socket_${tag}_empty`].build(K); s.position.set(...pos); s.name = 'socket_' + id; g.add(s); }
+  // Placed kit.
+  const dressOn = el('showDress').checked;
+  let dressN = 0;
+  for (const [mid, pos, rot = 0, sc = 1] of L.place) {
+    if (mid.includes('_dress_') || mid.includes('_scatter')) { if (!dressOn || tweaks.dressing === 'bare' || (tweaks.dressing === 'sparse' && dressN++ % 2)) continue; }
+    const m = ALL[mid]?.build(K); if (!m) continue; m.position.set(...pos); m.rotation.y = rot; m.scale.setScalar(sc); if (mid === 'shared_airlane_pylon') m.scale.set(1, sc, 1); g.add(m);
+  }
+  // Zipline cable.
+  if (L.zipline) { const [a, b] = L.zipline.map((p) => new THREE.Vector3(...p)); const c = ALL.shared_zipline_cable.build(K); c.position.copy(a); c.lookAt(b); c.rotateY(Math.PI); c.scale.z = a.distanceTo(b); g.add(c); }
+  if (el('showSky').checked) g.add(ALL[kit + '_skybox'].build(K));
+  // Sim truth overlays.
+  if (el('showRoutes').checked) {
+    for (const [name, pts] of Object.entries(L.routes)) {
+      const air = name === 'air', short = name === 'groundShort';
+      const geo = new THREE.BufferGeometry().setFromPoints(pts.map((p) => new THREE.Vector3(p[0], p[1] + .3, p[2])));
+      const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: air ? 0x22d3ee : short ? 0xe9614c : 0xf0c83a })); line.name = 'route_' + name; g.add(line);
+      if (air) for (let i = 0; i < pts.length - 1; i++) { const a = new THREE.Vector3(...pts[i]), b = new THREE.Vector3(...pts[i + 1]); const strand = new THREE.Mesh(new THREE.CylinderGeometry(.08, .08, a.distanceTo(b), 6), K.mats.energy_flak); strand.position.copy(a).lerp(b, .5); strand.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize()); strand.name = 'airstrand' + i; g.add(strand); }
+    }
+    for (const [id, pos] of L.stations) { const m = new THREE.Mesh(new THREE.OctahedronGeometry(.5, 0), new THREE.MeshBasicMaterial({ color: 0x7fe65a, wireframe: true })); m.position.set(pos[0], pos[1] + 1.2, pos[2]); m.name = 'station_' + id; g.add(m); }
+  }
+  if (el('showSight').checked) {
+    const pts = [];
+    for (const [, pos, tag] of L.sockets) { if (tag === 'trap') continue; const s = new THREE.Vector3(pos[0], pos[1] + 1.5, pos[2]); for (const [name, r] of Object.entries(L.routes)) for (let i = 0; i < r.length - 1; i++) { const a = new THREE.Vector3(...r[i]), b = new THREE.Vector3(...r[i + 1]); const t = Math.max(0, Math.min(1, s.clone().sub(a).dot(b.clone().sub(a)) / b.distanceToSquared(a))); const q = a.clone().lerp(b, t); q.y += name === 'air' ? 0 : .8; if (s.distanceTo(q) < 22) pts.push(s, q); } }
+    const sl = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0x65dce4, transparent: true, opacity: .55 })); sl.name = 'sightlines'; g.add(sl);
+  }
+  return g;
+}
+/* ── Tweaks: map condition, vantage, dressing density ───────────────────────── */
+// Conditions are factors over the kit's own atmosphere (the ConditionDef rule): fog thickens and greys, night dims, storm cools and flickers.
+const COND = { clear: { fog: 1, exp: 1, key: 1, hemi: 1 }, fog: { fog: 3.4, exp: .9, key: .7, hemi: 1.2, tint: 0x5a6068, mix: .55 }, night: { fog: 1.2, exp: .5, key: .25, hemi: .35, keyCol: 0x7f96d8 }, storm: { fog: 1.7, exp: .85, key: .6, hemi: .8, tint: 0x2a3a52, mix: .5, keyCol: 0xa8bfff } };
+function applyCondition() {
+  cancelAnimationFrame(stormRaf);
+  const scene = stage._scene, r = stage._renderer, key = stage._key, hemi = scene.children.find((o) => o.isHemisphereLight);
+  if (!scene.fog) return; // atmosphere off — nothing to factor
+  condBase ??= { density: scene.fog.density, fogCol: scene.fog.color.getHex(), exp: r.toneMappingExposure, key: key.intensity, keyCol: key.color.getHex(), hemi: hemi.intensity };
+  const C = COND[tweaks.condition];
+  scene.fog.density = condBase.density * C.fog; scene.fog.color.setHex(condBase.fogCol); if (C.tint) scene.fog.color.lerp(new THREE.Color(C.tint), C.mix);
+  stage.style.setProperty('--stage-bg', '#' + scene.fog.color.getHexString());
+  r.toneMappingExposure = condBase.exp * C.exp; key.intensity = condBase.key * C.key; key.color.setHex(C.keyCol || condBase.keyCol); hemi.intensity = condBase.hemi * C.hemi;
+  if (tweaks.condition === 'storm') { // lightning: a 90 ms white flash every 3–6 s
+    let next = performance.now() + 2000, until = 0;
+    const tick = (now) => { if (now > next) { until = now + 90; next = now + 3000 + Math.random() * 3000; } const on = now < until; key.intensity = condBase.key * C.key * (on ? 9 : 1); key.color.setHex(on ? 0xffffff : C.keyCol); r.toneMappingExposure = condBase.exp * C.exp * (on ? 1.6 : 1); stormRaf = requestAnimationFrame(tick); };
+    stormRaf = requestAnimationFrame(tick);
+  }
+}
+function applyVantage() {
+  const L = LEVELS[cur?.assembly]; if (!L) return;
+  const cam = stage._camera, ctl = stage._controls, V = THREE.Vector3, v = (a) => new V(...a);
+  const g = L.routes.ground || L.routes[L.roads?.[0]], core = v(g[g.length - 1]);
+  if (tweaks.vantage === 'overview') { cam.position.set(L.field[0] * .55, 38, L.field[1] * .9); ctl.target.set(0, 2, 0); }
+  else if (tweaks.vantage === 'hero') { const p = v(L.heroSpawn).add(new V(0, 1.7, 0)); cam.position.copy(p); ctl.target.copy(p).lerp(core.clone().setY(1.2), .35); }
+  else { const w = L.sockets.find(([, , tag]) => tag === 'wall') || L.sockets[0]; const p = v(w[1]).add(new V(0, 1.6, 0)); cam.position.copy(p); let best = null, bd = 1e9; for (const q of g) { const d = v(q).distanceTo(p); if (d < bd) { bd = d; best = v(q); } } ctl.target.copy(best.setY(best.y + .8)); }
+  cam.updateProjectionMatrix(); ctl.update();
+}
+function applyTweaks(t) {
+  const rebuild = t.dressing !== tweaks.dressing; Object.assign(tweaks, t);
+  if (rebuild && cur?.assembly) select(cur.id); else if (cur?.assembly) { applyCondition(); applyVantage(); }
+}
+setCat(CATS[0]);
+window.__maps = { K, ALL, LEVELS, select, setCat, CATS, applyTweaks, tweaks, get model() { return model; } };
+window.dispatchEvent(new Event('maps-ready'));
+</script>
+</body>
+</html>

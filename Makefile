@@ -1,7 +1,7 @@
 GODOT ?= $(HOME)/Applications/Godot_mono.app/Contents/MacOS/Godot
 export PATH := $(HOME)/.dotnet:$(PATH)
 
-.PHONY: sim test gates game run import check audit assets usage usage-list
+.PHONY: sim test gates game run import check audit assets usage usage-list design-export
 
 ## Build the pure sim (standalone — enforces the no-Godot boundary).
 sim:
@@ -30,6 +30,12 @@ import:
 ## Art delivery status: what the design brief names vs what's in game/assets/.
 assets:
 	@./tools/asset-report.sh --list
+
+## Rebuild every model, icon and manifest from Claude Design's sources in
+## docs/design/. Needs a browser (the skyboxes are shaders baked to a texture)
+## and node; writes straight into game/assets/ and docs/.
+design-export:
+	@./tools/design-export.sh
 
 ## Which delivered assets does the game actually consume?
 usage:

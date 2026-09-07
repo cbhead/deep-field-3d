@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Deep Field 3D — Tower Aim Rigs</title>
+<link rel="stylesheet" href="ds/tokens/fonts.css">
+<link rel="stylesheet" href="ds/tokens/colors.css">
+<link rel="stylesheet" href="ds/tokens/typography.css">
+<link rel="stylesheet" href="ds/tokens/spacing.css">
+<link rel="stylesheet" href="ds/tokens/effects.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.184.0/build/three.module.js",
+    "three/addons/controls/OrbitControls.js": "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js",
+    "three/addons/exporters/OBJExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js",
+    "three/addons/exporters/GLTFExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js"
+  },
+  "integrity": {
+    "https://unpkg.com/three@0.184.0/build/three.module.js": "sha384-8FCZ1eVO6it4+pbec2aDtnTrwjWXZLJRC+MAGCIPDgsYnUrl/E0A2YlF8ioMKI/J",
+    "https://unpkg.com/three@0.184.0/build/three.core.js": "sha384-dw2ooPewaEIrAgl6oFDBmmBWCE9oW9LxRGcfwZ0hLvEprzo202wXl7vCYHRlSnOT",
+    "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js": "sha384-4rziNxOBZKQ69i+w+f89KJ55TCYquwchVbByQwmaOeIOXdOU2PLDn3kOfXHwIJC9",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js": "sha384-nbwtoZENJD3Vq+ACK0CuGQdPMuDWHkamC2KJD70EV5nfg6jQjfppKOea07YJN+N3",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js": "sha384-VofkvpG6HERhFCYbsUOHeNXBCqID2nfqkQqnVzE1jc/oPcz+qJ13ADdXH08hE+cQ"
+  }
+}
+</script>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    font:var(--text-body-role);background:var(--surface-base);color:var(--text-primary);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  a{color:var(--text-arcane);text-decoration:none}
+  a:hover{color:var(--arcane-300);text-decoration:underline}
+  .label{font:var(--text-label);letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--text-muted)}
+
+  header{
+    flex:0 0 auto;display:flex;align-items:center;gap:var(--space-7);
+    padding:var(--space-4) var(--space-6);background:var(--surface-panel);
+    border-bottom:var(--stroke-emphasis) solid var(--border-panel);box-shadow:var(--shadow-panel);
+    position:relative;z-index:var(--z-hud);
+  }
+  header::after{
+    content:"";position:absolute;inset:auto 0 -3px 0;height:2px;background:var(--tex-hazard);opacity:.7;
+  }
+  .brand h1{font:var(--text-panel-title);margin:0;letter-spacing:var(--tracking-display)}
+  .brand p{margin:2px 0 0;font-size:var(--size-caption);color:var(--text-muted)}
+
+  .tabs{display:flex;gap:var(--space-2)}
+  .tabs button{
+    font:var(--weight-semibold) var(--size-body)/1 var(--font-display);letter-spacing:.03em;
+    display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3) var(--space-5);
+    background:var(--surface-raised);color:var(--text-secondary);cursor:pointer;
+    border:var(--stroke-panel) solid var(--border-panel);border-radius:var(--radius-2);
+    clip-path:var(--clip-chamfer-sm);
+    transition:background var(--dur-fast) var(--ease-snap),color var(--dur-fast) var(--ease-snap);
+  }
+  .tabs button:hover{background:var(--obsidian-500);color:var(--text-primary)}
+  .tabs button:focus-visible{outline:none;box-shadow:var(--glow-focus)}
+  .tabs button[aria-pressed="true"]{
+    background:var(--obsidian-500);color:var(--text-accent);
+    border-color:var(--border-accent);box-shadow:var(--glow-brass);
+  }
+  .swatch{width:10px;height:10px;flex:0 0 auto;transform:rotate(45deg)}
+
+  main{flex:1 1 auto;position:relative;min-height:0}
+  three-d-stage{width:100%;height:100%;display:block}
+  three-d-stage:not(:defined){visibility:hidden}
+
+  .panel{
+    position:absolute;z-index:var(--z-dock);width:290px;
+    background:var(--surface-glass);backdrop-filter:blur(var(--blur-glass));
+    border:var(--stroke-panel) solid var(--border-panel);border-top-color:var(--border-bevel-top);
+    box-shadow:var(--shadow-panel);clip-path:var(--clip-chamfer);
+    max-height:calc(100% - var(--space-8));overflow:auto;
+  }
+  .panel > h2{position:sticky;top:0}
+  .panel > h2{
+    font:var(--text-label);letter-spacing:var(--tracking-label);text-transform:uppercase;
+    color:var(--text-accent);margin:0;padding:var(--space-3) var(--space-4);
+    background:var(--surface-inset);border-bottom:var(--stroke-panel) solid var(--border-panel);
+  }
+  .panel .body{padding:var(--space-4)}
+  #rig{left:var(--space-6);top:var(--space-6)}
+  #ctl{right:var(--space-6);top:var(--space-6)}
+
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3) var(--space-4);margin:0}
+  .stats div{min-width:0}
+  .stats dt{font:var(--text-label);letter-spacing:var(--tracking-micro);text-transform:uppercase;color:var(--text-muted);margin:0}
+  .stats dd{
+    margin:3px 0 0;font:var(--weight-bold) var(--size-stat-sm)/1 var(--font-mono);
+    color:var(--text-primary);font-variant-numeric:tabular-nums;
+  }
+  .stats dd.accent{color:var(--text-accent)}
+  .stats dd.arcane{color:var(--text-arcane)}
+
+  hr{border:0;border-top:var(--stroke-panel) solid var(--border-panel);margin:var(--space-4) 0}
+
+  .gauge{margin-bottom:var(--space-4)}
+  .gauge .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)}
+  .gauge .row b{font:var(--weight-bold) var(--size-caption)/1 var(--font-mono);color:var(--text-secondary)}
+  .track{
+    position:relative;height:8px;background:var(--bar-track);box-shadow:var(--shadow-slot);
+    border:var(--stroke-hairline) solid var(--border-panel);
+  }
+  .track .band{position:absolute;inset:1px auto 1px auto;background:rgba(47,180,190,.16)}
+  .track .needle{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--brass-400);box-shadow:var(--glow-brass)}
+  .track .ghost{position:absolute;top:0;bottom:0;width:2px;background:var(--steel-400)}
+
+  .status{
+    font:var(--weight-bold) var(--size-caption)/1.3 var(--font-display);letter-spacing:.06em;
+    text-transform:uppercase;padding:var(--space-3);text-align:center;
+    border:var(--stroke-hairline) solid var(--border-panel);background:var(--surface-inset);
+    color:var(--text-muted);
+  }
+  .status[data-tone="lock"]{color:var(--state-success);border-color:rgba(123,192,67,.5)}
+  .status[data-tone="slew"]{color:var(--state-warning);border-color:rgba(232,134,43,.5)}
+  .status[data-tone="fail"]{color:var(--state-danger);border-color:rgba(201,59,40,.55);box-shadow:var(--glow-threat)}
+
+  .seg{display:flex;gap:0;margin-bottom:var(--space-4)}
+  .seg button{
+    flex:1 1 0;font:var(--weight-semibold) var(--size-caption)/1 var(--font-display);
+    padding:var(--space-3) var(--space-2);cursor:pointer;color:var(--text-secondary);
+    background:var(--surface-inset);border:var(--stroke-panel) solid var(--border-panel);border-left-width:0;
+  }
+  .seg button:first-child{border-left-width:var(--stroke-panel)}
+  .seg button:hover{color:var(--text-primary);background:var(--obsidian-600)}
+  .seg button:focus-visible{outline:none;box-shadow:var(--glow-focus)}
+  .seg button[aria-pressed="true"]{background:var(--arcane-700);color:var(--arcane-300);border-color:var(--arcane-600)}
+
+  .field{margin-bottom:var(--space-4)}
+  .field .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)}
+  .field output{font:var(--weight-bold) var(--size-caption)/1 var(--font-mono);color:var(--text-accent)}
+  input[type="range"]{width:100%;accent-color:var(--brass-500);margin:0}
+  .checks{display:flex;flex-direction:column;gap:var(--space-3)}
+  .checks label{display:flex;align-items:center;gap:var(--space-3);font-size:var(--size-caption);color:var(--text-secondary);cursor:pointer}
+  input[type="checkbox"]{accent-color:var(--arcane-500);width:14px;height:14px;margin:0}
+
+  .hier{
+    margin:0;font:var(--weight-regular) var(--size-micro)/1.65 var(--font-mono);
+    color:var(--text-muted);white-space:pre;overflow-x:auto;
+  }
+  .hier b{color:var(--text-arcane);font-weight:var(--weight-bold)}
+  .hier i{color:var(--text-accent);font-style:normal}
+  .note{font-size:var(--size-caption);line-height:var(--leading-normal);color:var(--text-muted);margin:var(--space-3) 0 0}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>Tower Aim Rigs</h1>
+    <p>Deep Field 3D · M1 roster · articulated yaw/pitch, live target tracking</p>
+  </div>
+  <div class="tabs" id="tabs"></div>
+</header>
+<main>
+  <three-d-stage name="lance" background="#0D1119"></three-d-stage>
+
+  <section class="panel" id="rig">
+    <h2 id="rig-title">Lance — aim rig</h2>
+    <div class="body">
+      <dl class="stats" id="rig-stats"></dl>
+      <hr>
+      <div class="gauge">
+        <div class="row"><span class="label">Yaw</span><b id="yaw-read">0.0°</b></div>
+        <div class="track"><span class="band" id="yaw-band"></span><span class="ghost" id="yaw-ghost"></span><span class="needle" id="yaw-needle"></span></div>
+      </div>
+      <div class="gauge">
+        <div class="row"><span class="label">Pitch</span><b id="pitch-read">0.0°</b></div>
+        <div class="track"><span class="band" id="pitch-band"></span><span class="ghost" id="pitch-ghost"></span><span class="needle" id="pitch-needle"></span></div>
+      </div>
+      <div class="status" id="status" data-tone="idle">Tracking off</div>
+      <hr>
+      <p class="label" style="margin:0 0 var(--space-3)">Export hierarchy</p>
+      <pre class="hier" id="hier"></pre>
+      <p class="note" id="note"></p>
+    </div>
+  </section>
+
+  <section class="panel" id="ctl">
+    <h2>Target sim</h2>
+    <div class="body">
+      <p class="label" style="margin:0 0 var(--space-3)">Motion</p>
+      <div class="seg" id="modes"></div>
+      <div class="field">
+        <div class="row"><span class="label">Speed</span><output id="speed-out">4.0 m/s</output></div>
+        <input type="range" id="speed" min="1" max="9" step="0.5" value="4">
+      </div>
+      <div class="field">
+        <div class="row"><span class="label">Standoff</span><output id="dist-out">9 m</output></div>
+        <input type="range" id="dist" min="3" max="18" step="0.5" value="9">
+      </div>
+      <div class="checks">
+        <label><input type="checkbox" id="track" checked> Track target</label>
+        <label><input type="checkbox" id="bore" checked> Bore sight + muzzle marker</label>
+        <label><input type="checkbox" id="pivots"> Pivot axes</label>
+        <label><input type="checkbox" id="limits" checked> Enforce traverse limits</label>
+      </div>
+    </div>
+  </section>
+</main>
+<script src="./three-d-stage.js"></script>
+<script type="module">
+const stage = document.querySelector('three-d-stage');
+const { THREE } = await stage.ready;
+
+/* ── shared material palette. Metalness stays ≤.4 (no env map on the stage);
+      the metal read comes from base colour + roughness separation. ─────── */
+const mats = {};
+const mat = (name, color, o = {}) => {
+  const m = new THREE.MeshStandardMaterial({ color, roughness: .62, metalness: .3, ...o });
+  m.name = name; mats[name] = m; return m;
+};
+mat('steel_hull',  0x606a7c, { roughness: .58, metalness: .36 });
+mat('steel_plate', 0x9aa6b7, { roughness: .48, metalness: .34 });
+mat('chassis',     0x2b3a5c, { roughness: .66, metalness: .2 });
+mat('trim',        0x1b2436, { roughness: .78, metalness: .14 });
+mat('chrome',      0xc3ccd8, { roughness: .22, metalness: .4 });
+mat('brass',       0xb08a3e, { roughness: .42, metalness: .4 });
+mat('rubber',      0x14181f, { roughness: .95, metalness: .04 });
+mat('hazard',      0xd8a13a, { roughness: .55, metalness: .12 });
+mat('optic_glass', 0x14314a, { roughness: .12, metalness: .1 });
+const energy = (name, hex) => mat(name, hex, {
+  roughness: .3, metalness: .06, emissive: new THREE.Color(hex), emissiveIntensity: .95,
+});
+energy('energy_rail',  0x3898d8);
+energy('energy_fuse',  0xe8a33d);
+energy('energy_field', 0x8b6fe0);
+energy('energy_flak',  0x4fc3e8);
+/* Plates read as kitbash panels, curved stock reads as machined. */
+for (const n of ['steel_plate', 'chassis', 'hazard']) mats[n].flatShading = true;
+
+/* ── part helpers ───────────────────────────────────────────────────────── */
+const part = (name, geo, material, pos = [0, 0, 0], rot = [0, 0, 0]) => {
+  const m = new THREE.Mesh(geo, material);
+  m.name = name; m.position.set(...pos); m.rotation.set(...rot);
+  return m;
+};
+const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+const cyl = (rt, rb, h, s = 24) => new THREE.CylinderGeometry(rt, rb, h, s);
+const grp = (name, pos = [0, 0, 0]) => {
+  const g = new THREE.Group(); g.name = name; g.position.set(...pos); return g;
+};
+const D = Math.PI / 180;
+
+/* ── greeble kit: the machined detail that separates "blocked out" from
+      "built". Geometry is shared between instances, so the tri cost is real
+      but the draw cost stays kitbash-cheap. ──────────────────────────────── */
+const BOLT = new THREE.CylinderGeometry(.045, .045, .034, 6);
+const TOOTH = new THREE.BoxGeometry(.052, .05, .085);
+
+/** Ring of hex-head bolts around a flange — the single strongest "this is
+ *  fabricated" cue at almost no cost. */
+function boltRing(name, radius, count, y = 0, material = mats.chrome) {
+  const g = grp(name, [0, y, 0]);
+  for (let i = 0; i < count; i++) {
+    const a = (i / count) * Math.PI * 2;
+    const m = new THREE.Mesh(BOLT, material);
+    m.name = `${name}_${i}`;
+    m.position.set(Math.cos(a) * radius, 0, Math.sin(a) * radius);
+    g.add(m);
+  }
+  return g;
+}
+
+/** Slew ring gear: the part that makes a yaw axis legible as machinery. */
+function ringGear(name, radius, teeth) {
+  const g = grp(name);
+  g.add(part(name + '_race', cyl(radius, radius, .07, 40), mats.brass));
+  for (let i = 0; i < teeth; i++) {
+    const a = (i / teeth) * Math.PI * 2;
+    const m = new THREE.Mesh(TOOTH, mats.brass);
+    m.name = `${name}_tooth${i}`;
+    m.position.set(Math.cos(a) * (radius + .03), 0, Math.sin(a) * (radius + .03));
+    m.rotation.y = -a;
+    g.add(m);
+  }
+  return g;
+}
+
+/** Hydraulic ram with clevis ends, chromed rod and a rubber wiper boot.
+ *  Lives inside ONE rig group so it never stretches across a pivot. */
+function hydraulic(name, from, to, gauge = 1) {
+  const a = new THREE.Vector3(...from), b = new THREE.Vector3(...to);
+  const len = a.distanceTo(b);
+  const g = grp(name, from);
+  g.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+  const body = len * .58, rod = len * .5;
+  g.add(part(name + '_clevis_a', box(.09 * gauge, .07, .07), mats.steel_plate, [0, .03, 0]));
+  g.add(part(name + '_body', cyl(.055 * gauge, .055 * gauge, body, 16), mats.chassis, [0, .05 + body / 2, 0]));
+  g.add(part(name + '_boot', cyl(.062 * gauge, .062 * gauge, .07, 12), mats.rubber, [0, .05 + body, 0]));
+  g.add(part(name + '_rod', cyl(.03 * gauge, .03 * gauge, rod, 12), mats.chrome, [0, .05 + body + rod / 2, 0]));
+  g.add(part(name + '_clevis_b', box(.08 * gauge, .06, .06), mats.steel_plate, [0, len - .02, 0]));
+  return g;
+}
+
+/** Sagging cable/conduit run — a catenary through the given points. */
+function cableRun(name, points, radius = .022, material = mats.rubber) {
+  const curve = new THREE.CatmullRomCurve3(points.map((p) => new THREE.Vector3(...p)));
+  return part(name, new THREE.TubeGeometry(curve, 20, radius, 7, false), material);
+}
+
+/** Cooling fin stack — thin plates, the classic heat-shedding read. */
+function finStack(name, count, spacing, w, h, thickness = .014, material = mats.steel_plate) {
+  const g = grp(name);
+  const geo = box(w, h, thickness);
+  for (let i = 0; i < count; i++) {
+    const m = new THREE.Mesh(geo, material);
+    m.name = `${name}_${i}`; m.position.z = i * spacing;
+    g.add(m);
+  }
+  return g;
+}
+
+/** Angled louvre bank in a frame — vents that read as vents. */
+function louvres(name, w, h, count, material = mats.trim) {
+  const g = grp(name);
+  const slat = box(w, h / count * .7, .03);
+  for (let i = 0; i < count; i++) {
+    const m = new THREE.Mesh(slat, material);
+    m.name = `${name}_${i}`;
+    m.position.y = -h / 2 + (i + .5) * (h / count);
+    m.rotation.x = 28 * D;
+    g.add(m);
+  }
+  return g;
+}
+
+/** Raised panel line / access hatch, floated 4 mm proud to avoid z-fighting. */
+function panelPlate(name, w, h, pos, rot = [0, 0, 0], material = mats.steel_plate) {
+  return part(name, box(w, h, .012), material, pos, rot);
+}
+
+/** Diagonal hazard stripes on a loading face — reads at a glance in-engine. */
+function hazardStripes(name, w, h, pos, rot = [0, 0, 0], count = 4) {
+  const g = grp(name, pos);
+  g.rotation.set(...rot);
+  const stripe = box(w / count * .5, h, .01);
+  for (let i = 0; i < count; i++) {
+    const m = new THREE.Mesh(stripe, mats.hazard);
+    m.name = `${name}_${i}`;
+    m.position.x = -w / 2 + (i + .5) * (w / count);
+    m.rotation.z = 22 * D;
+    g.add(m);
+  }
+  return g;
+}
+
+/** Socket foot — static, never rotates. Sized to the 2.1 m socket pads:
+ *  hexagonal baseplate, bolted slew flange, anchor studs, power conduit. */
+function foot(id, energyMat) {
+  const g = grp(id + '_foot');
+  g.add(part(id + '_baseplate', cyl(1.02, 1.08, .12, 6), mats.chassis, [0, .06, 0]));
+  g.add(part(id + '_baseplate_bevel', cyl(.94, 1.02, .07, 6), mats.steel_hull, [0, .155, 0]));
+  g.add(part(id + '_flange', cyl(.80, .80, .06, 32), mats.steel_plate, [0, .215, 0]));
+  g.add(boltRing(id + '_flange_bolts', .72, 12, .255));
+  g.add(part(id + '_collar', cyl(.64, .74, .14, 24), mats.steel_hull, [0, .30, 0]));
+  g.add(part(id + '_seam', new THREE.TorusGeometry(.90, .03, 8, 40), energyMat, [0, .155, 0], [90 * D, 0, 0]));
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2 + 30 * D, x = Math.cos(a) * .90, z = Math.sin(a) * .90;
+    g.add(part(id + '_anchor' + i, cyl(.10, .12, .20, 10), mats.trim, [x, .10, z]));
+    g.add(part(id + '_anchor_washer' + i, cyl(.15, .15, .028, 10), mats.steel_plate, [x, .205, z]));
+    g.add(part(id + '_anchor_nut' + i, cyl(.062, .062, .05, 6), mats.chrome, [x, .243, z]));
+  }
+  g.add(part(id + '_junction', box(.26, .20, .16), mats.chassis, [.60, .16, -.44]));
+  g.add(part(id + '_junction_hatch', box(.16, .11, .012), mats.steel_plate, [.60, .17, -.36]));
+  g.add(cableRun(id + '_conduit', [[.60, .25, -.44], [.44, .29, -.35], [.26, .23, -.23]], .026));
+  g.add(part(id + '_gland', cyl(.05, .062, .06, 10), mats.brass, [.26, .25, -.23]));
+  return g;
+}
+
+/** Muzzle marker: a tiny named group the bind layer reads as the projectile
+ *  spawn / tracer origin. Carries a visible ring so it can be eyeballed. */
+function muzzle(id, pos) {
+  const g = grp(id + '_muzzle', pos);
+  g.userData.role = 'projectileSpawn';
+  const ring = part(id + '_muzzle_marker', new THREE.TorusGeometry(.13, .018, 6, 20), mats.steel_plate, [0, 0, 0]);
+  ring.visible = false; ring.userData.gizmo = true;
+  g.add(ring);
+  return g;
+}
+
+/* ── Lance — railgun corridor. Yaw 360°, shallow pitch band. ─────────── */
+function buildLance() {
+  const root = grp('lance');
+  root.add(foot('lance', mats.energy_rail));
+  const yaw = grp('lance_yaw', [0, .33, 0]);
+  yaw.add(ringGear('lance_slew_gear', .58, 32));
+  yaw.add(part('lance_yaw_drum', cyl(.56, .60, .46, 24), mats.steel_hull, [0, .28, 0]));
+  yaw.add(panelPlate('lance_yaw_hatch', .32, .26, [0, .30, .585]));
+  yaw.add(boltRing('lance_yaw_bolts', .50, 10, .50));
+  yaw.add(louvres('lance_yaw_vent', .34, .24, 4).translateZ(-.58).translateY(.30));
+  yaw.add(part('lance_yaw_cap', cyl(.52, .56, .07, 24), mats.steel_plate, [0, .54, 0]));
+  for (const s of [-1, 1]) {
+    yaw.add(part('lance_trunnion' + (s < 0 ? '_l' : '_r'), box(.15, .80, .44), mats.chassis, [s * .46, .90, -.08]));
+    yaw.add(part('lance_trunnion_gusset' + (s < 0 ? '_l' : '_r'), box(.13, .26, .26), mats.steel_hull, [s * .46, .62, .10]));
+    yaw.add(part('lance_trunnion_hub' + (s < 0 ? '_l' : '_r'), cyl(.14, .14, .10, 20), mats.brass,
+      [s * .50, .86, 0], [0, 0, 90 * D]));
+    yaw.add(part('lance_trunnion_nut' + (s < 0 ? '_l' : '_r'), cyl(.05, .05, .12, 6), mats.chrome,
+      [s * .56, .86, 0], [0, 0, 90 * D]));
+  }
+  yaw.add(cableRun('lance_yaw_loom', [[-.40, .18, -.30], [-.46, .34, -.10], [-.40, .62, .04]], .028));
+
+  const pitch = grp('lance_pitch', [0, 1.19, 0]);
+  for (const s of [-1, 1]) {
+    pitch.add(part('lance_rail' + (s < 0 ? '_l' : '_r'), box(.13, .17, 3.0), mats.chrome, [s * .24, 0, .25]));
+    pitch.add(part('lance_rail_shroud' + (s < 0 ? '_l' : '_r'), box(.09, .22, 2.6), mats.steel_hull, [s * .33, 0, .35]));
+  }
+  pitch.add(part('lance_accelerator', box(.28, .05, 2.8), mats.energy_rail, [0, 0, .25]));
+  [-.35, .25, .85, 1.45].forEach((z, i) => {
+    pitch.add(part('lance_coil' + i, new THREE.TorusGeometry(.33, .08, 10, 28), mats.trim, [0, 0, z]));
+    pitch.add(part('lance_coil_winding' + i, new THREE.TorusGeometry(.33, .038, 8, 28), mats.brass, [0, 0, z + .06]));
+    pitch.add(part('lance_insulator' + i, box(.50, .09, .10), mats.steel_plate, [0, -.20, z]));
+  });
+  pitch.add(part('lance_breech', box(.80, .72, .86), mats.chassis, [0, -.02, -1.32]));
+  pitch.add(part('lance_breech_cap', cyl(.30, .30, .10, 24), mats.steel_plate, [0, -.02, -1.80], [90 * D, 0, 0]));
+  pitch.add(panelPlate('lance_breech_hatch', .34, .30, [0, .31, -1.32], [90 * D, 0, 0]));
+  pitch.add(hazardStripes('lance_breech_hazard', .42, .22, [.41, -.20, -1.32], [0, 90 * D, 0]));
+  for (const s of [-1, 1]) {
+    const x = s * .28;
+    pitch.add(part('lance_capacitor' + (s < 0 ? '_l' : '_r'), cyl(.15, .15, .74, 20), mats.steel_hull,
+      [x, .48, -1.30], [90 * D, 0, 0]));
+    for (let i = 0; i < 4; i++)
+      pitch.add(part('lance_cap_rib_' + (s < 0 ? 'l' : 'r') + i, new THREE.TorusGeometry(.155, .016, 6, 20),
+        mats.trim, [x, .48, -1.60 + i * .19]));
+    pitch.add(part('lance_cap_terminal' + (s < 0 ? '_l' : '_r'), cyl(.05, .05, .07, 10), mats.brass,
+      [x, .48, -.90], [90 * D, 0, 0]));
+  }
+  pitch.add(part('lance_bus_bar', box(.62, .05, .09), mats.brass, [0, .68, -1.30]));
+  pitch.add(cableRun('lance_cap_loom_l', [[-.28, .48, -.88], [-.14, .30, -.72], [0, .18, -.90]], .025));
+  pitch.add(cableRun('lance_cap_loom_r', [[.28, .48, -.88], [.14, .30, -.72], [0, .18, -.90]], .025));
+  pitch.add(hydraulic('lance_elev_ram_r', [.30, -.30, -1.00], [.30, -.36, .10], 1.1));
+  pitch.add(hydraulic('lance_elev_ram_l', [-.30, -.30, -1.00], [-.30, -.36, .10], 1.1));
+  pitch.add(part('lance_muzzle_shroud', cyl(.29, .25, .34, 24), mats.steel_plate, [0, 0, 1.78], [90 * D, 0, 0]));
+  pitch.add(finStack('lance_muzzle_fins', 5, .055, .50, .34).translateZ(1.50));
+  pitch.add(part('lance_aperture', cyl(.16, .16, .05, 20), mats.energy_rail, [0, 0, 1.96], [90 * D, 0, 0]));
+  pitch.add(part('lance_muzzle_lip', new THREE.TorusGeometry(.26, .026, 8, 28), mats.chrome, [0, 0, 1.95]));
+  pitch.add(part('lance_optic', box(.28, .21, .50), mats.steel_plate, [0, .47, -.42]));
+  pitch.add(part('lance_optic_shade', box(.24, .16, .12), mats.trim, [0, .47, -.13]));
+  pitch.add(part('lance_optic_lens', box(.17, .12, .02), mats.optic_glass, [0, .47, -.06]));
+  pitch.add(part('lance_optic_mount', box(.10, .18, .18), mats.steel_hull, [0, .32, -.42]));
+  pitch.add(muzzle('lance', [0, 0, 2.02]));
+  yaw.add(pitch);
+  root.add(yaw);
+  return root;
+}
+
+/* ── Nova — mortar. Slow yaw, high pitch floor (the min-range rule). ───── */
+function buildNova() {
+  const root = grp('nova');
+  root.add(foot('nova', mats.energy_fuse));
+  const yaw = grp('nova_yaw', [0, .33, 0]);
+  yaw.add(ringGear('nova_slew_gear', .70, 36));
+  yaw.add(part('nova_turret_drum', cyl(.80, .88, .40, 24), mats.chassis, [0, .24, 0]));
+  yaw.add(boltRing('nova_turret_bolts', .74, 14, .45));
+  yaw.add(part('nova_turret_lip', cyl(.76, .82, .09, 24), mats.steel_hull, [0, .49, 0]));
+  yaw.add(louvres('nova_turret_vent', .40, .26, 5).translateZ(-.80).translateY(.24));
+  yaw.add(panelPlate('nova_turret_hatch', .38, .24, [0, .24, .805]));
+  yaw.add(part('nova_blast_shield', box(1.06, .60, .05), mats.steel_plate, [0, 1.00, .32], [-14 * D, 0, 0]));
+  yaw.add(hazardStripes('nova_shield_hazard', .96, .15, [0, .76, .40], [-14 * D, 0, 0], 5));
+  for (const s of [-1, 1]) {
+    yaw.add(part('nova_cradle' + (s < 0 ? '_l' : '_r'), box(.13, .96, .74), mats.steel_hull, [s * .48, .97, -.16]));
+    yaw.add(part('nova_cradle_rib' + (s < 0 ? '_l' : '_r'), box(.16, .18, .60), mats.chassis, [s * .48, .60, -.16]));
+    yaw.add(part('nova_elevation_hub' + (s < 0 ? '_l' : '_r'), cyl(.19, .19, .10, 20), mats.brass,
+      [s * .55, .96, -.10], [0, 0, 90 * D]));
+    yaw.add(part('nova_elevation_nut' + (s < 0 ? '_l' : '_r'), cyl(.06, .06, .12, 6), mats.chrome,
+      [s * .62, .96, -.10], [0, 0, 90 * D]));
+  }
+  const rack = grp('nova_shell_rack', [-.86, .52, .30]);
+  rack.add(part('nova_hopper', box(.32, .54, .90), mats.steel_hull));
+  rack.add(part('nova_hoist_chute', box(.20, .16, .62), mats.chassis, [.16, .50, -.10], [0, 0, -22 * D]));
+  rack.add(hazardStripes('nova_hopper_hazard', .60, .14, [-.17, .10, 0], [0, -90 * D, 0], 4));
+  [-.28, 0, .28].forEach((z, i) => {
+    rack.add(part('nova_shell' + i, cyl(.11, .11, .40, 16), mats.brass, [0, .44, z]));
+    rack.add(part('nova_shell_band' + i, new THREE.TorusGeometry(.113, .014, 6, 18), mats.chrome, [0, .30, z], [90 * D, 0, 0]));
+    rack.add(part('nova_shell_fuse' + i, cyl(.03, .09, .16, 12), mats.energy_fuse, [0, .70, z]));
+  });
+  yaw.add(rack);
+
+  const pitch = grp('nova_pitch', [0, 1.29, -.10]);
+  pitch.add(part('nova_barrel', cyl(.25, .29, 1.62, 28), mats.steel_hull, [0, 0, .72], [90 * D, 0, 0]));
+  pitch.add(part('nova_barrel_jacket', cyl(.31, .31, .40, 24), mats.chassis, [0, 0, .28], [90 * D, 0, 0]));
+  pitch.add(finStack('nova_barrel_fins', 4, .07, .54, .28).translateZ(-.04));
+  pitch.add(part('nova_breech_ring', cyl(.36, .36, .16, 24), mats.steel_plate, [0, 0, -.16], [90 * D, 0, 0]));
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    pitch.add(part('nova_breech_lug' + i, box(.09, .07, .10), mats.chrome,
+      [Math.cos(a) * .36, Math.sin(a) * .36, -.16], [0, 0, a]));
+  }
+  pitch.add(part('nova_breech_block', cyl(.34, .34, .34, 24), mats.chassis, [0, 0, -.38], [90 * D, 0, 0]));
+  pitch.add(part('nova_breech_lever', box(.06, .22, .06), mats.chrome, [.30, .14, -.38], [0, 0, -24 * D]));
+  pitch.add(part('nova_breech_fuse', box(.15, .15, .10), mats.energy_fuse, [0, 0, -.56]));
+  for (const s of [-1, 1]) {
+    pitch.add(part('nova_recuperator' + (s < 0 ? '_l' : '_r'), cyl(.10, .10, 1.00, 16), mats.steel_plate,
+      [s * .30, -.18, .42], [90 * D, 0, 0]));
+    pitch.add(part('nova_recuperator_gland' + (s < 0 ? '_l' : '_r'), cyl(.11, .11, .08, 16), mats.brass,
+      [s * .30, -.18, .94], [90 * D, 0, 0]));
+  }
+  pitch.add(hydraulic('nova_recoil_ram', [0, -.34, -.30], [0, -.30, .70], 1.2));
+  pitch.add(part('nova_muzzle_brake', cyl(.35, .35, .28, 24), mats.steel_plate, [0, 0, 1.62], [90 * D, 0, 0]));
+  [-.26, 0, .26].forEach((x, i) =>
+    pitch.add(part('nova_brake_vent' + i, box(.05, .36, .30), mats.trim, [x, 0, 1.62])));
+  pitch.add(part('nova_brake_lip', new THREE.TorusGeometry(.32, .026, 8, 28), mats.chrome, [0, 0, 1.76]));
+  pitch.add(part('nova_bore', cyl(.20, .20, .05, 20), mats.trim, [0, 0, 1.79], [90 * D, 0, 0]));
+  pitch.add(muzzle('nova', [0, 0, 1.80]));
+  yaw.add(pitch);
+  root.add(yaw);
+  return root;
+}
+
+/* ── Singularity — aura tower. No aim rig: a spin group instead. ───────── */
+function buildSingularity() {
+  const root = grp('singularity');
+  root.add(foot('singularity', mats.energy_field));
+  root.add(part('singularity_stem', cyl(.40, .54, .58, 20), mats.chassis, [0, .62, 0]));
+  root.add(part('singularity_stem_flange', cyl(.46, .46, .07, 24), mats.steel_plate, [0, .90, 0]));
+  root.add(boltRing('singularity_stem_bolts', .38, 9, .945));
+  root.add(part('singularity_pump', box(.30, .26, .22), mats.steel_hull, [.44, .50, .30], [0, -30 * D, 0]));
+  root.add(cableRun('singularity_coolant_feed', [[.44, .62, .30], [.30, .78, .18], [.12, .92, .06]], .03, mats.brass));
+  for (let i = 0; i < 3; i++) {
+    const arm = grp('singularity_arm' + i);
+    arm.rotation.y = (i / 3) * Math.PI * 2;
+    // Lattice pylon: spar + diagonal truss members, so it reads structural.
+    arm.add(part('singularity_pylon' + i, box(.13, 1.90, .16), mats.chassis, [.52, 1.78, 0], [0, 0, 9 * D]));
+    arm.add(part('singularity_pylon_inner' + i, box(.09, 1.80, .10), mats.chassis, [.36, 1.82, 0], [0, 0, 9 * D]));
+    for (let k = 0; k < 5; k++)
+      arm.add(part('singularity_truss' + i + '_' + k, box(.065, .34, .065), mats.trim,
+        [.45 - k * .014, 1.06 + k * .34, 0], [0, 0, (k % 2 ? 54 : -54) * D]));
+    arm.add(part('singularity_pylon_foot' + i, box(.24, .16, .26), mats.chassis, [.60, .90, 0]));
+    arm.add(part('singularity_coolant_pipe' + i, cyl(.032, .032, 1.70, 10), mats.brass, [.60, 1.80, .10], [0, 0, 9 * D]));
+    arm.add(part('singularity_emitter' + i, box(.22, .28, .24), mats.steel_plate, [.40, 2.68, 0], [0, 0, -32 * D]));
+    arm.add(part('singularity_emitter_cowl' + i, box(.15, .17, .19), mats.trim, [.27, 2.60, 0], [0, 0, -32 * D]));
+    arm.add(part('singularity_lens' + i, cyl(.075, .075, .06, 14), mats.energy_field, [.22, 2.56, 0], [0, 0, 58 * D]));
+    root.add(arm);
+  }
+  root.add(part('singularity_containment_ring', new THREE.TorusGeometry(.62, .045, 10, 44), mats.steel_plate, [0, 1.92, 0], [90 * D, 0, 0]));
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    root.add(part('singularity_ring_flange' + i, box(.10, .12, .16), mats.chrome,
+      [Math.cos(a) * .62, 1.92, Math.sin(a) * .62], [0, -a, 0]));
+  }
+  const spin = grp('singularity_spin', [0, 2.30, 0]);
+  spin.userData.role = 'cosmeticSpin';
+  spin.add(part('singularity_core', new THREE.SphereGeometry(.30, 32, 24), mats.energy_field));
+  spin.add(part('singularity_core_cage', new THREE.TorusGeometry(.34, .022, 8, 32), mats.trim, [0, 0, 0], [90 * D, 0, 0]));
+  for (const [name, rad, rot] of [['a', .56, [74, 0, 0]]]) {
+    spin.add(part('singularity_halo_' + name, new THREE.TorusGeometry(rad, .032, 8, 48), mats.energy_field,
+      [0, 0, 0], rot.map((r) => r * D)));
+    for (let k = 0; k < 6; k++) {
+      const a = (k / 6) * Math.PI * 2;
+      const w = part('singularity_halo_' + name + '_coil' + k, new THREE.TorusGeometry(.04, .012, 6, 14), mats.brass,
+        [Math.cos(a) * rad, Math.sin(a) * rad, 0], [0, 90 * D, a]);
+      const holder = grp('singularity_halo_' + name + '_h' + k);
+      holder.rotation.set(rot[0] * D, rot[1] * D, rot[2] * D);
+      holder.add(w);
+      spin.add(holder);
+    }
+  }
+  root.add(spin);
+  return root;
+}
+
+/* ── Skywatch — flak. Fast yaw, high pitch band, air layer only. ───────── */
+function buildSkywatch() {
+  const root = grp('skywatch');
+  root.add(foot('skywatch', mats.energy_flak));
+  const yaw = grp('skywatch_yaw', [0, .33, 0]);
+  yaw.add(ringGear('skywatch_slew_gear', .56, 30));
+  yaw.add(part('skywatch_yaw_drum', cyl(.54, .58, .42, 24), mats.steel_hull, [0, .26, 0]));
+  yaw.add(boltRing('skywatch_yaw_bolts', .46, 10, .47));
+  yaw.add(part('skywatch_mast', cyl(.32, .40, .86, 16), mats.chassis, [0, .91, 0]));
+  yaw.add(panelPlate('skywatch_mast_hatch', .26, .34, [0, .90, .335]));
+  for (let i = 0; i < 4; i++)
+    yaw.add(part('skywatch_mast_rung' + i, cyl(.018, .018, .30, 8), mats.chrome, [0, .60 + i * .18, -.36], [0, 0, 90 * D]));
+  yaw.add(part('skywatch_cradle', box(.88, .38, .70), mats.chassis, [0, 1.45, -.02]));
+  yaw.add(part('skywatch_cradle_deck', box(.92, .05, .74), mats.steel_plate, [0, 1.66, -.02]));
+  for (const s of [-1, 1]) {
+    yaw.add(part('skywatch_ammo_drum' + (s < 0 ? '_l' : '_r'), cyl(.28, .28, .34, 24), mats.steel_hull,
+      [s * .62, 1.45, -.02], [0, 0, 90 * D]));
+    for (let i = 0; i < 3; i++)
+      yaw.add(part('skywatch_drum_rib_' + (s < 0 ? 'l' : 'r') + i, new THREE.TorusGeometry(.285, .016, 6, 24), mats.trim,
+        [s * (.50 + i * .12), 1.45, -.02], [0, 90 * D, 0]));
+    yaw.add(part('skywatch_drum_cap' + (s < 0 ? '_l' : '_r'), cyl(.13, .13, .38, 12), mats.chrome,
+      [s * .62, 1.45, -.02], [0, 0, 90 * D]));
+    yaw.add(part('skywatch_feed_chute' + (s < 0 ? '_l' : '_r'), box(.30, .13, .16), mats.steel_plate,
+      [s * .38, 1.63, .06], [0, 0, s * 16 * D]));
+    yaw.add(part('skywatch_outrigger' + (s < 0 ? '_l' : '_r'), box(.14, .12, .34), mats.steel_hull, [s * .48, .18, .22]));
+  }
+  const radar = grp('skywatch_radar', [0, 1.77, -.52]);
+  radar.userData.role = 'cosmeticSpin';
+  const dishPts = [];
+  for (let i = 0; i <= 12; i++) { const t = i / 12; dishPts.push(new THREE.Vector2(t * .52, t * t * .20)); }
+  radar.add(part('skywatch_radar_post', cyl(.075, .09, .70, 14), mats.trim, [0, 0, 0]));
+  radar.add(part('skywatch_radar_yoke', box(.14, .10, .22), mats.steel_hull, [0, .32, -.02]));
+  radar.add(part('skywatch_radar_dish', new THREE.LatheGeometry(dishPts, 36), mats.steel_plate, [0, .38, -.04], [-58 * D, 0, 0]));
+  radar.add(part('skywatch_radar_rim', new THREE.TorusGeometry(.52, .016, 6, 40), mats.chrome, [0, .38, -.04], [32 * D, 0, 0]));
+  radar.add(part('skywatch_radar_spine_a', box(.014, .96, .014), mats.chrome, [0, .38, -.035], [32 * D, 0, 0]));
+  radar.add(part('skywatch_radar_spine_b', box(.96, .014, .014), mats.chrome, [0, .38, -.035], [32 * D, 0, 0]));
+  for (const s of [-1, 1])
+    radar.add(part('skywatch_radar_strut' + (s < 0 ? '_l' : '_r'), cyl(.018, .018, .40, 8), mats.chrome,
+      [s * .12, .22, .06], [-38 * D, 0, s * 14 * D]));
+  radar.add(part('skywatch_radar_feed', cyl(.05, .05, .26, 12), mats.energy_flak, [0, .46, .08], [-58 * D, 0, 0]));
+  yaw.add(radar);
+
+  const pitch = grp('skywatch_pitch', [0, 1.53, .04]);
+  pitch.add(part('skywatch_gun_housing', box(.46, .40, .52), mats.steel_plate, [0, -.10, 0]));
+  pitch.add(part('skywatch_gun_saddle', cyl(.22, .22, .44, 20), mats.chassis, [0, .02, .06], [90 * D, 0, 0]));
+  let n = 0;
+  for (const x of [-.14, .14]) for (const y of [-.14, .14]) {
+    const i = n++;
+    pitch.add(part('skywatch_barrel' + i, cyl(.062, .072, 1.30, 14), mats.trim, [x, y, .78], [90 * D, 0, 0]));
+    pitch.add(part('skywatch_barrel_jacket' + i, cyl(.085, .085, .34, 14), mats.steel_hull, [x, y, .34], [90 * D, 0, 0]));
+    for (let k = 0; k < 3; k++)
+      pitch.add(part('skywatch_barrel_ring' + i + '_' + k, new THREE.TorusGeometry(.075, .012, 6, 16), mats.chrome,
+        [x, y, .60 + k * .22]));
+  }
+  pitch.add(part('skywatch_barrel_clamp', box(.42, .42, .09), mats.steel_hull, [0, 0, .95]));
+  pitch.add(part('skywatch_flash_ring', new THREE.TorusGeometry(.26, .048, 10, 28), mats.steel_plate, [0, 0, 1.40]));
+  pitch.add(part('skywatch_flash_vane_a', box(.44, .03, .10), mats.chrome, [0, 0, 1.40]));
+  pitch.add(part('skywatch_flash_vane_b', box(.03, .44, .10), mats.chrome, [0, 0, 1.40]));
+  pitch.add(part('skywatch_charge_strip', box(.05, .32, .38), mats.energy_flak, [.24, 0, .30]));
+  pitch.add(part('skywatch_ammo_feed', box(.16, .12, .30), mats.steel_hull, [-.26, -.06, .10]));
+  pitch.add(hydraulic('skywatch_elev_ram', [.28, -.30, -.14], [.28, -.24, .46]));
+  pitch.add(muzzle('skywatch', [0, 0, 1.48]));
+  yaw.add(pitch);
+  root.add(yaw);
+  return root;
+}
+
+/* ── roster: stats from sim/Sim.Core/Content/Towers.cs; rig limits are the
+      client-side aim contract the bind layer drives. ─────────────────────── */
+const towers = [
+  {
+    id: 'lance', label: 'Lance', swatch: 'var(--el-frost)', build: buildLance,
+    stats: { Cost: '75', Range: '12 m', Damage: '8', Rate: '1.6/s' },
+    rig: { yaw: [-180, 180], pitch: [-8, 26], traverse: 90, elevate: 60 },
+    layers: 'Ground', spawnHint: 'Bolt leaves the aperture, not the socket origin.',
+    note: 'Long rail = a lane weapon. Yaw is unlimited but slow-ish; a Leaper crossing at 8 m/s inside 6 m will out-slew it — that miss is the design, not a bug.',
+  },
+  {
+    id: 'nova', label: 'Nova', swatch: 'var(--el-storm)', build: buildNova,
+    stats: { Cost: '115', Range: '16 m', Damage: '22', Rate: '0.5/s' },
+    rig: { yaw: [-180, 180], pitch: [22, 70], traverse: 45, elevate: 30 },
+    layers: 'Ground', spawnHint: 'Shell spawns at the brake; arc is sim-side.',
+    note: 'Pitch floor of 22° IS the 5 m min-range rule expressed in geometry — the barrel physically cannot depress onto a close target, so the refusal is readable from outside the tower.',
+  },
+  {
+    id: 'singularity', label: 'Singularity', swatch: 'var(--el-void)', build: buildSingularity,
+    stats: { Cost: '110', Range: '9 m', Damage: '—', Rate: 'aura' },
+    rig: null,
+    layers: 'Ground + Air', spawnHint: 'No projectile — field applies in UpdateStatuses.',
+    note: 'No aim rig at all: an aura tower that pointed at things would lie about how it works. `singularity_spin` is a cosmetic group the client rotates at chill potency; nothing about it is authoritative.',
+  },
+  {
+    id: 'skywatch', label: 'Skywatch', swatch: 'var(--el-arcane)', build: buildSkywatch,
+    stats: { Cost: '90', Range: '15 m', Damage: '4', Rate: '3.0/s' },
+    rig: { yaw: [-180, 180], pitch: [6, 82], traverse: 200, elevate: 140 },
+    layers: 'Air', spawnHint: 'Flak burst spawns at the flash ring.',
+    note: 'Built to hold a strafing Skiff: 200°/s yaw and an 82° ceiling. The radar group spins independently of aim, so the tower reads as "searching" even while the guns are parked.',
+  },
+];
+
+/* ── target sim + tracking rig driver ───────────────────────────────────── */
+const modes = [
+  { id: 'strafe',   label: 'Strafe',   y: 0.9, air: false },
+  { id: 'approach', label: 'Approach', y: 0.9, air: false },
+  { id: 'orbit',    label: 'Air lane', y: 4.2, air: true },
+];
+
+const built = {};
+let current = towers[0], mode = modes[0], t = 0;
+let demo = null, targetMesh = null, boreLine = null, gizmos = [];
+const aim = { yaw: 0, pitch: 0 };
+const el = (id) => document.getElementById(id);
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const wrap180 = (d) => ((d + 180) % 360 + 360) % 360 - 180;
+
+function ensureDemo(scene) {
+  if (demo && demo.parent === scene) return;
+  const stale = scene.getObjectByName('__demo');
+  if (stale) scene.remove(stale);
+  demo = grp('__demo');
+  targetMesh = new THREE.Mesh(
+    new THREE.CapsuleGeometry(.34, .74, 8, 16),
+    new THREE.MeshStandardMaterial({ color: 0xc93b28, roughness: .5, emissive: 0x3a0d08, flatShading: true }));
+  targetMesh.name = '__target';
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(.5, .022, 6, 32),
+    new THREE.MeshBasicMaterial({ color: 0xe9614c }));
+  ring.rotation.x = 90 * D; ring.position.y = -.72; ring.name = '__target_ring';
+  targetMesh.add(ring);
+  boreLine = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
+    new THREE.LineBasicMaterial({ color: 0xe3bc66 }));
+  boreLine.name = '__bore';
+  demo.add(targetMesh, boreLine);
+  scene.add(demo);
+}
+
+function targetPos(dt) {
+  const speed = +el('speed').value, r = +el('dist').value;
+  t += dt;
+  if (mode.id === 'strafe') {
+    const span = Math.max(r, 6);
+    const x = Math.sin(t * speed / span) * span;
+    return new THREE.Vector3(x, mode.y, r * .8);
+  }
+  if (mode.id === 'approach') {
+    const cycle = ((t * speed) % (r * 2));
+    const z = r + 2 - cycle;
+    return new THREE.Vector3(r * .12, mode.y, z);
+  }
+  const w = speed / Math.max(r, 4);
+  return new THREE.Vector3(Math.sin(t * w) * r, mode.y + Math.sin(t * .6) * .6, Math.cos(t * w) * r);
+}
+
+function setNeedle(gauge, range, value, desired) {
+  const [lo, hi] = range, span = hi - lo || 1;
+  const pct = (v) => clamp(((v - lo) / span) * 100, 0, 100);
+  el(gauge + '-needle').style.left = pct(value) + '%';
+  el(gauge + '-ghost').style.left = pct(desired) + '%';
+  el(gauge + '-band').style.left = '0%';
+  el(gauge + '-band').style.width = '100%';
+}
+
+function countMeshes(obj) {
+  let n = 0;
+  obj.traverse((o) => { if (o.isMesh && !o.userData.gizmo) n++; });
+  return n;
+}
+
+/** The stage frames the tower alone; tracking needs the lane in shot too. */
+function frameForTracking() {
+  const obj = built[current.id];
+  const cam = stage._camera, ctl = stage._controls, key = stage._key;
+  const bounds = new THREE.Box3().setFromObject(obj);
+  const centre = bounds.getCenter(new THREE.Vector3());
+  const objR = bounds.getBoundingSphere(new THREE.Sphere()).radius;
+  const r = +el('dist').value;
+  const laneR = mode.id === 'strafe' ? Math.hypot(Math.max(r, 6), r * .8)
+    : mode.id === 'approach' ? r + 2
+    : Math.hypot(r, mode.y);
+  const tracking = el('track').checked && current.rig;
+  const objDist = (objR / Math.tan((cam.fov * Math.PI) / 360)) * 1.25;
+  const radius = tracking ? Math.max(objR, laneR * .7) : objR;
+  // The tower is the subject: never pull back more than ~2.2× its own framing,
+  // even when that lets a distant target leave the frame.
+  const dist = Math.min((radius / Math.tan((cam.fov * Math.PI) / 360)) * 1.1, objDist * 1.7);
+  const look = new THREE.Vector3(centre.x, tracking ? Math.max(centre.y, mode.air ? 2.2 : 1.5) : centre.y, centre.z);
+  cam.position.copy(look).add(new THREE.Vector3(1.5, .52, .8).normalize().multiplyScalar(dist));
+  cam.near = Math.max(dist / 100, .01); cam.far = dist * 100; cam.updateProjectionMatrix();
+  ctl.target.copy(look); ctl.update();
+  const span = radius * 2.2;
+  key.shadow.camera.left = -span; key.shadow.camera.right = span;
+  key.shadow.camera.top = span; key.shadow.camera.bottom = -span;
+  key.shadow.camera.updateProjectionMatrix();
+}
+
+let last = performance.now(), frameErr = false;
+function frame(now) {
+  try { tick(now); } catch (err) {
+    if (!frameErr) { frameErr = true; el('note').textContent = 'frame: ' + err.message; }
+  }
+  requestAnimationFrame(frame);
+}
+function tick(now) {
+  const dt = Math.min((now - last) / 1000, .05); last = now;
+  const obj = built[current.id];
+  if (obj) {
+    const scene = obj.parent;
+    if (scene) ensureDemo(scene);
+    const spin = obj.getObjectByName(current.id + '_spin') || obj.getObjectByName('skywatch_radar');
+    if (spin) spin.rotation.y += dt * (current.id === 'singularity' ? .9 : .55);
+
+    const tracking = el('track').checked && current.rig;
+    demo.visible = !!el('track').checked;
+    const tp = targetPos(dt);
+    targetMesh.position.copy(tp);
+
+    if (tracking) {
+      const yawG = obj.getObjectByName(current.id + '_yaw');
+      const pitchG = obj.getObjectByName(current.id + '_pitch');
+      const muz = obj.getObjectByName(current.id + '_muzzle');
+      const pivot = new THREE.Vector3();
+      pitchG.getWorldPosition(pivot);
+      const d = tp.clone().sub(pivot);
+      const desiredYaw = Math.atan2(d.x, d.z) / D;
+      const desiredPitch = Math.atan2(d.y, Math.hypot(d.x, d.z)) / D;
+      const lim = el('limits').checked;
+      const tgtYaw = lim ? clamp(desiredYaw, current.rig.yaw[0], current.rig.yaw[1]) : desiredYaw;
+      const tgtPitch = lim ? clamp(desiredPitch, current.rig.pitch[0], current.rig.pitch[1]) : desiredPitch;
+      const step = (from, to, rate) => {
+        const delta = wrap180(to - from), max = (lim ? rate : 720) * dt;
+        return from + clamp(delta, -max, max);
+      };
+      aim.yaw = wrap180(step(aim.yaw, tgtYaw, current.rig.traverse));
+      aim.pitch = step(aim.pitch, tgtPitch, current.rig.elevate);
+      yawG.rotation.y = aim.yaw * D;
+      pitchG.rotation.x = -aim.pitch * D;
+
+      const yawErr = Math.abs(wrap180(desiredYaw - aim.yaw));
+      const pitchErr = Math.abs(desiredPitch - aim.pitch);
+      const blocked = lim && (desiredPitch < current.rig.pitch[0] - .5 || desiredPitch > current.rig.pitch[1] + .5);
+      const s = el('status');
+      if (blocked) {
+        s.dataset.tone = 'fail';
+        s.textContent = desiredPitch < current.rig.pitch[0]
+          ? 'Min elevation — target inside dead zone' : 'Max elevation — target overhead';
+      } else if (yawErr > 2.5 || pitchErr > 2.5) {
+        s.dataset.tone = 'slew';
+        s.textContent = `Slewing — ${Math.max(yawErr, pitchErr).toFixed(1)}° behind`;
+      } else {
+        s.dataset.tone = 'lock';
+        s.textContent = 'Locked — on target';
+      }
+
+      el('yaw-read').textContent = aim.yaw.toFixed(1) + '°';
+      el('pitch-read').textContent = aim.pitch.toFixed(1) + '°';
+      setNeedle('yaw', current.rig.yaw, aim.yaw, wrap180(desiredYaw));
+      setNeedle('pitch', current.rig.pitch, aim.pitch, desiredPitch);
+
+      const showBore = el('bore').checked;
+      boreLine.visible = showBore;
+      if (showBore && muz) {
+        const from = new THREE.Vector3(); muz.getWorldPosition(from);
+        const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(muz.getWorldQuaternion(new THREE.Quaternion()));
+        boreLine.geometry.setFromPoints([from, from.clone().addScaledVector(fwd, Math.max(6, tp.distanceTo(from)))]);
+        boreLine.geometry.computeBoundingSphere();
+      }
+    } else {
+      boreLine.visible = false;
+    }
+  }
+}
+
+/* ── UI wiring ──────────────────────────────────────────────────────────── */
+function hierarchy(t) {
+  if (!t.rig) return `${t.id}\n├─ <b>${t.id}_foot</b>        static\n├─ ${t.id}_arm0…2      static\n└─ <i>${t.id}_spin</i>        cosmetic Y spin`;
+  return `${t.id}\n├─ <b>${t.id}_foot</b>${' '.repeat(Math.max(1, 12 - t.id.length))}static\n└─ <i>${t.id}_yaw</i>          rot.y ← aim\n   └─ <i>${t.id}_pitch</i>      rot.x ← −aim\n      └─ <i>${t.id}_muzzle</i>   spawn point`;
+}
+
+/** Triangle count — the "within reason for the engine" receipt. */
+function triCount(obj) {
+  let tris = 0;
+  obj.traverse((o) => {
+    if (!o.isMesh || o.userData.gizmo) return;
+    const g = o.geometry;
+    tris += g.index ? g.index.count / 3 : g.attributes.position.count / 3;
+  });
+  return Math.round(tris);
+}
+
+function select(tw) {
+  current = tw; t = 0; aim.yaw = 0; aim.pitch = tw.rig ? Math.max(0, tw.rig.pitch[0]) : 0;
+  built[tw.id] ??= tw.build();
+  if (tw.rig) {
+    const y = built[tw.id].getObjectByName(tw.id + '_yaw');
+    const p = built[tw.id].getObjectByName(tw.id + '_pitch');
+    y.userData.aim = { axis: 'y', min: tw.rig.yaw[0], max: tw.rig.yaw[1], degPerSec: tw.rig.traverse };
+    p.userData.aim = { axis: 'x', min: tw.rig.pitch[0], max: tw.rig.pitch[1], degPerSec: tw.rig.elevate, sign: -1 };
+    y.rotation.y = 0; p.rotation.x = -aim.pitch * D;
+  }
+  stage.setAttribute('name', 'deepfield_tower_' + tw.id);
+  stage.setObject(built[tw.id]);
+
+  el('rig-title').textContent = tw.label + (tw.rig ? ' — aim rig' : ' — no aim rig');
+  const r = tw.rig;
+  const rows = {
+    ...tw.stats,
+    Layers: tw.layers,
+    Yaw: r ? `${r.yaw[1] - r.yaw[0]}°` : 'fixed',
+    Pitch: r ? `${r.pitch[0]}…${r.pitch[1]}°` : '—',
+    Traverse: r ? `${r.traverse}°/s` : '—',
+    Elevate: r ? `${r.elevate}°/s` : '—',
+    Tris: triCount(built[tw.id]).toLocaleString(),
+    Parts: String(built[tw.id].getObjectByProperty ? countMeshes(built[tw.id]) : 0),
+  };
+  el('rig-stats').innerHTML = Object.entries(rows).map(([k, v]) =>
+    `<div><dt>${k}</dt><dd class="${k === 'Traverse' || k === 'Elevate' ? 'arcane' : (k === 'Cost' ? 'accent' : '')}">${v}</dd></div>`).join('');
+  el('hier').innerHTML = hierarchy(tw);
+  el('note').textContent = tw.note + ' ' + tw.spawnHint;
+  el('status').dataset.tone = 'idle';
+  el('status').textContent = r ? 'Acquiring…' : 'Aura tower — nothing to aim';
+  for (const b of el('tabs').children) b.setAttribute('aria-pressed', String(b.dataset.id === tw.id));
+  applyGizmos();
+  frameForTracking();
+}
+
+function applyGizmos() {
+  const obj = built[current.id];
+  for (const g of gizmos) g.parent?.remove(g);
+  gizmos = [];
+  obj.traverse((o) => { if (o.userData.gizmo) o.visible = el('bore').checked; });
+  if (!el('pivots').checked) return;
+  for (const n of [current.id + '_yaw', current.id + '_pitch']) {
+    const node = obj.getObjectByName(n);
+    if (!node) continue;
+    const ax = new THREE.AxesHelper(.9); ax.name = '__gizmo_' + n; ax.userData.gizmo = true;
+    node.add(ax); gizmos.push(ax);
+  }
+}
+
+for (const tw of towers) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.dataset.id = tw.id;
+  b.innerHTML = `<span class="swatch" style="background:${tw.swatch}"></span>${tw.label}`;
+  b.addEventListener('click', () => select(tw));
+  el('tabs').appendChild(b);
+}
+for (const m of modes) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.dataset.id = m.id; b.textContent = m.label;
+  b.setAttribute('aria-pressed', String(m === mode));
+  b.addEventListener('click', () => {
+    mode = m; t = 0;
+    for (const o of el('modes').children) o.setAttribute('aria-pressed', String(o.dataset.id === m.id));
+    frameForTracking();
+  });
+  el('modes').appendChild(b);
+}
+el('speed').addEventListener('input', (e) => el('speed-out').textContent = (+e.target.value).toFixed(1) + ' m/s');
+el('dist').addEventListener('input', (e) => el('dist-out').textContent = (+e.target.value).toFixed(1) + ' m');
+el('dist').addEventListener('change', frameForTracking);
+el('track').addEventListener('change', frameForTracking);
+el('bore').addEventListener('change', applyGizmos);
+el('pivots').addEventListener('change', applyGizmos);
+
+/* Debug surface: the render loop is rAF-driven, so a hidden tab renders no
+   frames. Exposing the tick lets a harness step the rig deterministically. */
+window.__deepfieldRig = { step: (ms) => tick(ms), aim, get tower() { return current; }, towers, built, THREE };
+requestAnimationFrame(frame);
+try { select(towers[0]); } catch (err) { console.error('select', err); el('note').textContent = 'select() failed: ' + err.message; }
+</script>
+</body>
+</html>

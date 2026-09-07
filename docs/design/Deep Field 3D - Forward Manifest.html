@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Deep Field 3D — Forward Manifest</title>
+<link rel="stylesheet" href="ds/tokens/fonts.css">
+<link rel="stylesheet" href="ds/tokens/colors.css">
+<link rel="stylesheet" href="ds/tokens/typography.css">
+<link rel="stylesheet" href="ds/tokens/spacing.css">
+<link rel="stylesheet" href="ds/tokens/effects.css">
+<link rel="stylesheet" href="ui-kit.css">
+<style>
+  main{display:block;overflow:auto;padding:var(--space-8) var(--space-9)}
+  .wrap{max-width:1400px;margin:0 auto;display:flex;flex-direction:column;gap:var(--space-8)}
+  .ms{display:grid;grid-template-columns:200px 1fr;gap:var(--space-8);align-items:start}
+  .ms .side{position:sticky;top:0}
+  .cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:var(--space-5)}
+  .entry{display:grid;grid-template-columns:170px minmax(0,1fr);gap:var(--space-4);padding:var(--space-4) 0;border-top:1px solid rgba(42,51,72,.6)}
+  .entry>div:first-child{min-width:0}
+  .entry .id{font:var(--weight-bold) var(--size-body)/1.2 var(--font-display);text-transform:uppercase;letter-spacing:.04em;word-break:break-word}
+  .entry .iconname{font:var(--weight-regular) 10px/1.4 var(--font-mono);color:var(--text-muted);word-break:break-all;letter-spacing:0;text-transform:none}
+  .files{display:flex;flex-direction:column;gap:2px;margin:0;padding:0;list-style:none}
+  .files li{font:var(--weight-regular) var(--size-micro)/1.5 var(--font-mono);color:var(--text-arcane);word-break:break-all}
+  .entry p{margin:4px 0 0;font-size:var(--size-caption);color:var(--text-secondary);line-height:var(--leading-normal)}
+  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-5)}
+</style>
+</head>
+<body>
+<header class="app">
+  <div class="brand"><h1>Forward Manifest</h1><p>Deep Field 3D · brief §4 · M4–M5 titles fixed now so nothing renames later · M3 delivered 2026-09-07 · <code>game/assets/forward-manifest.json</code></p></div>
+  <nav class="tabs"><a href="Deep Field 3D - Asset Export.html">Export pack</a><a href="Deep Field 3D - Roster.html">Roster</a><a href="Deep Field 3D - Gunsmith.html">Gunsmith</a><a href="Deep Field 3D - Maps.html">Maps</a><a href="Deep Field 3D - UI Screens.html">UI</a></nav>
+</header>
+<main><div class="wrap" id="root"></div></main>
+<script type="module">
+const M = await (await fetch('game/assets/forward-manifest.json')).json();
+const root = document.getElementById('root');
+const count = (ms) => Object.values(ms).filter(Array.isArray).reduce((a, c) => a + c.reduce((x, e) => x + e.files.length, 0), 0);
+const total = Object.values(M.milestones).reduce((a, ms) => a + count(ms), 0);
+root.innerHTML = `
+  <div class="summary">${Object.entries(M.delivered || {}).map(([k, d]) => `<div class="card col" style="gap:6px;box-shadow:inset 0 0 0 1px var(--venom-500)"><span class="label" style="color:var(--venom-400)">${k} · delivered ${d.date}</span><span style="font:var(--weight-bold) var(--size-body-lg)/1.2 var(--font-display)">${d.items.length} groups shipped</span><span class="mono muted" style="font-size:var(--size-caption)">${d.note}</span></div>`).join('')}${Object.entries(M.milestones).map(([k, ms]) => `<div class="card col" style="gap:6px"><span class="label brass">${k}</span><span style="font:var(--weight-bold) var(--size-body-lg)/1.2 var(--font-display)">${ms.theme}</span><span class="mono muted" style="font-size:var(--size-caption)">${count(ms)} titles</span></div>`).join('')}
+    <div class="card col" style="gap:6px"><span class="label">Conventions</span><span style="font-size:var(--size-caption);color:var(--text-secondary);line-height:var(--leading-normal)">${M.conventions.units} · ${M.conventions.up} up · ${M.conventions.forward} forward · ${M.conventions.states}</span><span class="mono brass" style="font-size:var(--size-caption)">${total} titles reserved</span></div></div>
+  ${Object.entries(M.milestones).map(([k, ms]) => `<section class="ms"><div class="side col" style="gap:8px"><span class="hero-t brass" style="font-size:64px">${k}</span><span class="h3">${ms.theme}</span><span class="label">${count(ms)} titles · status planned</span></div>
+    <div class="cats">${Object.entries(ms).filter(([, v]) => Array.isArray(v)).map(([cat, items]) => `<section class="panel"><div class="hd"><span class="ic"></span><h3>${cat.replace('_', ' ')}</h3><span class="tag">${items.length}</span></div><div class="bd" style="padding-top:0;padding-bottom:0">
+      ${items.map((e) => `<div class="entry"><div class="col" style="gap:6px"><span class="id">${e.id}</span>${e.channel ? `<span class="tag soul" style="align-self:flex-start">${e.channel}</span>` : ''}${e.icon ? `<span class="iconname">${e.icon}</span>` : ''}</div><div><ul class="files">${e.files.map((f) => `<li>${f}</li>`).join('')}</ul>${e.note ? `<p>${e.note}</p>` : ''}${e.paths ? `<p class="mono">paths: ${e.paths.join(' · ')}</p>` : ''}</div></div>`).join('')}</div></section>`).join('')}</div></section>`).join('')}`;
+</script>
+</body>
+</html>

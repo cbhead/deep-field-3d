@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Deep Field 3D — UI Screens</title>
+<link rel="stylesheet" href="ds/tokens/fonts.css">
+<link rel="stylesheet" href="ds/tokens/colors.css">
+<link rel="stylesheet" href="ds/tokens/typography.css">
+<link rel="stylesheet" href="ds/tokens/spacing.css">
+<link rel="stylesheet" href="ds/tokens/effects.css">
+<link rel="stylesheet" href="ui-kit.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.184.0/build/three.module.js",
+    "three/addons/controls/OrbitControls.js": "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js",
+    "three/addons/exporters/OBJExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js",
+    "three/addons/exporters/GLTFExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js"
+  },
+  "integrity": {
+    "https://unpkg.com/three@0.184.0/build/three.module.js": "sha384-8FCZ1eVO6it4+pbec2aDtnTrwjWXZLJRC+MAGCIPDgsYnUrl/E0A2YlF8ioMKI/J",
+    "https://unpkg.com/three@0.184.0/build/three.core.js": "sha384-dw2ooPewaEIrAgl6oFDBmmBWCE9oW9LxRGcfwZ0hLvEprzo202wXl7vCYHRlSnOT",
+    "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js": "sha384-4rziNxOBZKQ69i+w+f89KJ55TCYquwchVbByQwmaOeIOXdOU2PLDn3kOfXHwIJC9",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js": "sha384-nbwtoZENJD3Vq+ACK0CuGQdPMuDWHkamC2KJD70EV5nfg6jQjfppKOea07YJN+N3",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js": "sha384-VofkvpG6HERhFCYbsUOHeNXBCqID2nfqkQqnVzE1jc/oPcz+qJ13ADdXH08hE+cQ"
+  }
+}
+</script>
+</head>
+<body>
+<header class="app">
+  <div class="brand"><h1>UI Screens & Branding</h1><p>Deep Field 3D · brief §5 + §6 · 1920×1080 frames, ds tokens, §3.8 icon set</p></div>
+  <nav class="tabs" id="tabs"></nav>
+</header>
+<main>
+  <nav class="screens" id="nav"></nav>
+  <div class="stagewrap"><div class="stagearea" id="wrap"><div class="stage" id="stage"></div></div><div class="caption" id="cap"></div></div>
+</main>
+<script type="module">
+import { SCREENS } from './ui-screens.js';
+import './ui-branding.js';
+import { mountWeaponViews } from './ui-weapon-view.js';
+const el = (id) => document.getElementById(id);
+el('tabs').innerHTML = `<a href="Deep Field 3D - Asset Export.html"><span class="faction forge" style="width:8px;height:8px"></span>Export pack</a><a href="Deep Field 3D - Roster.html">Roster</a><a href="Deep Field 3D - Gunsmith.html">Gunsmith</a><a href="Deep Field 3D - Maps.html">Maps</a><a href="Lance.html">Towers</a>`;
+const groups = [...new Set(SCREENS.map((s) => s.group))];
+el('nav').innerHTML = groups.map((g) => `<h2>${g}</h2>` + SCREENS.filter((s) => s.group === g).map((s) => `<button type="button" data-id="${s.id}">${s.label}<small>${s.tag || ''}</small></button>`).join('')).join('');
+el('nav').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) show(b.dataset.id); });
+function show(id) {
+  const s = SCREENS.find((x) => x.id === id); if (!s) return;
+  for (const b of el('nav').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.id === id));
+  el('stage').innerHTML = s.render();
+  mountWeaponViews(el('stage'));
+  el('cap').innerHTML = `<b>${s.label}</b>${s.note}`;
+  location.hash = id;
+}
+function fit() { const w = el('wrap').clientWidth - 48, h = el('wrap').clientHeight - 48; el('stage').style.transform = `translate(-50%,-50%) scale(${Math.min(w / 1920, h / 1080)})`; }
+window.addEventListener('resize', fit); fit();
+show(location.hash.slice(1) || SCREENS[0].id);
+window.__screens = { SCREENS, show };
+</script>
+</body>
+</html>

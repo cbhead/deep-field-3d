@@ -6,7 +6,8 @@ Bloons-depth counters and machine-swept balance, Sanctum-style build-and-shoot.
 
 **Status: M3 in progress.** Three maps, ten enemies, eight towers, five factions,
 and the full design system worn across all sixteen UI surfaces — Claude Design's
-380 models and 58 icons replacing the graybox everywhere the code reaches.
+427 models and 65 icons replacing the graybox everywhere the code reaches,
+turrets driven on design's yaw/pitch rigs.
 Information warfare has landed: stealth and healing enemies, the Detector and
 Filament towers, poison and detection channels, and Night/Fog conditions.
 41 harness gates + 19 unit tests green.
@@ -56,6 +57,10 @@ make check    # sim build + unit tests + harness gates + game build
 make assets   # art delivered vs what the design brief names
 make usage    # what the game actually consumes (docs/ASSET-USAGE.md)
 ```
+
+Design's models are generated, not hand-delivered: the three.js sources live in
+`docs/design/` and `make design-export` rebuilds every GLB, icon and manifest
+from them (see [docs/ART-INTEGRATION.md](docs/ART-INTEGRATION.md)).
 
 ```sh
 ./play -- --shot foundry /tmp/shot.png   # render a frame, for reviewing art
