@@ -34,6 +34,13 @@ public partial class GameRoot : Node3D
     private readonly Dictionary<int, Node3D> _enemyViews = new();
     private readonly Dictionary<int, Node3D> _projectileViews = new();
     private readonly Dictionary<int, Node3D> _towerViews = new();
+    /// <summary>Design's yaw/pitch/spin nodes per tower view, resolved once per
+    /// build of the view (an upgrade rebuilds it, so the entry is keyed on the
+    /// view too).</summary>
+    private readonly Dictionary<int, (Node3D View, TowerRig Rig)> _towerRigs = new();
+    /// <summary>Far plane for the review-shot cameras: past design's 700 m
+    /// skybox dome, or the shot has no sky in it.</summary>
+    private const float SkyFar = 1000f;
     /// <summary>--audit-sockets prints every build pad's world height beside
     /// its socket's. Cheap, and it is how the wall-socket pads were caught
     /// rendering on the floor instead of on the deck.</summary>
@@ -147,6 +154,7 @@ public partial class GameRoot : Node3D
         Tokens.ReleaseCaches();
         Kit.ReleaseCaches();
         AssetLibrary.ReleaseCaches();
+        TowerRig.ReleaseCaches();
     }
 
     public override void _Ready()
@@ -473,7 +481,7 @@ public partial class GameRoot : Node3D
                 "deck" => (new Vector3(30, 15, 6), new Vector3(6, 6, -10)),
                 _ => (new Vector3(0, 60, 60), Vector3.Zero),
             };
-            var camera = new Camera3D { Position = from, Far = 500f };
+            var camera = new Camera3D { Position = from, Far = SkyFar };
             AddChild(camera);
             camera.LookAt(look, Vector3.Up);
             camera.MakeCurrent();
@@ -1281,8 +1289,8 @@ public partial class GameRoot : Node3D
     private Node3D SpawnStructureView(string defId, Vector3 pos, int[]? levels)
     {
         var root = new Node3D { Position = pos };
-        var chassis = AssetLibrary.Instantiate(
-            AssetLibrary.StructureAsset(defId), () => Placeholders.Structure(defId));
+        string chassisAsset = AssetLibrary.StructureAsset(defId);
+        var chassis = AssetLibrary.Instantiate(chassisAsset, () => Placeholders.Structure(defId));
         chassis.Name = "Body";
         root.AddChild(chassis);
         AddChild(root);
@@ -1294,7 +1302,8 @@ public partial class GameRoot : Node3D
             string pathId = def.UpgradePaths[i].Id;
             int stage = Mathf.Clamp(levels[i] + 1, 1, 10);
 
-            var module = AssetLibrary.TryInstantiate($"tower_{defId}_{pathId}_s{stage}");
+            string moduleAsset = $"tower_{defId}_{pathId}_s{stage}";
+            var module = AssetLibrary.TryInstantiate(moduleAsset);
             if (module is null)
             {
                 var stand = Placeholders.TowerModule(pathId, i, levels[i]);
@@ -1307,12 +1316,22 @@ public partial class GameRoot : Node3D
             // must swing with the barrel sits under the same-named node; move
             // the parts across and drop the now-empty scaffold.
             root.AddChild(module);
-            MergeRig(module, chassis);
+            MergeRig(Unwrap(module, moduleAsset), Unwrap(chassis, chassisAsset));
             root.RemoveChild(module);
             module.QueueFree();
         }
         return root;
     }
+
+    /// <summary>Godot's glTF import keeps the file's single root node and puts
+    /// it under an extra scene root, so a chassis arrives as
+    /// AuxScene → tower_lance_chassis → lance_foot / lance_yaw, and a module as
+    /// AuxScene → tower_lance_damage_s4 → lance_yaw → lance_pitch. The merge has
+    /// to start below the wrapper or the two trees never share a name and the
+    /// module lands whole under the chassis — which renders identically at
+    /// rest, and is why nothing noticed until the rig started moving.</summary>
+    private static Node Unwrap(Node scene, string asset)
+        => scene.GetNodeOrNull<Node3D>(asset.ToLowerInvariant()) ?? scene;
 
     /// <summary>Moves a module's parts onto the chassis nodes of the same name,
     /// descending through matching rig empties so pitch parts land under pitch
@@ -1443,6 +1462,7 @@ public partial class GameRoot : Node3D
 
             float distance = camera is null ? 0f : camera.GlobalPosition.DistanceTo(view.Position);
             bar.Set(structure.HpFraction, distance);
+            RefreshBarricadeArt(structure.Id, structure.DefId, structure.HpFraction, view);
         }
 
         // Views are freed with the structure they hang under, so this only has
@@ -1452,6 +1472,34 @@ public partial class GameRoot : Node3D
 
         if (_siegeReport is not null) WatchSiege();
     }
+
+    /// <summary>Design ships the barricade in three states — intact, damaged,
+    /// broken — for exactly this: a wall at a third of its health that still
+    /// looks new tells the player nothing the bar has not already said, and
+    /// the bar hides at distance. Same body swap as the trap plates; the wall
+    /// has no rig, so nothing has to survive the swap.</summary>
+    private void RefreshBarricadeArt(int structureId, string defId, float hpFraction, Node3D view)
+    {
+        if (defId != "barricade") return;
+        string asset = hpFraction < BarricadeBrokenBelow ? "tower_barricade_broken"
+            : hpFraction < BarricadeDamagedBelow ? "tower_barricade_damaged"
+            : "tower_barricade";
+        if ((string)view.GetMeta("structure_state", "tower_barricade") == asset) return;
+        if (!AssetLibrary.Has(asset)) return;
+
+        if (view.GetNodeOrNull<Node3D>("Body") is { } old)
+        {
+            view.RemoveChild(old);
+            old.QueueFree();
+        }
+        var body = AssetLibrary.Instantiate(asset, () => Placeholders.Structure(defId));
+        body.Name = "Body";
+        view.AddChild(body);
+        view.SetMeta("structure_state", asset);
+    }
+
+    private const float BarricadeDamagedBelow = 2f / 3f;
+    private const float BarricadeBrokenBelow = 1f / 3f;
 
     /// <summary>Records what a player would actually see while a Ram works on a
     /// barricade: the bar's fraction, whether it is on screen, and whether the
@@ -1477,7 +1525,7 @@ public partial class GameRoot : Node3D
                 && _towerViews.TryGetValue(barricade.Id, out var wreck))
             {
                 var target = wreck.Position;
-                var eye = new Camera3D { Position = target + new Vector3(7f, 4.5f, 7f), Far = 500f };
+                var eye = new Camera3D { Position = target + new Vector3(7f, 4.5f, 7f), Far = SkyFar };
                 AddChild(eye);
                 eye.LookAt(target + new Vector3(0f, 1.2f, 0f), Vector3.Up);
                 eye.MakeCurrent();
@@ -1785,6 +1833,7 @@ public partial class GameRoot : Node3D
             if (!_towerViews.TryGetValue(tower.Id, out var view) || !IsInstanceValid(view)) continue;
             var def = Towers.All[tower.DefId];
             if (def.RangeMeters <= 0f) continue;      // a barricade has nothing to aim
+            var rig = RigFor(tower.Id, view, tower.DefId);
 
             Enemy? best = null;
             float bestTraveled = -1f;
@@ -1797,29 +1846,71 @@ public partial class GameRoot : Node3D
                 bestTraveled = enemy.TotalTraveled;
                 best = enemy;
             }
-            if (best is null) continue;               // hold the last heading
+            if (best is null)                         // hold the last heading
+            {
+                rig.Spin(delta, engaged: false);
+                continue;
+            }
+            rig.Spin(delta, engaged: true);
+            bool settled;
+            if (rig.Articulated)
+            {
+                // Aim at the body, not the feet: the sim keeps an enemy at its
+                // spine base, and a barrel pitched at the ground under a Skiff
+                // reads as pointing at nothing. Yaw, pitch, limits and slew
+                // rates are design's (TowerRig); the whole view stays put so
+                // the foot never turns.
+                float height = _enemyViews.TryGetValue(best.Id, out var target) && target.HasMeta("head_height")
+                    ? (float)target.GetMeta("head_height") * 0.5f
+                    : 1.0f;
+                settled = rig.AimAt(ToGd(best.Pos) + new Vector3(0f, height, 0f), delta);
+            }
+            else if (rig.Spins.Count > 0)
+            {
+                // An aura tower has no rig and never points — turning it would
+                // lie about how it works.
+                continue;
+            }
+            else
+            {
+                // A graybox has neither rig nor spin group and still turns as
+                // a whole. The turn is eased, so the first frames on a new
+                // target are legitimately off.
+                var to = best.Pos - tower.Pos;
+                if (to.X * to.X + to.Z * to.Z < 1e-4f) continue;
+                TurnTowards(view, GodotYaw(Mathf.Atan2(to.X, to.Z)), delta);
+                settled = _aimHeld > 0.5f;
+            }
+
             if (_aimReport is not null)
             {
-                var fwd = (-view.GlobalTransform.Basis.Z) with { Y = 0 };
+                var fwd = (rig.Articulated ? rig.Forward : -view.GlobalTransform.Basis.Z) with { Y = 0 };
                 var want = (ToGd(best.Pos) - ToGd(tower.Pos)) with { Y = 0 };
                 if (fwd.Length() > 0.01f && want.Length() > 0.01f)
                 {
                     float err = Mathf.Abs(Mathf.RadToDeg(
                         fwd.Normalized().SignedAngleTo(want.Normalized(), Vector3.Up)));
-                    // The turn is eased, so the first frames on a new target are
-                    // legitimately off. Only samples taken after it has had time
-                    // to settle say whether it faces what it is shooting.
+                    // A rigged turret slews at design's rate — a Lance needs two
+                    // seconds for a half turn — so only frames where the rig is
+                    // no longer rate-limited say whether it faces what it is
+                    // shooting. Frames spent swinging are the design, not a miss.
                     _aimHeld += (float)delta;
-                    _aimReport.Add($"{_aimHeld:0.00}s {tower.DefId} -> {best.DefId} error={err:0.0} deg");
-                    if (_aimHeld > 0.5f) { _aimWorst = Mathf.Max(_aimWorst, err); _aimSettled++; }
+                    _aimReport.Add($"{_aimHeld:0.00}s {tower.DefId} -> {best.DefId} error={err:0.0} deg{(settled ? "" : " (slewing)")}");
+                    if (settled) { _aimWorst = Mathf.Max(_aimWorst, err); _aimSettled++; }
                 }
                 if (_aimSettled >= 200) { FinishAimProbe(); return; }
             }
-
-            var to = best.Pos - tower.Pos;
-            if (to.X * to.X + to.Z * to.Z < 1e-4f) continue;
-            TurnTowards(view, GodotYaw(Mathf.Atan2(to.X, to.Z)), delta);
         }
+    }
+
+    /// <summary>Resolved once per view; a rebuilt view (upgrade) resolves again
+    /// because the modules' parts were merged onto new rig nodes.</summary>
+    private TowerRig RigFor(int towerId, Node3D view, string defId)
+    {
+        if (_towerRigs.TryGetValue(towerId, out var cached) && cached.View == view) return cached.Rig;
+        var rig = TowerRig.Resolve(view, defId);
+        _towerRigs[towerId] = (view, rig);
+        return rig;
     }
 
     /// <summary>Writes the aim probe's samples and its verdict, then quits with
@@ -2287,6 +2378,7 @@ public partial class GameRoot : Node3D
     private void ReleaseStructureView(int towerId)
     {
         if (!_towerViews.Remove(towerId, out var view)) return;
+        _towerRigs.Remove(towerId);
         string socketId = (string)view.GetMeta("socket_id", "");
         RemoveChild(view);
         view.QueueFree();
@@ -2775,11 +2867,14 @@ public partial class GameRoot : Node3D
             },
         });
 
-        // Design's skybox is real geometry, not a cubemap — a 400 m dome that
+        // Design's skybox is real geometry, not a cubemap — a 700 m dome that
         // gives each map its own horizon. The procedural sky stays underneath
         // as the ambient light source.
         if (MapKit.Prop(this, $"{map.Id}_skybox", Vector3.Zero) is { } dome)
+        {
             MapKit.NoShadow(dome);
+            MapKit.SeenFromInside(dome);
+        }
     }
 
     private StaticBody3D AddStaticBox(Vector3 position, Vector3 size, Color color, uint layer, bool transparent = false)

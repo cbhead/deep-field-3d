@@ -111,12 +111,34 @@ public static class MapKit
         => Mathf.RadToDeg(Mathf.Atan2(direction.X, direction.Z));
 
     /// <summary>Stops a model casting shadows. The skybox is real geometry —
-    /// a 400 m dome — and a shadow-casting sun inside it puts the entire map
+    /// a 700 m dome — and a shadow-casting sun inside it puts the entire map
     /// in shade, which is exactly as dark as it sounds.</summary>
     public static void NoShadow(Node node)
     {
         if (node is GeometryInstance3D geometry)
             geometry.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
         foreach (var child in node.GetChildren()) NoShadow(child);
+    }
+
+    /// <summary>Renders a model from the inside. Design's skybox is a sphere
+    /// whose faces point outward and whose material is back-facing in three.js
+    /// — a sidedness glTF cannot carry, so the file arrives single-sided and
+    /// Godot culls the whole dome from where the player stands. The sky simply
+    /// wasn't there, and the procedural sky underneath looked plausible enough
+    /// that nothing failed. Cull nothing on it; there is one dome, and its
+    /// materials are duplicated so the import cache stays untouched.</summary>
+    public static void SeenFromInside(Node node)
+    {
+        if (node is MeshInstance3D mesh)
+        {
+            for (int i = 0; i < mesh.GetSurfaceOverrideMaterialCount(); i++)
+            {
+                if (mesh.GetActiveMaterial(i) is not BaseMaterial3D material) continue;
+                var inside = (BaseMaterial3D)material.Duplicate();
+                inside.CullMode = BaseMaterial3D.CullModeEnum.Disabled;
+                mesh.SetSurfaceOverrideMaterial(i, inside);
+            }
+        }
+        foreach (var child in node.GetChildren()) SeenFromInside(child);
     }
 }

@@ -1,0 +1,11 @@
+:root{
+--space-0:0;--space-1:2px;--space-2:4px;--space-3:6px;--space-4:8px;--space-5:12px;--space-6:16px;--space-7:20px;--space-8:24px;--space-9:32px;--space-10:40px;--space-11:48px;--space-12:64px;--space-13:80px;
+
+/* Component-level rhythm */
+--pad-panel:16px;--pad-panel-tight:12px;--pad-control:0 16px;--gap-inline:8px;--gap-stack:12px;--gap-section:24px;
+
+/* HUD layout constants — fixed chrome sizes */
+--hud-topbar-h:56px;--hud-dock-h:112px;--hud-rail-w:264px;--hud-edge:16px;
+
+--size-control-sm:28px;--size-control-md:36px;--size-control-lg:46px;--size-slot:56px;--size-slot-lg:72px;
+}

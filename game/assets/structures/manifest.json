@@ -1,14 +1,14 @@
 {
   "version": "1.0",
-  "generated": "2026-09-06T15:30:24.776Z",
+  "generated": "2026-09-07T23:05:54.979Z",
   "units": "metres",
   "up": "+Y",
   "forward": "-Z",
   "files": [
     {
       "file": "tower_lance_chassis.glb",
-      "bytes": 444000,
-      "tris": 11568,
+      "bytes": 1017104,
+      "tris": 33352,
       "parts": 150,
       "bounds": {
         "min": [
@@ -18,7 +18,7 @@
         ],
         "max": [
           0.935,
-          2.225,
+          2.234,
           1.85
         ]
       },
@@ -63,18 +63,18 @@
     },
     {
       "file": "tower_lance_damage_s2.glb",
-      "bytes": 11788,
-      "tris": 72,
+      "bytes": 40812,
+      "tris": 360,
       "parts": 6,
       "bounds": {
         "min": [
-          -0.3,
-          1.61,
+          -0.309,
+          1.601,
           -1.175
         ],
         "max": [
-          0.3,
-          1.685,
+          0.309,
+          1.689,
           0.075
         ]
       },
@@ -90,18 +90,18 @@
     },
     {
       "file": "tower_lance_damage_s3.glb",
-      "bytes": 22408,
-      "tris": 416,
+      "bytes": 67584,
+      "tris": 1088,
       "parts": 21,
       "bounds": {
         "min": [
           -0.487,
-          1.22,
+          1.209,
           -1.175
         ],
         "max": [
           0.487,
-          1.791,
+          1.802,
           1.67
         ]
       },
@@ -118,18 +118,18 @@
     },
     {
       "file": "tower_lance_damage_s4.glb",
-      "bytes": 35240,
-      "tris": 500,
+      "bytes": 114268,
+      "tris": 1508,
       "parts": 28,
       "bounds": {
         "min": [
-          -0.487,
-          1.22,
+          -0.495,
+          1.209,
           -1.7
         ],
         "max": [
-          0.487,
-          1.791,
+          0.495,
+          1.802,
           1.67
         ]
       },
@@ -147,18 +147,18 @@
     },
     {
       "file": "tower_lance_damage_s5.glb",
-      "bytes": 47460,
-      "tris": 660,
+      "bytes": 132972,
+      "tris": 1956,
       "parts": 31,
       "bounds": {
         "min": [
-          -0.487,
+          -0.495,
           1.12,
           -1.7
         ],
         "max": [
-          0.487,
-          1.791,
+          0.495,
+          1.802,
           1.67
         ]
       },
@@ -177,17 +177,17 @@
     },
     {
       "file": "tower_lance_damage_s6.glb",
-      "bytes": 85688,
-      "tris": 2016,
+      "bytes": 224748,
+      "tris": 5472,
       "parts": 35,
       "bounds": {
         "min": [
-          -0.487,
+          -0.495,
           1.12,
           -2.094
         ],
         "max": [
-          0.487,
+          0.495,
           1.89,
           1.67
         ]
@@ -208,17 +208,17 @@
     },
     {
       "file": "tower_lance_damage_s7.glb",
-      "bytes": 94140,
-      "tris": 2084,
+      "bytes": 254168,
+      "tris": 5972,
       "parts": 39,
       "bounds": {
         "min": [
-          -0.487,
+          -0.495,
           1.12,
           -2.094
         ],
         "max": [
-          0.487,
+          0.495,
           2.4,
           1.67
         ]
@@ -240,17 +240,17 @@
     },
     {
       "file": "tower_lance_damage_s8.glb",
-      "bytes": 102456,
-      "tris": 2152,
+      "bytes": 283452,
+      "tris": 6472,
       "parts": 43,
       "bounds": {
         "min": [
-          -0.487,
+          -0.495,
           1.12,
           -2.094
         ],
         "max": [
-          0.487,
+          0.495,
           2.4,
           1.67
         ]
@@ -273,17 +273,17 @@
     },
     {
       "file": "tower_lance_damage_s9.glb",
-      "bytes": 116448,
-      "tris": 2256,
+      "bytes": 332964,
+      "tris": 7152,
       "parts": 50,
       "bounds": {
         "min": [
-          -0.487,
+          -0.495,
           1.12,
           -2.094
         ],
         "max": [
-          0.487,
+          0.495,
           2.4,
           1.67
         ]
@@ -307,17 +307,17 @@
     },
     {
       "file": "tower_lance_damage_s10.glb",
-      "bytes": 150768,
-      "tris": 2936,
+      "bytes": 420264,
+      "tris": 9304,
       "parts": 59,
       "bounds": {
         "min": [
-          -0.487,
+          -0.495,
           1.12,
           -2.49
         ],
         "max": [
-          0.487,
+          0.495,
           2.4,
           1.67
         ]
@@ -356,18 +356,18 @@
     },
     {
       "file": "tower_lance_range_s2.glb",
-      "bytes": 5628,
-      "tris": 44,
+      "bytes": 16948,
+      "tris": 380,
       "parts": 2,
       "bounds": {
         "min": [
-          -0.125,
-          1.905,
+          -0.154,
+          1.876,
           -0.1
         ],
         "max": [
-          0.125,
-          2.086,
+          0.154,
+          2.115,
           0.06
         ]
       },
@@ -383,18 +383,18 @@
     },
     {
       "file": "tower_lance_range_s3.glb",
-      "bytes": 12384,
-      "tris": 100,
+      "bytes": 39856,
+      "tris": 820,
       "parts": 5,
       "bounds": {
         "min": [
-          -0.34,
-          1.612,
+          -0.345,
+          1.607,
           -1.85
         ],
         "max": [
-          0.34,
-          2.086,
+          0.345,
+          2.115,
           0.06
         ]
       },
@@ -411,18 +411,18 @@
     },
     {
       "file": "tower_lance_range_s4.glb",
-      "bytes": 21784,
-      "tris": 160,
+      "bytes": 73456,
+      "tris": 1120,
       "parts": 10,
       "bounds": {
         "min": [
-          -0.34,
-          1.612,
+          -0.345,
+          1.607,
           -1.85
         ],
         "max": [
-          0.34,
-          2.555,
+          0.345,
+          2.586,
           0.67
         ]
       },
@@ -440,18 +440,18 @@
     },
     {
       "file": "tower_lance_range_s5.glb",
-      "bytes": 27140,
-      "tris": 212,
+      "bytes": 89648,
+      "tris": 1500,
       "parts": 12,
       "bounds": {
         "min": [
-          -0.34,
-          1.612,
+          -0.345,
+          1.607,
           -1.85
         ],
         "max": [
-          0.34,
-          2.555,
+          0.345,
+          2.586,
           0.67
         ]
       },
@@ -470,18 +470,18 @@
     },
     {
       "file": "tower_lance_range_s6.glb",
-      "bytes": 33628,
-      "tris": 268,
+      "bytes": 112288,
+      "tris": 1940,
       "parts": 15,
       "bounds": {
         "min": [
-          -0.375,
-          1.42,
+          -0.391,
+          1.404,
           -2
         ],
         "max": [
-          0.375,
-          2.555,
+          0.391,
+          2.586,
           0.67
         ]
       },
@@ -501,18 +501,18 @@
     },
     {
       "file": "tower_lance_range_s7.glb",
-      "bytes": 44536,
-      "tris": 380,
+      "bytes": 144504,
+      "tris": 2700,
       "parts": 19,
       "bounds": {
         "min": [
-          -0.375,
-          1.42,
+          -0.391,
+          1.404,
           -2
         ],
         "max": [
-          0.59,
-          2.555,
+          0.615,
+          2.586,
           0.67
         ]
       },
@@ -533,18 +533,18 @@
     },
     {
       "file": "tower_lance_range_s8.glb",
-      "bytes": 54760,
-      "tris": 460,
+      "bytes": 180564,
+      "tris": 3260,
       "parts": 24,
       "bounds": {
         "min": [
-          -0.679,
-          0.796,
+          -0.701,
+          0.773,
           -2
         ],
         "max": [
-          0.679,
-          2.555,
+          0.701,
+          2.586,
           0.67
         ]
       },
@@ -566,18 +566,18 @@
     },
     {
       "file": "tower_lance_range_s9.glb",
-      "bytes": 63088,
-      "tris": 528,
+      "bytes": 209856,
+      "tris": 3760,
       "parts": 28,
       "bounds": {
         "min": [
-          -0.679,
-          0.796,
+          -0.701,
+          0.773,
           -2
         ],
         "max": [
-          0.679,
-          2.555,
+          0.701,
+          2.586,
           1.84
         ]
       },
@@ -600,8 +600,8 @@
     },
     {
       "file": "tower_lance_range_s10.glb",
-      "bytes": 93064,
-      "tris": 860,
+      "bytes": 295500,
+      "tris": 6180,
       "parts": 38,
       "bounds": {
         "min": [
@@ -611,7 +611,7 @@
         ],
         "max": [
           1.26,
-          2.555,
+          2.586,
           1.84
         ]
       },
@@ -649,8 +649,8 @@
     },
     {
       "file": "tower_lance_rate_s2.glb",
-      "bytes": 11992,
-      "tris": 312,
+      "bytes": 18472,
+      "tris": 600,
       "parts": 2,
       "bounds": {
         "min": [
@@ -676,8 +676,8 @@
     },
     {
       "file": "tower_lance_rate_s3.glb",
-      "bytes": 19696,
-      "tris": 388,
+      "bytes": 43968,
+      "tris": 1300,
       "parts": 5,
       "bounds": {
         "min": [
@@ -686,8 +686,8 @@
           0.909
         ],
         "max": [
-          -0.19,
-          2.261,
+          -0.172,
+          2.279,
           1.634
         ]
       },
@@ -704,8 +704,8 @@
     },
     {
       "file": "tower_lance_rate_s4.glb",
-      "bytes": 57748,
-      "tris": 1452,
+      "bytes": 180036,
+      "tris": 6348,
       "parts": 12,
       "bounds": {
         "min": [
@@ -714,8 +714,8 @@
           0.909
         ],
         "max": [
-          0.35,
-          2.48,
+          0.364,
+          2.484,
           1.67
         ]
       },
@@ -733,8 +733,8 @@
     },
     {
       "file": "tower_lance_rate_s5.glb",
-      "bytes": 63040,
-      "tris": 1556,
+      "bytes": 191816,
+      "tris": 6740,
       "parts": 19,
       "bounds": {
         "min": [
@@ -743,8 +743,8 @@
           0.909
         ],
         "max": [
-          0.35,
-          2.48,
+          0.364,
+          2.484,
           1.768
         ]
       },
@@ -763,8 +763,8 @@
     },
     {
       "file": "tower_lance_rate_s6.glb",
-      "bytes": 108872,
-      "tris": 3028,
+      "bytes": 370864,
+      "tris": 13972,
       "parts": 26,
       "bounds": {
         "min": [
@@ -774,7 +774,7 @@
         ],
         "max": [
           0.462,
-          2.48,
+          2.484,
           1.768
         ]
       },
@@ -794,8 +794,8 @@
     },
     {
       "file": "tower_lance_rate_s7.glb",
-      "bytes": 118316,
-      "tris": 3176,
+      "bytes": 396004,
+      "tris": 14496,
       "parts": 36,
       "bounds": {
         "min": [
@@ -805,7 +805,7 @@
         ],
         "max": [
           0.71,
-          2.48,
+          2.484,
           1.768
         ]
       },
@@ -826,18 +826,18 @@
     },
     {
       "file": "tower_lance_rate_s8.glb",
-      "bytes": 135776,
-      "tris": 3528,
+      "bytes": 452356,
+      "tris": 16608,
       "parts": 40,
       "bounds": {
         "min": [
           -0.581,
           0.401,
-          0.224
+          0.222
         ],
         "max": [
           0.71,
-          2.48,
+          2.484,
           1.768
         ]
       },
@@ -859,18 +859,18 @@
     },
     {
       "file": "tower_lance_rate_s9.glb",
-      "bytes": 142260,
-      "tris": 3584,
+      "bytes": 474976,
+      "tris": 17048,
       "parts": 43,
       "bounds": {
         "min": [
           -0.581,
-          0.401,
+          0.388,
           -0.39
         ],
         "max": [
           0.71,
-          2.48,
+          2.484,
           1.768
         ]
       },
@@ -893,18 +893,18 @@
     },
     {
       "file": "tower_lance_rate_s10.glb",
-      "bytes": 179968,
-      "tris": 4260,
+      "bytes": 575804,
+      "tris": 20500,
       "parts": 52,
       "bounds": {
         "min": [
-          -0.752,
-          0.401,
+          -0.754,
+          0.388,
           -0.39
         ],
         "max": [
           0.71,
-          2.48,
+          2.484,
           1.768
         ]
       },
@@ -928,8 +928,8 @@
     },
     {
       "file": "tower_nova_chassis.glb",
-      "bytes": 288128,
-      "tris": 5852,
+      "bytes": 619868,
+      "tris": 18140,
       "parts": 145,
       "bounds": {
         "min": [
@@ -938,8 +938,8 @@
           -1.715
         ],
         "max": [
-          1.035,
-          1.988,
+          1.078,
+          2.005,
           1.08
         ]
       },
@@ -984,8 +984,8 @@
     },
     {
       "file": "tower_nova_damage_s2.glb",
-      "bytes": 39908,
-      "tris": 1376,
+      "bytes": 95156,
+      "tris": 3776,
       "parts": 4,
       "bounds": {
         "min": [
@@ -1011,8 +1011,8 @@
     },
     {
       "file": "tower_nova_damage_s3.glb",
-      "bytes": 56544,
-      "tris": 1920,
+      "bytes": 132996,
+      "tris": 5248,
       "parts": 6,
       "bounds": {
         "min": [
@@ -1039,17 +1039,17 @@
     },
     {
       "file": "tower_nova_damage_s4.glb",
-      "bytes": 100872,
-      "tris": 2776,
+      "bytes": 259312,
+      "tris": 9592,
       "parts": 16,
       "bounds": {
         "min": [
-          -0.583,
+          -0.584,
           1.097,
           -1.28
         ],
         "max": [
-          0.583,
+          0.584,
           2.015,
           0.2
         ]
@@ -1068,17 +1068,17 @@
     },
     {
       "file": "tower_nova_damage_s5.glb",
-      "bytes": 113552,
-      "tris": 3096,
+      "bytes": 278484,
+      "tris": 10200,
       "parts": 26,
       "bounds": {
         "min": [
-          -0.583,
+          -0.584,
           1.097,
           -1.67
         ],
         "max": [
-          0.583,
+          0.584,
           2.185,
           0.2
         ]
@@ -1098,17 +1098,17 @@
     },
     {
       "file": "tower_nova_damage_s6.glb",
-      "bytes": 130972,
-      "tris": 3488,
+      "bytes": 357792,
+      "tris": 12944,
       "parts": 31,
       "bounds": {
         "min": [
-          -0.583,
+          -0.584,
           1.097,
           -1.67
         ],
         "max": [
-          0.583,
+          0.584,
           2.185,
           0.2
         ]
@@ -1129,17 +1129,17 @@
     },
     {
       "file": "tower_nova_damage_s7.glb",
-      "bytes": 162156,
-      "tris": 4292,
+      "bytes": 441580,
+      "tris": 15344,
       "parts": 38,
       "bounds": {
         "min": [
-          -0.583,
+          -0.584,
           1.097,
           -1.67
         ],
         "max": [
-          0.583,
+          0.584,
           2.255,
           0.66
         ]
@@ -1161,17 +1161,17 @@
     },
     {
       "file": "tower_nova_damage_s8.glb",
-      "bytes": 172536,
-      "tris": 4660,
+      "bytes": 461448,
+      "tris": 16224,
       "parts": 50,
       "bounds": {
         "min": [
-          -0.583,
+          -0.584,
           1.097,
           -1.67
         ],
         "max": [
-          0.583,
+          0.584,
           2.255,
           0.66
         ]
@@ -1194,17 +1194,17 @@
     },
     {
       "file": "tower_nova_damage_s9.glb",
-      "bytes": 191060,
-      "tris": 4896,
+      "bytes": 505376,
+      "tris": 17564,
       "parts": 55,
       "bounds": {
         "min": [
-          -0.92,
-          0.87,
+          -0.932,
+          0.848,
           -1.67
         ],
         "max": [
-          0.583,
+          0.584,
           2.255,
           0.66
         ]
@@ -1228,17 +1228,17 @@
     },
     {
       "file": "tower_nova_damage_s10.glb",
-      "bytes": 223212,
-      "tris": 5516,
+      "bytes": 577740,
+      "tris": 20056,
       "parts": 61,
       "bounds": {
         "min": [
-          -0.92,
-          0.87,
+          -0.932,
+          0.848,
           -1.67
         ],
         "max": [
-          0.583,
+          0.584,
           2.255,
           0.66
         ]
@@ -1277,13 +1277,13 @@
     },
     {
       "file": "tower_nova_range_s2.glb",
-      "bytes": 11244,
-      "tris": 124,
+      "bytes": 22560,
+      "tris": 460,
       "parts": 3,
       "bounds": {
         "min": [
-          -0.595,
-          1.53,
+          -0.6,
+          1.525,
           -0.16
         ],
         "max": [
@@ -1304,17 +1304,17 @@
     },
     {
       "file": "tower_nova_range_s3.glb",
-      "bytes": 22596,
-      "tris": 268,
+      "bytes": 50684,
+      "tris": 1420,
       "parts": 6,
       "bounds": {
         "min": [
-          -0.595,
+          -0.6,
           1.36,
           -1.09
         ],
         "max": [
-          0.378,
+          0.38,
           1.801,
           0.18
         ]
@@ -1332,17 +1332,17 @@
     },
     {
       "file": "tower_nova_range_s4.glb",
-      "bytes": 52712,
-      "tris": 1100,
+      "bytes": 126212,
+      "tris": 4364,
       "parts": 10,
       "bounds": {
         "min": [
-          -0.595,
+          -0.6,
           1.332,
-          -1.812
+          -1.814
         ],
         "max": [
-          0.378,
+          0.38,
           1.908,
           0.95
         ]
@@ -1361,18 +1361,18 @@
     },
     {
       "file": "tower_nova_range_s5.glb",
-      "bytes": 60020,
-      "tris": 1168,
+      "bytes": 145560,
+      "tris": 4768,
       "parts": 13,
       "bounds": {
         "min": [
-          -0.595,
+          -0.6,
           1.332,
-          -1.812
+          -1.814
         ],
         "max": [
-          0.378,
-          2.101,
+          0.38,
+          2.105,
           0.95
         ]
       },
@@ -1391,18 +1391,18 @@
     },
     {
       "file": "tower_nova_range_s6.glb",
-      "bytes": 66832,
-      "tris": 1224,
+      "bytes": 168552,
+      "tris": 5208,
       "parts": 16,
       "bounds": {
         "min": [
-          -0.595,
+          -0.6,
           1.332,
-          -1.812
+          -1.814
         ],
         "max": [
-          0.378,
-          2.101,
+          0.38,
+          2.105,
           0.95
         ]
       },
@@ -1422,17 +1422,17 @@
     },
     {
       "file": "tower_nova_range_s7.glb",
-      "bytes": 78968,
-      "tris": 1340,
+      "bytes": 207212,
+      "tris": 6028,
       "parts": 21,
       "bounds": {
         "min": [
-          -0.595,
+          -0.6,
           1.332,
-          -1.812
+          -1.814
         ],
         "max": [
-          0.773,
+          0.775,
           2.435,
           0.95
         ]
@@ -1454,17 +1454,17 @@
     },
     {
       "file": "tower_nova_range_s8.glb",
-      "bytes": 89412,
-      "tris": 1420,
+      "bytes": 243484,
+      "tris": 6588,
       "parts": 26,
       "bounds": {
         "min": [
-          -0.714,
-          0.93,
-          -1.812
+          -0.732,
+          0.905,
+          -1.814
         ],
         "max": [
-          0.773,
+          0.775,
           2.435,
           0.95
         ]
@@ -1487,17 +1487,17 @@
     },
     {
       "file": "tower_nova_range_s9.glb",
-      "bytes": 111660,
-      "tris": 1632,
+      "bytes": 306060,
+      "tris": 7424,
       "parts": 35,
       "bounds": {
         "min": [
-          -0.714,
-          0.923,
-          -1.812
+          -0.732,
+          0.905,
+          -1.814
         ],
         "max": [
-          0.773,
+          0.775,
           2.435,
           0.95
         ]
@@ -1521,14 +1521,14 @@
     },
     {
       "file": "tower_nova_range_s10.glb",
-      "bytes": 141600,
-      "tris": 1964,
+      "bytes": 391696,
+      "tris": 9844,
       "parts": 45,
       "bounds": {
         "min": [
           -1.295,
           0.015,
-          -1.812
+          -1.814
         ],
         "max": [
           1.295,
@@ -1570,18 +1570,18 @@
     },
     {
       "file": "tower_nova_rate_s2.glb",
-      "bytes": 9320,
-      "tris": 68,
+      "bytes": 30324,
+      "tris": 500,
       "parts": 4,
       "bounds": {
         "min": [
-          0.83,
-          1.15,
+          0.821,
+          1.141,
           -0.8
         ],
         "max": [
-          0.89,
-          1.506,
+          0.899,
+          1.515,
           0.2
         ]
       },
@@ -1597,18 +1597,18 @@
     },
     {
       "file": "tower_nova_rate_s3.glb",
-      "bytes": 17968,
-      "tris": 164,
+      "bytes": 58412,
+      "tris": 1460,
       "parts": 7,
       "bounds": {
         "min": [
-          0.83,
+          0.821,
           0.9,
           -0.8
         ],
         "max": [
           1.045,
-          1.506,
+          1.515,
           0.2
         ]
       },
@@ -1625,17 +1625,17 @@
     },
     {
       "file": "tower_nova_rate_s4.glb",
-      "bytes": 42356,
-      "tris": 464,
+      "bytes": 120996,
+      "tris": 3440,
       "parts": 14,
       "bounds": {
         "min": [
-          0.7,
+          0.646,
           0.9,
           -0.8
         ],
         "max": [
-          1.045,
+          1.074,
           2.21,
           0.2
         ]
@@ -1654,17 +1654,17 @@
     },
     {
       "file": "tower_nova_rate_s5.glb",
-      "bytes": 49124,
-      "tris": 520,
+      "bytes": 143940,
+      "tris": 3880,
       "parts": 17,
       "bounds": {
         "min": [
-          -0.418,
+          -0.433,
           0.9,
           -0.8
         ],
         "max": [
-          1.045,
+          1.074,
           2.21,
           0.95
         ]
@@ -1684,17 +1684,17 @@
     },
     {
       "file": "tower_nova_rate_s6.glb",
-      "bytes": 53868,
-      "tris": 564,
+      "bytes": 160004,
+      "tris": 4260,
       "parts": 19,
       "bounds": {
         "min": [
-          -0.418,
+          -0.433,
           0.9,
           -0.8
         ],
         "max": [
-          1.045,
+          1.074,
           2.21,
           0.95
         ]
@@ -1715,17 +1715,17 @@
     },
     {
       "file": "tower_nova_rate_s7.glb",
-      "bytes": 65476,
-      "tris": 648,
+      "bytes": 196516,
+      "tris": 4584,
       "parts": 25,
       "bounds": {
         "min": [
-          -0.418,
+          -0.433,
           0.9,
           -0.8
         ],
         "max": [
-          1.045,
+          1.074,
           2.21,
           0.95
         ]
@@ -1747,17 +1747,17 @@
     },
     {
       "file": "tower_nova_rate_s8.glb",
-      "bytes": 79448,
-      "tris": 800,
+      "bytes": 237860,
+      "tris": 5664,
       "parts": 30,
       "bounds": {
         "min": [
-          -0.58,
-          0.76,
+          -0.587,
+          0.753,
           -0.8
         ],
         "max": [
-          1.045,
+          1.074,
           2.21,
           0.95
         ]
@@ -1780,17 +1780,17 @@
     },
     {
       "file": "tower_nova_rate_s9.glb",
-      "bytes": 98464,
-      "tris": 1016,
+      "bytes": 289000,
+      "tris": 7064,
       "parts": 36,
       "bounds": {
         "min": [
-          -0.58,
-          0.76,
+          -0.587,
+          0.753,
           -0.8
         ],
         "max": [
-          1.045,
+          1.074,
           2.21,
           0.95
         ]
@@ -1814,8 +1814,8 @@
     },
     {
       "file": "tower_nova_rate_s10.glb",
-      "bytes": 145692,
-      "tris": 1988,
+      "bytes": 402156,
+      "tris": 11028,
       "parts": 54,
       "bounds": {
         "min": [
@@ -1824,7 +1824,7 @@
           -0.8
         ],
         "max": [
-          1.045,
+          1.074,
           2.21,
           0.95
         ]
@@ -1849,8 +1849,8 @@
     },
     {
       "file": "tower_singularity_chassis.glb",
-      "bytes": 322172,
-      "tris": 7900,
+      "bytes": 778976,
+      "tris": 21956,
       "parts": 95,
       "bounds": {
         "min": [
@@ -1860,7 +1860,7 @@
         ],
         "max": [
           0.935,
-          2.857,
+          2.912,
           1.08
         ]
       },
@@ -1922,19 +1922,19 @@
     },
     {
       "file": "tower_singularity_range_s4.glb",
-      "bytes": 55424,
-      "tris": 1208,
+      "bytes": 130292,
+      "tris": 3624,
       "parts": 13,
       "bounds": {
         "min": [
-          -1.086,
-          0,
-          -1.086
+          -1.096,
+          -0.011,
+          -1.096
         ],
         "max": [
-          1.086,
+          1.096,
           0.14,
-          1.086
+          1.096
         ]
       },
       "tower": "singularity",
@@ -1951,13 +1951,13 @@
     },
     {
       "file": "tower_singularity_range_s5.glb",
-      "bytes": 70024,
-      "tris": 1560,
+      "bytes": 157356,
+      "tris": 4544,
       "parts": 16,
       "bounds": {
         "min": [
           -1.111,
-          0,
+          -0.011,
           -1.111
         ],
         "max": [
@@ -1981,13 +1981,13 @@
     },
     {
       "file": "tower_singularity_range_s6.glb",
-      "bytes": 70024,
-      "tris": 1560,
+      "bytes": 157356,
+      "tris": 4544,
       "parts": 16,
       "bounds": {
         "min": [
           -1.146,
-          0,
+          -0.011,
           -1.146
         ],
         "max": [
@@ -2012,18 +2012,18 @@
     },
     {
       "file": "tower_singularity_range_s7.glb",
-      "bytes": 106924,
-      "tris": 2508,
+      "bytes": 234184,
+      "tris": 6836,
       "parts": 23,
       "bounds": {
         "min": [
           -1.182,
-          0,
+          -0.011,
           -1.182
         ],
         "max": [
           1.182,
-          1.43,
+          1.459,
           1.182
         ]
       },
@@ -2044,18 +2044,18 @@
     },
     {
       "file": "tower_singularity_range_s8.glb",
-      "bytes": 106952,
-      "tris": 2508,
+      "bytes": 234212,
+      "tris": 6836,
       "parts": 23,
       "bounds": {
         "min": [
           -1.217,
-          0,
+          -0.011,
           -1.217
         ],
         "max": [
           1.217,
-          1.43,
+          1.459,
           1.217
         ]
       },
@@ -2077,18 +2077,18 @@
     },
     {
       "file": "tower_singularity_range_s9.glb",
-      "bytes": 143236,
-      "tris": 3548,
+      "bytes": 414168,
+      "tris": 14068,
       "parts": 30,
       "bounds": {
         "min": [
           -1.252,
-          0,
+          -0.011,
           -1.252
         ],
         "max": [
           1.252,
-          2.509,
+          2.51,
           1.252
         ]
       },
@@ -2111,18 +2111,18 @@
     },
     {
       "file": "tower_singularity_range_s10.glb",
-      "bytes": 143212,
-      "tris": 3548,
+      "bytes": 414140,
+      "tris": 14068,
       "parts": 30,
       "bounds": {
         "min": [
           -1.287,
-          0,
+          -0.011,
           -1.287
         ],
         "max": [
           1.287,
-          2.509,
+          2.51,
           1.287
         ]
       },
@@ -2160,8 +2160,8 @@
     },
     {
       "file": "tower_singularity_rate_s2.glb",
-      "bytes": 23568,
-      "tris": 512,
+      "bytes": 85880,
+      "tris": 3264,
       "parts": 5,
       "bounds": {
         "min": [
@@ -2187,18 +2187,18 @@
     },
     {
       "file": "tower_singularity_rate_s3.glb",
-      "bytes": 36984,
-      "tris": 652,
+      "bytes": 130068,
+      "tris": 4604,
       "parts": 10,
       "bounds": {
         "min": [
-          -0.581,
+          -0.589,
           0.43,
           -0.573
         ],
         "max": [
           0.262,
-          0.876,
+          0.885,
           0.573
         ]
       },
@@ -2215,18 +2215,18 @@
     },
     {
       "file": "tower_singularity_rate_s4.glb",
-      "bytes": 81440,
-      "tris": 2212,
+      "bytes": 228368,
+      "tris": 8180,
       "parts": 15,
       "bounds": {
         "min": [
-          -0.581,
+          -0.589,
           0.43,
           -0.573
         ],
         "max": [
-          0.62,
-          0.876,
+          0.632,
+          0.885,
           0.573
         ]
       },
@@ -2244,18 +2244,18 @@
     },
     {
       "file": "tower_singularity_rate_s5.glb",
-      "bytes": 99660,
-      "tris": 2340,
+      "bytes": 291720,
+      "tris": 8980,
       "parts": 24,
       "bounds": {
         "min": [
-          -0.581,
-          0.29,
+          -0.589,
+          0.286,
           -0.573
         ],
         "max": [
-          0.62,
-          0.876,
+          0.632,
+          0.885,
           0.573
         ]
       },
@@ -2274,17 +2274,17 @@
     },
     {
       "file": "tower_singularity_rate_s6.glb",
-      "bytes": 129820,
-      "tris": 3396,
+      "bytes": 357796,
+      "tris": 11604,
       "parts": 27,
       "bounds": {
         "min": [
-          -0.581,
-          0.29,
+          -0.589,
+          0.286,
           -0.573
         ],
         "max": [
-          0.62,
+          0.632,
           2.68,
           0.573
         ]
@@ -2305,17 +2305,17 @@
     },
     {
       "file": "tower_singularity_rate_s7.glb",
-      "bytes": 181308,
-      "tris": 5108,
+      "bytes": 556540,
+      "tris": 19668,
       "parts": 34,
       "bounds": {
         "min": [
-          -0.581,
-          0.29,
+          -0.589,
+          0.286,
           -0.585
         ],
         "max": [
-          0.62,
+          0.632,
           2.792,
           0.585
         ]
@@ -2337,17 +2337,17 @@
     },
     {
       "file": "tower_singularity_rate_s8.glb",
-      "bytes": 198740,
-      "tris": 5460,
+      "bytes": 612884,
+      "tris": 21780,
       "parts": 38,
       "bounds": {
         "min": [
-          -0.581,
-          0.29,
+          -0.589,
+          0.286,
           -0.585
         ],
         "max": [
-          0.62,
+          0.632,
           2.792,
           0.585
         ]
@@ -2370,17 +2370,17 @@
     },
     {
       "file": "tower_singularity_rate_s9.glb",
-      "bytes": 198740,
-      "tris": 5460,
+      "bytes": 612884,
+      "tris": 21780,
       "parts": 38,
       "bounds": {
         "min": [
-          -0.581,
-          0.29,
+          -0.589,
+          0.286,
           -0.585
         ],
         "max": [
-          0.62,
+          0.632,
           2.792,
           0.585
         ]
@@ -2404,13 +2404,13 @@
     },
     {
       "file": "tower_singularity_rate_s10.glb",
-      "bytes": 254440,
-      "tris": 7140,
+      "bytes": 723456,
+      "tris": 24564,
       "parts": 48,
       "bounds": {
         "min": [
           -0.755,
-          0.29,
+          0.286,
           -0.755
         ],
         "max": [
@@ -2439,8 +2439,8 @@
     },
     {
       "file": "tower_skywatch_chassis.glb",
-      "bytes": 366340,
-      "tris": 8664,
+      "bytes": 896984,
+      "tris": 29848,
       "parts": 128,
       "bounds": {
         "min": [
@@ -2495,18 +2495,18 @@
     },
     {
       "file": "tower_skywatch_damage_s2.glb",
-      "bytes": 25536,
-      "tris": 704,
+      "bytes": 123460,
+      "tris": 4928,
       "parts": 5,
       "bounds": {
         "min": [
           -0.226,
-          1.636,
+          1.634,
           -1.508
         ],
         "max": [
           0.226,
-          2.084,
+          2.086,
           -1.452
         ]
       },
@@ -2522,18 +2522,18 @@
     },
     {
       "file": "tower_skywatch_damage_s3.glb",
-      "bytes": 33448,
-      "tris": 892,
+      "bytes": 142692,
+      "tris": 5452,
       "parts": 13,
       "bounds": {
         "min": [
-          -0.26,
-          1.636,
+          -0.282,
+          1.634,
           -1.508
         ],
         "max": [
-          0.26,
-          2.084,
+          0.282,
+          2.086,
           0.18
         ]
       },
@@ -2550,8 +2550,8 @@
     },
     {
       "file": "tower_skywatch_damage_s4.glb",
-      "bytes": 70616,
-      "tris": 1708,
+      "bytes": 234200,
+      "tris": 7404,
       "parts": 23,
       "bounds": {
         "min": [
@@ -2579,8 +2579,8 @@
     },
     {
       "file": "tower_skywatch_damage_s5.glb",
-      "bytes": 75808,
-      "tris": 1848,
+      "bytes": 250716,
+      "tris": 7880,
       "parts": 29,
       "bounds": {
         "min": [
@@ -2609,8 +2609,8 @@
     },
     {
       "file": "tower_skywatch_damage_s6.glb",
-      "bytes": 83240,
-      "tris": 1896,
+      "bytes": 277508,
+      "tris": 8120,
       "parts": 33,
       "bounds": {
         "min": [
@@ -2640,17 +2640,17 @@
     },
     {
       "file": "tower_skywatch_damage_s7.glb",
-      "bytes": 132716,
-      "tris": 3108,
+      "bytes": 491320,
+      "tris": 16372,
       "parts": 44,
       "bounds": {
         "min": [
-          -0.381,
+          -0.384,
           1.505,
           -1.695
         ],
         "max": [
-          0.381,
+          0.384,
           2.215,
           0.18
         ]
@@ -2672,19 +2672,19 @@
     },
     {
       "file": "tower_skywatch_damage_s8.glb",
-      "bytes": 167516,
-      "tris": 3508,
+      "bytes": 583856,
+      "tris": 18852,
       "parts": 55,
       "bounds": {
         "min": [
-          -0.381,
+          -0.384,
           1.505,
           -1.695
         ],
         "max": [
-          0.381,
+          0.384,
           2.215,
-          0.21
+          0.217
         ]
       },
       "tower": "skywatch",
@@ -2705,17 +2705,17 @@
     },
     {
       "file": "tower_skywatch_damage_s9.glb",
-      "bytes": 178656,
-      "tris": 3624,
+      "bytes": 612624,
+      "tris": 19576,
       "parts": 59,
       "bounds": {
         "min": [
-          -0.385,
+          -0.395,
           1.505,
           -1.695
         ],
         "max": [
-          0.381,
+          0.384,
           2.215,
           0.22
         ]
@@ -2739,18 +2739,18 @@
     },
     {
       "file": "tower_skywatch_damage_s10.glb",
-      "bytes": 216592,
-      "tris": 4016,
+      "bytes": 727636,
+      "tris": 22496,
       "parts": 73,
       "bounds": {
         "min": [
-          -0.59,
+          -0.637,
           1.505,
           -1.695
         ],
         "max": [
-          0.59,
-          2.215,
+          0.637,
+          2.237,
           0.22
         ]
       },
@@ -2788,19 +2788,19 @@
     },
     {
       "file": "tower_skywatch_range_s2.glb",
-      "bytes": 8520,
-      "tris": 164,
+      "bytes": 23132,
+      "tris": 744,
       "parts": 2,
       "bounds": {
         "min": [
           -0.435,
           2.61,
-          0.787
+          0.785
         ],
         "max": [
           -0.365,
           2.755,
-          0.853
+          0.855
         ]
       },
       "tower": "skywatch",
@@ -2815,19 +2815,19 @@
     },
     {
       "file": "tower_skywatch_range_s3.glb",
-      "bytes": 21384,
-      "tris": 436,
+      "bytes": 70324,
+      "tris": 2536,
       "parts": 5,
       "bounds": {
         "min": [
           -0.435,
           2.487,
-          0.28
+          0.278
         ],
         "max": [
           0.097,
           2.755,
-          0.853
+          0.855
         ]
       },
       "tower": "skywatch",
@@ -2843,14 +2843,14 @@
     },
     {
       "file": "tower_skywatch_range_s4.glb",
-      "bytes": 71176,
-      "tris": 2256,
+      "bytes": 154504,
+      "tris": 5848,
       "parts": 9,
       "bounds": {
         "min": [
           -0.758,
-          1.849,
-          0.185
+          1.848,
+          0.183
         ],
         "max": [
           0.758,
@@ -2872,13 +2872,13 @@
     },
     {
       "file": "tower_skywatch_range_s5.glb",
-      "bytes": 84900,
-      "tris": 2392,
+      "bytes": 196404,
+      "tris": 6928,
       "parts": 14,
       "bounds": {
         "min": [
           -0.758,
-          1.34,
+          1.315,
           -0.305
         ],
         "max": [
@@ -2902,13 +2902,13 @@
     },
     {
       "file": "tower_skywatch_range_s6.glb",
-      "bytes": 93960,
-      "tris": 2492,
+      "bytes": 221932,
+      "tris": 7628,
       "parts": 17,
       "bounds": {
         "min": [
           -0.758,
-          1.34,
+          1.315,
           -0.305
         ],
         "max": [
@@ -2933,13 +2933,13 @@
     },
     {
       "file": "tower_skywatch_range_s7.glb",
-      "bytes": 105492,
-      "tris": 2656,
+      "bytes": 266156,
+      "tris": 9048,
       "parts": 21,
       "bounds": {
         "min": [
           -0.758,
-          1.34,
+          1.315,
           -0.305
         ],
         "max": [
@@ -2965,8 +2965,8 @@
     },
     {
       "file": "tower_skywatch_range_s8.glb",
-      "bytes": 127500,
-      "tris": 3040,
+      "bytes": 323664,
+      "tris": 10008,
       "parts": 29,
       "bounds": {
         "min": [
@@ -2998,8 +2998,8 @@
     },
     {
       "file": "tower_skywatch_range_s9.glb",
-      "bytes": 161464,
-      "tris": 3324,
+      "bytes": 429948,
+      "tris": 11428,
       "parts": 44,
       "bounds": {
         "min": [
@@ -3032,8 +3032,8 @@
     },
     {
       "file": "tower_skywatch_range_s10.glb",
-      "bytes": 182144,
-      "tris": 4024,
+      "bytes": 477704,
+      "tris": 13200,
       "parts": 57,
       "bounds": {
         "min": [
@@ -3081,18 +3081,18 @@
     },
     {
       "file": "tower_skywatch_rate_s2.glb",
-      "bytes": 14296,
-      "tris": 136,
+      "bytes": 42484,
+      "tris": 1080,
       "parts": 5,
       "bounds": {
         "min": [
-          -0.57,
+          -0.579,
           2.02,
           -0.1
         ],
         "max": [
-          0.57,
-          2.116,
+          0.579,
+          2.125,
           0.1
         ]
       },
@@ -3108,18 +3108,18 @@
     },
     {
       "file": "tower_skywatch_rate_s3.glb",
-      "bytes": 21084,
-      "tris": 192,
+      "bytes": 65424,
+      "tris": 1520,
       "parts": 8,
       "bounds": {
         "min": [
-          -0.57,
-          1.57,
+          -0.579,
+          1.566,
           -0.17
         ],
         "max": [
-          0.57,
-          2.116,
+          0.579,
+          2.125,
           0.11
         ]
       },
@@ -3136,18 +3136,18 @@
     },
     {
       "file": "tower_skywatch_rate_s4.glb",
-      "bytes": 63304,
-      "tris": 1128,
+      "bytes": 173164,
+      "tris": 5224,
       "parts": 16,
       "bounds": {
         "min": [
           -0.96,
-          1.4,
+          1.397,
           -0.363
         ],
         "max": [
           0.96,
-          2.16,
+          2.163,
           0.403
         ]
       },
@@ -3165,13 +3165,13 @@
     },
     {
       "file": "tower_skywatch_rate_s5.glb",
-      "bytes": 76072,
-      "tris": 1276,
+      "bytes": 208008,
+      "tris": 6244,
       "parts": 20,
       "bounds": {
         "min": [
           -0.96,
-          1.4,
+          1.397,
           -0.363
         ],
         "max": [
@@ -3195,13 +3195,13 @@
     },
     {
       "file": "tower_skywatch_rate_s6.glb",
-      "bytes": 86208,
-      "tris": 1356,
+      "bytes": 244000,
+      "tris": 6804,
       "parts": 25,
       "bounds": {
         "min": [
           -0.96,
-          1.4,
+          1.397,
           -0.38
         ],
         "max": [
@@ -3226,18 +3226,18 @@
     },
     {
       "file": "tower_skywatch_rate_s7.glb",
-      "bytes": 104168,
-      "tris": 1508,
+      "bytes": 302972,
+      "tris": 7804,
       "parts": 33,
       "bounds": {
         "min": [
           -0.96,
-          1.4,
+          1.397,
           -0.38
         ],
         "max": [
           0.96,
-          2.194,
+          2.229,
           0.44
         ]
       },
@@ -3258,18 +3258,18 @@
     },
     {
       "file": "tower_skywatch_rate_s8.glb",
-      "bytes": 121808,
-      "tris": 1636,
+      "bytes": 365780,
+      "tris": 8604,
       "parts": 42,
       "bounds": {
         "min": [
           -0.96,
-          1.4,
+          1.397,
           -0.485
         ],
         "max": [
           0.96,
-          2.194,
+          2.229,
           0.44
         ]
       },
@@ -3291,18 +3291,18 @@
     },
     {
       "file": "tower_skywatch_rate_s9.glb",
-      "bytes": 144756,
-      "tris": 2084,
+      "bytes": 441072,
+      "tris": 11356,
       "parts": 48,
       "bounds": {
         "min": [
           -0.96,
-          1.4,
+          1.397,
           -0.49
         ],
         "max": [
           0.96,
-          2.194,
+          2.229,
           0.44
         ]
       },
@@ -3325,18 +3325,18 @@
     },
     {
       "file": "tower_skywatch_rate_s10.glb",
-      "bytes": 175268,
-      "tris": 2624,
+      "bytes": 522864,
+      "tris": 14168,
       "parts": 55,
       "bounds": {
         "min": [
           -0.96,
-          1.4,
+          1.397,
           -1.09
         ],
         "max": [
           0.96,
-          2.194,
+          2.229,
           0.44
         ]
       },
@@ -3360,8 +3360,8 @@
     },
     {
       "file": "tower_arc_chassis.glb",
-      "bytes": 283836,
-      "tris": 6992,
+      "bytes": 664756,
+      "tris": 24204,
       "parts": 78,
       "bounds": {
         "min": [
@@ -3401,19 +3401,19 @@
     },
     {
       "file": "tower_arc_damage_s2.glb",
-      "bytes": 9272,
-      "tris": 68,
+      "bytes": 30324,
+      "tris": 500,
       "parts": 4,
       "bounds": {
         "min": [
-          -0.341,
-          0.92,
+          -0.346,
+          0.915,
           -0.208
         ],
         "max": [
-          0.341,
-          1.931,
-          0.385
+          0.346,
+          1.936,
+          0.39
         ]
       },
       "tower": "arc",
@@ -3428,19 +3428,19 @@
     },
     {
       "file": "tower_arc_damage_s3.glb",
-      "bytes": 56620,
-      "tris": 1548,
+      "bytes": 172640,
+      "tris": 5972,
       "parts": 11,
       "bounds": {
         "min": [
           -0.622,
-          0.92,
-          -0.643
+          0.915,
+          -0.645
         ],
         "max": [
           0.622,
           2.905,
-          0.643
+          0.645
         ]
       },
       "tower": "arc",
@@ -3456,19 +3456,19 @@
     },
     {
       "file": "tower_arc_damage_s4.glb",
-      "bytes": 84936,
-      "tris": 1900,
+      "bytes": 247456,
+      "tris": 8532,
       "parts": 19,
       "bounds": {
         "min": [
           -0.622,
           0.57,
-          -0.643
+          -0.645
         ],
         "max": [
           0.622,
           2.905,
-          0.643
+          0.645
         ]
       },
       "tower": "arc",
@@ -3485,19 +3485,19 @@
     },
     {
       "file": "tower_arc_damage_s5.glb",
-      "bytes": 113076,
-      "tris": 2316,
+      "bytes": 294140,
+      "tris": 10132,
       "parts": 24,
       "bounds": {
         "min": [
           -0.622,
           0.57,
-          -0.643
+          -0.645
         ],
         "max": [
           0.622,
           2.905,
-          0.643
+          0.645
         ]
       },
       "tower": "arc",
@@ -3515,19 +3515,19 @@
     },
     {
       "file": "tower_arc_damage_s6.glb",
-      "bytes": 121776,
-      "tris": 2516,
+      "bytes": 322428,
+      "tris": 11172,
       "parts": 26,
       "bounds": {
         "min": [
           -0.622,
           0.57,
-          -0.643
+          -0.645
         ],
         "max": [
           0.622,
           4.08,
-          0.643
+          0.645
         ]
       },
       "tower": "arc",
@@ -3546,19 +3546,19 @@
     },
     {
       "file": "tower_arc_damage_s7.glb",
-      "bytes": 151956,
-      "tris": 3668,
+      "bytes": 379116,
+      "tris": 13476,
       "parts": 28,
       "bounds": {
         "min": [
           -0.622,
           0.57,
-          -0.643
+          -0.645
         ],
         "max": [
           0.622,
           4.08,
-          0.643
+          0.645
         ]
       },
       "tower": "arc",
@@ -3578,19 +3578,19 @@
     },
     {
       "file": "tower_arc_damage_s8.glb",
-      "bytes": 170164,
-      "tris": 3796,
+      "bytes": 442464,
+      "tris": 14276,
       "parts": 37,
       "bounds": {
         "min": [
           -0.622,
           0.57,
-          -0.643
+          -0.645
         ],
         "max": [
           0.622,
           4.08,
-          0.643
+          0.645
         ]
       },
       "tower": "arc",
@@ -3611,19 +3611,19 @@
     },
     {
       "file": "tower_arc_damage_s9.glb",
-      "bytes": 191248,
-      "tris": 4468,
+      "bytes": 527488,
+      "tris": 17732,
       "parts": 40,
       "bounds": {
         "min": [
           -0.622,
           0.57,
-          -0.643
+          -0.645
         ],
         "max": [
           0.622,
           4.08,
-          0.643
+          0.645
         ]
       },
       "tower": "arc",
@@ -3645,8 +3645,8 @@
     },
     {
       "file": "tower_arc_damage_s10.glb",
-      "bytes": 248612,
-      "tris": 6364,
+      "bytes": 725840,
+      "tris": 25796,
       "parts": 47,
       "bounds": {
         "min": [
@@ -3694,8 +3694,8 @@
     },
     {
       "file": "tower_arc_range_s2.glb",
-      "bytes": 45728,
-      "tris": 992,
+      "bytes": 237748,
+      "tris": 8960,
       "parts": 13,
       "bounds": {
         "min": [
@@ -3721,19 +3721,19 @@
     },
     {
       "file": "tower_arc_range_s3.glb",
-      "bytes": 54372,
-      "tris": 1060,
+      "bytes": 267396,
+      "tris": 9460,
       "parts": 17,
       "bounds": {
         "min": [
           -0.45,
-          2.985,
-          -0.726
+          2.98,
+          -0.729
         ],
         "max": [
           0.83,
           3.211,
-          0.726
+          0.729
         ]
       },
       "tower": "arc",
@@ -3749,19 +3749,19 @@
     },
     {
       "file": "tower_arc_range_s4.glb",
-      "bytes": 103852,
-      "tris": 2092,
+      "bytes": 400564,
+      "tris": 13720,
       "parts": 29,
       "bounds": {
         "min": [
-          -0.52,
-          0.87,
-          -0.833
+          -0.528,
+          0.852,
+          -0.835
         ],
         "max": [
-          0.95,
+          0.958,
           3.211,
-          0.833
+          0.835
         ]
       },
       "tower": "arc",
@@ -3778,19 +3778,19 @@
     },
     {
       "file": "tower_arc_range_s5.glb",
-      "bytes": 131108,
-      "tris": 2964,
+      "bytes": 434312,
+      "tris": 14880,
       "parts": 33,
       "bounds": {
         "min": [
           -0.792,
-          0.87,
-          -0.833
+          0.852,
+          -0.835
         ],
         "max": [
-          0.95,
+          0.958,
           3.211,
-          0.833
+          0.835
         ]
       },
       "tower": "arc",
@@ -3808,19 +3808,19 @@
     },
     {
       "file": "tower_arc_range_s6.glb",
-      "bytes": 159896,
-      "tris": 3612,
+      "bytes": 519252,
+      "tris": 18000,
       "parts": 39,
       "bounds": {
         "min": [
           -0.792,
-          0.87,
-          -0.833
+          0.852,
+          -0.835
         ],
         "max": [
-          0.95,
+          0.958,
           3.211,
-          0.833
+          0.835
         ]
       },
       "tower": "arc",
@@ -3839,19 +3839,19 @@
     },
     {
       "file": "tower_arc_range_s7.glb",
-      "bytes": 171448,
-      "tris": 3684,
+      "bytes": 559800,
+      "tris": 18360,
       "parts": 45,
       "bounds": {
         "min": [
           -0.792,
-          0.87,
-          -0.839
+          0.852,
+          -0.855
         ],
         "max": [
-          0.959,
+          0.962,
           3.211,
-          0.839
+          0.855
         ]
       },
       "tower": "arc",
@@ -3871,19 +3871,19 @@
     },
     {
       "file": "tower_arc_range_s8.glb",
-      "bytes": 180036,
-      "tris": 3752,
+      "bytes": 589376,
+      "tris": 18860,
       "parts": 49,
       "bounds": {
         "min": [
           -0.792,
-          0.87,
-          -0.839
+          0.852,
+          -0.855
         ],
         "max": [
-          0.959,
+          0.962,
           3.211,
-          0.839
+          0.855
         ]
       },
       "tower": "arc",
@@ -3904,19 +3904,19 @@
     },
     {
       "file": "tower_arc_range_s9.glb",
-      "bytes": 193452,
-      "tris": 3892,
+      "bytes": 633532,
+      "tris": 20200,
       "parts": 54,
       "bounds": {
         "min": [
           -0.792,
-          0.72,
-          -0.839
+          0.713,
+          -0.855
         ],
         "max": [
-          0.959,
+          0.962,
           3.211,
-          0.839
+          0.855
         ]
       },
       "tower": "arc",
@@ -3938,19 +3938,19 @@
     },
     {
       "file": "tower_arc_range_s10.glb",
-      "bytes": 218132,
-      "tris": 4444,
+      "bytes": 702392,
+      "tris": 21712,
       "parts": 61,
       "bounds": {
         "min": [
           -0.792,
-          0.72,
-          -0.839
+          0.713,
+          -0.855
         ],
         "max": [
-          0.959,
-          3.352,
-          0.839
+          0.962,
+          3.354,
+          0.855
         ]
       },
       "tower": "arc",
@@ -3987,18 +3987,18 @@
     },
     {
       "file": "tower_arc_rate_s2.glb",
-      "bytes": 22392,
-      "tris": 684,
+      "bytes": 45352,
+      "tris": 1532,
       "parts": 3,
       "bounds": {
         "min": [
-          -0.73,
-          0.55,
+          -0.752,
+          0.528,
           -0.682
         ],
         "max": [
           0.682,
-          0.69,
+          0.712,
           0.682
         ]
       },
@@ -4014,18 +4014,18 @@
     },
     {
       "file": "tower_arc_rate_s3.glb",
-      "bytes": 26280,
-      "tris": 708,
+      "bytes": 58912,
+      "tris": 1652,
       "parts": 5,
       "bounds": {
         "min": [
-          -0.73,
-          0.53,
+          -0.752,
+          0.512,
           -0.682
         ],
         "max": [
           0.682,
-          0.75,
+          0.768,
           0.682
         ]
       },
@@ -4042,12 +4042,12 @@
     },
     {
       "file": "tower_arc_rate_s4.glb",
-      "bytes": 62240,
-      "tris": 1704,
+      "bytes": 169404,
+      "tris": 5808,
       "parts": 11,
       "bounds": {
         "min": [
-          -0.73,
+          -0.752,
           0.3,
           -0.682
         ],
@@ -4071,18 +4071,18 @@
     },
     {
       "file": "tower_arc_rate_s5.glb",
-      "bytes": 70496,
-      "tris": 1772,
+      "bytes": 198652,
+      "tris": 6308,
       "parts": 15,
       "bounds": {
         "min": [
-          -0.73,
+          -0.752,
           0.3,
           -0.682
         ],
         "max": [
           0.959,
-          1.885,
+          1.892,
           0.682
         ]
       },
@@ -4101,19 +4101,19 @@
     },
     {
       "file": "tower_arc_rate_s6.glb",
-      "bytes": 92392,
-      "tris": 1924,
+      "bytes": 275380,
+      "tris": 7228,
       "parts": 26,
       "bounds": {
         "min": [
-          -0.73,
+          -0.752,
           0.3,
-          -0.69
+          -0.694
         ],
         "max": [
           0.959,
-          1.885,
-          0.69
+          1.892,
+          0.694
         ]
       },
       "tower": "arc",
@@ -4132,19 +4132,19 @@
     },
     {
       "file": "tower_arc_rate_s7.glb",
-      "bytes": 131824,
-      "tris": 3156,
+      "bytes": 426392,
+      "tris": 13308,
       "parts": 32,
       "bounds": {
         "min": [
-          -0.73,
+          -0.752,
           0.3,
-          -0.69
+          -0.694
         ],
         "max": [
           0.959,
-          2.761,
-          0.69
+          2.762,
+          0.694
         ]
       },
       "tower": "arc",
@@ -4164,19 +4164,19 @@
     },
     {
       "file": "tower_arc_rate_s8.glb",
-      "bytes": 142104,
-      "tris": 3276,
+      "bytes": 454044,
+      "tris": 14044,
       "parts": 38,
       "bounds": {
         "min": [
-          -0.929,
+          -0.98,
           0.3,
-          -0.69
+          -0.694
         ],
         "max": [
           0.959,
-          2.761,
-          0.69
+          2.762,
+          0.694
         ]
       },
       "tower": "arc",
@@ -4197,19 +4197,19 @@
     },
     {
       "file": "tower_arc_rate_s9.glb",
-      "bytes": 166944,
-      "tris": 3540,
+      "bytes": 522100,
+      "tris": 15364,
       "parts": 47,
       "bounds": {
         "min": [
-          -0.937,
+          -0.98,
           0.3,
-          -0.69
+          -0.694
         ],
         "max": [
           0.959,
-          2.761,
-          0.69
+          2.762,
+          0.694
         ]
       },
       "tower": "arc",
@@ -4231,19 +4231,19 @@
     },
     {
       "file": "tower_arc_rate_s10.glb",
-      "bytes": 214848,
-      "tris": 5172,
+      "bytes": 605548,
+      "tris": 17908,
       "parts": 53,
       "bounds": {
         "min": [
-          -0.937,
+          -0.98,
           0.3,
-          -0.69
+          -0.694
         ],
         "max": [
           0.959,
-          2.761,
-          0.69
+          2.762,
+          0.694
         ]
       },
       "tower": "arc",
@@ -4266,18 +4266,18 @@
     },
     {
       "file": "tower_barricade.glb",
-      "bytes": 48584,
-      "tris": 760,
+      "bytes": 135752,
+      "tris": 1624,
       "parts": 35,
       "bounds": {
         "min": [
-          -2.475,
-          0,
+          -2.513,
+          -0.038,
           -0.81
         ],
         "max": [
-          2.475,
-          2.145,
+          2.513,
+          2.161,
           0.795
         ]
       },
@@ -4287,18 +4287,18 @@
     },
     {
       "file": "tower_barricade_damaged.glb",
-      "bytes": 52968,
-      "tris": 664,
+      "bytes": 159440,
+      "tris": 1720,
       "parts": 33,
       "bounds": {
         "min": [
-          -2.475,
-          0,
+          -2.513,
+          -0.101,
           -0.81
         ],
         "max": [
-          2.475,
-          2.145,
+          2.513,
+          2.161,
           0.795
         ]
       },
@@ -4308,18 +4308,18 @@
     },
     {
       "file": "tower_barricade_broken.glb",
-      "bytes": 51024,
-      "tris": 664,
+      "bytes": 139552,
+      "tris": 1528,
       "parts": 31,
       "bounds": {
         "min": [
-          -2.634,
-          -0.362,
+          -2.667,
+          -0.396,
           -0.81
         ],
         "max": [
-          2.475,
-          2.145,
+          2.558,
+          2.161,
           0.795
         ]
       },
@@ -4329,8 +4329,8 @@
     },
     {
       "file": "tower_filament_chassis.glb",
-      "bytes": 242584,
-      "tris": 5796,
+      "bytes": 505704,
+      "tris": 16572,
       "parts": 105,
       "bounds": {
         "min": [
@@ -4385,8 +4385,8 @@
     },
     {
       "file": "tower_filament_ramp_s2.glb",
-      "bytes": 20108,
-      "tris": 592,
+      "bytes": 26584,
+      "tris": 880,
       "parts": 3,
       "bounds": {
         "min": [
@@ -4412,8 +4412,8 @@
     },
     {
       "file": "tower_filament_ramp_s3.glb",
-      "bytes": 73032,
-      "tris": 2352,
+      "bytes": 205600,
+      "tris": 8112,
       "parts": 10,
       "bounds": {
         "min": [
@@ -4440,8 +4440,8 @@
     },
     {
       "file": "tower_filament_ramp_s4.glb",
-      "bytes": 84872,
-      "tris": 2652,
+      "bytes": 222284,
+      "tris": 8460,
       "parts": 20,
       "bounds": {
         "min": [
@@ -4469,8 +4469,8 @@
     },
     {
       "file": "tower_filament_ramp_s5.glb",
-      "bytes": 90156,
-      "tris": 2756,
+      "bytes": 234056,
+      "tris": 8852,
       "parts": 27,
       "bounds": {
         "min": [
@@ -4499,8 +4499,8 @@
     },
     {
       "file": "tower_filament_ramp_s6.glb",
-      "bytes": 108020,
-      "tris": 2884,
+      "bytes": 297104,
+      "tris": 9652,
       "parts": 36,
       "bounds": {
         "min": [
@@ -4530,8 +4530,8 @@
     },
     {
       "file": "tower_filament_ramp_s7.glb",
-      "bytes": 123352,
-      "tris": 3228,
+      "bytes": 344304,
+      "tris": 11444,
       "parts": 39,
       "bounds": {
         "min": [
@@ -4562,8 +4562,8 @@
     },
     {
       "file": "tower_filament_ramp_s8.glb",
-      "bytes": 136716,
-      "tris": 3368,
+      "bytes": 388424,
+      "tris": 12784,
       "parts": 44,
       "bounds": {
         "min": [
@@ -4595,8 +4595,8 @@
     },
     {
       "file": "tower_filament_ramp_s9.glb",
-      "bytes": 148532,
-      "tris": 3728,
+      "bytes": 435712,
+      "tris": 14656,
       "parts": 46,
       "bounds": {
         "min": [
@@ -4629,8 +4629,8 @@
     },
     {
       "file": "tower_filament_ramp_s10.glb",
-      "bytes": 181020,
-      "tris": 4232,
+      "bytes": 536616,
+      "tris": 16928,
       "parts": 57,
       "bounds": {
         "min": [
@@ -4678,18 +4678,18 @@
     },
     {
       "file": "tower_filament_peak_s2.glb",
-      "bytes": 7456,
-      "tris": 56,
+      "bytes": 23624,
+      "tris": 440,
       "parts": 3,
       "bounds": {
         "min": [
-          -0.185,
-          1.975,
+          -0.19,
+          1.97,
           -1.57
         ],
         "max": [
           0.198,
-          2.016,
+          2.021,
           -1.23
         ]
       },
@@ -4705,8 +4705,8 @@
     },
     {
       "file": "tower_filament_peak_s3.glb",
-      "bytes": 22564,
-      "tris": 536,
+      "bytes": 61464,
+      "tris": 1912,
       "parts": 5,
       "bounds": {
         "min": [
@@ -4733,13 +4733,13 @@
     },
     {
       "file": "tower_filament_peak_s4.glb",
-      "bytes": 26372,
-      "tris": 560,
+      "bytes": 74944,
+      "tris": 2032,
       "parts": 7,
       "bounds": {
         "min": [
           -0.191,
-          1.73,
+          1.726,
           -1.648
         ],
         "max": [
@@ -4762,13 +4762,13 @@
     },
     {
       "file": "tower_filament_peak_s5.glb",
-      "bytes": 40360,
-      "tris": 928,
+      "bytes": 112748,
+      "tris": 3504,
       "parts": 9,
       "bounds": {
         "min": [
           -0.191,
-          1.73,
+          1.726,
           -1.735
         ],
         "max": [
@@ -4792,18 +4792,18 @@
     },
     {
       "file": "tower_filament_peak_s6.glb",
-      "bytes": 45208,
-      "tris": 972,
+      "bytes": 128912,
+      "tris": 3884,
       "parts": 11,
       "bounds": {
         "min": [
           -0.191,
-          1.73,
+          1.726,
           -1.735
         ],
         "max": [
           0.198,
-          2.251,
+          2.255,
           0.32
         ]
       },
@@ -4823,18 +4823,18 @@
     },
     {
       "file": "tower_filament_peak_s7.glb",
-      "bytes": 52916,
-      "tris": 1044,
+      "bytes": 151912,
+      "tris": 4324,
       "parts": 14,
       "bounds": {
         "min": [
           -0.191,
-          1.73,
+          1.726,
           -1.735
         ],
         "max": [
           0.198,
-          2.251,
+          2.255,
           0.32
         ]
       },
@@ -4855,8 +4855,8 @@
     },
     {
       "file": "tower_filament_peak_s8.glb",
-      "bytes": 76440,
-      "tris": 1572,
+      "bytes": 236816,
+      "tris": 7588,
       "parts": 19,
       "bounds": {
         "min": [
@@ -4866,7 +4866,7 @@
         ],
         "max": [
           0.198,
-          2.251,
+          2.255,
           0.32
         ]
       },
@@ -4888,8 +4888,8 @@
     },
     {
       "file": "tower_filament_peak_s9.glb",
-      "bytes": 100352,
-      "tris": 2164,
+      "bytes": 301304,
+      "tris": 9300,
       "parts": 25,
       "bounds": {
         "min": [
@@ -4922,14 +4922,14 @@
     },
     {
       "file": "tower_filament_peak_s10.glb",
-      "bytes": 124640,
-      "tris": 2736,
+      "bytes": 383252,
+      "tris": 12304,
       "parts": 30,
       "bounds": {
         "min": [
           -0.51,
           1.328,
-          -1.947
+          -1.948
         ],
         "max": [
           0.258,
@@ -4971,17 +4971,17 @@
     },
     {
       "file": "tower_filament_optics_s2.glb",
-      "bytes": 9148,
-      "tris": 84,
+      "bytes": 26472,
+      "tris": 700,
       "parts": 3,
       "bounds": {
         "min": [
-          -0.169,
-          2.15,
+          -0.17,
+          2.143,
           -0.48
         ],
         "max": [
-          -0.111,
+          -0.11,
           2.271,
           -0.32
         ]
@@ -4998,8 +4998,8 @@
     },
     {
       "file": "tower_filament_optics_s3.glb",
-      "bytes": 14892,
-      "tris": 156,
+      "bytes": 39608,
+      "tris": 1084,
       "parts": 5,
       "bounds": {
         "min": [
@@ -5026,14 +5026,14 @@
     },
     {
       "file": "tower_filament_optics_s4.glb",
-      "bytes": 27800,
-      "tris": 492,
+      "bytes": 77256,
+      "tris": 2556,
       "parts": 7,
       "bounds": {
         "min": [
           -0.17,
           1.86,
-          -1.812
+          -1.814
         ],
         "max": [
           0.17,
@@ -5055,17 +5055,17 @@
     },
     {
       "file": "tower_filament_optics_s5.glb",
-      "bytes": 33164,
-      "tris": 544,
+      "bytes": 93456,
+      "tris": 2936,
       "parts": 9,
       "bounds": {
         "min": [
           -0.17,
           1.86,
-          -1.812
+          -1.814
         ],
         "max": [
-          0.22,
+          0.234,
           2.271,
           -0.32
         ]
@@ -5085,18 +5085,18 @@
     },
     {
       "file": "tower_filament_optics_s6.glb",
-      "bytes": 38016,
-      "tris": 588,
+      "bytes": 109612,
+      "tris": 3316,
       "parts": 11,
       "bounds": {
         "min": [
           -0.17,
           1.86,
-          -1.812
+          -1.814
         ],
         "max": [
-          0.22,
-          2.361,
+          0.234,
+          2.365,
           -0.32
         ]
       },
@@ -5116,18 +5116,18 @@
     },
     {
       "file": "tower_filament_optics_s7.glb",
-      "bytes": 45300,
-      "tris": 636,
+      "bytes": 136252,
+      "tris": 3556,
       "parts": 15,
       "bounds": {
         "min": [
           -0.17,
           1.86,
-          -1.812
+          -1.814
         ],
         "max": [
-          0.22,
-          2.71,
+          0.234,
+          2.732,
           0.25
         ]
       },
@@ -5148,18 +5148,18 @@
     },
     {
       "file": "tower_filament_optics_s8.glb",
-      "bytes": 53032,
-      "tris": 712,
+      "bytes": 161788,
+      "tris": 4256,
       "parts": 18,
       "bounds": {
         "min": [
-          -0.17,
-          1.8,
-          -1.812
+          -0.179,
+          1.771,
+          -1.814
         ],
         "max": [
-          0.22,
-          2.71,
+          0.234,
+          2.732,
           1.06
         ]
       },
@@ -5181,18 +5181,18 @@
     },
     {
       "file": "tower_filament_optics_s9.glb",
-      "bytes": 80948,
-      "tris": 1608,
+      "bytes": 256000,
+      "tris": 8032,
       "parts": 22,
       "bounds": {
         "min": [
-          -0.171,
-          1.8,
-          -1.812
+          -0.179,
+          1.771,
+          -1.814
         ],
         "max": [
-          0.22,
-          2.71,
+          0.234,
+          2.732,
           1.06
         ]
       },
@@ -5215,18 +5215,18 @@
     },
     {
       "file": "tower_filament_optics_s10.glb",
-      "bytes": 110848,
-      "tris": 1940,
+      "bytes": 341556,
+      "tris": 10452,
       "parts": 32,
       "bounds": {
         "min": [
           -1.243,
           0.015,
-          -1.812
+          -1.814
         ],
         "max": [
           1.243,
-          2.71,
+          2.732,
           1.32
         ]
       },
@@ -5250,8 +5250,8 @@
     },
     {
       "file": "tower_detector_chassis.glb",
-      "bytes": 171148,
-      "tris": 3564,
+      "bytes": 359832,
+      "tris": 10452,
       "parts": 62,
       "bounds": {
         "min": [
@@ -5290,8 +5290,8 @@
     },
     {
       "file": "tower_detector_field_s2.glb",
-      "bytes": 13660,
-      "tris": 128,
+      "bytes": 23012,
+      "tris": 416,
       "parts": 5,
       "bounds": {
         "min": [
@@ -5317,17 +5317,17 @@
     },
     {
       "file": "tower_detector_field_s3.glb",
-      "bytes": 37792,
-      "tris": 816,
+      "bytes": 78140,
+      "tris": 1808,
       "parts": 10,
       "bounds": {
         "min": [
-          -0.6,
-          0.39,
+          -0.611,
+          0.379,
           -0.6
         ],
         "max": [
-          0.6,
+          0.611,
           2.531,
           0.6
         ]
@@ -5345,17 +5345,17 @@
     },
     {
       "file": "tower_detector_field_s4.glb",
-      "bytes": 120520,
-      "tris": 2832,
+      "bytes": 212364,
+      "tris": 6176,
       "parts": 28,
       "bounds": {
         "min": [
-          -1.023,
+          -1.026,
           0,
           -1.026
         ],
         "max": [
-          1.023,
+          1.026,
           2.531,
           1.026
         ]
@@ -5374,17 +5374,17 @@
     },
     {
       "file": "tower_detector_field_s5.glb",
-      "bytes": 124352,
-      "tris": 2856,
+      "bytes": 225864,
+      "tris": 6296,
       "parts": 30,
       "bounds": {
         "min": [
-          -1.023,
+          -1.026,
           0,
           -1.026
         ],
         "max": [
-          1.023,
+          1.026,
           2.531,
           1.026
         ]
@@ -5404,17 +5404,17 @@
     },
     {
       "file": "tower_detector_field_s6.glb",
-      "bytes": 148196,
-      "tris": 3272,
+      "bytes": 314428,
+      "tris": 9272,
       "parts": 38,
       "bounds": {
         "min": [
-          -1.023,
+          -1.026,
           0,
           -1.026
         ],
         "max": [
-          1.023,
+          1.026,
           2.65,
           1.026
         ]
@@ -5435,17 +5435,17 @@
     },
     {
       "file": "tower_detector_field_s7.glb",
-      "bytes": 155596,
-      "tris": 3320,
+      "bytes": 341208,
+      "tris": 9512,
       "parts": 42,
       "bounds": {
         "min": [
-          -1.08,
+          -1.087,
           0,
           -1.026
         ],
         "max": [
-          1.08,
+          1.087,
           2.65,
           1.026
         ]
@@ -5467,17 +5467,17 @@
     },
     {
       "file": "tower_detector_field_s8.glb",
-      "bytes": 166008,
-      "tris": 3400,
+      "bytes": 377444,
+      "tris": 10072,
       "parts": 47,
       "bounds": {
         "min": [
-          -1.08,
+          -1.087,
           0,
           -1.026
         ],
         "max": [
-          1.08,
+          1.087,
           2.65,
           1.026
         ]
@@ -5500,17 +5500,17 @@
     },
     {
       "file": "tower_detector_field_s9.glb",
-      "bytes": 217804,
-      "tris": 5320,
+      "bytes": 490964,
+      "tris": 14680,
       "parts": 51,
       "bounds": {
         "min": [
-          -1.08,
+          -1.087,
           0,
           -1.026
         ],
         "max": [
-          1.08,
+          1.087,
           2.65,
           1.026
         ]
@@ -5534,17 +5534,17 @@
     },
     {
       "file": "tower_detector_field_s10.glb",
-      "bytes": 269292,
-      "tris": 7096,
+      "bytes": 574544,
+      "tris": 17224,
       "parts": 57,
       "bounds": {
         "min": [
-          -1.08,
+          -1.087,
           0,
           -1.026
         ],
         "max": [
-          1.08,
+          1.087,
           2.65,
           1.026
         ]
@@ -5583,18 +5583,18 @@
     },
     {
       "file": "tower_detector_analysis_s2.glb",
-      "bytes": 4508,
-      "tris": 24,
+      "bytes": 14188,
+      "tris": 120,
       "parts": 2,
       "bounds": {
         "min": [
-          -0.51,
-          1.31,
+          -0.542,
+          1.278,
           -0.182
         ],
         "max": [
-          -0.29,
-          1.57,
+          -0.258,
+          1.602,
           0.01
         ]
       },
@@ -5610,13 +5610,13 @@
     },
     {
       "file": "tower_detector_analysis_s3.glb",
-      "bytes": 18056,
-      "tris": 304,
+      "bytes": 61652,
+      "tris": 1912,
       "parts": 5,
       "bounds": {
         "min": [
-          -0.51,
-          1.31,
+          -0.542,
+          1.278,
           -0.608
         ],
         "max": [
@@ -5638,17 +5638,17 @@
     },
     {
       "file": "tower_detector_analysis_s4.glb",
-      "bytes": 24136,
-      "tris": 364,
+      "bytes": 78184,
+      "tris": 2292,
       "parts": 7,
       "bounds": {
         "min": [
-          -0.51,
-          1.31,
+          -0.542,
+          1.278,
           -0.608
         ],
         "max": [
-          0.36,
+          0.382,
           2.298,
           0.01
         ]
@@ -5667,17 +5667,17 @@
     },
     {
       "file": "tower_detector_analysis_s5.glb",
-      "bytes": 29384,
-      "tris": 456,
+      "bytes": 89904,
+      "tris": 2672,
       "parts": 13,
       "bounds": {
         "min": [
           -0.568,
-          1.31,
+          1.278,
           -0.608
         ],
         "max": [
-          0.36,
+          0.382,
           2.298,
           0.028
         ]
@@ -5697,17 +5697,17 @@
     },
     {
       "file": "tower_detector_analysis_s6.glb",
-      "bytes": 34976,
-      "tris": 516,
+      "bytes": 105944,
+      "tris": 3052,
       "parts": 15,
       "bounds": {
         "min": [
           -0.568,
-          1.31,
+          1.278,
           -0.608
         ],
         "max": [
-          0.36,
+          0.382,
           2.298,
           0.028
         ]
@@ -5728,18 +5728,18 @@
     },
     {
       "file": "tower_detector_analysis_s7.glb",
-      "bytes": 48668,
-      "tris": 660,
+      "bytes": 147360,
+      "tris": 4132,
       "parts": 20,
       "bounds": {
         "min": [
           -0.568,
-          1.31,
+          1.278,
           -0.608
         ],
         "max": [
-          0.36,
-          2.39,
+          0.382,
+          2.415,
           0.4
         ]
       },
@@ -5760,8 +5760,8 @@
     },
     {
       "file": "tower_detector_analysis_s8.glb",
-      "bytes": 68004,
-      "tris": 1252,
+      "bytes": 173180,
+      "tris": 5012,
       "parts": 23,
       "bounds": {
         "min": [
@@ -5770,8 +5770,8 @@
           -0.608
         ],
         "max": [
-          0.36,
-          2.39,
+          0.382,
+          2.415,
           0.4
         ]
       },
@@ -5793,8 +5793,8 @@
     },
     {
       "file": "tower_detector_analysis_s9.glb",
-      "bytes": 82428,
-      "tris": 1628,
+      "bytes": 194808,
+      "tris": 5676,
       "parts": 26,
       "bounds": {
         "min": [
@@ -5827,8 +5827,8 @@
     },
     {
       "file": "tower_detector_analysis_s10.glb",
-      "bytes": 133528,
-      "tris": 2828,
+      "bytes": 356156,
+      "tris": 11292,
       "parts": 39,
       "bounds": {
         "min": [
@@ -5862,8 +5862,8 @@
     },
     {
       "file": "tower_overclock_chassis.glb",
-      "bytes": 220444,
-      "tris": 5748,
+      "bytes": 433268,
+      "tris": 12916,
       "parts": 72,
       "bounds": {
         "min": [
@@ -5903,8 +5903,8 @@
     },
     {
       "file": "tower_overclock_potency_s2.glb",
-      "bytes": 24820,
-      "tris": 800,
+      "bytes": 66880,
+      "tris": 2624,
       "parts": 3,
       "bounds": {
         "min": [
@@ -5930,17 +5930,17 @@
     },
     {
       "file": "tower_overclock_potency_s3.glb",
-      "bytes": 46092,
-      "tris": 1064,
+      "bytes": 123024,
+      "tris": 4544,
       "parts": 9,
       "bounds": {
         "min": [
-          -0.659,
+          -0.662,
           0.47,
           -0.75
         ],
         "max": [
-          0.659,
+          0.662,
           2,
           0.42
         ]
@@ -5958,17 +5958,17 @@
     },
     {
       "file": "tower_overclock_potency_s4.glb",
-      "bytes": 52808,
-      "tris": 1120,
+      "bytes": 145896,
+      "tris": 4984,
       "parts": 12,
       "bounds": {
         "min": [
-          -0.659,
+          -0.662,
           0.47,
           -0.75
         ],
         "max": [
-          0.73,
+          0.759,
           2,
           0.42
         ]
@@ -5987,18 +5987,18 @@
     },
     {
       "file": "tower_overclock_potency_s5.glb",
-      "bytes": 67092,
-      "tris": 1224,
+      "bytes": 195672,
+      "tris": 5664,
       "parts": 19,
       "bounds": {
         "min": [
-          -0.659,
+          -0.662,
           0.47,
           -0.75
         ],
         "max": [
-          0.73,
-          2.051,
+          0.759,
+          2.055,
           0.42
         ]
       },
@@ -6017,17 +6017,17 @@
     },
     {
       "file": "tower_overclock_potency_s6.glb",
-      "bytes": 91088,
-      "tris": 2024,
+      "bytes": 261740,
+      "tris": 8288,
       "parts": 22,
       "bounds": {
         "min": [
-          -0.659,
+          -0.662,
           0.47,
           -0.75
         ],
         "max": [
-          0.73,
+          0.759,
           2.378,
           0.42
         ]
@@ -6048,17 +6048,17 @@
     },
     {
       "file": "tower_overclock_potency_s7.glb",
-      "bytes": 113800,
-      "tris": 2240,
+      "bytes": 330296,
+      "tris": 9608,
       "parts": 31,
       "bounds": {
         "min": [
-          -0.659,
+          -0.662,
           0.47,
           -0.75
         ],
         "max": [
-          0.73,
+          0.759,
           2.378,
           0.677
         ]
@@ -6080,17 +6080,17 @@
     },
     {
       "file": "tower_overclock_potency_s8.glb",
-      "bytes": 122712,
-      "tris": 2308,
+      "bytes": 360196,
+      "tris": 10108,
       "parts": 35,
       "bounds": {
         "min": [
-          -0.659,
+          -0.662,
           0.47,
           -0.75
         ],
         "max": [
-          0.73,
+          0.759,
           2.378,
           0.677
         ]
@@ -6113,17 +6113,17 @@
     },
     {
       "file": "tower_overclock_potency_s9.glb",
-      "bytes": 143912,
-      "tris": 2788,
+      "bytes": 474188,
+      "tris": 14428,
       "parts": 41,
       "bounds": {
         "min": [
-          -0.659,
+          -0.662,
           0.47,
           -0.75
         ],
         "max": [
-          0.73,
+          0.759,
           2.87,
           0.677
         ]
@@ -6147,17 +6147,17 @@
     },
     {
       "file": "tower_overclock_potency_s10.glb",
-      "bytes": 165644,
-      "tris": 3348,
+      "bytes": 510812,
+      "tris": 15628,
       "parts": 46,
       "bounds": {
         "min": [
-          -0.659,
+          -0.662,
           0.47,
           -0.75
         ],
         "max": [
-          0.73,
+          0.759,
           3.28,
           0.677
         ]
@@ -6196,19 +6196,19 @@
     },
     {
       "file": "tower_overclock_network_s2.glb",
-      "bytes": 11264,
-      "tris": 80,
+      "bytes": 37088,
+      "tris": 560,
       "parts": 5,
       "bounds": {
         "min": [
-          -0.389,
-          0.86,
-          -0.389
+          -0.399,
+          0.846,
+          -0.399
         ],
         "max": [
-          0.389,
-          0.951,
-          0.389
+          0.399,
+          0.965,
+          0.399
         ]
       },
       "tower": "overclock",
@@ -6223,19 +6223,19 @@
     },
     {
       "file": "tower_overclock_network_s3.glb",
-      "bytes": 22536,
-      "tris": 392,
+      "bytes": 54836,
+      "tris": 1160,
       "parts": 7,
       "bounds": {
         "min": [
-          -0.389,
-          0.86,
+          -0.399,
+          0.846,
           -0.492
         ],
         "max": [
           0.492,
-          0.952,
-          0.389
+          0.965,
+          0.399
         ]
       },
       "tower": "overclock",
@@ -6251,17 +6251,17 @@
     },
     {
       "file": "tower_overclock_network_s4.glb",
-      "bytes": 52368,
-      "tris": 944,
+      "bytes": 160068,
+      "tris": 4460,
       "parts": 16,
       "bounds": {
         "min": [
-          -0.684,
-          0.85,
+          -0.702,
+          0.832,
           -0.78
         ],
         "max": [
-          0.684,
+          0.702,
           2.52,
           0.42
         ]
@@ -6280,17 +6280,17 @@
     },
     {
       "file": "tower_overclock_network_s5.glb",
-      "bytes": 75580,
-      "tris": 1216,
+      "bytes": 225656,
+      "tris": 6700,
       "parts": 23,
       "bounds": {
         "min": [
-          -0.684,
-          0.85,
+          -0.702,
+          0.832,
           -0.78
         ],
         "max": [
-          0.684,
+          0.702,
           2.52,
           0.42
         ]
@@ -6310,17 +6310,17 @@
     },
     {
       "file": "tower_overclock_network_s6.glb",
-      "bytes": 87308,
-      "tris": 1344,
+      "bytes": 263292,
+      "tris": 7980,
       "parts": 27,
       "bounds": {
         "min": [
-          -0.684,
-          0.85,
+          -0.702,
+          0.832,
           -0.78
         ],
         "max": [
-          0.684,
+          0.702,
           2.52,
           0.42
         ]
@@ -6341,13 +6341,13 @@
     },
     {
       "file": "tower_overclock_network_s7.glb",
-      "bytes": 127880,
-      "tris": 2628,
+      "bytes": 345544,
+      "tris": 11004,
       "parts": 33,
       "bounds": {
         "min": [
           -0.702,
-          0.85,
+          0.832,
           -0.78
         ],
         "max": [
@@ -6373,13 +6373,13 @@
     },
     {
       "file": "tower_overclock_network_s8.glb",
-      "bytes": 155316,
-      "tris": 3500,
+      "bytes": 379460,
+      "tris": 12164,
       "parts": 37,
       "bounds": {
         "min": [
           -0.702,
-          0.85,
+          0.832,
           -0.78
         ],
         "max": [
@@ -6406,13 +6406,13 @@
     },
     {
       "file": "tower_overclock_network_s9.glb",
-      "bytes": 165688,
-      "tris": 3580,
+      "bytes": 415664,
+      "tris": 12724,
       "parts": 42,
       "bounds": {
         "min": [
           -0.702,
-          0.85,
+          0.832,
           -0.78
         ],
         "max": [
@@ -6440,13 +6440,13 @@
     },
     {
       "file": "tower_overclock_network_s10.glb",
-      "bytes": 220344,
-      "tris": 5428,
+      "bytes": 483488,
+      "tris": 15124,
       "parts": 49,
       "bounds": {
         "min": [
           -0.702,
-          0.85,
+          0.832,
           -0.78
         ],
         "max": [
@@ -6489,19 +6489,19 @@
     },
     {
       "file": "tower_overclock_efficiency_s2.glb",
-      "bytes": 18816,
-      "tris": 128,
+      "bytes": 63972,
+      "tris": 800,
       "parts": 9,
       "bounds": {
         "min": [
-          -0.607,
-          0.46,
-          -0.607
+          -0.61,
+          0.456,
+          -0.61
         ],
         "max": [
-          0.607,
-          0.751,
-          0.607
+          0.61,
+          0.755,
+          0.61
         ]
       },
       "tower": "overclock",
@@ -6516,19 +6516,19 @@
     },
     {
       "file": "tower_overclock_efficiency_s3.glb",
-      "bytes": 27660,
-      "tris": 220,
+      "bytes": 89744,
+      "tris": 1500,
       "parts": 12,
       "bounds": {
         "min": [
-          -0.607,
-          0.46,
-          -0.607
+          -0.617,
+          0.456,
+          -0.61
         ],
         "max": [
-          0.607,
-          0.751,
-          0.607
+          0.61,
+          0.759,
+          0.61
         ]
       },
       "tower": "overclock",
@@ -6544,19 +6544,19 @@
     },
     {
       "file": "tower_overclock_efficiency_s4.glb",
-      "bytes": 35168,
-      "tris": 268,
+      "bytes": 116584,
+      "tris": 1740,
       "parts": 16,
       "bounds": {
         "min": [
-          -0.607,
-          0.43,
-          -0.607
+          -0.617,
+          0.39,
+          -0.61
         ],
         "max": [
-          0.822,
-          0.751,
-          0.607
+          0.857,
+          0.77,
+          0.61
         ]
       },
       "tower": "overclock",
@@ -6573,19 +6573,19 @@
     },
     {
       "file": "tower_overclock_efficiency_s5.glb",
-      "bytes": 54788,
-      "tris": 940,
+      "bytes": 154336,
+      "tris": 3212,
       "parts": 18,
       "bounds": {
         "min": [
-          -0.611,
-          0.43,
-          -0.607
+          -0.617,
+          0.39,
+          -0.61
         ],
         "max": [
-          0.822,
-          0.768,
-          0.607
+          0.857,
+          0.77,
+          0.61
         ]
       },
       "tower": "overclock",
@@ -6603,19 +6603,19 @@
     },
     {
       "file": "tower_overclock_efficiency_s6.glb",
-      "bytes": 62128,
-      "tris": 988,
+      "bytes": 181024,
+      "tris": 3452,
       "parts": 22,
       "bounds": {
         "min": [
-          -0.822,
-          0.43,
-          -0.607
+          -0.857,
+          0.39,
+          -0.61
         ],
         "max": [
-          0.822,
-          0.768,
-          0.607
+          0.857,
+          0.77,
+          0.61
         ]
       },
       "tower": "overclock",
@@ -6634,17 +6634,17 @@
     },
     {
       "file": "tower_overclock_efficiency_s7.glb",
-      "bytes": 81212,
-      "tris": 1384,
+      "bytes": 234692,
+      "tris": 5304,
       "parts": 26,
       "bounds": {
         "min": [
-          -0.822,
-          0.43,
-          -0.607
+          -0.857,
+          0.39,
+          -0.61
         ],
         "max": [
-          0.822,
+          0.857,
           1.135,
           0.61
         ]
@@ -6666,18 +6666,18 @@
     },
     {
       "file": "tower_overclock_efficiency_s8.glb",
-      "bytes": 89052,
-      "tris": 1460,
+      "bytes": 260316,
+      "tris": 6004,
       "parts": 29,
       "bounds": {
         "min": [
-          -0.822,
-          0.43,
-          -0.607
+          -0.857,
+          0.39,
+          -0.61
         ],
         "max": [
-          0.822,
-          1.14,
+          0.857,
+          1.141,
           0.61
         ]
       },
@@ -6699,18 +6699,18 @@
     },
     {
       "file": "tower_overclock_efficiency_s9.glb",
-      "bytes": 100476,
-      "tris": 1756,
+      "bytes": 298000,
+      "tris": 7476,
       "parts": 31,
       "bounds": {
         "min": [
-          -0.822,
-          0.43,
+          -0.857,
+          0.39,
           -0.79
         ],
         "max": [
-          0.822,
-          1.14,
+          0.857,
+          1.141,
           0.61
         ]
       },
@@ -6733,17 +6733,17 @@
     },
     {
       "file": "tower_overclock_efficiency_s10.glb",
-      "bytes": 113616,
-      "tris": 1840,
+      "bytes": 340608,
+      "tris": 7848,
       "parts": 38,
       "bounds": {
         "min": [
-          -0.822,
-          0.43,
+          -0.857,
+          0.39,
           -0.79
         ],
         "max": [
-          0.822,
+          0.857,
           2.24,
           0.61
         ]
@@ -6768,13 +6768,13 @@
     },
     {
       "file": "enemy_drifter.glb",
-      "bytes": 236244,
-      "tris": 3932,
+      "bytes": 582880,
+      "tris": 14820,
       "parts": 96,
       "bounds": {
         "min": [
           -0.438,
-          0.002,
+          -0.005,
           -0.26
         ],
         "max": [
@@ -6789,19 +6789,19 @@
     },
     {
       "file": "enemy_mote.glb",
-      "bytes": 157496,
-      "tris": 2714,
+      "bytes": 429176,
+      "tris": 12966,
       "parts": 49,
       "bounds": {
         "min": [
-          -0.388,
-          0.001,
+          -0.396,
+          -0.004,
           -0.47
         ],
         "max": [
-          0.388,
+          0.396,
           0.94,
-          0.437
+          0.438
         ]
       },
       "kind": "enemy",
@@ -6810,18 +6810,18 @@
     },
     {
       "file": "enemy_monolith.glb",
-      "bytes": 323756,
-      "tris": 5076,
+      "bytes": 783652,
+      "tris": 18836,
       "parts": 169,
       "bounds": {
         "min": [
-          -1.3,
+          -1.354,
           0,
           -0.85
         ],
         "max": [
-          1.3,
-          3.935,
+          1.354,
+          3.947,
           0.85
         ]
       },
@@ -6831,17 +6831,17 @@
     },
     {
       "file": "enemy_skiff.glb",
-      "bytes": 104268,
-      "tris": 1176,
+      "bytes": 328708,
+      "tris": 6908,
       "parts": 50,
       "bounds": {
         "min": [
-          -0.83,
+          -0.844,
           -0.05,
           -0.84
         ],
         "max": [
-          0.83,
+          0.844,
           0.509,
           0.53
         ]
@@ -6852,13 +6852,13 @@
     },
     {
       "file": "enemy_aegis.glb",
-      "bytes": 395452,
-      "tris": 6128,
+      "bytes": 837836,
+      "tris": 20528,
       "parts": 152,
       "bounds": {
         "min": [
           -0.968,
-          0.003,
+          -0.007,
           -0.945
         ],
         "max": [
@@ -6873,13 +6873,13 @@
     },
     {
       "file": "enemy_warden.glb",
-      "bytes": 258840,
-      "tris": 5452,
+      "bytes": 784276,
+      "tris": 25456,
       "parts": 99,
       "bounds": {
         "min": [
           -0.504,
-          0.002,
+          -0.006,
           -0.414
         ],
         "max": [
@@ -6894,19 +6894,19 @@
     },
     {
       "file": "enemy_warden_shield.glb",
-      "bytes": 75732,
-      "tris": 2004,
+      "bytes": 117096,
+      "tris": 3732,
       "parts": 8,
       "bounds": {
         "min": [
           -1.162,
           -0.306,
-          -1.45
+          -1.451
         ],
         "max": [
           1.162,
           2.706,
-          1.45
+          1.451
         ]
       },
       "kind": "enemy",
@@ -6915,8 +6915,8 @@
     },
     {
       "file": "enemy_mole_surfaced.glb",
-      "bytes": 199572,
-      "tris": 3448,
+      "bytes": 631592,
+      "tris": 20156,
       "parts": 79,
       "bounds": {
         "min": [
@@ -6936,8 +6936,8 @@
     },
     {
       "file": "enemy_mole_burrowed.glb",
-      "bytes": 90536,
-      "tris": 662,
+      "bytes": 176852,
+      "tris": 2126,
       "parts": 33,
       "bounds": {
         "min": [
@@ -6957,13 +6957,13 @@
     },
     {
       "file": "enemy_cluster.glb",
-      "bytes": 319156,
-      "tris": 6660,
+      "bytes": 841736,
+      "tris": 26768,
       "parts": 93,
       "bounds": {
         "min": [
           -0.66,
-          0.002,
+          -0.005,
           -1.092
         ],
         "max": [
@@ -6977,9 +6977,240 @@
       "note": "Visibly gravid: five Mote sacs bulge through the carapace behind clamp rings, a dorsal ridge runs over the belly, and a mandibled head hangs low. Four spindly jointed legs keep the belly the silhouette so the split is telegraphed."
     },
     {
+      "file": "enemy_shade.glb",
+      "bytes": 442668,
+      "tris": 12720,
+      "parts": 50,
+      "bounds": {
+        "min": [
+          -0.287,
+          -0.004,
+          -0.422
+        ],
+        "max": [
+          0.287,
+          1.789,
+          0.287
+        ]
+      },
+      "kind": "enemy",
+      "id": "shade",
+      "note": "Invisible to towers; only heroes see the shimmer. Tall and thin — a Drifter frame stretched and hollowed: translucent smoked shell over a dark endoskeleton, long forward-raked head with a single pale eye, no backpack (nothing to emit), and a cloak of vertical cloaking vanes that trail behind (`shade_vanes`, sway them). `enemy_shade_shimmer.glb` is the reveal overlay. Detector turns the shell opaque via material tint."
+    },
+    {
+      "file": "enemy_shade_shimmer.glb",
+      "bytes": 268604,
+      "tris": 10540,
+      "parts": 12,
+      "bounds": {
+        "min": [
+          -0.42,
+          0.02,
+          -0.445
+        ],
+        "max": [
+          0.42,
+          1.9,
+          0.42
+        ]
+      },
+      "kind": "enemy",
+      "id": "shade_shimmer",
+      "note": "Overlay at the Shade's transform: a heat-haze column of stacked translucent rings (`shimmer_spin`), a faint ground disc and a broken outline of the silhouette. Brighter while revealed, near-invisible while it sprints unseen. Towers never draw it."
+    },
+    {
+      "file": "enemy_mender.glb",
+      "bytes": 847608,
+      "tris": 27588,
+      "parts": 89,
+      "bounds": {
+        "min": [
+          -0.898,
+          -0.005,
+          -0.978
+        ],
+        "max": [
+          0.898,
+          1.891,
+          0.577
+        ]
+      },
+      "kind": "enemy",
+      "id": "mender",
+      "note": "Kill-it-first silhouette: a hunched carrier on four legs with a tall relay mast and a green reservoir dome — the heal source is the biggest, brightest thing on it. Three articulated emitter arms end in dish heads that aim at allies (`mender_arm0..2`); the dome (`mender_dome`) pulses with the heal tick. Coolant lines run dome → arms so the flow reads."
+    },
+    {
+      "file": "enemy_ram.glb",
+      "bytes": 1021632,
+      "tris": 32864,
+      "parts": 130,
+      "bounds": {
+        "min": [
+          -1.103,
+          -0.043,
+          -1.572
+        ],
+        "max": [
+          1.103,
+          2.163,
+          1.385
+        ]
+      },
+      "kind": "enemy",
+      "id": "ram",
+      "note": "The siege body: a low quadruped battering engine. Everything armoured is at the front — a wedge head of layered plates with a serrated ram bar and twin tusks — and everything soft is at the back: an exposed engine block with glowing cylinders, exhaust stacks and a fuel cell (`ram_engine`, the weak point; brighten on enrage). Piston legs, tow chains, a hazard skirt. Reads as Aegis's question asked while it is hitting your tower."
+    },
+    {
+      "file": "enemy_ram_enraged.glb",
+      "bytes": 1057596,
+      "tris": 33216,
+      "parts": 137,
+      "bounds": {
+        "min": [
+          -1.3,
+          -0.043,
+          -1.572
+        ],
+        "max": [
+          1.3,
+          2.605,
+          1.833
+        ]
+      },
+      "kind": "enemy",
+      "id": "ram_enraged",
+      "note": "Below 35% HP: head-plate seams and brow strip lit threat red, engine cylinders and stacks blown to red, flame cones off the exhausts, a hot ring underfoot — ×1.6 speed reads before it moves. The siege body: a low quadruped battering engine. Everything armoured is at the front — a wedge head of layered plates with a serrated ram bar and twin tusks — and everything soft is at the back: an exposed engine block with glowing cylinders, exhaust stacks and a fuel cell (`ram_engine`, the weak point; brighten on enrage). Piston legs, tow chains, a hazard skirt. Reads as Aegis's question asked while it is hitting your tower."
+    },
+    {
+      "file": "enemy_broodmother.glb",
+      "bytes": 1581180,
+      "tris": 52058,
+      "parts": 163,
+      "bounds": {
+        "min": [
+          -0.871,
+          -0.007,
+          -1.797
+        ],
+        "max": [
+          0.871,
+          1.528,
+          1.365
+        ]
+      },
+      "kind": "enemy",
+      "id": "broodmother",
+      "note": "A Cluster that keeps refilling: a broad brood-carrier on six legs with a translucent dorsal sac ring where Motes gestate at visible stages (`brood_sac0..7`, scale up as they fill), a rear birthing chute with a hinged hatch (`brood_hatch`, swing on emit), a vented incubator core underneath, and a mandibled head kept low. Reads as \"kill it before the next one drops\"."
+    },
+    {
+      "file": "enemy_leaper.glb",
+      "bytes": 515384,
+      "tris": 14976,
+      "parts": 63,
+      "bounds": {
+        "min": [
+          -0.578,
+          -0.01,
+          -0.83
+        ],
+        "max": [
+          0.578,
+          1.583,
+          1.341
+        ]
+      },
+      "kind": "enemy",
+      "id": "leaper",
+      "note": "Is your defence one kill-box? A hunched digitigrade jumper: oversized reverse-jointed hind legs with piston calves and splayed pad feet, a short body slung low between them, small grasping forearms, a long counterweight tail with fin plates, and a narrow head with a single forward lens. Standing: poised, knees bent, ready to go."
+    },
+    {
+      "file": "enemy_leaper_windup.glb",
+      "bytes": 542136,
+      "tris": 15216,
+      "parts": 67,
+      "bounds": {
+        "min": [
+          -0.682,
+          -0.01,
+          -0.83
+        ],
+        "max": [
+          0.682,
+          1.696,
+          1.074
+        ]
+      },
+      "kind": "enemy",
+      "id": "leaper_windup",
+      "note": "Is your defence one kill-box? A hunched digitigrade jumper: oversized reverse-jointed hind legs with piston calves and splayed pad feet, a short body slung low between them, small grasping forearms, a long counterweight tail with fin plates, and a narrow head with a single forward lens. Wind-up: legs fully compressed, tail cocked up, pads splayed, lens flaring — the tell before the jump."
+    },
+    {
+      "file": "enemy_leaper_airborne.glb",
+      "bytes": 515476,
+      "tris": 14976,
+      "parts": 63,
+      "bounds": {
+        "min": [
+          -0.578,
+          0.774,
+          -0.62
+        ],
+        "max": [
+          0.578,
+          2.195,
+          1.279
+        ]
+      },
+      "kind": "enemy",
+      "id": "leaper_airborne",
+      "note": "Is your defence one kill-box? A hunched digitigrade jumper: oversized reverse-jointed hind legs with piston calves and splayed pad feet, a short body slung low between them, small grasping forearms, a long counterweight tail with fin plates, and a narrow head with a single forward lens. Airborne: legs trailing straight back, arms tucked, tail streaming, body pitched nose-down — mid-arc, the ×1.5 window. Origin stays at the ground under the body."
+    },
+    {
+      "file": "enemy_carapace.glb",
+      "bytes": 731120,
+      "tris": 24148,
+      "parts": 70,
+      "bounds": {
+        "min": [
+          -0.715,
+          -0.006,
+          -0.93
+        ],
+        "max": [
+          0.715,
+          1.572,
+          0.626
+        ]
+      },
+      "kind": "enemy",
+      "id": "carapace",
+      "note": "The Bulwark redesign: armour you shoot OFF. A broad four-legged body wearing six detachable plates on numbered sockets (`carapace_plate_0…5` — head, two shoulders, two flanks, back), each over a glowing orange weak seam. The client instances `enemy_carapace_plate.glb` at each socket and drops it when its 10 hp is gone; the seam beneath then takes ×1.5. The body alone is soft and reads that way."
+    },
+    {
+      "file": "enemy_carapace_plate.glb",
+      "bytes": 71192,
+      "tris": 1648,
+      "parts": 11,
+      "bounds": {
+        "min": [
+          -0.22,
+          -0.024,
+          -0.233
+        ],
+        "max": [
+          0.22,
+          0.12,
+          0.233
+        ]
+      },
+      "kind": "enemy",
+      "id": "carapace_plate",
+      "note": "One armour plate, origin at its socket, facing +Y: a domed layered plate with a dark backing, six rivets, a chipped edge and a scorch mark so a bare one on the floor reads as shot off. Same mesh on all six sockets."
+    },
+    {
       "file": "trap_spike_armed.glb",
-      "bytes": 80060,
-      "tris": 792,
+      "bytes": 196492,
+      "tris": 5976,
       "parts": 36,
       "bounds": {
         "min": [
@@ -6999,8 +7230,8 @@
     },
     {
       "file": "trap_spike_triggered.glb",
-      "bytes": 81756,
-      "tris": 808,
+      "bytes": 198144,
+      "tris": 5992,
       "parts": 37,
       "bounds": {
         "min": [
@@ -7020,8 +7251,8 @@
     },
     {
       "file": "trap_spike_spent.glb",
-      "bytes": 79952,
-      "tris": 792,
+      "bytes": 196260,
+      "tris": 5976,
       "parts": 36,
       "bounds": {
         "min": [
@@ -7041,8 +7272,8 @@
     },
     {
       "file": "trap_tar_full.glb",
-      "bytes": 47556,
-      "tris": 808,
+      "bytes": 166608,
+      "tris": 5960,
       "parts": 19,
       "bounds": {
         "min": [
@@ -7062,8 +7293,8 @@
     },
     {
       "file": "trap_tar_depleted.glb",
-      "bytes": 38176,
-      "tris": 432,
+      "bytes": 108956,
+      "tris": 2672,
       "parts": 19,
       "bounds": {
         "min": [
@@ -7073,7 +7304,7 @@
         ],
         "max": [
           0.78,
-          0.13,
+          0.132,
           0.78
         ]
       },
@@ -7083,8 +7314,8 @@
     },
     {
       "file": "trap_launcher_charged.glb",
-      "bytes": 44836,
-      "tris": 588,
+      "bytes": 113032,
+      "tris": 3452,
       "parts": 23,
       "bounds": {
         "min": [
@@ -7094,7 +7325,7 @@
         ],
         "max": [
           0.78,
-          0.78,
+          0.791,
           0.78
         ]
       },
@@ -7104,8 +7335,8 @@
     },
     {
       "file": "trap_launcher_fired.glb",
-      "bytes": 44964,
-      "tris": 588,
+      "bytes": 113152,
+      "tris": 3452,
       "parts": 23,
       "bounds": {
         "min": [
@@ -7125,8 +7356,8 @@
     },
     {
       "file": "trap_launcher_rearming.glb",
-      "bytes": 44496,
-      "tris": 588,
+      "bytes": 112688,
+      "tris": 3452,
       "parts": 23,
       "bounds": {
         "min": [
@@ -7136,7 +7367,7 @@
         ],
         "max": [
           0.78,
-          0.78,
+          0.791,
           0.78
         ]
       },
@@ -7146,18 +7377,18 @@
     },
     {
       "file": "proj_lance_bolt.glb",
-      "bytes": 5968,
-      "tris": 48,
+      "bytes": 14944,
+      "tris": 448,
       "parts": 2,
       "bounds": {
         "min": [
-          -0.045,
-          -0.045,
+          -0.035,
+          -0.035,
           -0.48
         ],
         "max": [
-          0.045,
-          0.045,
+          0.035,
+          0.035,
           0.375
         ]
       },
@@ -7167,18 +7398,18 @@
     },
     {
       "file": "proj_lance_bolt_t2.glb",
-      "bytes": 11852,
-      "tris": 84,
+      "bytes": 35352,
+      "tris": 628,
       "parts": 5,
       "bounds": {
         "min": [
-          -0.045,
-          -0.072,
+          -0.047,
+          -0.075,
           -0.555
         ],
         "max": [
-          0.08,
-          0.072,
+          0.082,
+          0.075,
           0.45
         ]
       },
@@ -7188,8 +7419,8 @@
     },
     {
       "file": "proj_lance_bolt_t3.glb",
-      "bytes": 17836,
-      "tris": 276,
+      "bytes": 63644,
+      "tris": 1780,
       "parts": 6,
       "bounds": {
         "min": [
@@ -7209,18 +7440,18 @@
     },
     {
       "file": "proj_skywatch_bolt.glb",
-      "bytes": 6024,
-      "tris": 48,
+      "bytes": 15004,
+      "tris": 448,
       "parts": 2,
       "bounds": {
         "min": [
-          -0.078,
-          -0.078,
+          -0.06,
+          -0.06,
           -0.34
         ],
         "max": [
-          0.078,
-          0.078,
+          0.06,
+          0.06,
           0.16
         ]
       },
@@ -7230,18 +7461,18 @@
     },
     {
       "file": "proj_skywatch_bolt_t2.glb",
-      "bytes": 11848,
-      "tris": 84,
+      "bytes": 35348,
+      "tris": 628,
       "parts": 5,
       "bounds": {
         "min": [
-          -0.078,
-          -0.124,
+          -0.081,
+          -0.128,
           -0.36
         ],
         "max": [
-          0.138,
-          0.124,
+          0.141,
+          0.128,
           0.18
         ]
       },
@@ -7251,8 +7482,8 @@
     },
     {
       "file": "proj_skywatch_bolt_t3.glb",
-      "bytes": 17880,
-      "tris": 276,
+      "bytes": 63688,
+      "tris": 1780,
       "parts": 6,
       "bounds": {
         "min": [
@@ -7272,8 +7503,8 @@
     },
     {
       "file": "proj_nova_shell.glb",
-      "bytes": 16508,
-      "tris": 296,
+      "bytes": 52904,
+      "tris": 1920,
       "parts": 4,
       "bounds": {
         "min": [
@@ -7293,8 +7524,8 @@
     },
     {
       "file": "proj_nova_shell_t2.glb",
-      "bytes": 22776,
-      "tris": 488,
+      "bytes": 81416,
+      "tris": 3072,
       "parts": 5,
       "bounds": {
         "min": [
@@ -7314,8 +7545,8 @@
     },
     {
       "file": "proj_nova_shell_t3.glb",
-      "bytes": 33256,
-      "tris": 728,
+      "bytes": 138280,
+      "tris": 5232,
       "parts": 8,
       "bounds": {
         "min": [
@@ -7355,9 +7586,30 @@
       "note": "A unit-length jagged beam along −Z with empty nodes `arc_beam_source`, `arc_beam_target`, `arc_beam_hop`. The client scales Z to the hit distance and instances a second copy for the hop."
     },
     {
+      "file": "proj_filament_beam.glb",
+      "bytes": 41956,
+      "tris": 1344,
+      "parts": 5,
+      "bounds": {
+        "min": [
+          -0.068,
+          -0.068,
+          -1.005
+        ],
+        "max": [
+          0.068,
+          0.068,
+          0.004
+        ]
+      },
+      "kind": "projectile",
+      "id": "proj_filament_beam",
+      "note": "A unit-length continuous beam along −Z: a thin white-hot core, a red sheath that the client brightens as heat ramps (drive `filament_beam_ramp` emissive 0.3 → 2.0), a coil of three helix strands that spin while firing, and `filament_beam_source` / `filament_beam_target` nodes. Scale Z to the hit distance every frame."
+    },
+    {
       "file": "vfx_muzzle_lance.glb",
-      "bytes": 19940,
-      "tris": 312,
+      "bytes": 47224,
+      "tris": 1512,
       "parts": 7,
       "bounds": {
         "min": [
@@ -7377,7 +7629,7 @@
     },
     {
       "file": "vfx_impact_lance.glb",
-      "bytes": 18160,
+      "bytes": 17752,
       "tris": 84,
       "parts": 9,
       "bounds": {
@@ -7398,8 +7650,8 @@
     },
     {
       "file": "vfx_muzzle_nova.glb",
-      "bytes": 25396,
-      "tris": 336,
+      "bytes": 52496,
+      "tris": 1536,
       "parts": 10,
       "bounds": {
         "min": [
@@ -7419,7 +7671,7 @@
     },
     {
       "file": "vfx_impact_nova.glb",
-      "bytes": 28268,
+      "bytes": 27688,
       "tris": 164,
       "parts": 14,
       "bounds": {
@@ -7440,8 +7692,8 @@
     },
     {
       "file": "vfx_muzzle_arc.glb",
-      "bytes": 16296,
-      "tris": 296,
+      "bytes": 43684,
+      "tris": 1496,
       "parts": 5,
       "bounds": {
         "min": [
@@ -7461,7 +7713,7 @@
     },
     {
       "file": "vfx_impact_arc.glb",
-      "bytes": 18168,
+      "bytes": 17760,
       "tris": 84,
       "parts": 9,
       "bounds": {
@@ -7482,8 +7734,8 @@
     },
     {
       "file": "vfx_muzzle_skywatch.glb",
-      "bytes": 19992,
-      "tris": 312,
+      "bytes": 47276,
+      "tris": 1512,
       "parts": 7,
       "bounds": {
         "min": [
@@ -7503,7 +7755,7 @@
     },
     {
       "file": "vfx_impact_skywatch.glb",
-      "bytes": 18216,
+      "bytes": 17808,
       "tris": 84,
       "parts": 9,
       "bounds": {
@@ -7524,229 +7776,229 @@
     },
     {
       "file": "weapon_sidearm_vm.glb",
-      "bytes": 111820,
-      "tris": 1104,
-      "parts": 53,
+      "bytes": 2426780,
+      "tris": 68232,
+      "parts": 175,
       "bounds": {
         "min": [
-          -0.02,
-          -0.106,
-          -0.158
+          -0.019,
+          -0.123,
+          -0.16
         ],
         "max": [
           0.019,
-          0.086,
-          0.064
+          0.08,
+          0.069
         ]
       },
       "kind": "weapon",
       "id": "sidearm",
-      "note": "The starter, never taken away. A compact service pistol: serrated slide, exposed hammer, round-count lamp on the slide, and a full 7-slot rail set so even the free gun is a build."
+      "note": "The starter, never taken away. Striker-fired micro-compact after the reference: tall flat-sided slide with a chamfered top rib, wide angled cocking serrations front and rear, twin slanted lightening ports ahead of the ejection port with the barrel visible through them, loaded-chamber window, blacked-out high-profile sights. One-piece polymer frame with a deep beavertail, squared undercut trigger guard with a forward hook, flat-faced trigger with a blade safety, slide stop and takedown levers, an accessory rail, stippled grip panels with a raised palm swell and a forward-lipped baseplate. Seven mounts, so even the free gun is a build."
     },
     {
       "file": "weapon_rifle_vm.glb",
-      "bytes": 200620,
-      "tris": 1976,
-      "parts": 98,
+      "bytes": 2163232,
+      "tris": 37196,
+      "parts": 197,
       "bounds": {
         "min": [
-          -0.029,
-          -0.138,
-          -0.533
+          -0.026,
+          -0.192,
+          -0.572
         ],
         "max": [
-          0.025,
-          0.108,
-          0.24
+          0.027,
+          0.098,
+          0.284
         ]
       },
       "kind": "weapon",
       "id": "rifle",
-      "note": "Hitscan priority tool. Long fluted barrel with gas block, slotted handguard, charging handle, curved magazine and a full stock. The mark alt-fire is telegraphed by the designator lamp above the ejection port."
+      "note": "Hitscan priority tool, after the reference: a bronze-anodised AR-pattern carbine. Flat-top upper with a continuous top rail and brass deflector, forward assist and dust cover; matching lower with a flared magwell, bilateral selector, bolt catch and an oversized trigger guard. Long slim octagonal free-float handguard with M-LOK slots on every face and a vented cap, three anti-rotation screws at the root, a birdcage flash hider on the bare barrel. Ribbed 30-round polymer magazine with a floorplate, skeletonised collapsible stock with a sling loop and rubber pad. Designator lamp above the port telegraphs the mark alt-fire."
     },
     {
       "file": "weapon_scattergun_vm.glb",
-      "bytes": 177664,
-      "tris": 1916,
-      "parts": 72,
+      "bytes": 1237088,
+      "tris": 20132,
+      "parts": 109,
       "bounds": {
         "min": [
-          -0.034,
-          -0.106,
-          -0.483
+          -0.024,
+          -0.116,
+          -0.538
         ],
         "max": [
-          0.023,
-          0.096,
-          0.23
+          0.042,
+          0.116,
+          0.296
         ]
       },
       "kind": "weapon",
       "id": "scattergun",
-      "note": "Pump-action panic weapon for the perch. Fat bore, perforated heat shield, tube magazine under the barrel, ribbed pump, side saddle of brass shells, and a short stock with a thick recoil pad."
+      "note": "Panic weapon for the perch, after the reference: a semi-auto tactical shotgun. Tall boxed receiver with a short top rail and a ghost-ring rear sight, bolt handle and carrier proud of the ejection port, cross-bolt safety in the guard, shell lifter under the loading port. The `_magazine` group is the long tube under the barrel with its knurled cap, barrel clamp and the ribbed cylindrical forend (a drum replaces all of it and hangs from the port). The `_barrel` group carries the barrel, its front-sight tower with a fibre bead and the muzzle mount. Pistol grip into a solid fixed stock with a sling slot and a thick pad."
     },
     {
       "file": "weapon_emberpistol_vm.glb",
-      "bytes": 171860,
-      "tris": 2276,
-      "parts": 70,
+      "bytes": 1113468,
+      "tris": 20532,
+      "parts": 72,
       "bounds": {
         "min": [
-          -0.025,
-          -0.106,
-          -0.213
+          -0.024,
+          -0.123,
+          -0.221
         ],
         "max": [
-          0.034,
-          0.086,
-          0.105
+          0.037,
+          0.092,
+          0.106
         ]
       },
       "kind": "weapon",
       "id": "emberpistol",
-      "note": "The shooter's half of Thermal Shock. A fuel-fed hand cannon: glowing ember canister behind the frame, braided hose, finned vented shroud, pilot flame at the muzzle and a thermal gauge on the slide."
+      "note": "The shooter's half of Thermal Shock. A fuel-fed hand cannon: brushed-steel ember canister behind the frame with a glowing sight-glass ring and hazard bands, top valve wheel, braided hose into the frame, turned shroud with hex heat fins, pilot flame under the muzzle, thermal readout on the right of the upper."
     },
     {
       "file": "weapon_wrench_vm.glb",
-      "bytes": 99652,
-      "tris": 2304,
-      "parts": 35,
+      "bytes": 1136792,
+      "tris": 18120,
+      "parts": 33,
       "bounds": {
         "min": [
-          -0.041,
-          -0.01,
-          -0.275
+          -0.027,
+          -0.066,
+          -0.308
         ],
         "max": [
-          0.031,
-          0.125,
-          0.15
+          0.027,
+          0.119,
+          0.125
         ]
       },
       "kind": "weapon",
       "id": "wrench",
-      "note": "Powered repair wrench: long rubber-wrapped handle, adjustable jaw with a worm gear, a compact drive motor with cooling slots, hazard band, and a repair-status lamp that reads green when a structure is topped up. Origin at the grip."
+      "note": "Powered repair wrench: turned aluminium handle in a grooved rubber overmould, polymer motor housing with vent slots and a hazard band, vertical foregrip, forged head with a fixed upper jaw and worm-driven lower jaw, scanner glow in the gap, repair-status lamp that reads green when a structure is topped up. Origin at the grip."
     },
     {
       "file": "hands_firstperson.glb",
-      "bytes": 81832,
-      "tris": 1120,
-      "parts": 32,
+      "bytes": 1002176,
+      "tris": 25676,
+      "parts": 61,
       "bounds": {
         "min": [
-          -0.07,
-          -0.09,
-          -0.33
+          -0.121,
+          -0.13,
+          -0.374
         ],
         "max": [
-          0.164,
-          0.055,
-          0.315
+          0.089,
+          0.11,
+          0.34
         ]
       },
       "kind": "weapon",
       "id": "hands",
-      "note": "Base gloved forearms; pose per platform (weapon.handsPose): rifle two-hand,  pistol cup, tool grip. Rifle pose: right hand closed on the grip at the origin, left hand forward under the handguard. Segmented finger boxes, knuckle plates, wrist cuffs and rolled sleeves; faction variants swap the plates."
+      "note": "Base gloved forearms, posed per platform (weapon.handsPose). Fingers are capsule bone chains that actually wrap the grip — three fingers closed on the front strap, index on the trigger, thumb over the backstrap — with knuckle plates, wrist cuffs and rolled sleeves. Rifle: support hand C-clamps the handguard. Pistol: support hand cups the firing hand. Tool: right hand on the handle, left on the foregrip. Faction variants swap the plates."
     },
     {
       "file": "weapon_sidearm_world.glb",
-      "bytes": 111820,
-      "tris": 1104,
-      "parts": 53,
+      "bytes": 2426784,
+      "tris": 68232,
+      "parts": 175,
       "bounds": {
         "min": [
-          -0.02,
-          -0.106,
-          -0.158
+          -0.019,
+          -0.123,
+          -0.16
         ],
         "max": [
           0.019,
-          0.086,
-          0.064
+          0.08,
+          0.069
         ]
       },
       "kind": "weapon_world",
       "id": "sidearm_world",
-      "note": "The starter, never taken away. A compact service pistol: serrated slide, exposed hammer, round-count lamp on the slide, and a full 7-slot rail set so even the free gun is a build."
+      "note": "The starter, never taken away. Striker-fired micro-compact after the reference: tall flat-sided slide with a chamfered top rib, wide angled cocking serrations front and rear, twin slanted lightening ports ahead of the ejection port with the barrel visible through them, loaded-chamber window, blacked-out high-profile sights. One-piece polymer frame with a deep beavertail, squared undercut trigger guard with a forward hook, flat-faced trigger with a blade safety, slide stop and takedown levers, an accessory rail, stippled grip panels with a raised palm swell and a forward-lipped baseplate. Seven mounts, so even the free gun is a build."
     },
     {
       "file": "weapon_rifle_world.glb",
-      "bytes": 200624,
-      "tris": 1976,
-      "parts": 98,
+      "bytes": 2163236,
+      "tris": 37196,
+      "parts": 197,
       "bounds": {
         "min": [
-          -0.029,
-          -0.138,
-          -0.533
+          -0.026,
+          -0.192,
+          -0.572
         ],
         "max": [
-          0.025,
-          0.108,
-          0.24
+          0.027,
+          0.098,
+          0.284
         ]
       },
       "kind": "weapon_world",
       "id": "rifle_world",
-      "note": "Hitscan priority tool. Long fluted barrel with gas block, slotted handguard, charging handle, curved magazine and a full stock. The mark alt-fire is telegraphed by the designator lamp above the ejection port."
+      "note": "Hitscan priority tool, after the reference: a bronze-anodised AR-pattern carbine. Flat-top upper with a continuous top rail and brass deflector, forward assist and dust cover; matching lower with a flared magwell, bilateral selector, bolt catch and an oversized trigger guard. Long slim octagonal free-float handguard with M-LOK slots on every face and a vented cap, three anti-rotation screws at the root, a birdcage flash hider on the bare barrel. Ribbed 30-round polymer magazine with a floorplate, skeletonised collapsible stock with a sling loop and rubber pad. Designator lamp above the port telegraphs the mark alt-fire."
     },
     {
       "file": "weapon_scattergun_world.glb",
-      "bytes": 177668,
-      "tris": 1916,
-      "parts": 72,
+      "bytes": 1237088,
+      "tris": 20132,
+      "parts": 109,
       "bounds": {
         "min": [
-          -0.034,
-          -0.106,
-          -0.483
+          -0.024,
+          -0.116,
+          -0.538
         ],
         "max": [
-          0.023,
-          0.096,
-          0.23
+          0.042,
+          0.116,
+          0.296
         ]
       },
       "kind": "weapon_world",
       "id": "scattergun_world",
-      "note": "Pump-action panic weapon for the perch. Fat bore, perforated heat shield, tube magazine under the barrel, ribbed pump, side saddle of brass shells, and a short stock with a thick recoil pad."
+      "note": "Panic weapon for the perch, after the reference: a semi-auto tactical shotgun. Tall boxed receiver with a short top rail and a ghost-ring rear sight, bolt handle and carrier proud of the ejection port, cross-bolt safety in the guard, shell lifter under the loading port. The `_magazine` group is the long tube under the barrel with its knurled cap, barrel clamp and the ribbed cylindrical forend (a drum replaces all of it and hangs from the port). The `_barrel` group carries the barrel, its front-sight tower with a fibre bead and the muzzle mount. Pistol grip into a solid fixed stock with a sling slot and a thick pad."
     },
     {
       "file": "weapon_emberpistol_world.glb",
-      "bytes": 171864,
-      "tris": 2276,
-      "parts": 70,
+      "bytes": 1113472,
+      "tris": 20532,
+      "parts": 72,
       "bounds": {
         "min": [
-          -0.025,
-          -0.106,
-          -0.213
+          -0.024,
+          -0.123,
+          -0.221
         ],
         "max": [
-          0.034,
-          0.086,
-          0.105
+          0.037,
+          0.092,
+          0.106
         ]
       },
       "kind": "weapon_world",
       "id": "emberpistol_world",
-      "note": "The shooter's half of Thermal Shock. A fuel-fed hand cannon: glowing ember canister behind the frame, braided hose, finned vented shroud, pilot flame at the muzzle and a thermal gauge on the slide."
+      "note": "The shooter's half of Thermal Shock. A fuel-fed hand cannon: brushed-steel ember canister behind the frame with a glowing sight-glass ring and hazard bands, top valve wheel, braided hose into the frame, turned shroud with hex heat fins, pilot flame under the muzzle, thermal readout on the right of the upper."
     },
     {
       "file": "hero_forge.glb",
-      "bytes": 295520,
-      "tris": 4848,
+      "bytes": 849696,
+      "tris": 21352,
       "parts": 125,
       "bounds": {
         "min": [
-          -0.434,
-          -0.01,
-          -0.325
+          -0.448,
+          -0.018,
+          -0.328
         ],
         "max": [
           0.448,
           1.878,
-          0.373
+          0.38
         ]
       },
       "kind": "hero",
@@ -7755,19 +8007,19 @@
     },
     {
       "file": "hero_forge_downed.glb",
-      "bytes": 297064,
-      "tris": 4848,
+      "bytes": 851240,
+      "tris": 21352,
       "parts": 125,
       "bounds": {
         "min": [
-          -0.434,
-          -0.066,
-          -0.905
+          -0.448,
+          -0.068,
+          -0.915
         ],
         "max": [
           0.482,
-          0.816,
-          1.07
+          0.819,
+          1.072
         ]
       },
       "kind": "hero",
@@ -7776,18 +8028,18 @@
     },
     {
       "file": "hero_forge_revive.glb",
-      "bytes": 296676,
-      "tris": 4848,
+      "bytes": 850852,
+      "tris": 21352,
       "parts": 125,
       "bounds": {
         "min": [
-          -0.434,
-          -0.013,
-          -0.667
+          -0.448,
+          -0.018,
+          -0.67
         ],
         "max": [
           0.448,
-          1.478,
+          1.482,
           0.63
         ]
       },
@@ -7797,19 +8049,19 @@
     },
     {
       "file": "hero_ember.glb",
-      "bytes": 314076,
-      "tris": 5390,
+      "bytes": 970484,
+      "tris": 26816,
       "parts": 111,
       "bounds": {
         "min": [
-          -0.434,
-          -0.01,
+          -0.448,
+          -0.018,
           -0.37
         ],
         "max": [
           0.448,
           1.905,
-          0.302
+          0.304
         ]
       },
       "kind": "hero",
@@ -7818,19 +8070,19 @@
     },
     {
       "file": "hero_ember_downed.glb",
-      "bytes": 315504,
-      "tris": 5390,
+      "bytes": 971912,
+      "tris": 26816,
       "parts": 111,
       "bounds": {
         "min": [
-          -0.434,
-          -0.066,
-          -0.905
+          -0.448,
+          -0.068,
+          -0.915
         ],
         "max": [
           0.495,
-          0.816,
-          1.07
+          0.819,
+          1.072
         ]
       },
       "kind": "hero",
@@ -7839,18 +8091,18 @@
     },
     {
       "file": "hero_ember_revive.glb",
-      "bytes": 315132,
-      "tris": 5390,
+      "bytes": 971540,
+      "tris": 26816,
       "parts": 111,
       "bounds": {
         "min": [
-          -0.434,
-          -0.013,
+          -0.448,
+          -0.018,
           -0.73
         ],
         "max": [
           0.448,
-          1.478,
+          1.481,
           0.63
         ]
       },
@@ -7860,14 +8112,14 @@
     },
     {
       "file": "hero_tempest.glb",
-      "bytes": 313668,
-      "tris": 5584,
+      "bytes": 947468,
+      "tris": 25856,
       "parts": 116,
       "bounds": {
         "min": [
-          -0.434,
-          -0.01,
-          -0.333
+          -0.448,
+          -0.018,
+          -0.334
         ],
         "max": [
           0.448,
@@ -7881,18 +8133,18 @@
     },
     {
       "file": "hero_tempest_downed.glb",
-      "bytes": 315116,
-      "tris": 5584,
+      "bytes": 948916,
+      "tris": 25856,
       "parts": 116,
       "bounds": {
         "min": [
-          -0.434,
-          -0.066,
-          -0.905
+          -0.448,
+          -0.068,
+          -0.915
         ],
         "max": [
           0.482,
-          0.816,
+          0.819,
           1.208
         ]
       },
@@ -7902,13 +8154,13 @@
     },
     {
       "file": "hero_tempest_revive.glb",
-      "bytes": 314728,
-      "tris": 5584,
+      "bytes": 948528,
+      "tris": 25856,
       "parts": 116,
       "bounds": {
         "min": [
-          -0.434,
-          -0.013,
+          -0.448,
+          -0.018,
           -0.681
         ],
         "max": [
@@ -7922,20 +8174,146 @@
       "note": "The striker. Slim violet plates, capacitor fin stack down the spine, antenna mast with rings, wired capacitors, arc-gap electrodes on the right gauntlet, wide visor and swept horns. Revive crouch: one knee down, hands forward and low over the ally. Sits ~0.6 m in front of the downed origin."
     },
     {
-      "file": "hands_forge.glb",
-      "bytes": 96624,
-      "tris": 1384,
-      "parts": 41,
+      "file": "hero_glacier.glb",
+      "bytes": 941968,
+      "tris": 25786,
+      "parts": 111,
       "bounds": {
         "min": [
-          -0.07,
-          -0.09,
-          -0.33
+          -0.448,
+          -0.018,
+          -0.328
         ],
         "max": [
-          0.164,
-          0.09,
-          0.315
+          0.448,
+          1.94,
+          0.44
+        ]
+      },
+      "kind": "hero",
+      "id": "hero_glacier",
+      "note": "The controller. Frosted dewar backpack with a sight-glass ring and cryo core, coolant coils to both bracers, pale rimed plates, frost-crystal pauldron spikes, a full frosted visor with a cold glow line."
+    },
+    {
+      "file": "hero_glacier_downed.glb",
+      "bytes": 943376,
+      "tris": 25786,
+      "parts": 111,
+      "bounds": {
+        "min": [
+          -0.448,
+          -0.088,
+          -0.915
+        ],
+        "max": [
+          0.482,
+          0.819,
+          1.072
+        ]
+      },
+      "kind": "hero",
+      "id": "hero_glacier_downed",
+      "note": "The controller. Frosted dewar backpack with a sight-glass ring and cryo core, coolant coils to both bracers, pale rimed plates, frost-crystal pauldron spikes, a full frosted visor with a cold glow line. Downed: on the back, head toward +Z, one knee up, right arm reaching for a revive — the pose that says \"hold R\"."
+    },
+    {
+      "file": "hero_glacier_revive.glb",
+      "bytes": 942988,
+      "tris": 25786,
+      "parts": 111,
+      "bounds": {
+        "min": [
+          -0.448,
+          -0.018,
+          -0.67
+        ],
+        "max": [
+          0.448,
+          1.472,
+          0.63
+        ]
+      },
+      "kind": "hero",
+      "id": "hero_glacier_revive",
+      "note": "The controller. Frosted dewar backpack with a sight-glass ring and cryo core, coolant coils to both bracers, pale rimed plates, frost-crystal pauldron spikes, a full frosted visor with a cold glow line. Revive crouch: one knee down, hands forward and low over the ally. Sits ~0.6 m in front of the downed origin."
+    },
+    {
+      "file": "hero_specter.glb",
+      "bytes": 839964,
+      "tris": 21028,
+      "parts": 107,
+      "bounds": {
+        "min": [
+          -0.448,
+          -0.018,
+          -0.328
+        ],
+        "max": [
+          0.448,
+          2.067,
+          0.21
+        ]
+      },
+      "kind": "hero",
+      "id": "hero_specter",
+      "note": "The scout. Dark plates with violet seam lines, a scanner mast with a rotating dish, a half-cloak of void veil off the left shoulder, a four-lens targeting visor, a wrist scanner. Sees what towers cannot."
+    },
+    {
+      "file": "hero_specter_downed.glb",
+      "bytes": 841344,
+      "tris": 21028,
+      "parts": 107,
+      "bounds": {
+        "min": [
+          -0.448,
+          -0.068,
+          -0.915
+        ],
+        "max": [
+          0.482,
+          0.819,
+          1.193
+        ]
+      },
+      "kind": "hero",
+      "id": "hero_specter_downed",
+      "note": "The scout. Dark plates with violet seam lines, a scanner mast with a rotating dish, a half-cloak of void veil off the left shoulder, a four-lens targeting visor, a wrist scanner. Sees what towers cannot. Downed: on the back, head toward +Z, one knee up, right arm reaching for a revive — the pose that says \"hold R\"."
+    },
+    {
+      "file": "hero_specter_revive.glb",
+      "bytes": 840956,
+      "tris": 21028,
+      "parts": 107,
+      "bounds": {
+        "min": [
+          -0.448,
+          -0.018,
+          -0.67
+        ],
+        "max": [
+          0.448,
+          1.628,
+          0.63
+        ]
+      },
+      "kind": "hero",
+      "id": "hero_specter_revive",
+      "note": "The scout. Dark plates with violet seam lines, a scanner mast with a rotating dish, a half-cloak of void veil off the left shoulder, a four-lens targeting visor, a wrist scanner. Sees what towers cannot. Revive crouch: one knee down, hands forward and low over the ally. Sits ~0.6 m in front of the downed origin."
+    },
+    {
+      "file": "hands_forge.glb",
+      "bytes": 1060384,
+      "tris": 27164,
+      "parts": 70,
+      "bounds": {
+        "min": [
+          -0.123,
+          -0.13,
+          -0.374
+        ],
+        "max": [
+          0.089,
+          0.114,
+          0.34
         ]
       },
       "kind": "hero",
@@ -7944,19 +8322,19 @@
     },
     {
       "file": "hands_ember.glb",
-      "bytes": 97708,
-      "tris": 1448,
-      "parts": 37,
+      "bytes": 1037412,
+      "tris": 26196,
+      "parts": 66,
       "bounds": {
         "min": [
-          -0.07,
-          -0.09,
-          -0.33
+          -0.121,
+          -0.13,
+          -0.374
         ],
         "max": [
-          0.164,
-          0.055,
-          0.315
+          0.089,
+          0.11,
+          0.365
         ]
       },
       "kind": "hero",
@@ -7965,19 +8343,19 @@
     },
     {
       "file": "hands_tempest.glb",
-      "bytes": 100076,
-      "tris": 1384,
-      "parts": 39,
+      "bytes": 1064076,
+      "tris": 27116,
+      "parts": 68,
       "bounds": {
         "min": [
-          -0.07,
-          -0.09,
-          -0.33
+          -0.121,
+          -0.13,
+          -0.374
         ],
         "max": [
-          0.164,
-          0.055,
-          0.315
+          0.089,
+          0.11,
+          0.34
         ]
       },
       "kind": "hero",
@@ -7985,9 +8363,51 @@
       "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, capacitor ring and arc electrodes on the right cuff."
     },
     {
+      "file": "hands_glacier.glb",
+      "bytes": 1113980,
+      "tris": 29372,
+      "parts": 68,
+      "bounds": {
+        "min": [
+          -0.121,
+          -0.13,
+          -0.374
+        ],
+        "max": [
+          0.089,
+          0.11,
+          0.34
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_glacier",
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, frosted coolant coil around the right cuff."
+    },
+    {
+      "file": "hands_specter.glb",
+      "bytes": 1042484,
+      "tris": 26036,
+      "parts": 67,
+      "bounds": {
+        "min": [
+          -0.121,
+          -0.13,
+          -0.374
+        ],
+        "max": [
+          0.089,
+          0.11,
+          0.34
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_specter",
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, wrist scanner screen on the left cuff."
+    },
+    {
       "file": "ui_nameplate.glb",
-      "bytes": 20152,
-      "tris": 192,
+      "bytes": 60596,
+      "tris": 1072,
       "parts": 8,
       "bounds": {
         "min": [
@@ -8007,40 +8427,40 @@
     },
     {
       "file": "foundry_terrain.glb",
-      "bytes": 6464,
-      "tris": 200,
-      "parts": 1,
+      "bytes": 3063832,
+      "tris": 3774,
+      "parts": 26,
       "bounds": {
         "min": [
           -10,
-          -0.118,
+          -0.113,
           -10
         ],
         "max": [
           10,
-          0.118,
+          0.27,
           10
         ]
       },
       "kind": "map_foundry",
       "id": "foundry_terrain",
-      "note": "Tileable slag ground: 10×10 displaced grid, relief ±0.15 m, flat edges so tiles seam. Instance on a 20 m grid under the whole 110×80 playfield; the roadway kit sits 6 cm above it. Boulders and lava cracks are `foundry_terrain_scatter`, placed clear of routes and sockets."
+      "note": "Tileable cast-iron floor: 8×8 riveted plates baked into a 1024² albedo/roughness/normal set (soot, rust bleed, scorch rings, tread ridges, stencilled bay numbers) with an emissive map for the seams still running molten. Four variants (rotation + a different set of physical details: drain grates, access hatch, conduit, cooled slag pool) so the 24-tile grid never repeats visibly. Flat edges so tiles seam."
     },
     {
       "file": "foundry_terrain_scatter.glb",
-      "bytes": 26748,
-      "tris": 204,
+      "bytes": 36460,
+      "tris": 300,
       "parts": 7,
       "bounds": {
         "min": [
           -2.561,
           -0.69,
-          -2.789
+          -2.793
         ],
         "max": [
           2.847,
           1.365,
-          2.351
+          2.354
         ]
       },
       "kind": "map_foundry",
@@ -8049,18 +8469,18 @@
     },
     {
       "file": "foundry_path_ground.glb",
-      "bytes": 54596,
-      "tris": 516,
+      "bytes": 134488,
+      "tris": 1236,
       "parts": 33,
       "bounds": {
         "min": [
-          -2,
-          -0.01,
+          -2.029,
+          -0.032,
           -1.875
         ],
         "max": [
-          2,
-          0.19,
+          2.029,
+          0.209,
           1.86
         ]
       },
@@ -8070,18 +8490,18 @@
     },
     {
       "file": "foundry_deck.glb",
-      "bytes": 53152,
-      "tris": 440,
+      "bytes": 178596,
+      "tris": 2136,
       "parts": 27,
       "bounds": {
         "min": [
-          -2,
+          -2.036,
           5.33,
           -5
         ],
         "max": [
-          2,
-          6.035,
+          2.036,
+          6.04,
           5.27
         ]
       },
@@ -8091,18 +8511,18 @@
     },
     {
       "file": "foundry_deck_rail.glb",
-      "bytes": 18388,
-      "tris": 220,
+      "bytes": 55568,
+      "tris": 1036,
       "parts": 15,
       "bounds": {
         "min": [
-          -2.02,
-          0,
+          -2.027,
+          -0.018,
           -0.12
         ],
         "max": [
-          2.02,
-          1.1,
+          2.027,
+          1.118,
           0.12
         ]
       },
@@ -8112,18 +8532,18 @@
     },
     {
       "file": "foundry_pillar.glb",
-      "bytes": 41932,
-      "tris": 712,
+      "bytes": 84924,
+      "tris": 1096,
       "parts": 23,
       "bounds": {
         "min": [
-          -0.9,
-          0,
+          -0.954,
+          -0.054,
           -0.9
         ],
         "max": [
-          0.9,
-          5.8,
+          0.954,
+          5.854,
           0.9
         ]
       },
@@ -8133,18 +8553,18 @@
     },
     {
       "file": "foundry_vent_tunnel.glb",
-      "bytes": 73296,
-      "tris": 720,
+      "bytes": 247604,
+      "tris": 3120,
       "parts": 55,
       "bounds": {
         "min": [
-          -1.93,
-          0,
+          -1.97,
+          -0.045,
           -7.005
         ],
         "max": [
-          1.93,
-          1.68,
+          1.97,
+          1.69,
           7.005
         ]
       },
@@ -8154,76 +8574,76 @@
     },
     {
       "file": "foundry_wall_boundary.glb",
-      "bytes": 38656,
-      "tris": 252,
-      "parts": 21,
+      "bytes": 1889684,
+      "tris": 4368,
+      "parts": 52,
       "bounds": {
         "min": [
-          -5.4,
-          0,
-          -0.75
+          -6.018,
+          -0.09,
+          -0.8
         ],
         "max": [
-          5.4,
-          6.3,
-          1.45
+          6.018,
+          6.63,
+          1.968
         ]
       },
       "kind": "map_foundry",
       "id": "foundry_wall_boundary",
-      "note": "Refractory brick wall with a steel cap rail, buttresses every 5 m, a slag chute stain, and one furnace window glowing molten. Repeat around the 110×80 m playfield."
+      "note": "Refractory brick wall on a baked 2.5 m brick set (stretcher courses, glazed and soot-blackened bricks, crazing, salt bloom, mortar joints in the normal map) with real geometry breaking the face: a stepped stone plinth, three battered buttresses with chamfered caps, a corbelled cornice under the steel cap rail, iron tie plates with bolt heads, spalled bricks standing proud, weep pipes, a slag-chute stain and one furnace window glowing molten. Repeat around the 110×80 m playfield."
     },
     {
       "file": "foundry_skybox.glb",
-      "bytes": 58020,
-      "tris": 1064,
-      "parts": 16,
+      "bytes": 9132884,
+      "tris": 3968,
+      "parts": 1,
       "bounds": {
         "min": [
-          -199.983,
-          -41.287,
-          -199.983
+          -700,
+          -700,
+          -700
         ],
         "max": [
-          199.983,
-          190,
-          199.983
+          700,
+          700,
+          700
         ]
       },
       "kind": "map_foundry",
       "id": "foundry_skybox",
-      "note": "Inverted 400 m dome: deep obsidian zenith with an ember-orange horizon band, a distant stack silhouette ring, and a slag-cloud ceiling. GLB stand-in for the HDR."
+      "note": "Realistic deep-space sky: black-body starfield in three magnitude layers, Milky Way band with dust lanes, faint nebulosity, sun disc with corona aligned to the key light, and a banded rust gas giant with soft terminator, Fresnel atmosphere and limb glow. Full sphere, unlit, fog-exempt. GLB stand-in for the HDR bake."
     },
     {
       "file": "foundry_dress_crucible.glb",
-      "bytes": 90272,
-      "tris": 1588,
-      "parts": 28,
+      "bytes": 680500,
+      "tris": 15512,
+      "parts": 83,
       "bounds": {
         "min": [
-          -2.8,
-          0,
-          -3.5
+          -3.106,
+          -0.525,
+          -9.599
         ],
         "max": [
-          2.8,
-          4.479,
-          1.923
+          3.178,
+          4.713,
+          2.092
         ]
       },
       "kind": "map_foundry",
       "id": "foundry_dress_crucible",
-      "note": "Tilting crucible on a trunnion frame with a molten surface, pour lip, slag crust rim and a drip. The map's biggest light source — place away from route sightlines."
+      "note": "Tilting crucible on a trunnion frame, caught mid-pour: a molten stream arcs from the lip into a channel of cooling slag and spreads into a puddle field — a hot core, orange skin, dark crust rims and cracked black slag at the edges — running 6 m out along −Z. The map's biggest light source; place with the pour side away from route sightlines."
     },
     {
       "file": "foundry_dress_pipes.glb",
-      "bytes": 106504,
-      "tris": 1520,
+      "bytes": 331172,
+      "tris": 10464,
       "parts": 32,
       "bounds": {
         "min": [
           -4,
-          -0.005,
+          -0.036,
           -1.1
         ],
         "max": [
@@ -8238,18 +8658,18 @@
     },
     {
       "file": "foundry_dress_gantry.glb",
-      "bytes": 71636,
-      "tris": 752,
+      "bytes": 251268,
+      "tris": 3968,
       "parts": 38,
       "bounds": {
         "min": [
-          -6.6,
-          -0.085,
+          -6.662,
+          -0.098,
           -1.6
         ],
         "max": [
-          6.6,
-          10.1,
+          6.662,
+          10.208,
           1.8
         ]
       },
@@ -8259,17 +8679,17 @@
     },
     {
       "file": "foundry_dress_lightrig.glb",
-      "bytes": 69480,
-      "tris": 708,
+      "bytes": 182240,
+      "tris": 2692,
       "parts": 36,
       "bounds": {
         "min": [
-          -1.6,
-          0,
+          -1.627,
+          -0.054,
           -0.6
         ],
         "max": [
-          1.6,
+          1.627,
           7.15,
           0.6
         ]
@@ -8280,61 +8700,61 @@
     },
     {
       "file": "foundry_dress_steamvent.glb",
-      "bytes": 48560,
-      "tris": 872,
-      "parts": 26,
+      "bytes": 333644,
+      "tris": 5732,
+      "parts": 37,
       "bounds": {
         "min": [
           -1.3,
           0,
-          -1.3
+          -2.294
         ],
         "max": [
-          1.3,
-          2.95,
+          2.219,
+          5.52,
           1.3
         ]
       },
       "kind": "map_foundry",
       "id": "foundry_dress_steamvent",
-      "note": "Floor vent: recessed grate in a riveted collar, a stub stack with a flap lid propped open, steam plume stand-in, scorch ring. Safe filler along the lane edges — it never rises above 1.5 m."
+      "note": "Floor vent: recessed grate in a riveted collar, a stub stack with a flap lid propped open, a layered steam plume (nine translucent puffs widening and thinning as they rise, sheared downwind, with a hot core at the mouth — the client swaps in particles), scorch ring. Safe filler along the lane edges — solid parts never rise above 1.5 m."
     },
     {
       "file": "switchyard_terrain.glb",
-      "bytes": 385448,
-      "tris": 2684,
-      "parts": 208,
+      "bytes": 6416724,
+      "tris": 13960,
+      "parts": 221,
       "bounds": {
         "min": [
-          -10,
-          -0.093,
+          -10.013,
+          -0.094,
           -10
         ],
         "max": [
-          10,
-          0.26,
+          10.013,
+          0.356,
           10
         ]
       },
       "kind": "map_switchyard",
       "id": "switchyard_terrain",
-      "note": "Tileable ballast ground with two disused sidings embedded along X and a drainage channel. Tiles seam flat. The \"three tiers\" of the brief are the yard (0 m), mid deck (5 m) and catwalk (10 m) structures placed on top."
+      "note": "Tileable ballast bed baked into a 1024² albedo/roughness/normal set (30k pebbles, oil, rust dust along the sidings, puddles with silt rims, faded yard markings, weeds at the margins) plus two disused sidings and a drain with grates. Four variants add standing water, weed tufts, a switch stand, a cable trough or dropped sleepers. The \"three tiers\" are the yard (0 m), mid deck (5 m) and catwalk (10 m) structures placed on top."
     },
     {
       "file": "switchyard_terrain_scatter.glb",
-      "bytes": 14164,
-      "tris": 90,
+      "bytes": 45620,
+      "tris": 488,
       "parts": 7,
       "bounds": {
         "min": [
-          -2.706,
-          0,
-          -1.356
+          -2.731,
+          -0.025,
+          -1.361
         ],
         "max": [
-          2.879,
+          1.933,
           0.8,
-          2.424
+          2.428
         ]
       },
       "kind": "map_switchyard",
@@ -8343,19 +8763,19 @@
     },
     {
       "file": "switchyard_cut_channel.glb",
-      "bytes": 84980,
-      "tris": 772,
+      "bytes": 286792,
+      "tris": 3892,
       "parts": 56,
       "bounds": {
         "min": [
-          -2,
-          -0.602,
-          -4.917
+          -2.162,
+          -0.74,
+          -5.002
         ],
         "max": [
-          2,
-          3.65,
-          4.917
+          2.162,
+          3.668,
+          5.002
         ]
       },
       "kind": "map_switchyard",
@@ -8364,18 +8784,18 @@
     },
     {
       "file": "switchyard_path_ground.glb",
-      "bytes": 55276,
-      "tris": 360,
+      "bytes": 200428,
+      "tris": 1800,
       "parts": 30,
       "bounds": {
         "min": [
-          -2,
-          0,
+          -2.029,
+          -0.018,
           -1.7
         ],
         "max": [
-          2,
-          0.77,
+          2.029,
+          0.788,
           1.7
         ]
       },
@@ -8385,17 +8805,17 @@
     },
     {
       "file": "switchyard_retainingwall.glb",
-      "bytes": 54352,
-      "tris": 436,
+      "bytes": 154576,
+      "tris": 1828,
       "parts": 26,
       "bounds": {
         "min": [
-          -5.15,
-          0,
+          -5.204,
+          -0.09,
           -0.45
         ],
         "max": [
-          5.15,
+          5.204,
           7.8,
           1.05
         ]
@@ -8406,18 +8826,18 @@
     },
     {
       "file": "switchyard_middeck.glb",
-      "bytes": 130056,
-      "tris": 1048,
+      "bytes": 393520,
+      "tris": 4024,
       "parts": 72,
       "bounds": {
         "min": [
-          -2,
-          -0.001,
+          -2.029,
+          -0.054,
           -4.1
         ],
         "max": [
-          2,
-          6.1,
+          2.029,
+          6.114,
           4.1
         ]
       },
@@ -8427,17 +8847,17 @@
     },
     {
       "file": "switchyard_catwalk.glb",
-      "bytes": 75480,
-      "tris": 792,
+      "bytes": 246176,
+      "tris": 4712,
       "parts": 48,
       "bounds": {
         "min": [
-          -2.202,
+          -2.211,
           9.005,
           -2.5
         ],
         "max": [
-          2.202,
+          2.211,
           11.135,
           2.5
         ]
@@ -8448,19 +8868,19 @@
     },
     {
       "file": "switchyard_column.glb",
-      "bytes": 62924,
-      "tris": 576,
+      "bytes": 217416,
+      "tris": 2112,
       "parts": 40,
       "bounds": {
         "min": [
-          -0.9,
-          0,
+          -0.99,
+          -0.09,
           -0.9
         ],
         "max": [
-          0.909,
-          9.8,
-          0.909
+          0.99,
+          9.854,
+          0.916
         ]
       },
       "kind": "map_switchyard",
@@ -8469,39 +8889,39 @@
     },
     {
       "file": "switchyard_skybox.glb",
-      "bytes": 57288,
-      "tris": 904,
-      "parts": 23,
+      "bytes": 9502376,
+      "tris": 3968,
+      "parts": 1,
       "bounds": {
         "min": [
-          -199.983,
-          -41.287,
-          -199.983
+          -700,
+          -700,
+          -700
         ],
         "max": [
-          199.983,
-          190,
-          199.983
+          700,
+          700,
+          700
         ]
       },
       "kind": "map_switchyard",
       "id": "switchyard_skybox",
-      "note": "Night yard: near-black zenith, sodium-orange horizon band, distant gantry and water-tower silhouettes. GLB stand-in for the HDR."
+      "note": "Realistic deep-space sky: black-body starfield in three magnitude layers, Milky Way band with dust lanes, faint nebulosity, sun disc with corona aligned to the key light, and a blue ice world with cloud decks with soft terminator, Fresnel atmosphere and limb glow. Full sphere, unlit, fog-exempt. GLB stand-in for the HDR bake."
     },
     {
       "file": "switchyard_dress_railcar.glb",
-      "bytes": 168928,
-      "tris": 1632,
+      "bytes": 519024,
+      "tris": 8376,
       "parts": 73,
       "bounds": {
         "min": [
-          -6.7,
+          -6.754,
           0,
           -1.57
         ],
         "max": [
-          6.7,
-          3.77,
+          6.754,
+          3.968,
           1.5
         ]
       },
@@ -8511,18 +8931,18 @@
     },
     {
       "file": "switchyard_dress_container.glb",
-      "bytes": 75228,
-      "tris": 520,
+      "bytes": 271892,
+      "tris": 2920,
       "parts": 40,
       "bounds": {
         "min": [
-          -3.05,
-          0,
+          -3.432,
+          -0.432,
           -1.26
         ],
         "max": [
-          3.08,
-          2.64,
+          3.432,
+          3.032,
           1.26
         ]
       },
@@ -8532,17 +8952,17 @@
     },
     {
       "file": "switchyard_dress_signaltower.glb",
-      "bytes": 89144,
-      "tris": 1428,
+      "bytes": 252940,
+      "tris": 6724,
       "parts": 31,
       "bounds": {
         "min": [
-          -0.6,
-          0,
+          -0.654,
+          -0.09,
           -0.6
         ],
         "max": [
-          2.05,
+          2.122,
           7.8,
           0.6
         ]
@@ -8553,19 +8973,19 @@
     },
     {
       "file": "switchyard_dress_buffer.glb",
-      "bytes": 37436,
-      "tris": 432,
+      "bytes": 116560,
+      "tris": 2576,
       "parts": 20,
       "bounds": {
         "min": [
-          -1.2,
-          0,
+          -1.225,
+          -0.025,
           -0.35
         ],
         "max": [
-          1.2,
+          1.225,
           2,
-          1.405
+          1.417
         ]
       },
       "kind": "map_switchyard",
@@ -8574,13 +8994,13 @@
     },
     {
       "file": "shared_ladder.glb",
-      "bytes": 111792,
-      "tris": 2056,
+      "bytes": 416280,
+      "tris": 14056,
       "parts": 48,
       "bounds": {
         "min": [
           -0.725,
-          0,
+          -0.011,
           -0.18
         ],
         "max": [
@@ -8595,17 +9015,17 @@
     },
     {
       "file": "shared_zipline_anchor.glb",
-      "bytes": 39312,
-      "tris": 780,
+      "bytes": 98768,
+      "tris": 2828,
       "parts": 18,
       "bounds": {
         "min": [
-          -0.45,
-          0,
-          -0.474
+          -0.468,
+          -0.018,
+          -0.478
         ],
         "max": [
-          0.645,
+          0.663,
           1.85,
           0.465
         ]
@@ -8616,8 +9036,8 @@
     },
     {
       "file": "shared_zipline_cable.glb",
-      "bytes": 48108,
-      "tris": 1056,
+      "bytes": 367968,
+      "tris": 14784,
       "parts": 15,
       "bounds": {
         "min": [
@@ -8637,13 +9057,13 @@
     },
     {
       "file": "shared_zipline_trolley.glb",
-      "bytes": 41104,
-      "tris": 700,
+      "bytes": 134260,
+      "tris": 4404,
       "parts": 11,
       "bounds": {
         "min": [
           -0.35,
-          -0.754,
+          -0.756,
           -0.285
         ],
         "max": [
@@ -8658,8 +9078,8 @@
     },
     {
       "file": "shared_launcher_idle.glb",
-      "bytes": 47956,
-      "tris": 1068,
+      "bytes": 119196,
+      "tris": 3140,
       "parts": 28,
       "bounds": {
         "min": [
@@ -8669,7 +9089,7 @@
         ],
         "max": [
           1.15,
-          1.5,
+          0.67,
           1.15
         ]
       },
@@ -8679,9 +9099,9 @@
     },
     {
       "file": "shared_launcher_charging.glb",
-      "bytes": 48376,
-      "tris": 1068,
-      "parts": 28,
+      "bytes": 146252,
+      "tris": 3380,
+      "parts": 32,
       "bounds": {
         "min": [
           -1.15,
@@ -8690,7 +9110,7 @@
         ],
         "max": [
           1.15,
-          1.5,
+          0.97,
           1.15
         ]
       },
@@ -8700,9 +9120,9 @@
     },
     {
       "file": "shared_launcher_fired.glb",
-      "bytes": 57772,
-      "tris": 1132,
-      "parts": 32,
+      "bytes": 165980,
+      "tris": 3892,
+      "parts": 36,
       "bounds": {
         "min": [
           -1.15,
@@ -8721,19 +9141,19 @@
     },
     {
       "file": "shared_vent_grate.glb",
-      "bytes": 45876,
-      "tris": 692,
+      "bytes": 83064,
+      "tris": 1220,
       "parts": 41,
       "bounds": {
         "min": [
           -2.1,
-          -0.016,
+          -0.045,
           -0.23
         ],
         "max": [
           2.1,
           2.857,
-          2.862
+          2.87
         ]
       },
       "kind": "shared",
@@ -8742,8 +9162,8 @@
     },
     {
       "file": "shared_controlpoint_neutral.glb",
-      "bytes": 48524,
-      "tris": 940,
+      "bytes": 130104,
+      "tris": 2916,
       "parts": 21,
       "bounds": {
         "min": [
@@ -8763,8 +9183,8 @@
     },
     {
       "file": "shared_controlpoint_capturing.glb",
-      "bytes": 48820,
-      "tris": 940,
+      "bytes": 130364,
+      "tris": 2916,
       "parts": 21,
       "bounds": {
         "min": [
@@ -8784,8 +9204,8 @@
     },
     {
       "file": "shared_controlpoint_held.glb",
-      "bytes": 48780,
-      "tris": 940,
+      "bytes": 130360,
+      "tris": 2916,
       "parts": 21,
       "bounds": {
         "min": [
@@ -8805,13 +9225,13 @@
     },
     {
       "file": "shared_armory_kiosk.glb",
-      "bytes": 55608,
-      "tris": 564,
+      "bytes": 152192,
+      "tris": 1716,
       "parts": 37,
       "bounds": {
         "min": [
           -2.1,
-          0,
+          -0.036,
           -2.5
         ],
         "max": [
@@ -8826,13 +9246,13 @@
     },
     {
       "file": "shared_core.glb",
-      "bytes": 120832,
-      "tris": 2964,
+      "bytes": 236004,
+      "tris": 7508,
       "parts": 54,
       "bounds": {
         "min": [
           -3.5,
-          0,
+          -0.09,
           -3.525
         ],
         "max": [
@@ -8847,13 +9267,13 @@
     },
     {
       "file": "shared_core_hit.glb",
-      "bytes": 134472,
-      "tris": 3048,
+      "bytes": 283500,
+      "tris": 7928,
       "parts": 61,
       "bounds": {
         "min": [
           -3.5,
-          0,
+          -0.09,
           -3.525
         ],
         "max": [
@@ -8868,13 +9288,13 @@
     },
     {
       "file": "shared_spawn_portal.glb",
-      "bytes": 83740,
-      "tris": 1232,
+      "bytes": 169888,
+      "tris": 3664,
       "parts": 32,
       "bounds": {
         "min": [
           -3.234,
-          -0.364,
+          -0.407,
           -1.42
         ],
         "max": [
@@ -8889,17 +9309,17 @@
     },
     {
       "file": "shared_airlane_pylon.glb",
-      "bytes": 76776,
-      "tris": 1312,
+      "bytes": 288544,
+      "tris": 7052,
       "parts": 35,
       "bounds": {
         "min": [
-          -0.8,
-          0,
+          -0.854,
+          -0.054,
           -0.8
         ],
         "max": [
-          0.8,
+          0.854,
           9.15,
           0.8
         ]
@@ -8910,8 +9330,8 @@
     },
     {
       "file": "socket_ground_empty.glb",
-      "bytes": 30404,
-      "tris": 816,
+      "bytes": 78476,
+      "tris": 2320,
       "parts": 19,
       "bounds": {
         "min": [
@@ -8921,7 +9341,7 @@
         ],
         "max": [
           1.15,
-          0.172,
+          0.175,
           1.15
         ]
       },
@@ -8931,8 +9351,8 @@
     },
     {
       "file": "socket_ground_base.glb",
-      "bytes": 39496,
-      "tris": 1032,
+      "bytes": 96332,
+      "tris": 2920,
       "parts": 21,
       "bounds": {
         "min": [
@@ -8942,7 +9362,7 @@
         ],
         "max": [
           1.15,
-          0.376,
+          0.38,
           1.15
         ]
       },
@@ -8952,18 +9372,18 @@
     },
     {
       "file": "socket_wall_empty.glb",
-      "bytes": 34108,
-      "tris": 840,
+      "bytes": 91844,
+      "tris": 2440,
       "parts": 21,
       "bounds": {
         "min": [
           -1.15,
-          0,
+          -0.054,
           -1.15
         ],
         "max": [
           1.15,
-          1.2,
+          1.254,
           1.15
         ]
       },
@@ -8973,18 +9393,18 @@
     },
     {
       "file": "socket_wall_base.glb",
-      "bytes": 43024,
-      "tris": 1056,
+      "bytes": 109524,
+      "tris": 3040,
       "parts": 23,
       "bounds": {
         "min": [
           -1.15,
-          0,
+          -0.054,
           -1.15
         ],
         "max": [
           1.15,
-          1.2,
+          1.254,
           1.15
         ]
       },
@@ -8994,8 +9414,8 @@
     },
     {
       "file": "socket_trap_empty.glb",
-      "bytes": 21080,
-      "tris": 400,
+      "bytes": 78004,
+      "tris": 2224,
       "parts": 15,
       "bounds": {
         "min": [
@@ -9005,7 +9425,7 @@
         ],
         "max": [
           1.15,
-          0.172,
+          0.175,
           1.15
         ]
       },
@@ -9015,8 +9435,8 @@
     },
     {
       "file": "socket_barricade_empty.glb",
-      "bytes": 33316,
-      "tris": 888,
+      "bytes": 81384,
+      "tris": 2392,
       "parts": 25,
       "bounds": {
         "min": [
@@ -9035,9 +9455,345 @@
       "note": "Threat-red ring with a hazard band across the cut: the barricade lesson."
     },
     {
+      "file": "shared_teleporter_pad_idle.glb",
+      "bytes": 141948,
+      "tris": 2504,
+      "parts": 24,
+      "bounds": {
+        "min": [
+          -1.861,
+          -0.054,
+          -1.7
+        ],
+        "max": [
+          2.236,
+          0.954,
+          1.7
+        ]
+      },
+      "kind": "shared",
+      "id": "shared_teleporter_pad_idle",
+      "note": "Hex pad with a dark ring and folded emitter petals: available."
+    },
+    {
+      "file": "shared_teleporter_pad_charged.glb",
+      "bytes": 259340,
+      "tris": 7176,
+      "parts": 29,
+      "bounds": {
+        "min": [
+          -1.618,
+          -0.234,
+          -1.7
+        ],
+        "max": [
+          2.236,
+          2.65,
+          1.7
+        ]
+      },
+      "kind": "shared",
+      "id": "shared_teleporter_pad_charged",
+      "note": "Petals raised, ring lit teal, a light column forming — you are being sent."
+    },
+    {
+      "file": "shared_teleporter_pad_cooldown.glb",
+      "bytes": 170732,
+      "tris": 3656,
+      "parts": 25,
+      "bounds": {
+        "min": [
+          -1.861,
+          -0.054,
+          -1.7
+        ],
+        "max": [
+          2.236,
+          0.954,
+          1.7
+        ]
+      },
+      "kind": "shared",
+      "id": "shared_teleporter_pad_cooldown",
+      "note": "Petals down, ring amber with a sweeping progress arc (`tele_arc`), column gone: wait."
+    },
+    {
+      "file": "shared_snipernest.glb",
+      "bytes": 562460,
+      "tris": 16528,
+      "parts": 53,
+      "bounds": {
+        "min": [
+          -2.541,
+          -0.036,
+          -2.53
+        ],
+        "max": [
+          2.541,
+          2.05,
+          2.5
+        ]
+      },
+      "kind": "shared",
+      "id": "shared_snipernest",
+      "note": "A perch that only pays if you commit to the climb: a 5 m grated platform with a waist-high sandbag-and-plate parapet on three sides, a swing-out rifle rest with a brass rangefinder post, a spotting scope on a tripod, an ammo crate and a shaded lamp. Open side faces the ladder."
+    },
+    {
+      "file": "shared_cache_hidden.glb",
+      "bytes": 115152,
+      "tris": 2472,
+      "parts": 12,
+      "bounds": {
+        "min": [
+          -0.79,
+          -0.126,
+          -0.499
+        ],
+        "max": [
+          0.726,
+          0.92,
+          0.47
+        ]
+      },
+      "kind": "shared",
+      "id": "shared_cache_hidden",
+      "note": "A strapped brass-cornered crate half under a tarp with a faint locator lamp — meant to be noticed, not signposted."
+    },
+    {
+      "file": "shared_cache_opened.glb",
+      "bytes": 114936,
+      "tris": 1896,
+      "parts": 15,
+      "bounds": {
+        "min": [
+          -0.726,
+          -0.126,
+          -0.45
+        ],
+        "max": [
+          0.726,
+          0.855,
+          0.888
+        ]
+      },
+      "kind": "shared",
+      "id": "shared_cache_opened",
+      "note": "Lid thrown back, brass interior lit, four scrap chunks visible inside, a spent lock."
+    },
+    {
+      "file": "shared_elevator_shaft.glb",
+      "bytes": 189512,
+      "tris": 1776,
+      "parts": 36,
+      "bounds": {
+        "min": [
+          -2.604,
+          -0.054,
+          -2.55
+        ],
+        "max": [
+          2.604,
+          5.054,
+          2.55
+        ]
+      },
+      "kind": "shared",
+      "id": "shared_elevator_shaft",
+      "note": "One 5 m bay of the open lift shaft: four corner columns with lattice bracing, guide rails on two faces, a floor-level landing gate on the third, a lit floor-number plate. Stack 8 for the Spire."
+    },
+    {
+      "file": "shared_elevator.glb",
+      "bytes": 268128,
+      "tris": 5228,
+      "parts": 43,
+      "bounds": {
+        "min": [
+          -2.122,
+          0,
+          -2.1
+        ],
+        "max": [
+          2.122,
+          9.6,
+          2.1
+        ]
+      },
+      "kind": "shared",
+      "id": "shared_elevator",
+      "note": "The honest way up: an open cage car with a chequer-plate floor, waist rail, a roof frame with a hanging work lamp, a call panel with a lit floor readout (`lift_readout`), rubber buffers underneath and the winch cable rising from the roof yoke."
+    },
+    {
+      "file": "shared_floodgate.glb",
+      "bytes": 540752,
+      "tris": 18468,
+      "parts": 49,
+      "bounds": {
+        "min": [
+          -2.736,
+          -0.108,
+          -0.6
+        ],
+        "max": [
+          3.808,
+          6.01,
+          1.2
+        ]
+      },
+      "kind": "shared",
+      "id": "shared_floodgate",
+      "note": "The panic button someone has to run to: a 5 m sluice frame across the lane mouth with a raised steel gate on chains, a header tank with sight-glass and overflow, hazard chevrons on the sill, and a big two-hand lever on a pedestal beside it with a lit ready lamp (`gate_lamp`). Gate slides down on `gate_leaf`; `vfx_lanewash` spawns at the sill."
+    },
+    {
+      "file": "shared_crusher.glb",
+      "bytes": 171340,
+      "tris": 4088,
+      "parts": 30,
+      "bounds": {
+        "min": [
+          -2.308,
+          -0.09,
+          -2.32
+        ],
+        "max": [
+          3.64,
+          6.62,
+          2.2
+        ]
+      },
+      "kind": "shared",
+      "id": "shared_crusher",
+      "note": "Authored killzone: a hydraulic gantry over the lane with a 3 m square ram head on twin cylinders (`crusher_head` drives down 4 m), warning strobes on the frame, a scorched anvil plate in the road, and an operator console with a big red button off to the side."
+    },
+    {
+      "file": "shared_gate_operated.glb",
+      "bytes": 202328,
+      "tris": 4372,
+      "parts": 32,
+      "bounds": {
+        "min": [
+          -3.34,
+          -0.09,
+          -1.6
+        ],
+        "max": [
+          2.336,
+          4.204,
+          1.6
+        ]
+      },
+      "kind": "shared",
+      "id": "shared_gate_operated",
+      "note": "Player-operated route switch: a boom-arm barrier across a lane fork on a counterweighted pivot (`gate_arm`, rotate to raise), a hand wheel and gearbox on the post, a signal head that shows which route is live (`gate_signal_a/b`), rumble strip on the sill."
+    },
+    {
+      "file": "shared_wall_destructible.glb",
+      "bytes": 726428,
+      "tris": 6564,
+      "parts": 110,
+      "bounds": {
+        "min": [
+          -3.336,
+          -0.058,
+          -0.35
+        ],
+        "max": [
+          3.336,
+          4.254,
+          0.35
+        ]
+      },
+      "kind": "shared",
+      "id": "shared_wall_destructible",
+      "note": "A 6 m infill wall of cinder block with a cracked render, a keystone plate marked with a hazard X so it reads as breakable, exposed rebar at one corner."
+    },
+    {
+      "file": "shared_wall_destructible_broken.glb",
+      "bytes": 516640,
+      "tris": 4668,
+      "parts": 81,
+      "bounds": {
+        "min": [
+          -3.336,
+          -0.119,
+          -0.35
+        ],
+        "max": [
+          3.336,
+          4.254,
+          1.792
+        ]
+      },
+      "kind": "shared",
+      "id": "shared_wall_destructible_broken",
+      "note": "Same footprint blown through: a ragged 3 m hole, tilted slabs, hanging rebar, scorch — the new route or socket shows through."
+    },
+    {
+      "file": "shared_wall_destructible_debris.glb",
+      "bytes": 97780,
+      "tris": 792,
+      "parts": 23,
+      "bounds": {
+        "min": [
+          -2.4,
+          -0.302,
+          -1.6
+        ],
+        "max": [
+          2.4,
+          0.575,
+          3.2
+        ]
+      },
+      "kind": "shared",
+      "id": "shared_wall_destructible_debris",
+      "note": "Loose rubble field for the floor after the break: block chunks, render flakes, rebar stubs, dust ring. Scatter-only, no collision."
+    },
+    {
+      "file": "prop_barrel_explosive.glb",
+      "bytes": 155568,
+      "tris": 5576,
+      "parts": 10,
+      "bounds": {
+        "min": [
+          -0.375,
+          0,
+          -0.375
+        ],
+        "max": [
+          0.7,
+          1.12,
+          0.4
+        ]
+      },
+      "kind": "shared",
+      "id": "prop_barrel_explosive",
+      "note": "Red drum with hazard diamond, ribbed bands, a leaking bung and a drip pool. Reads as \"shoot me\" from across the map."
+    },
+    {
+      "file": "prop_container_droppable.glb",
+      "bytes": 371192,
+      "tris": 11484,
+      "parts": 34,
+      "bounds": {
+        "min": [
+          -1.932,
+          -0.332,
+          -1.25
+        ],
+        "max": [
+          1.932,
+          4.57,
+          1.25
+        ]
+      },
+      "kind": "shared",
+      "id": "prop_container_droppable",
+      "note": "A half-size container hanging from a release hook on a chain — the hook, chain and drop-release bracket are the tell. Corner castings, corrugation, a faded stencil plate."
+    },
+    {
       "file": "vfx_reaction_thermalshock.glb",
-      "bytes": 120116,
-      "tris": 1768,
+      "bytes": 144124,
+      "tris": 2792,
       "parts": 43,
       "bounds": {
         "min": [
@@ -9057,8 +9813,8 @@
     },
     {
       "file": "vfx_reaction_flashfreeze.glb",
-      "bytes": 94384,
-      "tris": 2010,
+      "bytes": 142664,
+      "tris": 3274,
       "parts": 27,
       "bounds": {
         "min": [
@@ -9078,8 +9834,8 @@
     },
     {
       "file": "vfx_status_burn.glb",
-      "bytes": 57148,
-      "tris": 1032,
+      "bytes": 100472,
+      "tris": 2824,
       "parts": 18,
       "bounds": {
         "min": [
@@ -9099,8 +9855,8 @@
     },
     {
       "file": "vfx_status_chill.glb",
-      "bytes": 69500,
-      "tris": 1018,
+      "bytes": 89484,
+      "tris": 1578,
       "parts": 25,
       "bounds": {
         "min": [
@@ -9120,8 +9876,8 @@
     },
     {
       "file": "vfx_status_shock.glb",
-      "bytes": 56012,
-      "tris": 1204,
+      "bytes": 93888,
+      "tris": 2804,
       "parts": 17,
       "bounds": {
         "min": [
@@ -9141,19 +9897,19 @@
     },
     {
       "file": "vfx_status_shred.glb",
-      "bytes": 57484,
-      "tris": 432,
+      "bytes": 163672,
+      "tris": 2272,
       "parts": 28,
       "bounds": {
         "min": [
-          -0.809,
+          -0.812,
           0.025,
-          -0.741
+          -0.746
         ],
         "max": [
-          0.828,
-          1.669,
-          0.928
+          0.833,
+          1.673,
+          0.933
         ]
       },
       "kind": "vfx",
@@ -9162,8 +9918,8 @@
     },
     {
       "file": "vfx_status_mark.glb",
-      "bytes": 50584,
-      "tris": 1320,
+      "bytes": 177820,
+      "tris": 6096,
       "parts": 12,
       "bounds": {
         "min": [
@@ -9182,9 +9938,135 @@
       "note": "Priority-target reticle: a gold bracket ring hovering over the head on `_spin`, a diamond pin, a thin ground ring, and a light column so the team sees the mark through crowds."
     },
     {
+      "file": "vfx_status_poison.glb",
+      "bytes": 483420,
+      "tris": 17264,
+      "parts": 40,
+      "bounds": {
+        "min": [
+          -0.63,
+          0,
+          -0.63
+        ],
+        "max": [
+          0.63,
+          1.837,
+          0.63
+        ]
+      },
+      "kind": "vfx",
+      "id": "vfx_status_poison",
+      "note": "Venom eating through the body: dripping green beads on `_rise` (they fall, so drive it downward), a dark sickly haze shell, corroded pits on the plates, a bubbling ground pool with a soft ring. Reads as \"chip that cannot be stopped\" — the Mender's answer."
+    },
+    {
+      "file": "vfx_status_reveal.glb",
+      "bytes": 232936,
+      "tris": 7528,
+      "parts": 17,
+      "bounds": {
+        "min": [
+          -0.717,
+          0,
+          -0.717
+        ],
+        "max": [
+          0.717,
+          2.2,
+          0.717
+        ]
+      },
+      "kind": "vfx",
+      "id": "vfx_status_reveal",
+      "note": "Detection lock: a green scan-line cage of horizontal rings sweeping the body on `_rise`, a rotating reticle square over the head on `_spin`, a ground disc with four ticks, a thin light column so towers-can-see-it reads from range."
+    },
+    {
+      "file": "vfx_detector_pulse.glb",
+      "bytes": 185252,
+      "tris": 4816,
+      "parts": 16,
+      "bounds": {
+        "min": [
+          -13.08,
+          -0.03,
+          -13.08
+        ],
+        "max": [
+          13.08,
+          3.233,
+          13.08
+        ]
+      },
+      "kind": "vfx",
+      "id": "vfx_detector_pulse",
+      "note": "The tower's reveal sweep: a 13 m ground ring expanding on `_pulse` with a trailing soft band, a slow radar wedge on `_spin`, and a low dome edge so the covered volume reads. Unit-authored at full radius; the client scales 0 → 1 over the period."
+    },
+    {
+      "file": "vfx_status_stun.glb",
+      "bytes": 122504,
+      "tris": 4176,
+      "parts": 16,
+      "bounds": {
+        "min": [
+          -0.59,
+          -0.01,
+          -0.59
+        ],
+        "max": [
+          0.725,
+          2.024,
+          0.725
+        ]
+      },
+      "kind": "vfx",
+      "id": "vfx_status_stun",
+      "note": "Dazed: a ring of pale sparks orbiting the head on `_spin` (the classic tell, kept because it reads at 30 m), a jittering vertical column that flickers, feet locked in a gold ground ring, and a thin ccResist gauge arc that fills as the stun runs."
+    },
+    {
+      "file": "vfx_overclock_link.glb",
+      "bytes": 94688,
+      "tris": 3568,
+      "parts": 6,
+      "bounds": {
+        "min": [
+          -0.115,
+          -0.115,
+          -1.015
+        ],
+        "max": [
+          0.115,
+          0.115,
+          0.015
+        ]
+      },
+      "kind": "vfx",
+      "id": "vfx_overclock_link",
+      "note": "Buff-orange conduit from the pylon to each fed tower: a unit-length twisted pair of tubes along −Z with a pulse bead on `link_pulse` the client slides source → target, a soft sheath, and end collars. Scale Z to the tower distance; instance one per link."
+    },
+    {
+      "file": "vfx_lanewash.glb",
+      "bytes": 314908,
+      "tris": 11276,
+      "parts": 23,
+      "bounds": {
+        "min": [
+          -2.123,
+          -0.054,
+          -6.64
+        ],
+        "max": [
+          2.123,
+          1.8,
+          0
+        ]
+      },
+      "kind": "vfx",
+      "id": "vfx_lanewash",
+      "note": "The panic button: a wall of water rolling down the lane — a 3.4 m-wide breaking crest on `_rise`, foam shards on `_pulse`, a sheet of surface plane behind it, spray cones off the kerbs. Unit-authored 6 m long; the client scales Z along the lane leg and translates it down-route."
+    },
+    {
       "file": "vfx_shield_pop.glb",
-      "bytes": 77660,
-      "tris": 1332,
+      "bytes": 115456,
+      "tris": 2408,
       "parts": 21,
       "bounds": {
         "min": [
@@ -9204,8 +10086,8 @@
     },
     {
       "file": "vfx_shield_regen.glb",
-      "bytes": 93720,
-      "tris": 2538,
+      "bytes": 222700,
+      "tris": 7752,
       "parts": 18,
       "bounds": {
         "min": [
@@ -9225,13 +10107,13 @@
     },
     {
       "file": "vfx_burrow_spray.glb",
-      "bytes": 84836,
-      "tris": 742,
+      "bytes": 130708,
+      "tris": 1754,
       "parts": 23,
       "bounds": {
         "min": [
           -1.606,
-          -0.035,
+          -0.045,
           -1.452
         ],
         "max": [
@@ -9246,8 +10128,8 @@
     },
     {
       "file": "vfx_cluster_split.glb",
-      "bytes": 116684,
-      "tris": 2980,
+      "bytes": 197992,
+      "tris": 6392,
       "parts": 27,
       "bounds": {
         "min": [
@@ -9267,8 +10149,8 @@
     },
     {
       "file": "vfx_core_breach.glb",
-      "bytes": 92748,
-      "tris": 2700,
+      "bytes": 123972,
+      "tris": 3852,
       "parts": 15,
       "bounds": {
         "min": [
@@ -9288,8 +10170,8 @@
     },
     {
       "file": "vfx_revive_beam.glb",
-      "bytes": 70152,
-      "tris": 1776,
+      "bytes": 110124,
+      "tris": 3472,
       "parts": 18,
       "bounds": {
         "min": [
@@ -9309,19 +10191,19 @@
     },
     {
       "file": "vfx_ability_overdrive.glb",
-      "bytes": 128172,
-      "tris": 2624,
+      "bytes": 348364,
+      "tris": 6024,
       "parts": 42,
       "bounds": {
         "min": [
-          -10.65,
+          -10.668,
           0,
-          -10.65
+          -10.668
         ],
         "max": [
-          10.65,
+          10.668,
           10,
-          10.65
+          10.668
         ]
       },
       "kind": "vfx",
@@ -9330,8 +10212,8 @@
     },
     {
       "file": "vfx_ability_ignitionwave.glb",
-      "bytes": 99460,
-      "tris": 1228,
+      "bytes": 110432,
+      "tris": 1632,
       "parts": 40,
       "bounds": {
         "min": [
@@ -9351,8 +10233,8 @@
     },
     {
       "file": "vfx_ability_chainsurge.glb",
-      "bytes": 149204,
-      "tris": 3888,
+      "bytes": 352152,
+      "tris": 10656,
       "parts": 34,
       "bounds": {
         "min": [
@@ -9372,13 +10254,13 @@
     },
     {
       "file": "vfx_tower_place.glb",
-      "bytes": 52916,
-      "tris": 864,
+      "bytes": 111620,
+      "tris": 2096,
       "parts": 19,
       "bounds": {
         "min": [
           -1.35,
-          -0.001,
+          -0.007,
           -1.35
         ],
         "max": [
@@ -9393,17 +10275,17 @@
     },
     {
       "file": "vfx_tower_sell.glb",
-      "bytes": 74284,
-      "tris": 1136,
+      "bytes": 204456,
+      "tris": 3960,
       "parts": 26,
       "bounds": {
         "min": [
-          -1.126,
+          -1.13,
           0,
           -0.95
         ],
         "max": [
-          1.13,
+          1.142,
           3.281,
           0.95
         ]
@@ -9414,8 +10296,8 @@
     },
     {
       "file": "vfx_tower_upgrade.glb",
-      "bytes": 72236,
-      "tris": 1904,
+      "bytes": 137260,
+      "tris": 4752,
       "parts": 18,
       "bounds": {
         "min": [
@@ -9435,18 +10317,18 @@
     },
     {
       "file": "vfx_wave_start.glb",
-      "bytes": 60724,
-      "tris": 1700,
+      "bytes": 117340,
+      "tris": 4152,
       "parts": 11,
       "bounds": {
         "min": [
-          -4.465,
+          -4.631,
           -0.54,
           -3.6
         ],
         "max": [
           6.2,
-          5.8,
+          6,
           3.6
         ]
       },
@@ -9456,8 +10338,8 @@
     },
     {
       "file": "vfx_wave_clear.glb",
-      "bytes": 130832,
-      "tris": 3888,
+      "bytes": 183408,
+      "tris": 6096,
       "parts": 25,
       "bounds": {
         "min": [
@@ -9476,330 +10358,435 @@
       "note": "All-clear beat: green success rings rising off the core on `_rise`, a fountain of scrap-bounty motes on `_pulse`, four upward light beams from the stacks, a calm ground ring."
     },
     {
-      "file": "attach_longbarrel.glb",
-      "bytes": 58324,
-      "tris": 972,
-      "parts": 18,
+      "file": "pickup_alloy.glb",
+      "bytes": 55572,
+      "tris": 1392,
+      "parts": 5,
       "bounds": {
         "min": [
-          -0.02,
-          -0.018,
-          -0.423
+          -0.312,
+          0.008,
+          -0.312
         ],
         "max": [
-          0.02,
-          0.019,
+          0.312,
+          0.398,
+          0.312
+        ]
+      },
+      "kind": "pickup",
+      "id": "pickup_alloy",
+      "note": "Common: a bundle of three steel ingots strapped together, bright cut ends."
+    },
+    {
+      "file": "pickup_flux.glb",
+      "bytes": 69536,
+      "tris": 2208,
+      "parts": 8,
+      "bounds": {
+        "min": [
+          -0.312,
+          0.008,
+          -0.312
+        ],
+        "max": [
+          0.312,
+          0.45,
+          0.312
+        ]
+      },
+      "kind": "pickup",
+      "id": "pickup_flux",
+      "note": "Uncommon: a cyan energy cell in a chrome cage, glowing from within — shielded/energy enemies drop it."
+    },
+    {
+      "file": "pickup_plating.glb",
+      "bytes": 61968,
+      "tris": 1428,
+      "parts": 8,
+      "bounds": {
+        "min": [
+          -0.312,
+          0.008,
+          -0.312
+        ],
+        "max": [
+          0.312,
+          0.329,
+          0.312
+        ]
+      },
+      "kind": "pickup",
+      "id": "pickup_plating",
+      "note": "Uncommon: a torn armour plate with rivets and a scorched edge — what armoured enemies leave behind."
+    },
+    {
+      "file": "pickup_primecore.glb",
+      "bytes": 219528,
+      "tris": 8288,
+      "parts": 10,
+      "bounds": {
+        "min": [
+          -0.415,
+          -0.088,
+          -0.508
+        ],
+        "max": [
+          0.415,
+          2.2,
+          0.508
+        ]
+      },
+      "kind": "pickup",
+      "id": "pickup_primecore",
+      "note": "Very rare — boss drop. A soul-violet core lattice suspended between two brass yokes, orbited by four rings, throwing a light column so it reads as the rarest thing on the floor."
+    },
+    {
+      "file": "pickup_gravium.glb",
+      "bytes": 64648,
+      "tris": 2328,
+      "parts": 7,
+      "bounds": {
+        "min": [
+          -0.312,
+          0.008,
+          -0.312
+        ],
+        "max": [
+          0.312,
+          0.564,
+          0.312
+        ]
+      },
+      "kind": "pickup",
+      "id": "pickup_gravium",
+      "note": "Rare: a violet crystal shard hovering in a gravity ring, small debris orbiting it — heavies and elites only."
+    },
+    {
+      "file": "attach_longbarrel.glb",
+      "bytes": 230548,
+      "tris": 7116,
+      "parts": 17,
+      "bounds": {
+        "min": [
+          -0.012,
+          -0.011,
+          -0.421
+        ],
+        "max": [
+          0.012,
+          0.017,
           0
         ]
       },
       "kind": "attachment",
       "id": "longbarrel",
-      "note": "Replaces the stock barrel: 42 cm fluted tube with a gas block and a target crown. Carries `attach_mount_muzzle` at its end."
+      "note": "Replaces the stock barrel with a bore-matched extended tube, fitted per host: rifle — 42 cm fluted nitride, flutes and rifle-length gas block clear of the handguard (the rifle keeps its own barrel nut); scattergun — 46 cm smoothbore with a knurled receiver collar, mid-barrel band under the tube-mag clamp and a fibre bead at the crown; pistols — 11 cm threaded extension on a knurled collar. Threaded crown; carries `attach_mount_muzzle` at its end."
     },
     {
       "file": "attach_shortbarrel.glb",
-      "bytes": 41728,
-      "tris": 432,
-      "parts": 14,
+      "bytes": 225964,
+      "tris": 5568,
+      "parts": 22,
       "bounds": {
         "min": [
-          -0.019,
-          -0.019,
-          -0.163
+          -0.017,
+          -0.017,
+          -0.161
         ],
         "max": [
-          0.019,
-          0.019,
+          0.017,
+          0.017,
           0
         ]
       },
       "kind": "attachment",
       "id": "shortbarrel",
-      "note": "Chopped 16 cm barrel in a ported shroud: reads as a snub the moment it is mounted. `attach_mount_muzzle` at the end."
+      "note": "Chopped 16 cm barrel inside a ported turned shroud: reads as a snub the moment it is mounted. `attach_mount_muzzle` at the end."
     },
     {
       "file": "attach_compensator.glb",
-      "bytes": 33548,
-      "tris": 300,
-      "parts": 14,
+      "bytes": 222924,
+      "tris": 3152,
+      "parts": 11,
       "bounds": {
         "min": [
-          -0.016,
-          -0.016,
-          -0.058
+          -0.015,
+          -0.015,
+          -0.056
         ],
         "max": [
-          0.016,
+          0.015,
           0.016,
           0
         ]
       },
       "kind": "attachment",
       "id": "compensator",
-      "note": "Muzzle device with four upward gas ports and three side slots; chamfered crown and index marks."
+      "note": "Turned three-chamber muzzle device: upward gas ports, side slots, chamfered pale crown and a timing index."
     },
     {
       "file": "attach_rangefinder.glb",
-      "bytes": 61584,
-      "tris": 668,
-      "parts": 22,
+      "bytes": 286284,
+      "tris": 6256,
+      "parts": 16,
       "bounds": {
         "min": [
-          -0.015,
-          0,
-          -0.067
+          -0.018,
+          -0.001,
+          -0.071
         ],
         "max": [
-          0.018,
-          0.051,
-          0.054
+          0.023,
+          0.059,
+          0.047
         ]
       },
       "kind": "attachment",
       "id": "rangefinder",
-      "note": "Rail-clamped optic: tubular body with objective and ocular glass, a laser emitter under the tube, elevation dial, and a green readout window on the left."
+      "note": "QD-clamped optic: turned tube with an objective bell and rubber eyecup, knurled elevation and windage turrets, laser emitter under the tube, green readout window on the left."
     },
     {
       "file": "attach_drumfeed.glb",
-      "bytes": 60636,
-      "tris": 612,
-      "parts": 24,
+      "bytes": 229552,
+      "tris": 4196,
+      "parts": 26,
       "bounds": {
         "min": [
-          -0.032,
-          -0.117,
-          -0.037
+          -0.034,
+          -0.12,
+          -0.035
         ],
         "max": [
-          0.028,
-          0,
-          0.057
+          0.025,
+          0.002,
+          0.055
         ]
       },
       "kind": "attachment",
       "id": "drumfeed",
-      "note": "Replaces the magazine: ribbed drum with a feed tower, spring-tension dial, and a viewing window showing the coiled brass."
+      "note": "Replaces the magazine: turned polymer drum with spoked faces, spring-tension dial, feed tower and a viewing window showing the coiled ammunition. Fitted per host: the tower matches the well it fills (rifle mag well, scattergun loading port, pistol grip base), the drum is 45 mm on long guns and 36 mm under a pistol grip, and the window shows shell hulls on the scattergun."
     },
     {
       "file": "attach_bracestock.glb",
-      "bytes": 32940,
-      "tris": 368,
+      "bytes": 498052,
+      "tris": 10440,
       "parts": 13,
       "bounds": {
         "min": [
           -0.016,
-          -0.069,
+          -0.075,
           0
         ],
         "max": [
           0.016,
-          0.021,
-          0.187
+          0.019,
+          0.194
         ]
       },
       "kind": "attachment",
       "id": "bracestock",
-      "note": "Skeleton brace: twin struts on an adjustable tube, a T-pad with rubber, locking lever and sling loop. Replaces any factory stock; fits pistols too."
+      "note": "Skeleton brace: notched tube with a locking collar, twin struts with lightening cuts, rubber-faced pad, sling loop. Replaces any factory stock; fits pistols too."
     },
     {
       "file": "attach_stabilizer.glb",
-      "bytes": 41740,
-      "tris": 932,
-      "parts": 13,
+      "bytes": 317328,
+      "tris": 6084,
+      "parts": 15,
       "bounds": {
         "min": [
-          -0.017,
-          -0.078,
+          -0.018,
+          -0.104,
           -0.035
         ],
         "max": [
-          0.017,
-          0,
-          0.035
+          0.018,
+          0.001,
+          0.036
         ]
       },
       "kind": "attachment",
       "id": "stabilizer",
-      "note": "Gravium counter-mass under the barrel: a dense block in a rail cradle with two gyro rings and a violet field slit. Heavy, and it should look heavy."
+      "note": "Gravium counter-mass under the barrel: a dense bevelled block in a rail cradle with two gyro rings, a violet field slit, and a grooved foregrip. Heavy, and it should look heavy."
     },
     {
       "file": "attach_embercoil.glb",
-      "bytes": 51820,
-      "tris": 1188,
-      "parts": 15,
+      "bytes": 396284,
+      "tris": 10476,
+      "parts": 18,
       "bounds": {
         "min": [
-          -0.034,
-          -0.015,
+          -0.029,
+          -0.017,
           -0.025
         ],
         "max": [
-          0,
-          0.015,
+          0.001,
+          0.017,
           0.025
         ]
       },
       "kind": "attachment",
       "id": "embercoil",
-      "note": "Infusion cell: a brass-wound coil around a glowing ember core, heat fins on the outboard face and a hose stub into the receiver."
+      "note": "Infusion cell: a brass-wound coil around a glowing ember core, hex heat fins on the outboard face and a hose stub into the receiver."
     },
     {
       "file": "attach_cryocell.glb",
-      "bytes": 32476,
-      "tris": 648,
-      "parts": 10,
+      "bytes": 165596,
+      "tris": 4664,
+      "parts": 11,
       "bounds": {
         "min": [
           -0.03,
-          -0.015,
+          -0.016,
           -0.026
         ],
         "max": [
-          0,
-          0.021,
-          0.029
+          0.001,
+          0.022,
+          0.025
         ]
       },
       "kind": "attachment",
       "id": "cryocell",
-      "note": "Infusion cell: a pressure canister with a frost-blue sight window, bleed valve and rime rings, clamped to the receiver."
+      "note": "Infusion cell: a turned pressure canister with a frost-blue sight window, bleed valve wheel and rime rings, clamped to the receiver."
     },
     {
       "file": "attach_voltcap.glb",
-      "bytes": 22652,
-      "tris": 224,
-      "parts": 10,
+      "bytes": 165900,
+      "tris": 2804,
+      "parts": 15,
       "bounds": {
         "min": [
           -0.026,
-          -0.015,
+          -0.016,
           -0.025
         ],
         "max": [
-          0,
-          0.028,
+          0.001,
+          0.037,
           0.025
         ]
       },
       "kind": "attachment",
       "id": "voltcap",
-      "note": "Infusion cell: a boxy capacitor with two electrodes and a visible arc gap glowing magenta, charge stripe along the side."
+      "note": "Infusion cell: a bevelled capacitor block with two turned electrodes on ceramic insulators and a visible jagged arc glowing magenta, charge stripe along the side."
     },
     {
       "file": "ammo_standard.glb",
-      "bytes": 100420,
-      "tris": 1004,
-      "parts": 37,
+      "bytes": 547352,
+      "tris": 9328,
+      "parts": 28,
       "bounds": {
         "min": [
-          -0.022,
-          0,
-          -0.038
+          -0.025,
+          -0.001,
+          -0.041
         ],
         "max": [
-          0.052,
+          0.028,
           0.108,
           0.029
         ]
       },
       "kind": "ammo",
       "id": "ammo_standard",
-      "note": "Brass case, plain jacketed tip; pale-gold tracer. Magazine block with the top round exposed plus a loose round for the armory grid."
+      "note": "Brass case, plain jacketed tip; pale-gold tracer. Turned bottleneck rounds (rim, extractor groove, shoulder, neck) in a bevelled magazine with the top round exposed, plus a loose round for the armory grid."
     },
     {
       "file": "ammo_ap.glb",
-      "bytes": 123420,
-      "tris": 1556,
-      "parts": 43,
+      "bytes": 641600,
+      "tris": 13000,
+      "parts": 34,
       "bounds": {
         "min": [
-          -0.026,
-          0,
-          -0.042
+          -0.028,
+          -0.001,
+          -0.045
         ],
         "max": [
-          0.052,
+          0.028,
           0.108,
           0.029
         ]
       },
       "kind": "ammo",
       "id": "ammo_ap",
-      "note": "Black penetrator tip with a steel band; thin white-hot tracer. Magazine block with the top round exposed plus a loose round for the armory grid."
+      "note": "Black penetrator tip with a steel band; thin white-hot tracer. Turned bottleneck rounds (rim, extractor groove, shoulder, neck) in a bevelled magazine with the top round exposed, plus a loose round for the armory grid."
     },
     {
       "file": "ammo_hollowpoint.glb",
-      "bytes": 128300,
-      "tris": 1676,
-      "parts": 43,
+      "bytes": 635700,
+      "tris": 12928,
+      "parts": 31,
       "bounds": {
         "min": [
-          -0.022,
-          0,
+          -0.023,
+          -0.001,
           -0.039
         ],
         "max": [
-          0.052,
+          0.028,
           0.108,
           0.029
         ]
       },
       "kind": "ammo",
       "id": "ammo_hollowpoint",
-      "note": "Dimpled cavity tip and amber band; wide orange tracer that reads as a mushrooming hit. Magazine block with the top round exposed plus a loose round for the armory grid."
+      "note": "Dimpled cavity tip and amber band; wide orange tracer that reads as a mushrooming hit. Turned bottleneck rounds (rim, extractor groove, shoulder, neck) in a bevelled magazine with the top round exposed, plus a loose round for the armory grid."
     },
     {
       "file": "ammo_incendiary.glb",
-      "bytes": 116660,
-      "tris": 1508,
-      "parts": 40,
+      "bytes": 632176,
+      "tris": 12784,
+      "parts": 31,
       "bounds": {
         "min": [
-          -0.022,
-          0,
-          -0.038
+          -0.025,
+          -0.001,
+          -0.041
         ],
         "max": [
-          0.052,
+          0.028,
           0.108,
           0.029
         ]
       },
       "kind": "ammo",
       "id": "ammo_incendiary",
-      "note": "Ember-glass tip; tracer trails flame petals. Magazine block with the top round exposed plus a loose round for the armory grid."
+      "note": "Ember-glass tip; tracer trails flame petals. Turned bottleneck rounds (rim, extractor groove, shoulder, neck) in a bevelled magazine with the top round exposed, plus a loose round for the armory grid."
     },
     {
       "file": "ammo_cryo.glb",
-      "bytes": 116388,
-      "tris": 1508,
-      "parts": 40,
+      "bytes": 631960,
+      "tris": 12784,
+      "parts": 31,
       "bounds": {
         "min": [
-          -0.022,
-          0,
-          -0.038
+          -0.025,
+          -0.001,
+          -0.041
         ],
         "max": [
-          0.052,
+          0.028,
           0.108,
           0.029
         ]
       },
       "kind": "ammo",
       "id": "ammo_cryo",
-      "note": "Frost-blue tip; tracer sheds ice crystals. Magazine block with the top round exposed plus a loose round for the armory grid."
+      "note": "Frost-blue tip; tracer sheds ice crystals. Turned bottleneck rounds (rim, extractor groove, shoulder, neck) in a bevelled magazine with the top round exposed, plus a loose round for the armory grid."
     },
     {
       "file": "vfx_tracer_standard.glb",
-      "bytes": 8592,
-      "tris": 172,
+      "bytes": 23312,
+      "tris": 816,
       "parts": 2,
       "bounds": {
         "min": [
           -0.024,
           -0.024,
-          -1.023
+          -1.024
         ],
         "max": [
           0.024,
@@ -9813,8 +10800,8 @@
     },
     {
       "file": "vfx_tracer_ap.glb",
-      "bytes": 11660,
-      "tris": 204,
+      "bytes": 27204,
+      "tris": 912,
       "parts": 3,
       "bounds": {
         "min": [
@@ -9834,14 +10821,14 @@
     },
     {
       "file": "vfx_tracer_hollowpoint.glb",
-      "bytes": 8600,
-      "tris": 172,
+      "bytes": 23324,
+      "tris": 816,
       "parts": 2,
       "bounds": {
         "min": [
           -0.036,
           -0.036,
-          -1.034
+          -1.036
         ],
         "max": [
           0.036,
@@ -9855,18 +10842,18 @@
     },
     {
       "file": "vfx_tracer_incendiary.glb",
-      "bytes": 18124,
-      "tris": 222,
+      "bytes": 47776,
+      "tris": 1456,
       "parts": 7,
       "bounds": {
         "min": [
-          -0.053,
-          -0.055,
-          -1.023
+          -0.034,
+          -0.035,
+          -1.024
         ],
         "max": [
-          0.059,
-          0.055,
+          0.04,
+          0.039,
           0
         ]
       },
@@ -9876,14 +10863,14 @@
     },
     {
       "file": "vfx_tracer_cryo.glb",
-      "bytes": 18624,
-      "tris": 220,
+      "bytes": 33364,
+      "tris": 864,
       "parts": 8,
       "bounds": {
         "min": [
           -0.074,
           -0.073,
-          -1.023
+          -1.024
         ],
         "max": [
           0.075,

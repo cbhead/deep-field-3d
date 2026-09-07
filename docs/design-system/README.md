@@ -56,22 +56,37 @@ design's forward manifest but not delivered, so the banner draws a placeholder
 chip. `make usage` reports them as requested-and-missing rather than the code
 pretending they exist.
 
-### The icon set stops at M2
+### Icons still missing after the 2026-09-07 drop
 
-Design's icon batch predates M3, so **21 icons are requested and missing** —
-every tower, enemy, faction, ammo, status and upgrade path added since. List
-them with `./play --headless --quit-after 600 -- --asset-audit | grep MISSING`.
+The drop closed seven of the M3 gaps — `icon_tower_detector`,
+`icon_tower_filament`, `icon_tower_overclock`, `icon_faction_glacier`,
+`icon_faction_specter`, `icon_ability_cryofield`, `icon_ability_revealpulse` —
+so the build wheel and the lobby are whole. **Fourteen icons are still requested
+and missing**, all M3 content that is not on design's forward manifest yet:
 
-This was invisible until the build wheel became reviewable. The audit printed
-what the game *asked for* and said nothing about what arrived, and the fallback
-is a labelled chip that reads as a deliberate control rather than as a hole — so
-the Detector and Filament sat on the wheel as blank squares for a whole
-milestone with nobody in a position to notice. `UiTheme.MissingIcons` records
-the fallbacks now and the audit prints them.
+- enemies: `icon_enemy_shade`, `icon_enemy_mender`, `icon_enemy_ram`
+  (intermission preview, overheads)
+- upgrade paths: `icon_path_field`, `icon_path_analysis`, `icon_path_ramp`,
+  `icon_path_peak`, `icon_path_optics` (the Detector's and Filament's panels)
+- status: `icon_status_reveal`
+- gunsmith: `icon_ammo_shock`, `icon_ammo_toxin`, `icon_attach_toxinfeed`,
+  `icon_weapon_cryosprayer`, `icon_weapon_poisonstream`
 
-Affected surfaces: the build wheel (detector, filament), the upgrade panel (the
-five M3 path icons), the intermission preview and enemy overheads (shade,
-mender, ram), and the lobby (glacier, specter).
+List them with `./play --headless --quit-after 600 -- --asset-audit | grep MISSING`.
+
+This class of gap was invisible until the build wheel became reviewable. The
+audit printed what the game *asked for* and said nothing about what arrived,
+and the fallback is a labelled chip that reads as a deliberate control rather
+than as a hole — so the Detector and Filament sat on the wheel as blank squares
+for a whole milestone with nobody in a position to notice.
+`UiTheme.MissingIcons` records the fallbacks now and the audit prints them.
+
+The same audit caught a name that had drifted the other way: the brief and the
+drop name the cryo ammo icon `icon_ammo_cryo`, and the sim's M3 ammo rows were
+`cryoRounds` / `shockRounds` / `toxinRounds` — so the armory asked for
+`icon_ammo_cryorounds` and drew a chip beside a delivered icon. The rows are
+now `cryo` / `shock` / `toxin`, matching `standard` / `ap` / `hollowpoint` /
+`incendiary`; the brief is the contract, code adopts.
 
 ## Naming
 

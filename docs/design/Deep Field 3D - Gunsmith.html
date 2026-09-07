@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Deep Field 3D — Gunsmith</title>
+<link rel="stylesheet" href="ds/tokens/fonts.css">
+<link rel="stylesheet" href="ds/tokens/colors.css">
+<link rel="stylesheet" href="ds/tokens/typography.css">
+<link rel="stylesheet" href="ds/tokens/spacing.css">
+<link rel="stylesheet" href="ds/tokens/effects.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.184.0/build/three.module.js",
+    "three/addons/controls/OrbitControls.js": "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js",
+    "three/addons/exporters/OBJExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js",
+    "three/addons/exporters/GLTFExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js"
+  },
+  "integrity": {
+    "https://unpkg.com/three@0.184.0/build/three.module.js": "sha384-8FCZ1eVO6it4+pbec2aDtnTrwjWXZLJRC+MAGCIPDgsYnUrl/E0A2YlF8ioMKI/J",
+    "https://unpkg.com/three@0.184.0/build/three.core.js": "sha384-dw2ooPewaEIrAgl6oFDBmmBWCE9oW9LxRGcfwZ0hLvEprzo202wXl7vCYHRlSnOT",
+    "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js": "sha384-4rziNxOBZKQ69i+w+f89KJ55TCYquwchVbByQwmaOeIOXdOU2PLDn3kOfXHwIJC9",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js": "sha384-nbwtoZENJD3Vq+ACK0CuGQdPMuDWHkamC2KJD70EV5nfg6jQjfppKOea07YJN+N3",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js": "sha384-VofkvpG6HERhFCYbsUOHeNXBCqID2nfqkQqnVzE1jc/oPcz+qJ13ADdXH08hE+cQ"
+  }
+}
+</script>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font:var(--text-body-role);background:var(--surface-base);color:var(--text-primary);display:flex;flex-direction:column;overflow:hidden}
+  a{color:var(--text-arcane);text-decoration:none}
+  a:hover{color:var(--arcane-300)}
+  .label{font:var(--text-label);letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--text-muted)}
+  header{flex:0 0 auto;display:flex;align-items:center;gap:var(--space-7);padding:var(--space-4) var(--space-6);background:var(--surface-panel);
+    border-bottom:var(--stroke-emphasis) solid var(--border-panel);box-shadow:var(--shadow-panel);position:relative;z-index:var(--z-hud)}
+  header::after{content:"";position:absolute;inset:auto 0 -3px 0;height:2px;background:var(--tex-hazard);opacity:.7}
+  .brand h1{font:var(--text-panel-title);margin:0;letter-spacing:var(--tracking-display)}
+  .brand p{margin:2px 0 0;font-size:var(--size-caption);color:var(--text-muted)}
+  .tabs{display:flex;gap:var(--space-2);flex-wrap:wrap;align-items:center;margin-left:auto}
+  .tabs a,.tabs button{font:var(--weight-semibold) var(--size-caption)/1 var(--font-display);letter-spacing:.03em;display:flex;align-items:center;gap:var(--space-2);
+    padding:var(--space-2) var(--space-4);background:var(--surface-raised);color:var(--text-secondary);border:var(--stroke-panel) solid var(--border-panel);
+    border-radius:var(--radius-2);clip-path:var(--clip-chamfer-sm);cursor:pointer}
+  .tabs a:hover,.tabs button:hover{background:var(--obsidian-500);color:var(--text-primary)}
+  .tabs button[aria-pressed="true"]{background:var(--obsidian-500);color:var(--text-accent);border-color:var(--border-accent);box-shadow:var(--glow-brass)}
+  main{flex:1 1 auto;position:relative;min-height:0}
+  three-d-stage{width:100%;height:100%;display:block}
+  three-d-stage:not(:defined){visibility:hidden}
+  .panel{position:absolute;z-index:var(--z-dock);width:300px;background:var(--surface-glass);backdrop-filter:blur(var(--blur-glass));
+    border:var(--stroke-panel) solid var(--border-panel);border-top-color:var(--border-bevel-top);box-shadow:var(--shadow-panel);clip-path:var(--clip-chamfer);
+    max-height:calc(100% - var(--space-8));overflow:auto}
+  .panel>h2{font:var(--text-label);letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--text-accent);margin:0;padding:var(--space-3) var(--space-4);
+    background:var(--surface-inset);border-bottom:var(--stroke-panel) solid var(--border-panel);position:sticky;top:0}
+  .body{padding:var(--space-4)}
+  #list{left:var(--space-6);top:var(--space-6)}
+  #build{right:var(--space-6);top:var(--space-6);width:320px}
+  .items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+  .items button{width:100%;text-align:left;display:flex;align-items:center;gap:var(--space-3);font:var(--weight-semibold) var(--size-caption)/1.2 var(--font-display);
+    padding:var(--space-2) var(--space-3);background:transparent;color:var(--text-secondary);border:var(--stroke-hairline) solid transparent;cursor:pointer}
+  .items button:hover{background:var(--obsidian-600);color:var(--text-primary)}
+  .items button[aria-pressed="true"]{background:var(--obsidian-500);color:var(--text-accent);border-color:var(--border-accent)}
+  .items button small{margin-left:auto;font:var(--weight-regular) var(--size-micro)/1 var(--font-mono);color:var(--text-muted)}
+  .swatch{width:8px;height:8px;flex:0 0 auto;transform:rotate(45deg)}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3) var(--space-4);margin:0}
+  .stats dt{font:var(--text-label);letter-spacing:var(--tracking-micro);text-transform:uppercase;color:var(--text-muted);margin:0}
+  .stats dd{margin:3px 0 0;font:var(--weight-bold) var(--size-stat-sm)/1 var(--font-mono);color:var(--text-primary)}
+  .stats dd.arcane{color:var(--text-arcane)} .stats dd.up{color:var(--state-success)} .stats dd.down{color:var(--state-danger)}
+  hr{border:0;border-top:var(--stroke-panel) solid var(--border-panel);margin:var(--space-4) 0}
+  .note{font-size:var(--size-caption);line-height:var(--leading-normal);color:var(--text-muted);margin:var(--space-3) 0 0}
+  code{font:var(--weight-regular) var(--size-micro)/1 var(--font-mono);color:var(--text-arcane)}
+  .slots{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2)}
+  .slot{background:var(--surface-inset);border:var(--stroke-hairline) solid var(--border-panel);padding:var(--space-2) var(--space-3)}
+  .slot .label{display:block;margin-bottom:var(--space-2)}
+  .slot .opts{display:flex;flex-wrap:wrap;gap:2px}
+  .slot .opts button{font:var(--weight-semibold) var(--size-micro)/1 var(--font-display);padding:var(--space-2);cursor:pointer;color:var(--text-secondary);
+    background:var(--surface-raised);border:var(--stroke-hairline) solid var(--border-panel)}
+  .slot .opts button:hover{color:var(--text-primary);background:var(--obsidian-500)}
+  .slot .opts button[aria-pressed="true"]{background:var(--arcane-700);color:var(--arcane-300);border-color:var(--arcane-600)}
+  .slot.filled{border-color:var(--border-accent)}
+  .checks label{display:flex;align-items:center;gap:var(--space-3);font-size:var(--size-caption);color:var(--text-secondary);cursor:pointer;margin-top:var(--space-3)}
+  input[type="checkbox"]{accent-color:var(--arcane-500);width:14px;height:14px;margin:0}
+  .bar{position:relative;height:6px;background:var(--bar-track);border:var(--stroke-hairline) solid var(--border-panel);margin-top:4px}
+  .bar i{position:absolute;inset:0 auto 0 0;background:var(--steel-400)} .bar b{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--brass-400)}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><h1 id="title">Gunsmith</h1><p>Deep Field 3D · brief §3.4 · grip at origin, muzzle −Z · seven slots, every module visible</p></div>
+  <nav class="tabs" id="tabs"></nav>
+</header>
+<main>
+  <three-d-stage name="deepfield_weapon" background="#0D1119"></three-d-stage>
+  <section class="panel" id="list"><h2 id="list-title">Platforms</h2><div class="body"><ul class="items" id="items"></ul>
+    <hr><dl class="stats" id="stats"></dl><p class="note" style="margin-top:var(--space-3)"><code id="file"></code></p><p class="note" id="note"></p></div></section>
+  <section class="panel" id="build"><h2>Build</h2><div class="body">
+    <div class="slots" id="slots"></div>
+    <hr>
+    <dl class="stats" id="eff"></dl>
+    <div class="checks"><label><input type="checkbox" id="hands"> First-person hands</label><label><input type="checkbox" id="mounts"> Show mount nodes</label></div>
+  </div></section>
+</main>
+<script src="./three-d-stage.js"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+<script type="text/babel" src="./tweaks-panel.jsx"></script>
+<div id="tweaks-host"></div>
+<script type="text/babel">
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "finish": "factory",
+  "stage": "bench",
+  "explode": 0
+}/*EDITMODE-END*/;
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  React.useEffect(() => {
+    const apply = () => window.__gunsmith?.applyTweaks(t);
+    apply(); window.addEventListener('gunsmith-ready', apply);
+    return () => window.removeEventListener('gunsmith-ready', apply);
+  }, [t]);
+  return (
+    <TweaksPanel title="Gunsmith tweaks">
+      <TweakSection label="Finish" />
+      <TweakRadio label="Metal set" value={t.finish} options={['factory', 'worn', 'parade', 'night']} onChange={(v) => setTweak('finish', v)} />
+      <TweakSection label="Presentation" />
+      <TweakRadio label="Stage" value={t.stage} options={['bench', 'armory', 'range']} onChange={(v) => setTweak('stage', v)} />
+      <TweakSlider label="Exploded view" value={t.explode} min={0} max={1} step={0.05} onChange={(v) => setTweak('explode', v)} />
+    </TweaksPanel>
+  );
+}
+ReactDOM.createRoot(document.getElementById('tweaks-host')).render(<App />);
+</script>
+<script type="module">
+import { makeWeaponKit, WEAPONS, ATTACHMENTS, AMMO, TRACERS } from './models/weapons.js';
+import { triCount, countMeshes } from './models/tower-kit.js';
+import { applyStudio } from './models/studio.js';
+
+const SLOTS = ['barrel', 'muzzle', 'optic', 'magazine', 'stock', 'underbarrel', 'infusion'];
+const FACT = { longbarrel: [1.10, .92, 1.25], shortbarrel: [.95, 1.18, .8], compensator: [1.12, 1, 1], rangefinder: [1, 1, 1.2], drumfeed: [1, 1.15, 1], bracestock: [1, 1.08, 1.05], stabilizer: [1.18, .95, 1], embercoil: [1, 1, 1], cryocell: [1, 1, 1], voltcap: [1, 1, 1] };
+const APPLIES = { embercoil: 'burn', cryocell: 'chill', voltcap: 'shock' };
+const CATS = [
+  { id: 'weapons', label: 'Platforms', items: WEAPONS.filter((w) => w.worldFile), buildable: true },
+  { id: 'tools', label: 'Tool & hands', items: WEAPONS.filter((w) => !w.worldFile), buildable: false },
+  { id: 'attachments', label: 'Attachments', items: ATTACHMENTS },
+  { id: 'ammo', label: 'Ammo', items: AMMO },
+  { id: 'tracers', label: 'Tracers', items: TRACERS },
+];
+const el = (id) => document.getElementById(id);
+const stage = document.querySelector('three-d-stage');
+const { THREE } = await stage.ready;
+applyStudio(stage, THREE);
+const K = makeWeaponKit(THREE);
+const HANDS = WEAPONS.find((w) => w.id === 'hands');
+let cat = CATS[0], cur = null, model = null;
+const build = Object.fromEntries(SLOTS.map((s) => [s, null]));
+
+el('tabs').innerHTML = CATS.map((c) => `<button type="button" data-cat="${c.id}">${c.label}</button>`).join('') +
+  `<a href="Deep Field 3D - Asset Export.html"><span class="swatch" style="background:var(--arcane-400)"></span>Export pack</a><a href="Deep Field 3D - Roster.html"><span class="swatch" style="background:#e9614c"></span>Enemies</a><a href="Lance.html"><span class="swatch" style="background:#2b5cff"></span>Towers</a>`;
+el('tabs').addEventListener('click', (e) => { const c = CATS.find((x) => x.id === e.target.dataset.cat); if (c) setCat(c); });
+
+el('slots').innerHTML = SLOTS.map((s) => `<div class="slot" data-slot="${s}"><span class="label">${s}</span><div class="opts"><button type="button" data-att="" aria-pressed="true">—</button>${ATTACHMENTS.filter((a) => a.slot === s).map((a) => `<button type="button" data-att="${a.id}">${a.label}</button>`).join('')}</div></div>`).join('');
+el('slots').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  const slot = b.closest('.slot').dataset.slot;
+  build[slot] = b.dataset.att || null;
+  for (const o of b.parentElement.children) o.setAttribute('aria-pressed', String(o === b));
+  b.closest('.slot').classList.toggle('filled', !!build[slot]);
+  if (cat.buildable) assemble();
+});
+el('hands').addEventListener('change', () => assemble());
+el('mounts').addEventListener('change', () => { model?.traverse((o) => { if (o.userData.mountGizmo) o.visible = el('mounts').checked; }); });
+
+function setCat(c) {
+  cat = c;
+  for (const b of el('tabs').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.cat === c.id));
+  el('list-title').textContent = c.label;
+  el('items').innerHTML = c.items.map((it) => `<li><button type="button" data-id="${it.id}"><span class="swatch" style="background:${it.swatch}"></span>${it.label}<small>${it.slot || ''}</small></button></li>`).join('');
+  el('build').style.display = c.buildable ? '' : 'none';
+  select(c.items[0]);
+}
+el('items').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; select(cat.items.find((x) => x.id === b.dataset.id)); });
+
+function select(it) {
+  cur = it;
+  for (const b of el('items').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.id === it.id));
+  el('file').textContent = 'game/assets/weapons/' + it.file + (it.worldFile ? ' · ' + it.worldFile : '');
+  el('note').textContent = it.note;
+  assemble();
+}
+
+function assemble() {
+  model = cur.build(K);
+  if (el('hands').checked && cur.handsPose) { K.__handsPose = cur.handsPose; model.add(HANDS.build(K)); }
+  if (cat.buildable) {
+    for (const slot of SLOTS) {
+      const att = ATTACHMENTS.find((a) => a.id === build[slot]);
+      if (!att) continue;
+      const hide = (n) => { const o = model.getObjectByName(n); if (o) o.visible = false; };
+      if (slot === 'barrel') hide(`${cur.id}_barrel`);
+      if (slot === 'magazine') hide(`${cur.id}_magazine`);
+      if (slot === 'stock') hide(`${cur.id}_stock`);
+      let mnt = model.getObjectByName(`${cur.id}_mount_${slot}`);
+      if (slot === 'muzzle' && build.barrel) mnt = model.getObjectByName('attach_mount_muzzle') || mnt;
+      mnt?.add(att.build(K, cur.id));
+    }
+  }
+  // Mount gizmos (viewer only).
+  model.traverse((o) => { if (o.userData.slot) { const g = new THREE.Mesh(new THREE.OctahedronGeometry(.006, 0), new THREE.MeshBasicMaterial({ color: 0x65dce4, wireframe: true })); g.name = '__mount_' + o.name; g.userData.mountGizmo = true; g.userData.gizmo = true; g.visible = el('mounts').checked; o.add(g); } });
+  stage.setAttribute('name', cur.file.replace(/\.glb$/, ''));
+  stage.setObject(model);
+  // Weapons read best from the left three-quarter, slightly above.
+  const cam = stage._camera, ctl = stage._controls;
+  if (cam && ctl) { const d = cam.position.distanceTo(ctl.target); cam.position.copy(ctl.target).add(new THREE.Vector3(-1.4, .55, -.7).normalize().multiplyScalar(d)); ctl.update(); }
+  const b = new THREE.Box3().setFromObject(model), s = b.getSize(new THREE.Vector3());
+  el('stats').innerHTML = Object.entries({ ...cur.stats, Size: `${(s.x * 100).toFixed(0)}×${(s.y * 100).toFixed(0)}×${(s.z * 100).toFixed(0)} cm`, Tris: triCount(model).toLocaleString(), Parts: String(countMeshes(model)) })
+    .map(([k, v]) => `<div><dt>${k}</dt><dd class="${k === 'Tris' || k === 'Parts' ? 'arcane' : ''}">${v}</dd></div>`).join('');
+  if (cat.buildable) {
+    const f = [1, 1, 1];
+    for (const s of SLOTS) if (build[s] && FACT[build[s]]) FACT[build[s]].forEach((v, i) => f[i] *= v);
+    const base = { Damage: parseFloat(cur.stats.Damage), Rate: parseFloat(cur.stats.Rate), Range: parseFloat(cur.stats.Range) };
+    const applies = [cur.stats.Applies, ...SLOTS.map((s) => APPLIES[build[s]])].filter(Boolean);
+    const row = (k, v, fac, unit) => `<div><dt>${k}</dt><dd class="${fac > 1.001 ? 'up' : fac < .999 ? 'down' : ''}">${(v * fac).toFixed(1)}${unit} <small style="color:var(--text-muted);font-weight:400">×${fac.toFixed(2)}</small></dd><div class="bar"><i style="width:${Math.min(100, fac * 50)}%"></i><b style="left:50%"></b></div></div>`;
+    el('eff').innerHTML = row('Damage', base.Damage, f[0], '') + row('Rate', base.Rate, f[1], '/s') + row('Range', base.Range, f[2], ' m') + `<div><dt>Applies</dt><dd>${applies.join(' · ') || '—'}</dd></div>`;
+  }
+}
+setCat(CATS[0]);
+
+/* ── Tweaks: finish set, stage mood, exploded view ───────────────────────────────── */
+const tweaks = { finish: 'factory', stage: 'bench', explode: 0 };
+// Each finish rewrites the whole metal family so every gun, attachment and shell re-reads together.
+const FINISH = {
+  factory: { gun_metal: [0x3a4250, .38, .85], gun_dark: [0x14171d, .42, .8], gun_pale: [0x9aa4b4, .28, .9], gun_bronze: [0x8a6b3a, .32, .9], polymer: [0x1c2029, .7], chrome: [0xc3ccd8, .2, .9], brass: [0xb08a3e, .3, .9], skin_plate: [0xc89b3c, .45, .5] },
+  worn: { gun_metal: [0x4a4b48, .62, .7], gun_dark: [0x23221f, .7, .55], gun_pale: [0x8d8a80, .55, .7], gun_bronze: [0x6f5530, .6, .7], polymer: [0x2a2a26, .9], chrome: [0x9a9c9c, .45, .8], brass: [0x8a6a30, .55, .8], skin_plate: [0x9a7a34, .7, .4] },
+  parade: { gun_metal: [0xb9c2cf, .12, 1], gun_dark: [0x2a2f3a, .18, .95], gun_pale: [0xe2e8f0, .08, 1], gun_bronze: [0xd8a13a, .15, 1], polymer: [0x12151c, .35], chrome: [0xf2f5f8, .06, 1], brass: [0xe0b34a, .12, 1], skin_plate: [0xe0b34a, .2, .8] },
+  night: { gun_metal: [0x0f1116, .55, .6], gun_dark: [0x08090c, .6, .5], gun_pale: [0x1c1f26, .5, .6], gun_bronze: [0x141317, .5, .6], polymer: [0x0b0c10, .85], chrome: [0x2a2e36, .35, .8], brass: [0x3a3327, .45, .7], skin_plate: [0x4a3f22, .5, .5] },
+};
+const STAGE = { bench: { bg: '#0D1119', key: [0xffffff, 1.1], hemi: .3, exposure: 1.05, env: 1.0 }, armory: { bg: '#161008', key: [0xffc27a, 1.6], hemi: .22, exposure: 1.25, env: .8 }, range: { bg: '#03050a', key: [0x9fb4ff, .7], hemi: .12, exposure: .8, env: .45 } };
+const EXPLODE = { barrel: [0, 0, -1], muzzle: [0, 0, -1.6], optic: [0, 1, 0], magazine: [0, -1, 0], stock: [0, 0, 1], underbarrel: [0, -.8, 0], infusion: [-1, 0, 0] };
+function applyFinish() {
+  for (const [n, [c, r, m]] of Object.entries(FINISH[tweaks.finish])) { const mat = K.mats[n]; if (!mat) continue; mat.color.setHex(c); mat.roughness = r; if (m !== undefined && 'metalness' in mat && !mat.isMeshPhysicalMaterial) mat.metalness = m; mat.needsUpdate = true; }
+}
+function applyStage() {
+  const S = STAGE[tweaks.stage]; stage.setAttribute('background', S.bg); stage.style.setProperty('--stage-bg', S.bg);
+  if (stage._key) { stage._key.color.setHex(S.key[0]); stage._key.intensity = S.key[1]; }
+  stage._scene.traverse((n) => { if (n.isHemisphereLight) n.intensity = S.hemi; });
+  stage._scene.environmentIntensity = S.env; stage._renderer.toneMappingExposure = S.exposure;
+}
+function applyExplode() {
+  if (!model) return;
+  const k = tweaks.explode * .09;
+  model.traverse((o) => {
+    const slot = o.userData.slot; if (!slot) return;
+    const d = EXPLODE[slot] || [0, 0, 0];
+    for (const c of o.children) { if (c.userData.mountGizmo) continue; c.userData.basePos ??= c.position.clone(); c.position.copy(c.userData.basePos).add(new THREE.Vector3(...d).multiplyScalar(k)); }
+  });
+  for (const [n, slot] of [[`${cur.id}_barrel`, 'barrel'], [`${cur.id}_magazine`, 'magazine'], [`${cur.id}_stock`, 'stock']]) {
+    const g = model.getObjectByName(n); if (!g || !g.visible) continue;
+    g.userData.basePos ??= g.position.clone(); g.position.copy(g.userData.basePos).add(new THREE.Vector3(...EXPLODE[slot]).multiplyScalar(k));
+  }
+}
+function applyTweaks(t) { Object.assign(tweaks, t); applyFinish(); applyStage(); applyExplode(); }
+const _assemble = assemble; assemble = function () { _assemble(); applyExplode(); };
+window.__gunsmith = { CATS, K, build, get model() { return model; }, select, setCat, assemble: () => assemble(), applyTweaks, tweaks };
+window.dispatchEvent(new Event('gunsmith-ready'));
+</script>
+</body>
+</html>

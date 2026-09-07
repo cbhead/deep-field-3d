@@ -13,3 +13,7 @@ export/
 
 # OS
 .DS_Store
+
+# Design export host (make design-export)
+tools/design-export/node_modules/
+tools/design-export/export.log

@@ -207,22 +207,29 @@ Towers/traps: `icon_tower_lance` · `icon_tower_nova` · `icon_tower_arc` ·
 `icon_trap_spike` · `icon_trap_tar` · `icon_trap_launcher`
 Enemies: `icon_enemy_drifter` · `icon_enemy_mote` · `icon_enemy_monolith` ·
 `icon_enemy_skiff` · `icon_enemy_aegis` · `icon_enemy_warden` ·
-`icon_enemy_mole` · `icon_enemy_cluster`
+`icon_enemy_mole` · `icon_enemy_cluster` · `icon_enemy_shade` ·
+`icon_enemy_mender` · `icon_enemy_ram` (M3–M4, in the game now)
 Statuses/reactions: `icon_status_burn` · `icon_status_chill` ·
 `icon_status_mark` · `icon_status_shock` · `icon_status_freeze` ·
-`icon_status_shred` · `icon_reaction_thermalshock` · `icon_reaction_flashfreeze`
+`icon_status_shred` · `icon_status_reveal` (M3) · `icon_reaction_thermalshock` ·
+`icon_reaction_flashfreeze`
+Conditions (intermission banner): `icon_cond_fog` · `icon_cond_night` (M3)
 Scrap: `icon_scrap_alloy` · `icon_scrap_flux` · `icon_scrap_plating` ·
 `icon_scrap_gravium`
 Weapons/ammo/attachments: `icon_weapon_sidearm` · `icon_weapon_rifle` ·
 `icon_weapon_scattergun` · `icon_weapon_emberpistol` · `icon_weapon_wrench` ·
+`icon_weapon_cryosprayer` · `icon_weapon_poisonstream` (M3) ·
 `icon_ammo_standard` · `icon_ammo_ap` · `icon_ammo_hollowpoint` ·
-`icon_ammo_incendiary` · `icon_ammo_cryo` · one `icon_attach_<name>` per
-attachment in §3.4
+`icon_ammo_incendiary` · `icon_ammo_cryo` · `icon_ammo_shock` ·
+`icon_ammo_toxin` (M3) · one `icon_attach_<name>` per attachment in §3.4
 Factions/abilities: `icon_faction_forge` · `icon_faction_ember` ·
 `icon_faction_tempest` · `icon_ability_overdrive` ·
 `icon_ability_ignitionwave` · `icon_faction_glacier` · `icon_faction_specter` ·
   `icon_ability_cryofield` · `icon_ability_revealpulse` · `icon_ability_chainsurge`
-Upgrade paths: `icon_path_damage` · `icon_path_range` · `icon_path_rate`
+Upgrade paths: `icon_path_damage` · `icon_path_range` · `icon_path_rate` ·
+`icon_path_field` · `icon_path_analysis` (Detector) · `icon_path_ramp` ·
+`icon_path_peak` · `icon_path_optics` (Filament) — the M3 towers' panels draw
+labelled chips until these land.
 
 ## 4. Forward manifest — design ahead of M3–M5
 

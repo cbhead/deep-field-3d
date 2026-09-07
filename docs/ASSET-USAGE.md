@@ -1,6 +1,6 @@
 # Asset usage
 
-**438 delivered · 254 consumed · 184 unused** — regenerate with `make usage`.
+**492 delivered · 320 consumed · 172 unused** — regenerate with `make usage`.
 
 `asset-report.sh` answers *has design shipped it*. This answers the question that
 rots silently: an asset can be delivered, imported, and never referenced by a
@@ -22,22 +22,36 @@ the files on disk. **Requests are reported by the code, not scraped from
 source** — icon ids are built by interpolation (`$"enemy_{defId}"`), so grepping
 for string literals under-reports by more than half.
 
-## What the unused 184 are
+One blind spot, recorded rather than papered over: a solo match builds nothing
+and nothing gets hurt, so state variants the code *does* request — a spent trap
+plate, a half-demolished barricade — never come up in the measurement. They are
+marked `wired=yes` in the manifest by reading the code, and show as unused here.
+
+## What the unused 172 are
+
+The 2026-09-07 drop (427 models, 65 icons) replaced the first delivery's
+geometry and added 47 names beyond the brief — M4/M5 enemies, the Glacier and
+Specter heroes, map elements, status VFX. Most of the new names wait on the
+system they are for.
 
 | Group | Count | Why |
 |---|---|---|
-| M3–M5 tower stage modules | 83 | Detector, Filament and Overclock do not exist as towers yet. Delivered early on purpose — art lead time is the schedule risk. |
-| VFX | 34 | No VFX system. Status particles, reaction bursts, ability effects, muzzle flashes and impacts all wait on it. |
-| Weapon viewmodels, attachments, ammo models, hands | 28 | No first-person weapon rendering. The armory shows icons; the models mount when viewmodels land. |
-| `_s1` stage modules | 16 | **Correct and intentional.** Design's chassis *is* the level-1 state and `_s1` is an empty root, so sim level N asks for stage N+1 and `_s1` is never requested. |
+| VFX | 40 | No VFX system. Status particles, reaction bursts, ability effects, muzzle flashes, impacts, tracers and the Detector/Overclock/lane-wash effects all wait on it. |
+| Overclock tower (chassis + 30 stage modules) | 31 | Overclock does not exist as a tower yet (M4). Delivered early on purpose — art lead time is the schedule risk. |
+| Weapon viewmodels, world models, attachments, ammo models, hands | 28 | Only the sidearm viewmodel is mounted so far. The other platforms, every attachment model, ammo model and the faction hands wait on the viewmodel work reaching them. |
+| `_s1` stage modules | 19 | **Correct and intentional.** Design's chassis *is* the level-1 state and `_s1` is an empty root, so sim level N asks for stage N+1 and `_s1` is never requested. |
+| Map elements | 17 | Teleporter pad states, elevator, sniper nest, crusher, floodgate, operated gate, destructible wall, control-point and launcher-pad states, caches, physics props — M3/M4 map elements the sim does not drive yet (the pads and nest that *are* placed use the idle/neutral state). |
+| M4/M5 enemies and states | 8 | Broodmother, Carapace (+ plate), Leaper (+ windup, airborne), the Ram's enraged state, the Shade's shimmer. Ram, Shade and Mender themselves are wired. |
 | Projectile tier variants (`_t2`, `_t3`) | 6 | No tier escalation wiring; projectiles use the base model at every level. |
-| Hero revive poses | 3 | Downed poses are wired; the revive-crouch pose is not. |
-| Barricade damaged/broken | 2 | Structure HP arrives with Ram at M4. |
-| Control point capturing/held | 2 | The control point is `sweepInert` — no sim hookup yet. |
-| Launcher pad charging/fired | 2 | The pad has no charge state in the sim. |
-| Remainder | 8 | Icons for content that exists only in the forward manifest, plus `ui_nameplate` (no world-space nameplates yet). |
+| Hero revive poses | 5 | Downed poses are wired; the revive-crouch pose is not. |
+| Trap spent/triggered/rearming states | 5 | **Requested by code** (`RefreshTrapArt` follows `ChargesLeft`) — the blind spot above. |
+| Scrap pickups | 5 | Scrap is credited on kill; nothing is dropped in the world. |
+| Icons | 3 | `icon_tower_overclock` (no tower), `icon_weapon_wrench` (melee has no armory card), and `icon_ammo_cryo` — see the naming note below. |
+| Barricade damaged/broken | 2 | Structure HP draws a bar over the intact model; the damaged and broken states are not swapped in yet. |
+| Socket base plates | 2 | The occupied-socket art is the tower's own foot. |
+| `ui_nameplate` | 1 | No world-space nameplates yet. |
 
-Nothing in that list is unused *by mistake*. Everything that was, is now wired.
+Nothing in that list is unused *by mistake*.
 
 ## What this evaluation found
 
@@ -60,6 +74,28 @@ lie the player pays for. Trap art now follows `ChargesLeft`.
 **`shared_core_hit` was never asked for.** A leak costs a life wherever it
 happened; the core now flashes to its struck state for a beat on every leak,
 on both the host and client paths.
+
+Found by the 2026-09-07 re-measurement:
+
+**The manifest's `wired` column had rotted.** Fifty-seven rows said `no` for
+names a played match requests every time — the whole Foundry and Switchyard
+kits, every socket pad, the core and its struck state, the Detector and
+Filament towers. The column now follows this measurement (a delivered name is
+`yes` when the game asked for it), plus the code-read exceptions above.
+
+**Stage modules never followed the barrel.** Godot's glTF import wraps each
+file's root node in an extra scene root, so the merge that reparents a
+module's parts onto the chassis rig nodes (`MergeRig`) compared two wrappers
+with different names and reparented the whole module instead. Nothing showed,
+because the whole tower turned as one node. It surfaced the moment the yaw and
+pitch nodes started being driven (`TowerRig`); the merge now starts below the
+wrapper.
+
+**One icon name drifted.** The brief and the drop name the cryo ammo icon
+`icon_ammo_cryo`; the sim's M3 ammo rows are `cryoRounds`, `shockRounds`,
+`toxinRounds`, so the armory asks for `icon_ammo_cryorounds` and draws a chip
+beside a delivered icon. Recorded in the design-system README with the other
+missing icons; the fix is on the code side (the brief is the contract).
 
 ## Keeping it honest
 

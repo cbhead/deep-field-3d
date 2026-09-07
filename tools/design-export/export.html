@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Deep Field 3D — asset pack export (headless host)</title>
+<script type="importmap">
+{
+  "imports": {
+    "three": "/vendor/three/build/three.module.js",
+    "three/addons/controls/OrbitControls.js": "/vendor/three/examples/jsm/controls/OrbitControls.js",
+    "three/addons/exporters/OBJExporter.js": "/vendor/three/examples/jsm/exporters/OBJExporter.js",
+    "three/addons/exporters/GLTFExporter.js": "/vendor/three/examples/jsm/exporters/GLTFExporter.js"
+  }
+}
+</script>
+<style>
+  html,body{margin:0;height:100%;background:#0D1119;color:#c3ccd8;font:13px/1.5 monospace}
+  body{display:grid;grid-template-rows:1fr auto;height:100%}
+  three-d-stage{width:100%;height:100%;display:block;min-height:320px}
+  three-d-stage:not(:defined){visibility:hidden}
+  #status{padding:8px 12px;border-top:1px solid #333;white-space:pre-wrap;max-height:40vh;overflow:auto}
+</style>
+</head>
+<body>
+<three-d-stage name="deepfield_tower_pack" background="#0D1119"></three-d-stage>
+<pre id="status">Loading models…</pre>
+<script src="./three-d-stage.js"></script>
+<script type="module">
+/* The same export as docs/design/"Deep Field 3D - Asset Export.html" — the page Claude Design ships — with two
+   changes: every file is PUT to tools/design-export/server.mjs at /out/<repo path> instead of being zipped for
+   download, and the run starts on load. The build / prune / bake logic is verbatim; when design's page changes,
+   port the change here. Served at http://127.0.0.1:8765/export.html by tools/design-export.sh. */
+const post = (s) => fetch('/log', { method: 'POST', body: s }).catch(() => {});
+const status = document.getElementById('status');
+const say = (s) => { status.textContent = s; post(s); };
+window.addEventListener('error', (e) => say('ERROR ' + (e.error?.stack || e.message)));
+window.addEventListener('unhandledrejection', (e) => say('ERROR ' + (e.reason?.stack || e.reason)));
+
+import { applyLevels, triCount, countMeshes } from './models/tower-kit.js';
+import { makeEnemyKit, ENEMIES } from './models/enemies.js';
+import { TRAPS } from './models/traps.js';
+import { PROJECTILES } from './models/projectiles.js';
+import { makeWeaponKit, WEAPONS, ATTACHMENTS, AMMO, TRACERS } from './models/weapons.js';
+import { makeHeroKit, HEROES } from './models/heroes.js';
+import { FOUNDRY, makeFoundryMats } from './models/foundry.js';
+import { SHARED, PICKUPS } from './models/shared.js';
+import { SWITCHYARD, makeSwitchyardMats } from './models/switchyard.js';
+import { VFX, makeVfxMats } from './models/vfx.js';
+const MODS = ['lance', 'nova', 'singularity', 'skywatch', 'arc', 'barricade', 'filament', 'detector', 'overclock'];
+const ICONS = [
+  'icon_tower_lance', 'icon_tower_nova', 'icon_tower_arc', 'icon_tower_singularity', 'icon_tower_skywatch', 'icon_tower_barricade', 'icon_tower_detector', 'icon_tower_filament', 'icon_tower_overclock',
+  'icon_trap_spike', 'icon_trap_tar', 'icon_trap_launcher',
+  'icon_enemy_drifter', 'icon_enemy_mote', 'icon_enemy_monolith', 'icon_enemy_skiff', 'icon_enemy_aegis', 'icon_enemy_warden', 'icon_enemy_mole', 'icon_enemy_cluster',
+  'icon_status_burn', 'icon_status_chill', 'icon_status_mark', 'icon_status_shock', 'icon_status_freeze', 'icon_status_shred', 'icon_reaction_thermalshock', 'icon_reaction_flashfreeze',
+  'icon_scrap_alloy', 'icon_scrap_flux', 'icon_scrap_plating', 'icon_scrap_gravium',
+  'icon_weapon_sidearm', 'icon_weapon_rifle', 'icon_weapon_scattergun', 'icon_weapon_emberpistol', 'icon_weapon_wrench',
+  'icon_ammo_standard', 'icon_ammo_ap', 'icon_ammo_hollowpoint', 'icon_ammo_incendiary', 'icon_ammo_cryo',
+  'icon_attach_longbarrel', 'icon_attach_shortbarrel', 'icon_attach_compensator', 'icon_attach_rangefinder', 'icon_attach_drumfeed', 'icon_attach_bracestock', 'icon_attach_stabilizer', 'icon_attach_embercoil', 'icon_attach_cryocell', 'icon_attach_voltcap',
+  'icon_faction_forge', 'icon_faction_ember', 'icon_faction_tempest', 'icon_faction_glacier', 'icon_faction_specter', 'icon_ability_overdrive', 'icon_ability_ignitionwave', 'icon_ability_chainsurge', 'icon_ability_cryofield', 'icon_ability_revealpulse',
+  'icon_path_damage', 'icon_path_range', 'icon_path_rate'];
+const EXTRA = [
+  { dir: 'enemies/', items: ENEMIES, kind: 'enemy' }, { dir: 'traps/', items: TRAPS, kind: 'trap' }, { dir: 'towers/', items: PROJECTILES, kind: 'projectile' },
+  { dir: 'weapons/', items: WEAPONS, kind: 'weapon' }, { dir: 'weapons/', items: WEAPONS.filter((w) => w.worldFile).map((w) => ({ ...w, file: w.worldFile, id: w.id + '_world' })), kind: 'weapon_world' },
+  { dir: 'heroes/', items: HEROES, kind: 'hero' }, { dir: 'maps/foundry/', items: FOUNDRY, kind: 'map_foundry' }, { dir: 'maps/switchyard/', items: SWITCHYARD, kind: 'map_switchyard' }, { dir: 'shared/', items: SHARED, kind: 'shared' }, { dir: 'vfx/', items: VFX, kind: 'vfx' }, { dir: 'economy/', items: PICKUPS, kind: 'pickup' }, { dir: 'weapons/', items: ATTACHMENTS, kind: 'attachment' }, { dir: 'weapons/', items: AMMO, kind: 'ammo' }, { dir: 'weapons/', items: TRACERS, kind: 'tracer' }];
+const EXTRA_COUNT = EXTRA.reduce((a, c) => a + c.items.length, 0);
+const ROUTES = [['enemy_', 'enemies'], ['boss_', 'enemies'], ['tower_', 'structures'], ['trap_', 'structures'], ['socket_', 'structures'], ['weapon_', 'weapons'], ['attach_', 'weapons'], ['ammo_', 'weapons'], ['hands_', 'weapons'], ['hero_', 'heroes'], ['proj_', 'vfx'], ['vfx_', 'vfx'], ['pickup_', 'economy'], ['foundry_', 'maps'], ['switchyard_', 'maps'], ['shared_', 'maps'], ['prop_', 'maps'], ['ui_', 'ui']];
+const routeFor = (file) => 'game/assets/' + (ROUTES.find(([p]) => file.startsWith(p))?.[1] || 'misc') + '/' + file;
+const TOWERS = (await Promise.all(MODS.map((m) => import(`./models/${m}.js`)))).map((m) => m.TOWER);
+
+const stage = document.querySelector('three-d-stage');
+const { THREE } = await stage.ready;
+const kit = makeEnemyKit(THREE);
+Object.assign(kit.mats, makeWeaponKit(THREE).mats, makeHeroKit(THREE).mats); makeFoundryMats(THREE, kit.mats); makeSwitchyardMats(THREE, kit.mats); makeVfxMats(THREE, kit.mats); kit.mats.threat = kit.mats.weak;
+const { GLTFExporter } = await import('three/addons/exporters/GLTFExporter.js');
+const exporter = new GLTFExporter();
+
+const allLevels = (t, fn) => Object.fromEntries(t.paths.map((p) => [p.id, fn(p.id)]));
+const resetVis = (m) => m.traverse((o) => { o.visible = !o.userData.gizmo; });
+function visBox(root) {
+  root.updateMatrixWorld(true);
+  const b = new THREE.Box3(), tmp = new THREE.Box3();
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    for (let p = o; p; p = p.parent) if (!p.visible) return;
+    if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+    tmp.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld);
+    b.union(tmp);
+  });
+  return b;
+}
+function pruneToPath(model, id, path) {
+  const re = new RegExp(`^${id}_up_${path}_l\\d+$`);
+  const keep = (o, under) => {
+    if (!o.visible && o !== model) return false;
+    const u = under || re.test(o.name);
+    if (o.isMesh) { o.visible = o.visible && u; return o.visible; }
+    let any = false;
+    for (const c of o.children) any = keep(c, u) || any;
+    o.visible = any || o === model;
+    return any;
+  };
+  keep(model, false);
+}
+function chassis(t, variant) {
+  const m = t.build(kit, allLevels(t, () => 1));
+  applyLevels(m, t, allLevels(t, () => 1));
+  if (variant) t.variants[variant](m, kit);
+  m.rotation.y = Math.PI;
+  return m;
+}
+function fileList() {
+  const out = [];
+  for (const t of TOWERS) {
+    if (t.id === 'barricade') { out.push('tower_barricade.glb', 'tower_barricade_damaged.glb', 'tower_barricade_broken.glb'); continue; }
+    out.push(`tower_${t.id}_chassis.glb`);
+    for (const p of t.paths) for (let s = 1; s <= 10; s++) out.push(`tower_${t.id}_${p.id}_s${s}.glb`);
+  }
+  return out;
+}
+const FILES = fileList();
+stage.setObject(chassis(TOWERS[0]));
+
+const glb = async (obj) => new Uint8Array(await exporter.parseAsync(obj, { binary: true, trs: true, onlyVisible: true }));
+async function bakeSky(mesh, faceSize = 1536, W = 4096) {
+  const renderer = stage._renderer, H = W / 2;
+  const cubeRT = new THREE.WebGLCubeRenderTarget(faceSize, { generateMipmaps: false }); cubeRT.texture.colorSpace = THREE.SRGBColorSpace;
+  const cubeCam = new THREE.CubeCamera(1, 5000, cubeRT);
+  const sc = new THREE.Scene(); const sky = new THREE.Mesh(mesh.geometry, mesh.material); sky.frustumCulled = false; sc.add(sky); sc.add(cubeCam);
+  cubeCam.update(renderer, sc);
+  const eqRT = new THREE.WebGLRenderTarget(W, H, { depthBuffer: false }); eqRT.texture.colorSpace = THREE.SRGBColorSpace;
+  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
+    uniforms: { tCube: { value: cubeRT.texture } }, depthTest: false, depthWrite: false,
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
+    fragmentShader: 'precision highp float; uniform samplerCube tCube; varying vec2 vUv; void main(){ float ph = vUv.x * 6.28318530718, th = (1. - vUv.y) * 3.14159265359; vec3 d = vec3(-cos(ph) * sin(th), cos(th), sin(ph) * sin(th)); gl_FragColor = textureCube(tCube, d); }' }));
+  const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), qs = new THREE.Scene(); qs.add(quad);
+  const prevRT = renderer.getRenderTarget(); renderer.setRenderTarget(eqRT); renderer.render(qs, cam);
+  const px = new Uint8Array(W * H * 4); renderer.readRenderTargetPixels(eqRT, 0, 0, W, H, px); renderer.setRenderTarget(prevRT);
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const ctx = c.getContext('2d'), img = ctx.createImageData(W, H);
+  for (let y = 0; y < H; y++) img.data.set(px.subarray((H - 1 - y) * W * 4, (H - y) * W * 4), y * W * 4);
+  ctx.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  const mat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide, fog: false, toneMapped: false }); mat.name = mesh.material.name + '_baked';
+  cubeRT.dispose(); eqRT.dispose(); quad.geometry.dispose(); quad.material.dispose();
+  const baked = new THREE.Mesh(mesh.geometry, mat); baked.name = mesh.name; baked.userData = { ...mesh.userData, gizmo: false, bakedEquirect: `${W}x${H} png` };
+  return baked;
+}
+async function bakeSkies(obj) {
+  if (obj.isMesh && obj.material?.isShaderMaterial && obj.userData.sky) return bakeSky(obj);
+  const jobs = [];
+  obj.traverse((o) => { if (o.isMesh && o.material?.isShaderMaterial && o.userData.sky && o.parent) jobs.push(o); });
+  for (const o of jobs) { const b = await bakeSky(o); b.position.copy(o.position); b.rotation.copy(o.rotation); b.scale.copy(o.scale); o.parent.add(b); o.parent.remove(o); }
+  return obj;
+}
+const tick = () => new Promise((r) => setTimeout(r, 0));
+const bounds = (o) => { const b = visBox(o); return b.isEmpty() ? null : { min: b.min.toArray().map((v) => +v.toFixed(3)), max: b.max.toArray().map((v) => +v.toFixed(3)) }; };
+const text = async (p) => { const r = await fetch(p); if (!r.ok) throw new Error(`fetch ${p}: ${r.status}`); return new Uint8Array(await r.arrayBuffer()); };
+const put = async (name, data) => {
+  const r = await fetch('/out/' + name, { method: 'PUT', body: data });
+  if (!r.ok) throw new Error(`PUT ${name}: ${r.status}`);
+};
+
+const TOTAL = FILES.length + EXTRA_COUNT;
+say(`Ready — ${TOTAL} GLB files; starting`);
+const manifest = { version: '1.0', generated: new Date().toISOString(), units: 'metres', up: '+Y', forward: '-Z', files: [] };
+let done = 0;
+const add = async (name, obj, meta) => {
+  obj.name = name.split('/').pop().replace(/\.glb$/, '');
+  obj = await bakeSkies(obj);
+  const data = await glb(obj);
+  await put(routeFor(name), data);
+  manifest.files.push({ file: name, bytes: data.length, tris: triCount(obj), parts: countMeshes(obj), bounds: bounds(obj), ...meta });
+  done++;
+  say(`${done} / ${TOTAL} · ${name} · ${data.length} bytes`);
+  await tick();
+};
+try {
+  for (const t of TOWERS) {
+    const rigMeta = t.rig ? { rig: { yaw: t.id + '_yaw', pitch: t.id + '_pitch', muzzle: t.id + '_muzzle', yawLimits: t.rig.yaw, pitchLimits: t.rig.pitch, traverseDegPerSec: t.rig.traverse, elevateDegPerSec: t.rig.elevate, pitchSign: -1 } } : { spin: t.id + '_spin' };
+    if (t.id === 'barricade') {
+      for (const [file, v] of [['tower_barricade.glb', null], ['tower_barricade_damaged.glb', 'damaged'], ['tower_barricade_broken.glb', 'broken']])
+        await add(file, chassis(t, v), { tower: t.id, kind: 'structure', state: v || 'intact' });
+      continue;
+    }
+    await add(`tower_${t.id}_chassis.glb`, chassis(t), { tower: t.id, kind: 'chassis', ...rigMeta, cues: t.paths.map((p) => p.cue), energy: t.swatch });
+    const staged = t.build(kit, allLevels(t, () => 10));
+    staged.rotation.y = Math.PI;
+    for (const p of t.paths) for (let s = 1; s <= 10; s++) {
+      resetVis(staged);
+      applyLevels(staged, t, allLevels(t, (id) => id === p.id ? s : 1));
+      pruneToPath(staged, t.id, p.id);
+      await add(`tower_${t.id}_${p.id}_s${s}.glb`, staged, { tower: t.id, kind: 'module', path: p.id, stage: s, breakpoint: [4, 7, 10].includes(s), adds: p.steps[s] || null, increments: Array.from({ length: s - 1 }, (_, i) => `${t.id}_up_${p.id}_l${i + 2}`) });
+    }
+  }
+  for (const c of EXTRA) for (const it of c.items) {
+    const m = it.build(kit);
+    await add(it.file, m, { kind: c.kind, id: it.id, note: it.note });
+  }
+  say('Bundling palette, icons, manifest, design system…');
+  await put('game/assets/structures/manifest.json', new TextEncoder().encode(JSON.stringify(manifest, null, 2)));
+  await put('docs/forward-manifest.json', await text('game/assets/forward-manifest.json'));
+  await put('game/assets/brand/README.md', await text('game/assets/brand/README.md'));
+  for (const n of ['logo_mark.svg', 'logo_mark_mono.svg', 'logo_horizontal.svg', 'logo_horizontal_onbrass.svg', 'logo_stacked.svg']) await put('game/assets/brand/' + n, await text('game/assets/brand/' + n));
+  for (const s of [16, 32, 48, 64, 128, 256, 512, 1024]) await put(`game/assets/brand/appicon_${s}.png`, await text(`game/assets/brand/appicon_${s}.png`));
+  for (const [p, n] of [['game/assets/palette.json', 'docs/palette.json'], ['game/assets/palette.md', 'docs/PALETTE.md'], ['game/assets/towers/README.md', 'game/assets/structures/README-towers.md'], ['docs/ASSET-DELIVERY.md', 'docs/ASSET-DELIVERY.md']])
+    await put(n, await text(p));
+  for (const i of ICONS) await put(`game/assets/ui/${i}.svg`, await text(`game/assets/ui/${i}.svg`));
+  for (const t of ['base', 'colors', 'effects', 'fonts', 'spacing', 'typography']) await put(`docs/design-system/${t}.css`, await text(`ds/tokens/${t}.css`));
+  for (const f of ['ui-kit.css', 'ui-screens.js', 'ui-branding.js', 'ui-weapon-view.js']) await put('docs/design-system/' + f, await text(f));
+  await put('docs/design-system/ui-screens.html', new TextEncoder().encode((await (await fetch('Deep Field 3D - UI Screens.html')).text()).replaceAll('ds/tokens/', '')));
+  say(`DONE — ${done} GLB files exported`);
+} catch (err) {
+  say('ERROR export failed: ' + (err.stack || err.message));
+}
+</script>
+</body>
+</html>

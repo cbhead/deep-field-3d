@@ -31,6 +31,9 @@ intermission with catch-up scrap.
    unzip -o /tmp/godot-mono.zip -d ~/Applications/
    ```
    (Or `brew install --cask godot-mono dotnet-sdk` if you're fine with sudo.)
+3. **Node 22+** — only for `make design-export`, which rebuilds the models from
+   Claude Design's sources in `docs/design/` (see docs/ART-INTEGRATION.md). Not
+   needed to build or play.
 3. **GNU make** (this machine's Xcode CLT shim is broken; brew's make sidesteps it):
    ```sh
    brew install make

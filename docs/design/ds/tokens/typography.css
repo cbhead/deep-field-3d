@@ -1,0 +1,26 @@
+:root{
+--font-display:'Oxanium',ui-sans-serif,system-ui,sans-serif;
+--font-ui:'Barlow',ui-sans-serif,system-ui,sans-serif;
+--font-mono:'JetBrains Mono',ui-monospace,'SFMono-Regular',monospace;
+
+--weight-regular:400;--weight-medium:500;--weight-semibold:600;--weight-bold:700;--weight-black:800;
+
+/* Sizes — a 1.25-ish scale, tuned for 1080p-first game UI */
+--size-display-xl:56px;--size-display-lg:40px;--size-display-md:30px;--size-display-sm:22px;
+--size-title:18px;--size-body-lg:16px;--size-body:14px;--size-caption:12px;--size-micro:11px;
+--size-stat-xl:34px;--size-stat:20px;--size-stat-sm:15px;
+
+--leading-tight:1.05;--leading-snug:1.25;--leading-normal:1.5;--leading-loose:1.65;
+
+--tracking-display:.02em;--tracking-label:.14em;--tracking-micro:.18em;--tracking-normal:0;
+
+/* Composite roles */
+--text-hero:var(--weight-black) var(--size-display-xl)/var(--leading-tight) var(--font-display);
+--text-h1:var(--weight-bold) var(--size-display-lg)/var(--leading-tight) var(--font-display);
+--text-h2:var(--weight-bold) var(--size-display-md)/var(--leading-snug) var(--font-display);
+--text-h3:var(--weight-semibold) var(--size-display-sm)/var(--leading-snug) var(--font-display);
+--text-panel-title:var(--weight-bold) var(--size-title)/var(--leading-snug) var(--font-display);
+--text-body-role:var(--weight-regular) var(--size-body)/var(--leading-normal) var(--font-ui);
+--text-label:var(--weight-bold) var(--size-micro)/1.2 var(--font-display);
+--text-stat-role:var(--weight-bold) var(--size-stat)/1 var(--font-mono);
+}

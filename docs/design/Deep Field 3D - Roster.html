@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Deep Field 3D — Roster: Enemies, Heroes, Traps & Projectiles</title>
+<link rel="stylesheet" href="ds/tokens/fonts.css">
+<link rel="stylesheet" href="ds/tokens/colors.css">
+<link rel="stylesheet" href="ds/tokens/typography.css">
+<link rel="stylesheet" href="ds/tokens/spacing.css">
+<link rel="stylesheet" href="ds/tokens/effects.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.184.0/build/three.module.js",
+    "three/addons/controls/OrbitControls.js": "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js",
+    "three/addons/exporters/OBJExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js",
+    "three/addons/exporters/GLTFExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js"
+  },
+  "integrity": {
+    "https://unpkg.com/three@0.184.0/build/three.module.js": "sha384-8FCZ1eVO6it4+pbec2aDtnTrwjWXZLJRC+MAGCIPDgsYnUrl/E0A2YlF8ioMKI/J",
+    "https://unpkg.com/three@0.184.0/build/three.core.js": "sha384-dw2ooPewaEIrAgl6oFDBmmBWCE9oW9LxRGcfwZ0hLvEprzo202wXl7vCYHRlSnOT",
+    "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js": "sha384-4rziNxOBZKQ69i+w+f89KJ55TCYquwchVbByQwmaOeIOXdOU2PLDn3kOfXHwIJC9",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js": "sha384-nbwtoZENJD3Vq+ACK0CuGQdPMuDWHkamC2KJD70EV5nfg6jQjfppKOea07YJN+N3",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js": "sha384-VofkvpG6HERhFCYbsUOHeNXBCqID2nfqkQqnVzE1jc/oPcz+qJ13ADdXH08hE+cQ"
+  }
+}
+</script>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font:var(--text-body-role);background:var(--surface-base);color:var(--text-primary);display:flex;flex-direction:column;overflow:hidden}
+  a{color:var(--text-arcane);text-decoration:none}
+  a:hover{color:var(--arcane-300)}
+  .label{font:var(--text-label);letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--text-muted)}
+  header{flex:0 0 auto;display:flex;align-items:center;gap:var(--space-7);padding:var(--space-4) var(--space-6);background:var(--surface-panel);
+    border-bottom:var(--stroke-emphasis) solid var(--border-panel);box-shadow:var(--shadow-panel);position:relative;z-index:var(--z-hud)}
+  header::after{content:"";position:absolute;inset:auto 0 -3px 0;height:2px;background:var(--tex-hazard);opacity:.7}
+  .brand h1{font:var(--text-panel-title);margin:0;letter-spacing:var(--tracking-display)}
+  .brand p{margin:2px 0 0;font-size:var(--size-caption);color:var(--text-muted)}
+  .tabs{display:flex;gap:var(--space-2);flex-wrap:wrap;align-items:center;margin-left:auto}
+  .tabs a,.tabs button{font:var(--weight-semibold) var(--size-caption)/1 var(--font-display);letter-spacing:.03em;display:flex;align-items:center;gap:var(--space-2);
+    padding:var(--space-2) var(--space-4);background:var(--surface-raised);color:var(--text-secondary);border:var(--stroke-panel) solid var(--border-panel);
+    border-radius:var(--radius-2);clip-path:var(--clip-chamfer-sm);cursor:pointer}
+  .tabs a:hover,.tabs button:hover{background:var(--obsidian-500);color:var(--text-primary)}
+  .tabs button[aria-pressed="true"]{background:var(--obsidian-500);color:var(--text-accent);border-color:var(--border-accent);box-shadow:var(--glow-brass)}
+  main{flex:1 1 auto;position:relative;min-height:0}
+  three-d-stage{width:100%;height:100%;display:block}
+  three-d-stage:not(:defined){visibility:hidden}
+  .panel{position:absolute;z-index:var(--z-dock);width:300px;background:var(--surface-glass);backdrop-filter:blur(var(--blur-glass));
+    border:var(--stroke-panel) solid var(--border-panel);border-top-color:var(--border-bevel-top);box-shadow:var(--shadow-panel);clip-path:var(--clip-chamfer);
+    max-height:calc(100% - var(--space-8));overflow:auto}
+  .panel>h2{font:var(--text-label);letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--text-accent);margin:0;padding:var(--space-3) var(--space-4);
+    background:var(--surface-inset);border-bottom:var(--stroke-panel) solid var(--border-panel);position:sticky;top:0}
+  .body{padding:var(--space-4)}
+  #list{left:var(--space-6);top:var(--space-6)}
+  #info{right:var(--space-6);top:var(--space-6)}
+  .items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+  .items button{width:100%;text-align:left;display:flex;align-items:center;gap:var(--space-3);font:var(--weight-semibold) var(--size-caption)/1.2 var(--font-display);
+    padding:var(--space-2) var(--space-3);background:transparent;color:var(--text-secondary);border:var(--stroke-hairline) solid transparent;cursor:pointer}
+  .items button:hover{background:var(--obsidian-600);color:var(--text-primary)}
+  .items button[aria-pressed="true"]{background:var(--obsidian-500);color:var(--text-accent);border-color:var(--border-accent)}
+  .items button small{margin-left:auto;font:var(--weight-regular) var(--size-micro)/1 var(--font-mono);color:var(--text-muted)}
+  .swatch{width:8px;height:8px;flex:0 0 auto;transform:rotate(45deg)}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3) var(--space-4);margin:0}
+  .stats dt{font:var(--text-label);letter-spacing:var(--tracking-micro);text-transform:uppercase;color:var(--text-muted);margin:0}
+  .stats dd{margin:3px 0 0;font:var(--weight-bold) var(--size-stat-sm)/1 var(--font-mono);color:var(--text-primary)}
+  .stats dd.arcane{color:var(--text-arcane)}
+  hr{border:0;border-top:var(--stroke-panel) solid var(--border-panel);margin:var(--space-4) 0}
+  .note{font-size:var(--size-caption);line-height:var(--leading-normal);color:var(--text-muted);margin:var(--space-3) 0 0}
+  .checks label{display:flex;align-items:center;gap:var(--space-3);font-size:var(--size-caption);color:var(--text-secondary);cursor:pointer;margin-top:var(--space-3)}
+  input[type="checkbox"]{accent-color:var(--arcane-500);width:14px;height:14px;margin:0}
+  code{font:var(--weight-regular) var(--size-micro)/1 var(--font-mono);color:var(--text-arcane)}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1 id="title">Enemies</h1>
+    <p>Deep Field 3D · brief §3.1 / §3.5 / §3.3 / §3.2 / §3.7 · metres, y-up, −Z forward</p>
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+</header>
+<main>
+  <three-d-stage name="deepfield" background="#0D1119"></three-d-stage>
+  <section class="panel" id="list"><h2 id="list-title">Roster</h2><div class="body"><ul class="items" id="items"></ul></div></section>
+  <section class="panel" id="info"><h2 id="info-title">—</h2><div class="body">
+    <dl class="stats" id="stats"></dl>
+    <hr>
+    <p class="label">File</p><p class="note" style="margin-top:var(--space-2)"><code id="file"></code></p>
+    <p class="note" id="note"></p>
+    <div class="checks">
+      <label><input type="checkbox" id="ref" checked> 1.6 m Drifter reference ghost</label>
+      <label><input type="checkbox" id="anim" checked> Procedural motion preview</label>
+    </div>
+  </div></section>
+</main>
+<script src="./three-d-stage.js"></script>
+<script type="module">
+import { makeEnemyKit, ENEMIES, ELITES } from './models/enemies.js';
+import { SHARED, PICKUPS } from './models/shared.js';
+import { TRAPS } from './models/traps.js';
+import { PROJECTILES } from './models/projectiles.js';
+import { makeHeroKit, HEROES } from './models/heroes.js';
+import { VFX, makeVfxMats } from './models/vfx.js';
+import { triCount, countMeshes } from './models/tower-kit.js';
+import { applyStudio } from './models/studio.js';
+
+const CATS = [
+  { id: 'enemies', label: 'Enemies', items: ENEMIES, dir: 'enemies/' },
+  { id: 'heroes', label: 'Heroes', items: HEROES, dir: 'heroes/' },
+  { id: 'traps', label: 'Traps', items: TRAPS, dir: 'traps/' },
+  { id: 'projectiles', label: 'Projectiles', items: PROJECTILES, dir: 'towers/' },
+  { id: 'vfx', label: 'VFX', items: VFX, dir: 'vfx/' },
+  { id: 'elites', label: 'Elites', items: ELITES.map((e) => ({ ...e, file: e.id + ' (overlay)', size: 'on Drifter', build(K) { const host = ENEMIES[0].build(K); host.add(e.apply(K, host)); host.name = 'elite_' + e.id + '_preview'; return host; } })), dir: 'enemies/' },
+  { id: 'pickups', label: 'Pickups', items: PICKUPS, dir: 'economy/' },
+  { id: 'elements', label: 'Map elements', items: SHARED.filter((s) => /teleporter|snipernest|cache|elevator|floodgate|crusher|gate_operated|destructible|^prop_/.test(s.id)), dir: 'maps/' },
+];
+const el = (id) => document.getElementById(id);
+const stage = document.querySelector('three-d-stage');
+const { THREE } = await stage.ready;
+applyStudio(stage, THREE);
+const K = makeEnemyKit(THREE);
+Object.assign(K.mats, makeHeroKit(THREE).mats); makeVfxMats(THREE, K.mats);
+let cat = CATS[0], cur = null, model = null, ghost = null, t = 0;
+
+el('tabs').innerHTML = CATS.map((c) => `<button type="button" data-cat="${c.id}">${c.label}</button>`).join('') +
+  `<a href="Deep Field 3D - Asset Export.html"><span class="swatch" style="background:var(--arcane-400)"></span>Export pack</a><a href="Deep Field 3D - Gunsmith.html"><span class="swatch" style="background:#c3ccd8"></span>Gunsmith</a><a href="Deep Field 3D - Maps.html"><span class="swatch" style="background:#ff8a1f"></span>Maps</a><a href="Deep Field 3D - UI Screens.html"><span class="swatch" style="background:#c89b3c"></span>UI</a><a href="Lance.html"><span class="swatch" style="background:#2b5cff"></span>Towers</a>`;
+el('tabs').addEventListener('click', (e) => { const c = CATS.find((x) => x.id === e.target.dataset.cat); if (c) setCat(c); });
+
+function setCat(c) {
+  cat = c;
+  for (const b of el('tabs').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.cat === c.id));
+  el('title').textContent = c.label; el('list-title').textContent = c.label;
+  el('items').innerHTML = c.items.map((it) => `<li><button type="button" data-id="${it.id}"><span class="swatch" style="background:${it.swatch}"></span>${it.label}<small>${it.size || ''}</small></button></li>`).join('');
+  select(c.items[0]);
+}
+el('items').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; select(cat.items.find((x) => x.id === b.dataset.id)); });
+
+function select(it) {
+  cur = it;
+  for (const b of el('items').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.id === it.id));
+  model = it.build(K);
+  stage.setAttribute('name', it.file.replace(/\.glb$/, ''));
+  stage.setObject(model);
+  // Enemies face −Z: swing the auto-framed camera round to the front.
+  const cam = stage._camera, ctl = stage._controls;
+  if (cam && ctl) { const d = cam.position.clone().sub(ctl.target); cam.position.copy(ctl.target).add(new THREE.Vector3(-d.x, d.y, -d.z)); ctl.update(); }
+  el('info-title').textContent = it.label;
+  el('file').textContent = 'game/assets/' + cat.dir + it.file;
+  el('note').textContent = it.note;
+  const b = new THREE.Box3().setFromObject(model), s = b.getSize(new THREE.Vector3());
+  el('stats').innerHTML = Object.entries({ ...it.stats, Bounds: `${s.x.toFixed(2)}×${s.y.toFixed(2)}×${s.z.toFixed(2)}`, Tris: triCount(model).toLocaleString(), Parts: String(countMeshes(model)) })
+    .map(([k, v]) => `<div><dt>${k}</dt><dd class="${k === 'Tris' || k === 'Parts' ? 'arcane' : ''}">${v}</dd></div>`).join('');
+  placeGhost();
+}
+
+function placeGhost() {
+  const scene = model?.parent; if (!scene) return;
+  if (ghost) ghost.parent?.remove(ghost);
+  if (!el('ref').checked || !(cat.id === 'enemies' || cat.id === 'heroes') || cur.id === 'drifter') return;
+  ghost = ENEMIES[0].build(K);
+  ghost.name = '__ghost';
+  ghost.traverse((o) => { if (o.isMesh) { o.material = new THREE.MeshBasicMaterial({ color: 0x3e4a63, wireframe: true, transparent: true, opacity: .35 }); o.castShadow = false; } });
+  const b = new THREE.Box3().setFromObject(model);
+  ghost.position.x = b.max.x + 1.4;
+  scene.add(ghost);
+}
+el('ref').addEventListener('change', placeGhost);
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min((now - last) / 1000, .05); last = now; t += dt;
+  if (model && el('anim').checked) {
+    for (const n of ['skiff_wing_l', 'skiff_wing_r']) { const w = model.getObjectByName(n); if (w) w.rotation.z = Math.sin(t * 9) * .35 * (n.endsWith('_l') ? 1 : -1); }
+    const d = model.getObjectByName('mole_drill'); if (d) d.rotation.z += dt * 12;
+    const sh = model.getObjectByName('warden_shield_bubble'); if (sh) sh.scale.setScalar(1 + Math.sin(t * 3) * .02);
+    const vanes = model.getObjectByName('shade_vanes'); if (vanes) { vanes.rotation.x = .15 + Math.sin(t * 2.2) * .08; vanes.children.forEach((v, i) => { v.rotation.z = Math.sin(t * 3 + i) * .06; }); }
+    const shim = model.getObjectByName('shimmer_spin'); if (shim) { shim.rotation.y = t * .8; shim.children.forEach((r, i) => { r.position.x = Math.sin(t * 2 + i * .7) * .04; }); }
+    const dome = model.getObjectByName('mender_dome_core'); if (dome) dome.scale.setScalar(1 + Math.sin(t * 4) * .15);
+    for (let i = 0; i < 3; i++) { const arm = model.getObjectByName('mender_arm' + i); if (arm) arm.rotation.y = -((i / 3) * Math.PI * 2 + Math.PI / 6) + Math.sin(t * 1.3 + i * 2) * .4; }
+    for (const p of ['pickup_alloy_spin', 'pickup_flux_spin', 'pickup_plating_spin', 'pickup_gravium_spin', 'pickup_primecore_spin']) { const o = model.getObjectByName(p); if (o) { o.rotation.y = t * 1.4; o.position.y = .25 + Math.sin(t * 2.5) * .04; } }
+    const ch = model.getObjectByName('crusher_head'); if (ch) ch.position.y = 2.8 - Math.max(0, Math.sin(t * 1.2)) * 2.2;
+    const ga = model.getObjectByName('gate_arm'); if (ga) ga.rotation.z = (Math.sin(t * .8) + 1) * .6;
+    const gl = model.getObjectByName('gate_leaf'); if (gl) gl.position.y = 2.6 - (Math.sin(t * .9) + 1) * .9;
+    const lp = model.getObjectByName('link_pulse'); if (lp) lp.position.z = -((t * .6) % 1);
+    const va = model.getObjectByName('volt_arcs'); if (va) va.visible = Math.sin(t * 23) > -.3;
+    for (const s of [-1, 1]) { const mnd = model.getObjectByName('brood_mandible' + (s < 0 ? '_l' : '_r')); if (mnd) mnd.rotation.y = -s * (.35 + Math.max(0, Math.sin(t * 2.2)) * .35); }
+    const eng = model.getObjectByName('ram_engine'); if (eng) eng.traverse((o) => { if (o.material === K.mats.engine_glow) o.material.emissiveIntensity = 1.0 + Math.sin(t * 8) * .4; });
+    if (cat.id === 'projectiles' && cur.id.startsWith('vfx_')) { const s = .6 + (Math.sin(t * 4) + 1) * .3; model.scale.setScalar(s); }
+    else model.scale.setScalar(1);
+    if (cat.id === 'vfx') model.traverse((o) => {
+      if (!o.isGroup) return;
+      if (o.name.endsWith('_spin')) o.rotation.y = t * 1.2;
+      else if (o.name.endsWith('_pulse')) o.scale.setScalar(1 + Math.sin(t * 3) * .12);
+      else if (o.name.endsWith('_rise')) o.position.y = (Math.sin(t * 2) + 1) * .15;
+      else if (o.name.endsWith('_fade')) o.traverse((m) => { if (!m.isMesh) return; if (!m.userData.fadeMat) { m.material = m.material.clone(); m.material.transparent = true; m.userData.fadeMat = true; } m.material.opacity = .35 + (Math.sin(t * 2.5) + 1) * .3; });
+    });
+  }
+  requestAnimationFrame(frame);
+}
+setCat(CATS[0]);
+requestAnimationFrame(frame);
+window.__deepfieldRoster = { CATS, K, get model() { return model; }, select, setCat };
+</script>
+</body>
+</html>

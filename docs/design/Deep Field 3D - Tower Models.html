@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Deep Field 3D — M1 Tower Models</title>
+<link rel="stylesheet" href="_ds/isalus-healthcare-design-system-019dee4f-a026-7b12-96c7-9aa7ab854572/colors_and_type.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Roboto+Mono:wght@400;500&display=swap">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.184.0/build/three.module.js",
+    "three/addons/controls/OrbitControls.js": "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js",
+    "three/addons/exporters/OBJExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js",
+    "three/addons/exporters/GLTFExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js"
+  },
+  "integrity": {
+    "https://unpkg.com/three@0.184.0/build/three.module.js": "sha384-8FCZ1eVO6it4+pbec2aDtnTrwjWXZLJRC+MAGCIPDgsYnUrl/E0A2YlF8ioMKI/J",
+    "https://unpkg.com/three@0.184.0/build/three.core.js": "sha384-dw2ooPewaEIrAgl6oFDBmmBWCE9oW9LxRGcfwZ0hLvEprzo202wXl7vCYHRlSnOT",
+    "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js": "sha384-4rziNxOBZKQ69i+w+f89KJ55TCYquwchVbByQwmaOeIOXdOU2PLDn3kOfXHwIJC9",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js": "sha384-nbwtoZENJD3Vq+ACK0CuGQdPMuDWHkamC2KJD70EV5nfg6jQjfppKOea07YJN+N3",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js": "sha384-VofkvpG6HERhFCYbsUOHeNXBCqID2nfqkQqnVzE1jc/oPcz+qJ13ADdXH08hE+cQ"
+  }
+}
+</script>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    font-family:Inter,system-ui,sans-serif;
+    background:var(--bg-canvas,#f8fafc);
+    color:var(--gray-900,#0f172a);
+    display:flex;flex-direction:column;
+  }
+  a{color:var(--isalus-blue-500,#3898d8);text-decoration:none}
+  a:hover{color:var(--isalus-navy,#283858);text-decoration:underline}
+  header{
+    flex:0 0 auto;background:#fff;border-bottom:1px solid var(--gray-200,#e2e8f0);
+    padding:12px 20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;
+  }
+  .brand{display:flex;flex-direction:column;gap:2px;min-width:150px}
+  .brand b{font-size:15px;font-weight:600;color:var(--isalus-navy,#283858);letter-spacing:-0.01em}
+  .brand span{font-size:12px;color:var(--gray-500,#64748b)}
+  .picker{display:flex;gap:8px;flex-wrap:wrap}
+  .picker button{
+    font:500 14px/1 Inter,sans-serif;padding:9px 14px;border-radius:6px;
+    border:1px solid var(--gray-300,#cbd5e1);background:#fff;color:var(--isalus-navy,#283858);
+    cursor:pointer;transition:background 140ms cubic-bezier(.2,0,0,1),border-color 140ms;
+    display:flex;align-items:center;gap:8px;
+  }
+  .picker button:hover{background:var(--gray-100,#f1f5f9)}
+  .picker button:focus-visible{outline:2px solid var(--isalus-blue-500,#3898d8);outline-offset:2px}
+  .picker button[aria-pressed="true"]{
+    background:var(--isalus-navy,#283858);border-color:var(--isalus-navy,#283858);color:#fff;
+  }
+  .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+  .specs{
+    display:flex;gap:0;border:1px solid var(--gray-200,#e2e8f0);
+    border-radius:6px;overflow:hidden;background:var(--gray-50,#f8fafc);margin:0 0 10px;
+  }
+  .specs div{padding:5px 10px;border-left:1px solid var(--gray-200,#e2e8f0);flex:1 1 0}
+  .specs div:first-child{border-left:0}
+  .specs dt{font:500 10px/1.4 Inter,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--gray-500,#64748b);margin:0}
+  .specs dd{margin:2px 0 0;font:500 15px/1.2 "Roboto Mono",monospace;font-variant-numeric:tabular-nums;color:var(--isalus-navy,#283858)}
+  main{flex:1 1 auto;position:relative;min-height:0}
+  three-d-stage{width:100%;height:100%;display:block}
+  three-d-stage:not(:defined){visibility:hidden}
+  .note{
+    position:absolute;left:20px;bottom:52px;max-width:340px;z-index:5;
+    background:rgba(255,255,255,.92);border:1px solid var(--gray-200,#e2e8f0);border-radius:10px;
+    padding:12px 14px;font-size:13px;line-height:1.5;color:var(--gray-700,#334155);
+  }
+  .specs dd{font-size:14px}
+  .note b{color:var(--isalus-navy,#283858);font-weight:600;display:block;margin-bottom:3px;font-size:13px}
+  .note code{font:400 12px/1 "Roboto Mono",monospace;color:var(--gray-700,#334155)}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <b>Deep Field 3D — Tower Models</b>
+    <span>M1 roster · flat-shaded kitbash · meters, y-up</span>
+  </div>
+  <div class="picker" id="picker"></div>
+</header>
+<main>
+  <three-d-stage name="lance" background="#eef1f5"></three-d-stage>
+  <div class="note">
+    <b id="note-title"></b>
+    <dl class="specs" id="specs"></dl>
+    <span id="note-body"></span>
+  </div>
+</main>
+<script src="./three-d-stage.js"></script>
+<script type="module">
+const stage = document.querySelector('three-d-stage');
+const { THREE } = await stage.ready;
+
+/* ── shared material palette (5 body materials + 1 per-tower energy) ───── */
+const mats = {};
+const mat = (name, color, o = {}) => {
+  const m = new THREE.MeshStandardMaterial({ color, roughness: .62, metalness: .3, flatShading: true, ...o });
+  m.name = name; mats[name] = m; return m;
+};
+mat('hull',   0x5b6577);
+mat('plate',  0x94a0b1, { roughness: .5 });
+mat('chassis',0x283858, { roughness: .7, metalness: .18 });
+mat('trim',   0x1b2436, { roughness: .8, metalness: .1 });
+mat('amber',  0xe8a33d, { roughness: .45 });
+
+const energy = (name, hex) => mat(name, hex, {
+  roughness: .32, metalness: .1, emissive: new THREE.Color(hex), emissiveIntensity: .85,
+});
+energy('energy_rail',  0x3898d8);
+energy('energy_fuse',  0xe8a33d);
+energy('energy_field', 0x8b6fe0);
+energy('energy_flak',  0x4fc3e8);
+
+/* ── part helpers ───────────────────────────────────────────────────────── */
+const part = (name, geo, material, pos = [0, 0, 0], rot = [0, 0, 0]) => {
+  const m = new THREE.Mesh(geo, material);
+  m.name = name; m.position.set(...pos); m.rotation.set(...rot);
+  return m;
+};
+const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+const cyl = (rt, rb, h, s = 24) => new THREE.CylinderGeometry(rt, rb, h, s);
+const D = Math.PI / 180;
+
+/** Shared socket foot: every tower clamps to the same 2.1 m socket pad. */
+function foot(prefix, energyMat) {
+  const g = new THREE.Group(); g.name = prefix + '_foot';
+  g.add(part(prefix + '_baseplate', cyl(1.00, 1.06, .18, 6), mats.chassis, [0, .09, 0]));
+  g.add(part(prefix + '_collar',    cyl(.74, .84, .16, 6),   mats.hull,    [0, .25, 0]));
+  g.add(part(prefix + '_seam',      new THREE.TorusGeometry(.90, .035, 8, 32), energyMat, [0, .19, 0], [90 * D, 0, 0]));
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2 + 30 * D;
+    g.add(part(prefix + '_anchor' + i, cyl(.10, .10, .26, 8), mats.trim,
+      [Math.cos(a) * .90, .13, Math.sin(a) * .90]));
+  }
+  return g;
+}
+
+/* ── Lance — railgun corridor pierce ───────────────────────────────────── */
+function buildLance() {
+  const g = new THREE.Group(); g.name = 'lance';
+  g.add(foot('lance', mats.energy_rail));
+  g.add(part('lance_yaw_drum', cyl(.60, .66, .52, 8), mats.hull, [0, .59, 0]));
+  g.add(part('lance_yaw_ring', new THREE.TorusGeometry(.62, .05, 8, 32), mats.trim, [0, .86, 0], [90 * D, 0, 0]));
+  for (const s of [-1, 1])
+    g.add(part('lance_trunnion' + (s < 0 ? '_l' : '_r'), box(.16, .82, .46), mats.chassis, [s * .46, 1.22, -.1]));
+
+  const rail = new THREE.Group(); rail.name = 'lance_rail_assembly';
+  rail.position.set(0, 1.52, 0); rail.rotation.x = -4 * D;
+  for (const s of [-1, 1])
+    rail.add(part('lance_rail' + (s < 0 ? '_l' : '_r'), box(.14, .18, 3.0), mats.plate, [s * .24, 0, .25]));
+  rail.add(part('lance_accelerator', box(.30, .06, 2.8), mats.energy_rail, [0, 0, .25]));
+  rail.add(part('lance_breech', box(.82, .74, .86), mats.chassis, [0, -.02, -1.32]));
+  for (const s of [-1, 1])
+    rail.add(part('lance_capacitor' + (s < 0 ? '_l' : '_r'), cyl(.15, .15, .76, 16), mats.hull,
+      [s * .28, .48, -1.30], [90 * D, 0, 0]));
+  [-.35, .25, .85, 1.45].forEach((z, i) =>
+    rail.add(part('lance_coil' + i, new THREE.TorusGeometry(.34, .085, 8, 24), mats.trim, [0, 0, z])));
+  rail.add(part('lance_muzzle', cyl(.30, .26, .34, 16), mats.plate, [0, 0, 1.78], [90 * D, 0, 0]));
+  rail.add(part('lance_aperture', cyl(.17, .17, .05, 16), mats.energy_rail, [0, 0, 1.96], [90 * D, 0, 0]));
+  rail.add(part('lance_optic', box(.30, .22, .52), mats.plate, [0, .48, -.42]));
+  rail.add(part('lance_optic_lens', box(.16, .12, .04), mats.energy_rail, [0, .48, -.15]));
+  g.add(rail);
+  return g;
+}
+
+/* ── Nova — arcing mortar, min range, ground only ──────────────────────── */
+function buildNova() {
+  const g = new THREE.Group(); g.name = 'nova';
+  g.add(foot('nova', mats.energy_fuse));
+  g.add(part('nova_turret_drum', cyl(.84, .92, .44, 8), mats.chassis, [0, .55, 0]));
+  g.add(part('nova_turret_lip',  cyl(.78, .84, .10, 8), mats.hull,    [0, .82, 0]));
+  for (const s of [-1, 1]) {
+    g.add(part('nova_cradle' + (s < 0 ? '_l' : '_r'), box(.13, .96, .78), mats.hull, [s * .48, 1.30, -.14]));
+    g.add(part('nova_elevation_hub' + (s < 0 ? '_l' : '_r'), cyl(.20, .20, .10, 16), mats.plate,
+      [s * .56, 1.62, -.10], [0, 0, 90 * D]));
+  }
+
+  const el = 46 * D, dir = new THREE.Vector3(0, Math.cos(el), Math.sin(el));
+  const pivot = new THREE.Vector3(0, 1.62, -.10);
+  const at = (t) => pivot.clone().addScaledVector(dir, t).toArray();
+  g.add(part('nova_barrel',      cyl(.26, .30, 1.62, 24), mats.hull,  at(.72), [-el, 0, 0]));
+  g.add(part('nova_muzzle_brake',cyl(.36, .36, .26, 24),  mats.plate, at(1.62), [-el, 0, 0]));
+  [-.26, 0, .26].forEach((x, i) =>
+    g.add(part('nova_brake_vent' + i, box(.05, .34, .34), mats.trim,
+      pivot.clone().addScaledVector(dir, 1.62).add(new THREE.Vector3(x, 0, 0)).toArray(), [-el, 0, 0])));
+  g.add(part('nova_muzzle_bore', cyl(.20, .20, .06, 20),  mats.trim,  at(1.78), [-el, 0, 0]));
+  g.add(part('nova_breech_block',cyl(.36, .36, .44, 20),  mats.chassis, at(-.20), [-el, 0, 0]));
+  g.add(part('nova_breech_fuse', box(.16, .16, .12), mats.energy_fuse, at(-.44), [-el, 0, 0]));
+  for (const s of [-1, 1])
+    g.add(part('nova_recoil_piston' + (s < 0 ? '_l' : '_r'), cyl(.08, .08, 1.10, 12), mats.trim,
+      pivot.clone().addScaledVector(dir, .48).add(new THREE.Vector3(s * .30, -.20, 0)).toArray(), [-el, 0, 0]));
+
+  const rack = new THREE.Group(); rack.name = 'nova_shell_rack';
+  rack.position.set(-.88, .88, .34);
+  rack.add(part('nova_hopper', box(.34, .52, .92), mats.hull, [0, 0, 0]));
+  [-.28, 0, .28].forEach((z, i) => {
+    rack.add(part('nova_shell' + i, cyl(.11, .11, .40, 12), mats.amber, [0, .42, z]));
+    rack.add(part('nova_shell_fuse' + i, cyl(.03, .09, .16, 12), mats.energy_fuse, [0, .70, z]));
+  });
+  g.add(rack);
+  return g;
+}
+
+/* ── Singularity — gravity well, chill aura, no barrel ─────────────────── */
+function buildSingularity() {
+  const g = new THREE.Group(); g.name = 'singularity';
+  g.add(foot('singularity', mats.energy_field));
+  g.add(part('singularity_stem', cyl(.40, .56, .58, 16), mats.chassis, [0, .62, 0]));
+  g.add(part('singularity_stem_cap', new THREE.TorusGeometry(.40, .05, 8, 32), mats.trim, [0, .90, 0], [90 * D, 0, 0]));
+  for (let i = 0; i < 3; i++) {
+    const arm = new THREE.Group(); arm.name = 'singularity_arm' + i;
+    arm.rotation.y = (i / 3) * Math.PI * 2;
+    arm.add(part('singularity_pylon' + i, box(.15, 1.90, .28), mats.hull, [.52, 1.78, 0], [0, 0, 9 * D]));
+    arm.add(part('singularity_emitter' + i, box(.20, .30, .24), mats.plate, [.36, 2.76, 0], [0, 0, -14 * D]));
+    arm.add(part('singularity_lens' + i, cyl(.08, .08, .06, 12), mats.energy_field, [.26, 2.72, 0], [0, 0, 62 * D]));
+    g.add(arm);
+  }
+  g.add(part('singularity_core', new THREE.SphereGeometry(.30, 32, 24), mats.energy_field, [0, 2.24, 0]));
+  g.add(part('singularity_halo_a', new THREE.TorusGeometry(.60, .035, 8, 48), mats.energy_field, [0, 2.24, 0], [72 * D, 0, 0]));
+  g.add(part('singularity_halo_b', new THREE.TorusGeometry(.52, .035, 8, 48), mats.energy_field, [0, 2.24, 0], [-64 * D, 34 * D, 0]));
+  return g;
+}
+
+/* ── Skywatch — anti-air flak, air layer only ──────────────────────────── */
+function buildSkywatch() {
+  const g = new THREE.Group(); g.name = 'skywatch';
+  g.add(foot('skywatch', mats.energy_flak));
+  g.add(part('skywatch_yaw_drum', cyl(.58, .64, .48, 8), mats.hull, [0, .57, 0]));
+  g.add(part('skywatch_mast', cyl(.34, .42, .90, 12), mats.chassis, [0, 1.26, 0]));
+  g.add(part('skywatch_cradle', box(.92, .40, .74), mats.chassis, [0, 1.78, -.02]));
+  for (const s of [-1, 1]) {
+    g.add(part('skywatch_ammo_drum' + (s < 0 ? '_l' : '_r'), cyl(.28, .28, .34, 20), mats.hull,
+      [s * .62, 1.78, -.02], [0, 0, 90 * D]));
+    g.add(part('skywatch_drum_cap' + (s < 0 ? '_l' : '_r'), cyl(.13, .13, .38, 12), mats.trim,
+      [s * .62, 1.78, -.02], [0, 0, 90 * D]));
+  }
+
+  const el = 56 * D, dir = new THREE.Vector3(0, Math.cos(el), Math.sin(el));
+  const pivot = new THREE.Vector3(0, 1.86, .04);
+  const guns = new THREE.Group(); guns.name = 'skywatch_gun_cluster';
+  guns.position.copy(pivot); guns.rotation.x = -el;
+  guns.add(part('skywatch_gun_housing', box(.46, .40, .52), mats.plate, [0, -.10, 0]));
+  let n = 0;
+  for (const x of [-.14, .14]) for (const y of [-.14, .14])
+    guns.add(part('skywatch_barrel' + (n++), cyl(.075, .085, 1.30, 12), mats.trim, [x, y, .78], [90 * D, 0, 0]));
+  guns.add(part('skywatch_barrel_clamp', box(.44, .44, .10), mats.hull, [0, 0, .95]));
+  guns.add(part('skywatch_flash_ring', new THREE.TorusGeometry(.26, .05, 8, 24), mats.plate, [0, 0, 1.40]));
+  guns.add(part('skywatch_charge_strip', box(.06, .34, .40), mats.energy_flak, [.24, 0, .30]));
+  g.add(guns);
+
+  const dishPts = [];
+  for (let i = 0; i <= 10; i++) { const t = i / 10; dishPts.push(new THREE.Vector2(t * .52, t * t * .20)); }
+  g.add(part('skywatch_radar_post', cyl(.09, .09, .70, 12), mats.trim, [0, 2.10, -.52]));
+  g.add(part('skywatch_radar_dish', new THREE.LatheGeometry(dishPts, 32), mats.plate, [0, 2.48, -.56], [-58 * D, 0, 0]));
+  g.add(part('skywatch_radar_feed', cyl(.05, .05, .26, 10), mats.energy_flak, [0, 2.56, -.44], [-58 * D, 0, 0]));
+  return g;
+}
+
+/* ── roster: stats lifted from sim/Sim.Core/Content/Towers.cs ───────────── */
+const towers = [
+  { id: 'lance', label: 'Lance', dot: '#3898d8', build: buildLance,
+    stats: { Cost: '75', Range: '12 m', Damage: '8', Rate: '1.6/s' },
+    note: 'Railgun corridor. The long horizontal rail assembly is the silhouette — reads as “this shoots down a lane” from ground level. Coil rings and the emissive accelerator strip are the shader-tint targets for the L10 armour-ignore breakpoint.' },
+  { id: 'nova', label: 'Nova', dot: '#e8a33d', build: buildNova,
+    stats: { Cost: '115', Range: '16 m', Damage: '22', Rate: '0.5/s' },
+    note: 'Mortar. Squat, wide, barrel locked at 46° — visibly incapable of hitting air, and the min-range rule is legible from the elevation alone. Amber shell rack doubles as the reload tell.' },
+  { id: 'singularity', label: 'Singularity', dot: '#8b6fe0', build: buildSingularity,
+    stats: { Cost: '110', Range: '9 m', Damage: '—', Rate: 'aura' },
+    note: 'Gravity well. No barrel anywhere on it: three pylons cradling a caged core. Support identity readable at a glance; the halo rings animate in-engine and tint per chill potency.' },
+  { id: 'skywatch', label: 'Skywatch', dot: '#4fc3e8', build: buildSkywatch,
+    stats: { Cost: '90', Range: '15 m', Damage: '4', Rate: '3.0/s' },
+    note: 'Anti-air flak. Quad barrels pinned skyward plus a radar dish — the only tower whose silhouette points up, so “did you buy vertical coverage?” is answerable by looking at the map.' },
+];
+
+const built = {};
+const picker = document.getElementById('picker');
+const specsEl = document.getElementById('specs');
+const noteTitle = document.getElementById('note-title');
+const noteBody = document.getElementById('note-body');
+
+function select(t) {
+  built[t.id] ??= t.build();
+  stage.setAttribute('name', 'deepfield_tower_' + t.id);
+  stage.setObject(built[t.id]);
+  specsEl.innerHTML = Object.entries(t.stats)
+    .map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
+  noteTitle.textContent = t.label;
+  noteBody.textContent = t.note;
+  for (const b of picker.children) b.setAttribute('aria-pressed', String(b.dataset.id === t.id));
+}
+
+for (const t of towers) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.dataset.id = t.id;
+  b.innerHTML = `<span class="dot" style="background:${t.dot}"></span>${t.label}`;
+  b.addEventListener('click', () => select(t));
+  picker.appendChild(b);
+}
+select(towers[0]);
+</script>
+</body>
+</html>

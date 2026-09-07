@@ -1,0 +1,9 @@
+{
+  "name": "deepfield-design-export",
+  "private": true,
+  "description": "Rebuilds game/assets from Claude Design's three.js sources in docs/design/ (make design-export).",
+  "type": "module",
+  "dependencies": {
+    "three": "0.184.0"
+  }
+}
