@@ -30,6 +30,12 @@ the gap gets written down rather than faked.
 
 Known gaps of that kind:
 
+- **The Spire wears graybox.** Sector 3 is built and balanced, but its
+  environment kit (`spire_floor`, `spire_facade`, `spire_roof`,
+  `spire_fireescape`, plus the shared traversal set its lift, pads and nests
+  need) is specced in the brief and not delivered. `make usage` reports them as
+  requested-and-missing rather than the code pretending otherwise.
+
 - **Specter's `weakPoints` passive** is defined on the faction and does nothing.
   It is a client rendering feature — highlight an enemy's weak point, which
   today only the Aegis has — and no code draws it. Recorded here rather than
