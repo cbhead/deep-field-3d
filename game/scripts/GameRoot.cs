@@ -638,7 +638,8 @@ public partial class GameRoot : Node3D
 
         if (Mode != RunMode.Dedicated)
         {
-            SyncEnemyViewsLocal();
+            SyncEnemyViewsLocal(delta);
+            AimTowers(delta);
             SyncProjectileViews();
             SyncAvatarsFromWorld();
         }
@@ -695,7 +696,7 @@ public partial class GameRoot : Node3D
         var pos = _player.GlobalPosition;
         _net.SendAvatar(pos, _player.Rotation.Y);
 
-        SyncEnemyViewsRemote();
+        SyncEnemyViewsRemote(delta);
         SyncAvatarsFromMeta();
     }
 
@@ -1174,7 +1175,7 @@ public partial class GameRoot : Node3D
     // View sync
     // =====================================================================
 
-    private void SyncEnemyViewsLocal()
+    private void SyncEnemyViewsLocal(double delta)
     {
         foreach (var enemy in _world!.Enemies)
         {
@@ -1184,6 +1185,10 @@ public partial class GameRoot : Node3D
                 _enemyViews[enemy.Id] = view;
             }
             view.Position = ToGd(enemy.Pos);
+            // Forward is whatever the current leg points at, so a walker turns
+            // through a corner instead of sliding round it sideways. The sim
+            // already keeps Facing per leg; nothing was reading it.
+            FaceAlong(view, enemy.Facing, delta);
             byte bits = Protocol.PackStatusBits(enemy);
             TintEnemy(view, enemy.Hp / enemy.MaxHp, bits);
 
@@ -1225,7 +1230,7 @@ public partial class GameRoot : Node3D
             _overheads.Remove(id);
     }
 
-    private void SyncEnemyViewsRemote()
+    private void SyncEnemyViewsRemote(double delta)
     {
         if (_net.SnapshotBuffer.Count == 0) return;
 
@@ -1246,6 +1251,9 @@ public partial class GameRoot : Node3D
                 ? Vec3.Lerp(prev.Pos, snap.Pos, t)
                 : snap.Pos;
             view.Position = ToGd(target);
+            // Snapshots carry the yaw the server computed, so a client sees the
+            // same turn rather than a differently-oriented crowd.
+            TurnTowards(view, snap.Yaw, delta);
             TintEnemy(view, snap.HpFraction, snap.StatusBits);
 
             // Snapshots carry no shield channel of their own; a Warden that
@@ -1383,6 +1391,64 @@ public partial class GameRoot : Node3D
 
     /// <summary>Shows the state variant that matches the sim: shield bubble
     /// while a Warden still has one, dirt mound while a Mole is under.</summary>
+    /// <summary>Yaw a view towards a heading, easing rather than snapping — an
+    /// enemy that flips facing at a waypoint reads as a glitch, and the turn is
+    /// most of what sells a corner.</summary>
+    private static void FaceAlong(Node3D view, Vec3 facing, double delta)
+    {
+        if (facing.X * facing.X + facing.Z * facing.Z < 1e-4f) return;
+        TurnTowards(view, Mathf.Atan2(facing.X, facing.Z), delta);
+    }
+
+    private static void TurnTowards(Node3D view, float yaw, double delta)
+    {
+        float current = view.Rotation.Y;
+        // Shortest way round, so a turn across the seam does not spin the long
+        // way for no reason.
+        float diff = Mathf.Wrap(yaw - current, -Mathf.Pi, Mathf.Pi);
+        float step = Mathf.Min(1f, (float)delta * TurnRateRadians);
+        view.Rotation = new Vector3(view.Rotation.X, current + diff * step, view.Rotation.Z);
+    }
+
+    private const float TurnRateRadians = 9f;
+
+    /// <summary>Towers track what they are shooting at. A turret frozen on its
+    /// build angle while firing reads as broken, and the swing is the only cue
+    /// a player has for what a tower has decided to prioritise.
+    ///
+    /// Aim is computed client-side from the rule the sim targets by — furthest
+    /// along the route, in range, on a layer this tower can hit. It is
+    /// cosmetic, so it sits on the pull-continuous side of the split rather
+    /// than in a snapshot; a frame of disagreement costs nothing.</summary>
+    private void AimTowers(double delta)
+    {
+        if (_world is null) return;
+
+        foreach (var tower in _world.Towers)
+        {
+            if (!_towerViews.TryGetValue(tower.Id, out var view) || !IsInstanceValid(view)) continue;
+            var def = Towers.All[tower.DefId];
+            if (def.RangeMeters <= 0f) continue;      // a barricade has nothing to aim
+
+            Enemy? best = null;
+            float bestTraveled = -1f;
+            foreach (var enemy in _world.Enemies)
+            {
+                if (enemy.Dead || enemy.Burrowed) continue;
+                if (!def.TargetLayers.Contains(Enemies.All[enemy.DefId].Layer)) continue;
+                if (tower.Pos.DistanceTo(enemy.Pos) > def.RangeMeters * 1.15f) continue;
+                if (enemy.TotalTraveled <= bestTraveled) continue;
+                bestTraveled = enemy.TotalTraveled;
+                best = enemy;
+            }
+            if (best is null) continue;               // hold the last heading
+
+            var to = best.Pos - tower.Pos;
+            if (to.X * to.X + to.Z * to.Z < 1e-4f) continue;
+            TurnTowards(view, Mathf.Atan2(to.X, to.Z), delta);
+        }
+    }
+
     private static void UpdateEnemyStates(Node3D view, bool burrowed, float shieldFraction)
     {
         if (view.GetNodeOrNull<Node3D>("Shield") is { } shield)
