@@ -144,6 +144,65 @@ public partial class ArmoryScreen : Control
 
     // =====================================================================
 
+    /// <summary>Clicks a slot the way a player does — a real mouse event
+    /// pushed through the viewport, so it goes through hit-testing rather than
+    /// around it — and reports whether the selection actually moved.
+    ///
+    /// This exists because every attachment slot on this bench was inert for
+    /// weeks while looking perfectly correct: positioned by hand inside a plain
+    /// Control, they had no size, and Godot draws children outside a zero-sized
+    /// parent while giving them no hit area. Screenshots could not see it and
+    /// neither could I. A rendered surface proves it draws; only a click proves
+    /// it works.</summary>
+    public bool ProbeClick()
+    {
+        var before = _slot;
+        // The infusion slot, bottom-right of the bench.
+        Button? target = null;
+        void Find(Node n)
+        {
+            if (n is Button b && b.Size == new Vector2(60, 60)) target = b;   // take the last
+            foreach (var c in n.GetChildren()) Find(c);
+        }
+        Find(this);
+        if (target is null) { GD.PrintErr("ERROR: probe found no slot button"); return false; }
+
+        var centre = target.GetGlobalRect().GetCenter();
+        foreach (bool down in new[] { true, false })
+        {
+            var ev = new InputEventMouseButton
+            {
+                ButtonIndex = MouseButton.Left,
+                Pressed = down,
+                Position = centre,
+                GlobalPosition = centre,
+            };
+            GetViewport().PushInput(ev);
+        }
+        bool moved = _slot != before;
+        if (moved) GD.Print($"[probe] gunsmith slot click works: {before} -> {_slot}");
+        else GD.PrintErr($"ERROR: gunsmith slot at {centre} is inert — click did not change selection");
+        return moved;
+    }
+
+    /// <summary>Every interactive control with its rect, for when a probe
+    /// fails and the question is which control lost its hit area.</summary>
+    public void DumpHitAreas()
+    {
+        void Walk(Node n, int depth)
+        {
+            if (n is BaseButton b)
+            {
+                var c = (Control)n;
+                GD.Print($"[hit] {new string(' ', depth)}{b.GetType().Name} " +
+                    $"text='{(b as Button)?.Text ?? ""}' rect={c.GetGlobalRect()} " +
+                    $"vis={c.IsVisibleInTree()} filter={c.MouseFilter} disabled={b.Disabled}");
+            }
+            foreach (var child in n.GetChildren()) Walk(child, depth + 1);
+        }
+        Walk(this, 0);
+    }
+
     public void Open(GameView view)
     {
         IsOpen = true;

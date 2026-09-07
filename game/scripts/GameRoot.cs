@@ -39,6 +39,7 @@ public partial class GameRoot : Node3D
     /// rendering on the floor instead of on the deck.</summary>
     private bool _auditSockets;
     private bool _dumpAssets;
+    private bool _dumpHits;
     private string? _shotPath;
     private string _shotView = "eye";
     private int _shotCountdown;
@@ -258,7 +259,7 @@ public partial class GameRoot : Node3D
             _shotView = "eye";
             _shotPath = path;
             _shotCountdown = 4;
-            if (surface == "armory") ToggleArmory();
+            if (surface == "armory") { ToggleArmory(); _dumpHits = true; }
             else if (surface == "wheel") OpenBuildWheel(_map.Sockets[0].Id);
             else if (surface == "upgrade" && _world is not null)
             {
@@ -304,6 +305,10 @@ public partial class GameRoot : Node3D
             return;
         }
 
+        // A UI probe runs before the capture, so --shot armory doubles as the
+        // only automated check that this screen is operable rather than merely
+        // drawn. CI greps for ERROR, so an inert control fails the build.
+        if (_dumpHits && !_armory.ProbeClick()) _armory.DumpHitAreas();
         var image = GetViewport().GetTexture().GetImage();
         image.SavePng(path);
         GD.Print($"[shot] wrote {path}  ({image.GetWidth()}x{image.GetHeight()})");

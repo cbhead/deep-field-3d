@@ -64,6 +64,17 @@ jobs:
           ./tools/asset-report.sh --verify audit.log
           ./tools/asset-report.sh
 
+      # Operability, not appearance. The gunsmith's attachment slots were inert
+      # for weeks while rendering perfectly — no screenshot could catch it. This
+      # pushes a real mouse event through hit-testing and fails if the selection
+      # does not move.
+      - name: UI probe (gunsmith is operable)
+        run: |
+          godot --headless --path game --quit-after 900 -- \
+            --shot foundry /tmp/probe.png armory > probe.log 2>&1 || true
+          grep -q "\[probe\] gunsmith slot click works" probe.log
+          ! grep -qiE "^ERROR|SCRIPT ERROR" probe.log
+
       # A real solo match on each map: drives the sim, every UI surface, and
       # the view/event plumbing that only runs once a world exists.
       - name: Solo match smoke (every sector)
