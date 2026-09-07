@@ -401,10 +401,19 @@ public partial class ArmoryScreen : Control
     /// Rebuilt on weapon change, not per refresh.</summary>
     private void RebuildWeaponModel()
     {
-        if (GodotObject.IsInstanceValid(_modelHost) && _modelFor == _weaponId) return;
+        // Keyed on the weapon AND what is bolted to it, so fitting a barrel
+        // rebuilds the view. Keying on the weapon alone meant the gun you were
+        // building never changed while you built it.
+        var fitted = _view.Local is { } who
+            ? who.AttachmentsFor(_weaponId)
+            : new Dictionary<AttachmentSlot, string>();
+        string key = _weaponId + "|" + string.Join(",",
+            fitted.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}={kv.Value}"));
+
+        if (GodotObject.IsInstanceValid(_modelHost) && _modelFor == key) return;
         if (GodotObject.IsInstanceValid(_modelHost)) _modelHost!.QueueFree();
         _modelHost = null;
-        _modelFor = _weaponId;
+        _modelFor = key;
 
         string asset = AssetLibrary.Has($"weapon_{_weaponId}_world")
             ? $"weapon_{_weaponId}_world" : $"weapon_{_weaponId}_vm";
@@ -438,6 +447,18 @@ public partial class ArmoryScreen : Control
         var gun = AssetLibrary.Instantiate(asset, () => new Node3D());
         gun.RotationDegrees = new Vector3(10f, 208f, 0f);
         stage.AddChild(gun);
+
+        // Fitted attachments hang off the weapon, not the stage, so they
+        // inherit its rotation and sit where design authored them relative to
+        // the gun's origin. The brief's rule is that the gun you built is the
+        // gun you see; until now the build only existed as icons in the slots.
+        foreach (var (slot, attachmentId) in fitted)
+        {
+            var module = AssetLibrary.TryInstantiate($"attach_{attachmentId}");
+            if (module is null) continue;      // model not delivered yet
+            module.Name = $"attach_{slot}";
+            gun.AddChild(module);
+        }
 
         _modelHost = new SubViewportContainer { Stretch = true, MouseFilter = MouseFilterEnum.Ignore };
         _modelHost.AddChild(viewport);

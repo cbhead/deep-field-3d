@@ -259,7 +259,21 @@ public partial class GameRoot : Node3D
             _shotView = "eye";
             _shotPath = path;
             _shotCountdown = 4;
-            if (surface == "armory") { ToggleArmory(); _dumpHits = true; }
+            if (surface == "armory")
+            {
+                // Stage a fitted attachment so the shot proves modules mount on
+                // the weapon. A fresh match has no scrap, so without this the
+                // only thing a screenshot could show is an unmodified gun.
+                if (_world is not null && _world.Players.TryGetValue(LocalPlayerId, out var smith))
+                {
+                    smith.Scrap[ScrapType.Alloy] = 40;
+                    Submit(new Command.CraftAttachment(LocalPlayerId, "sidearm", "longBarrel"));
+                    Step.Advance(_world);
+                    RebuildView();
+                }
+                ToggleArmory();
+                _dumpHits = true;
+            }
             else if (surface == "wheel") OpenBuildWheel(_map.Sockets[0].Id);
             else if (surface == "upgrade" && _world is not null)
             {
