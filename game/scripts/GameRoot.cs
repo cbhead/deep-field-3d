@@ -64,6 +64,8 @@ public partial class GameRoot : Node3D
     private int _stageWaited;
     private string? _intermissionShotPath;
     private int _intermissionLastWave = -1;
+    private int _intermissionFireBeat;        // throttles the hero so towers get a share
+    private int _lastWaveEnemyCount;          // what the wave announced, for the kill split
     private string? _shotPath;
     private string _shotView = "eye";
     private int _shotCountdown;
@@ -1006,6 +1008,7 @@ public partial class GameRoot : Node3D
                     _screens.HideIntermission();
                     _lastWaveLeaks = 0;
                     SnapshotKills();
+                    _lastWaveEnemyCount = started.EnemyCount;
                     Post($"wave {started.WaveIndex + 1} — {started.EnemyCount} inbound");
                     break;
                 case SimEvent.WaveCleared cleared:
@@ -1087,6 +1090,7 @@ public partial class GameRoot : Node3D
                 _screens.HideIntermission();
                 _lastWaveLeaks = 0;
                 SnapshotKills();
+                _lastWaveEnemyCount = int.Parse(p[3]);
                 Post($"wave {int.Parse(p[2]) + 1} — {p[3]} inbound");
                 break;
             case "waveCleared": Post($"wave {int.Parse(p[2]) + 1} cleared", UiTheme.Good); break;
@@ -1897,12 +1901,29 @@ public partial class GameRoot : Node3D
     {
         if (_intermissionShotPath is null || _view is not { Valid: true }) return;
 
-        // Shoot while the wave runs. Without this the towers do all the killing
-        // and the recap's kill line is a truthful nought, which demonstrates
-        // nothing — the shot exists to show the panel with real numbers on it.
-        // The sim refuses anything out of range or on cooldown, so this is the
-        // ordinary fire path and not a way of granting kills.
+        // Shoot while the wave runs, but not at every opportunity. Left alone,
+        // the towers do all the killing and the recap's new line is a truthful
+        // nought that demonstrates nothing; firing flat out, the hero takes the
+        // entire wave and it demonstrates the opposite falsehood. A recap is a
+        // split, so the shot should be of one — this is the harness bot's
+        // Uptime idea with the arithmetic done by a counter.
+        //
+        // The fire goes through the ordinary PlayerHit path, so the sim still
+        // refuses anything out of range or on cooldown: a hero shooting, not
+        // kills being handed out.
+        // One shot per four seconds of game time. The divisor has to be this
+        // large to bite at all: the wave runs at eight times speed, so a game
+        // second is only 7.5 frames, and the sidearm's own three-a-second
+        // cooldown swallowed a quarter-cadence whole — throttling to one frame
+        // in four moved the split by nothing, which is the tell that the dial
+        // was not connected to the outcome.
+        //
+        // Cadence is the right lever rather than range or aim, because the
+        // sidearm reaches sixty metres against a lance's twelve: an
+        // unthrottled hero picks the entire lane clean from wherever it stands.
+        const int framesPerShot = 12;         // 7.5 frames per game second, so ~1.6s
         if (_world is not null && _view.Phase == MatchPhase.Wave
+            && _intermissionFireBeat++ % framesPerShot == 0
             && _world.Players.TryGetValue(LocalPlayerId, out var shooter))
         {
             Enemy? nearest = null;
@@ -1942,9 +1963,12 @@ public partial class GameRoot : Node3D
             string rows = string.Join(", ", KillsThisWave().Select(r => $"{r.Name}={r.Kills}"));
             ShootSurface(path, "intermission", _view.Phase == MatchPhase.Intermission);
             string totals = string.Join(", ", _view.Players.Select(pl => $"{pl.Name}={pl.Kills}"));
+            int hero = KillsThisWave().Sum(r => r.Kills);
+            int towers = Mathf.Max(0, _lastWaveEnemyCount - _lastWaveLeaks - hero);
             System.IO.File.AppendAllText(path + ".txt",
-                $"wave {_view.Wave} recap: leaks {_lastWaveLeaks}, kills this wave {rows}" +
-                $" | match totals {totals}\n");
+                $"wave {_view.Wave} recap: {_lastWaveEnemyCount} inbound, " +
+                $"hero {hero}, towers {towers}, leaked {_lastWaveLeaks}\n" +
+                $"kills this wave {rows} | match totals {totals}\n");
         });
     }
 
