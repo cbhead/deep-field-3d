@@ -87,35 +87,35 @@ public static class Waves
             // groups reroute to the long way when a barricade holds b1.
             ["switchyard"] = new IReadOnlyList<WaveGroup>[]
             {
-                new[] { new WaveGroup("drifter", 7, 24, 0, "groundShort") },
+                new[] { new WaveGroup("drifter", 6, 24, 0, "groundShort") },
                 new[]
                 {
-                    new WaveGroup("drifter", 8, 22, 0, "ground"),
-                    new WaveGroup("mote", 8, 9, 100, "groundShort"),
+                    new WaveGroup("drifter", 6, 22, 0, "ground"),
+                    new WaveGroup("mote", 6, 9, 100, "groundShort"),
                 },
                 // Warden debuts — coverage gaps get punished.
                 new[]
                 {
                     new WaveGroup("warden", 2, 80, 0, "ground"),
-                    new WaveGroup("drifter", 8, 20, 40, "groundShort"),
+                    new WaveGroup("drifter", 6, 20, 40, "groundShort"),
                 },
                 // Mole debuts — hit the windows.
                 new[]
                 {
-                    new WaveGroup("mole", 4, 50, 0, "groundShort"),
-                    new WaveGroup("drifter", 6, 22, 60, "ground"),
+                    new WaveGroup("mole", 3, 50, 0, "groundShort"),
+                    new WaveGroup("drifter", 5, 22, 60, "ground"),
                 },
                 // Cluster debuts — pre-place the splash.
                 new[]
                 {
-                    new WaveGroup("cluster", 4, 60, 0, "ground"),
-                    new WaveGroup("skiff", 4, 36, 40, "air"),
+                    new WaveGroup("cluster", 3, 60, 0, "ground"),
+                    new WaveGroup("skiff", 3, 36, 40, "air"),
                 },
                 new[]
                 {
-                    new WaveGroup("warden", 3, 70, 0, "groundShort"),
-                    new WaveGroup("mole", 3, 55, 100, "ground"),
-                    new WaveGroup("mote", 8, 9, 160, "groundShort"),
+                    new WaveGroup("warden", 2, 70, 0, "groundShort"),
+                    new WaveGroup("mole", 2, 55, 100, "ground"),
+                    new WaveGroup("mote", 6, 9, 160, "groundShort"),
                 },
                 // W7 rides FOG. The wave keeps its authored weight: the whole
                 // point of a factor system is that weather adjusts the baseline
@@ -123,14 +123,14 @@ public static class Waves
                 new[]
                 {
                     new WaveGroup("monolith", 1, 0, 0, "ground"),
-                    new WaveGroup("cluster", 3, 65, 40, "groundShort"),
-                    new WaveGroup("skiff", 5, 32, 80, "air"),
+                    new WaveGroup("cluster", 2, 65, 40, "groundShort"),
+                    new WaveGroup("skiff", 4, 32, 80, "air"),
                 },
                 new[]
                 {
-                    new WaveGroup("aegis", 3, 80, 0, "groundShort"),
+                    new WaveGroup("aegis", 2, 80, 0, "groundShort"),
                     new WaveGroup("warden", 2, 80, 120, "ground"),
-                    new WaveGroup("mote", 8, 9, 200, "groundShort"),
+                    new WaveGroup("mote", 6, 9, 200, "groundShort"),
                 },
                 // Shade debuts here rather than in a wave of its own: the arc
                 // stays twelve waves, so the swept difficulty curve holds. It
@@ -138,10 +138,10 @@ public static class Waves
                 // roughly where it was while changing what the wave asks.
                 new[]
                 {
-                    new WaveGroup("shade", 3, 70, 0, "ground"),
-                    new WaveGroup("mole", 4, 45, 40, "ground"),
-                    new WaveGroup("cluster", 3, 55, 60, "groundShort"),
-                    new WaveGroup("skiff", 4, 28, 100, "air"),
+                    new WaveGroup("shade", 2, 70, 0, "ground"),
+                    new WaveGroup("mole", 3, 45, 40, "ground"),
+                    new WaveGroup("cluster", 2, 55, 60, "groundShort"),
+                    new WaveGroup("skiff", 3, 28, 100, "air"),
                 },
                 // Mender debuts behind the warden pair — shoot the healer, not
                 // the shield. One aegis steps aside to pay for it.
@@ -154,10 +154,10 @@ public static class Waves
                 },
                 new[]
                 {
-                    new WaveGroup("drifter", 12, 16, 0, "groundShort"),
-                    new WaveGroup("mole", 3, 50, 100, "ground"),
-                    new WaveGroup("cluster", 3, 60, 200, "groundShort"),
-                    new WaveGroup("skiff", 5, 30, 240, "air"),
+                    new WaveGroup("drifter", 10, 16, 0, "groundShort"),
+                    new WaveGroup("mole", 2, 50, 100, "ground"),
+                    new WaveGroup("cluster", 2, 60, 200, "groundShort"),
+                    new WaveGroup("skiff", 4, 30, 240, "air"),
                 },
                 // Finale: everything, both routes, both layers.
                 new[]
@@ -165,11 +165,11 @@ public static class Waves
                     new WaveGroup("monolith", 2, 180, 0, "ground"),
                     new WaveGroup("aegis", 2, 90, 100, "groundShort"),
                     new WaveGroup("warden", 2, 80, 200, "ground"),
-                    new WaveGroup("cluster", 4, 55, 280, "groundShort"),
-                    new WaveGroup("shade", 3, 60, 240, "ground"),
+                    new WaveGroup("cluster", 3, 55, 280, "groundShort"),
+                    new WaveGroup("shade", 2, 60, 240, "ground"),
                     new WaveGroup("mender", 1, 0, 300, "groundShort"),
-                    new WaveGroup("skiff", 4, 30, 320, "air"),
-                    new WaveGroup("mote", 8, 9, 380, "groundShort"),
+                    new WaveGroup("skiff", 3, 30, 320, "air"),
+                    new WaveGroup("mote", 6, 9, 380, "groundShort"),
                 },
             },
 
@@ -179,54 +179,54 @@ public static class Waves
             ["spire"] = new IReadOnlyList<WaveGroup>[]
             {
                 // W1: the stair only. Learn the interior.
-                new[] { new WaveGroup("drifter", 7, 24, 0, "stair") },
+                new[] { new WaveGroup("drifter", 6, 24, 0, "stair") },
                 // W2: the fire escape opens. Both ways up, at once, forever.
                 new[]
                 {
-                    new WaveGroup("drifter", 6, 24, 0, "stair"),
-                    new WaveGroup("drifter", 6, 24, 40, "escape"),
+                    new WaveGroup("drifter", 5, 24, 0, "stair"),
+                    new WaveGroup("drifter", 5, 24, 40, "escape"),
                 },
                 // W3: motes up the open outside, where splash pays.
                 new[]
                 {
-                    new WaveGroup("mote", 12, 8, 0, "escape"),
-                    new WaveGroup("drifter", 5, 26, 80, "stair"),
+                    new WaveGroup("mote", 10, 8, 0, "escape"),
+                    new WaveGroup("drifter", 4, 26, 80, "stair"),
                 },
                 // W4: skiffs skip the whole building. The roof needs answering.
                 new[]
                 {
-                    new WaveGroup("skiff", 5, 36, 0, "air"),
-                    new WaveGroup("drifter", 6, 24, 60, "stair"),
+                    new WaveGroup("skiff", 4, 36, 0, "air"),
+                    new WaveGroup("drifter", 5, 24, 60, "stair"),
                 },
                 new[]
                 {
                     new WaveGroup("aegis", 2, 90, 0, "stair"),
-                    new WaveGroup("mote", 8, 9, 60, "escape"),
+                    new WaveGroup("mote", 6, 9, 60, "escape"),
                 },
                 // W6: a Monolith in a stairwell is a cork; the escape is the
                 // only way past it, which is the point.
                 new[]
                 {
                     new WaveGroup("monolith", 1, 0, 0, "stair"),
-                    new WaveGroup("drifter", 8, 20, 40, "escape"),
-                    new WaveGroup("skiff", 4, 34, 90, "air"),
+                    new WaveGroup("drifter", 6, 20, 40, "escape"),
+                    new WaveGroup("skiff", 3, 34, 90, "air"),
                 },
                 new[]
                 {
-                    new WaveGroup("warden", 3, 70, 0, "escape"),
-                    new WaveGroup("mole", 3, 55, 80, "stair"),
+                    new WaveGroup("warden", 2, 70, 0, "escape"),
+                    new WaveGroup("mole", 2, 55, 80, "stair"),
                 },
                 // W8 rides NIGHT: shades in a dark stairwell.
                 new[]
                 {
-                    new WaveGroup("shade", 3, 70, 0, "stair"),
-                    new WaveGroup("drifter", 6, 22, 80, "escape"),
+                    new WaveGroup("shade", 2, 70, 0, "stair"),
+                    new WaveGroup("drifter", 5, 22, 80, "escape"),
                 },
                 new[]
                 {
-                    new WaveGroup("cluster", 4, 60, 0, "escape"),
-                    new WaveGroup("skiff", 5, 30, 40, "air"),
-                    new WaveGroup("mole", 3, 55, 100, "stair"),
+                    new WaveGroup("cluster", 3, 60, 0, "escape"),
+                    new WaveGroup("skiff", 4, 30, 40, "air"),
+                    new WaveGroup("mole", 2, 55, 100, "stair"),
                 },
                 new[]
                 {
@@ -238,8 +238,8 @@ public static class Waves
                 {
                     new WaveGroup("monolith", 1, 0, 0, "escape"),
                     new WaveGroup("shade", 2, 60, 60, "stair"),
-                    new WaveGroup("cluster", 3, 60, 140, "escape"),
-                    new WaveGroup("skiff", 4, 30, 180, "air"),
+                    new WaveGroup("cluster", 2, 60, 140, "escape"),
+                    new WaveGroup("skiff", 3, 30, 180, "air"),
                 },
                 // W12 rides FOG, on a roof, forty metres up. Everything comes.
                 new[]
@@ -249,8 +249,8 @@ public static class Waves
                     new WaveGroup("mender", 1, 0, 140, "stair"),
                     new WaveGroup("warden", 2, 80, 180, "escape"),
                     new WaveGroup("shade", 2, 70, 220, "stair"),
-                    new WaveGroup("skiff", 5, 28, 260, "air"),
-                    new WaveGroup("mote", 8, 9, 320, "escape"),
+                    new WaveGroup("skiff", 4, 28, 260, "air"),
+                    new WaveGroup("mote", 6, 9, 320, "escape"),
                 },
             },
         };
