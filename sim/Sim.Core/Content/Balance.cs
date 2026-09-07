@@ -74,6 +74,12 @@ public static class Balance
     /// number that decides whether anyone ever puts the gun away.</summary>
     public const float MeleeScrapBonus = 1.25f;
 
+    /// <summary>Repair per melee swing, as a multiple of the weapon's damage.
+    /// Deliberately below a Ram's dps: one player with a wrench slows a
+    /// demolition, two hold it, and nobody holds it while also shooting. That
+    /// is the trade the Ram is for.</summary>
+    public const float MeleeRepairFactor = 1.4f;
+
     public const float BurrowCycleMeters = 14f;
     public const float BurrowedMeters = 8f;
 

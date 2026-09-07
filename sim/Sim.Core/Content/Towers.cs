@@ -2,6 +2,14 @@ namespace DeepField.Sim.Content;
 
 public static class Towers
 {
+    // Towers have health from M4 on. Until the Ram there was nothing that could
+    // damage a structure, so every tower carried StructureHp 0 and only the
+    // Barricade had a number — which made the Ram a switchyard-only enemy with
+    // exactly one target whose loss reshaped the whole match. Spreading health
+    // across the roster turns that binary into attrition: losing a Lance costs
+    // a lane for as long as it takes to rebuild, and losing the barricade is
+    // still the expensive one.
+
     private static readonly IReadOnlyDictionary<ScrapType, int> NoRecipe =
         new Dictionary<ScrapType, int>();
 
@@ -34,7 +42,7 @@ public static class Towers
         Cost: 75, RangeMeters: 12f, MinRangeMeters: 0f,
         Damage: 8f, ShotsPerSecond: 1.6f, ProjectileSpeed: 30f,
         SplashRadius: 0f, SplashFalloff: 1f,
-        ChainJumps: 0, ChainRange: 0f, ChainFalloff: 1f, StructureHp: 0f,
+        ChainJumps: 0, ChainRange: 0f, ChainFalloff: 1f, StructureHp: 120f,
         Applies: System.Array.Empty<string>(),
         TargetLayers: new[] { EnemyLayer.Ground },
         UpgradePaths: new[] { Damage(StdCosts), Range(StdCosts), Rate(StdCosts) });
@@ -46,7 +54,7 @@ public static class Towers
         Cost: 115, RangeMeters: 16f, MinRangeMeters: 5f,
         Damage: 22f, ShotsPerSecond: 0.5f, ProjectileSpeed: 14f,
         SplashRadius: 3.2f, SplashFalloff: 0.35f,
-        ChainJumps: 0, ChainRange: 0f, ChainFalloff: 1f, StructureHp: 0f,
+        ChainJumps: 0, ChainRange: 0f, ChainFalloff: 1f, StructureHp: 140f,
         Applies: System.Array.Empty<string>(),
         TargetLayers: new[] { EnemyLayer.Ground },
         UpgradePaths: new[] { Damage(StdCosts), Range(StdCosts), Rate(StdCosts) });
@@ -58,7 +66,7 @@ public static class Towers
         Cost: 110, RangeMeters: 9f, MinRangeMeters: 0f,
         Damage: 0f, ShotsPerSecond: 0f, ProjectileSpeed: 0f,
         SplashRadius: 0f, SplashFalloff: 1f,
-        ChainJumps: 0, ChainRange: 0f, ChainFalloff: 1f, StructureHp: 0f,
+        ChainJumps: 0, ChainRange: 0f, ChainFalloff: 1f, StructureHp: 110f,
         Applies: new[] { "chill" },
         TargetLayers: new[] { EnemyLayer.Ground, EnemyLayer.Air },
         UpgradePaths: new[] { Range(StdCosts), Rate(StdCosts) });
@@ -70,7 +78,7 @@ public static class Towers
         Cost: 90, RangeMeters: 15f, MinRangeMeters: 0f,
         Damage: 5.5f, ShotsPerSecond: 3.0f, ProjectileSpeed: 45f,
         SplashRadius: 0f, SplashFalloff: 1f,
-        ChainJumps: 0, ChainRange: 0f, ChainFalloff: 1f, StructureHp: 0f,
+        ChainJumps: 0, ChainRange: 0f, ChainFalloff: 1f, StructureHp: 110f,
         Applies: System.Array.Empty<string>(),
         TargetLayers: new[] { EnemyLayer.Air },
         UpgradePaths: new[] { Damage(StdCosts), Range(StdCosts), Rate(StdCosts) });
@@ -82,7 +90,7 @@ public static class Towers
         Cost: 90, RangeMeters: 11f, MinRangeMeters: 0f,
         Damage: 9f, ShotsPerSecond: 1.2f, ProjectileSpeed: 0f,
         SplashRadius: 0f, SplashFalloff: 1f,
-        ChainJumps: 1, ChainRange: 6f, ChainFalloff: 0.6f, StructureHp: 0f,
+        ChainJumps: 1, ChainRange: 6f, ChainFalloff: 0.6f, StructureHp: 120f,
         Applies: new[] { "shock" },
         TargetLayers: new[] { EnemyLayer.Ground, EnemyLayer.Air },
         UpgradePaths: new[] { Damage(StdCosts), Range(StdCosts), Rate(StdCosts) });
@@ -107,7 +115,7 @@ public static class Towers
         Cost: 70, RangeMeters: 13f, MinRangeMeters: 0f,
         Damage: 0f, ShotsPerSecond: 0f, ProjectileSpeed: 0f,
         SplashRadius: 0f, SplashFalloff: 1f,
-        ChainJumps: 0, ChainRange: 0f, ChainFalloff: 1f, StructureHp: 0f,
+        ChainJumps: 0, ChainRange: 0f, ChainFalloff: 1f, StructureHp: 100f,
         Applies: new[] { "reveal" },
         TargetLayers: new[] { EnemyLayer.Ground, EnemyLayer.Air },
         UpgradePaths: new[] { Path("field", 1.14f, StdCosts), Path("analysis", 1.10f, StdCosts) });
@@ -120,7 +128,7 @@ public static class Towers
         Cost: 125, RangeMeters: 12f, MinRangeMeters: 0f,
         Damage: 7f, ShotsPerSecond: 0f, ProjectileSpeed: 0f,
         SplashRadius: 0f, SplashFalloff: 1f,
-        ChainJumps: 0, ChainRange: 0f, ChainFalloff: 1f, StructureHp: 0f,
+        ChainJumps: 0, ChainRange: 0f, ChainFalloff: 1f, StructureHp: 130f,
         Applies: System.Array.Empty<string>(),
         TargetLayers: new[] { EnemyLayer.Ground, EnemyLayer.Air },
         UpgradePaths: new[]

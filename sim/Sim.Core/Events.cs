@@ -122,6 +122,21 @@ public abstract record SimEvent
         public override string LogLine() => $"{Tick} attachmentCrafted {PlayerId} {WeaponId} {AttachmentId}";
     }
 
+    public sealed record StructureDamaged(int TowerId, int EnemyId, float Hp) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} structureDamaged {TowerId} {EnemyId} {Hp:0.##}";
+    }
+
+    public sealed record StructureDestroyed(int TowerId, string DefId, string SocketId) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} structureDestroyed {TowerId} {DefId} {SocketId}";
+    }
+
+    public sealed record StructureRepaired(int TowerId, float Hp) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} structureRepaired {TowerId} {Hp:0.##}";
+    }
+
     public sealed record MeleeSwing(int PlayerId, string MeleeId, bool Connected) : SimEvent
     {
         public override string LogLine() => $"{Tick} meleeSwing {PlayerId} {MeleeId} {(Connected ? 1 : 0)}";

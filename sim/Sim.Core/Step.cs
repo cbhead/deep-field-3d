@@ -22,6 +22,7 @@ public static class Step
         UpdateStatuses(w);
         ApplyHealAuras(w);
         MoveEnemies(w);
+        SiegeStructures(w);
         TriggerTraps(w);
         UpdatePlayers(w);
         FireTowers(w);
@@ -184,6 +185,7 @@ public static class Step
             Pos = socket.Pos,
             Spent = cost,
             PathLevels = new int[def.UpgradePaths.Count],
+            Hp = def.StructureHp,
         };
         w.Towers.Add(tower);
         if (w.Players.TryGetValue(place.PlayerId, out var builder)) builder.TowersBuilt += 1;
@@ -351,12 +353,11 @@ public static class Step
     /// The server picks the targets rather than trusting a client list, which
     /// it can afford to do because melee reach is metres and not sightlines.
     ///
-    /// No barricade repair yet, and that is a finding rather than an omission.
-    /// The M1 plan pairs the wrench with a repair interaction, but nothing in
-    /// the sim can damage a structure: TowerDef carries StructureHp and no
-    /// Tower carries current health, because the thing that attacks structures
-    /// is the Ram and the Ram is M4. Writing the repair now would mean shipping
-    /// a branch no game state can reach. It lands with tower HP.</summary>
+    /// Structures are checked first: swinging at a hurt one repairs it, which
+    /// is what makes the wrench a tool as well as a weapon. This was left out
+    /// when melee shipped because nothing could damage a structure yet — it
+    /// would have been a branch no game state could reach — and lands now that
+    /// the Ram exists to break things.</summary>
     private static void ApplyPlayerMelee(World w, Command.PlayerMelee swing)
     {
         if (!w.Players.TryGetValue(swing.PlayerId, out var player) || !player.Alive) return;
@@ -368,6 +369,19 @@ public static class Step
         float rate = def.SwingsPerSecond * build.SpeedFactor();
         if (player.FactionId == Factions.Tempest.Id) rate *= Balance.TempestRateFactor;
         player.MeleeCooldown = 1f / rate;
+
+        // Repair before damage: a swing does one thing, and next to a hurt
+        // barricade the thing you meant was the barricade.
+        foreach (var structure in w.Towers)
+        {
+            var sdef = Towers.All[structure.DefId];
+            if (sdef.StructureHp <= 0f || structure.Hp >= sdef.StructureHp) continue;
+            if (player.Pos.DistanceTo(structure.Pos) > reach) continue;
+            structure.Hp = MathF.Min(sdef.StructureHp,
+                structure.Hp + def.Damage * Balance.MeleeRepairFactor);
+            w.Emit(new SimEvent.StructureRepaired(structure.Id, structure.Hp));
+            return;
+        }
 
         var aim = swing.AimPoint - player.Pos;
         if (aim.Length() < 0.01f) aim = new Vec3(0f, 0f, 1f);
@@ -684,7 +698,13 @@ public static class Step
             // fallback route instead.
             int routeIndex = entry.RouteIndex;
             var routeDef = w.Map.Routes[routeIndex];
+            // Siege enemies are not turned away by a barricade — they walk at
+            // it. Without this exemption a Ram can never reach the one thing it
+            // exists to break: the barricade reroutes it, so it takes the long
+            // way round and arrives as an expensive walker. The block is what
+            // makes it choose the shortcut, not what stops it.
             if (routeDef.BarricadeGate is { } gate
+                && def.StructureDps <= 0f
                 && w.Towers.Any(t => t.SocketId == gate && Towers.All[t.DefId].Kind == TowerKind.Barricade)
                 && routeDef.FallbackRouteId is { } fallback)
             {
@@ -882,6 +902,16 @@ public static class Step
             ref var movement = ref enemy.Statuses[(int)Channel.Movement];
             if (movement.Active)
                 speed *= Statuses.All[movement.StatusId!].SpeedFactor;
+
+            // Enrage: a Ram that is losing hurries. Read from the def so the
+            // dial is content, and applied before control so a frozen Ram is
+            // still frozen — panic does not beat being frozen solid.
+            if (def.EnrageBelowHpFraction > 0f && enemy.MaxHp > 0f
+                && enemy.Hp / enemy.MaxHp <= def.EnrageBelowHpFraction)
+                speed *= def.EnrageSpeedFactor;
+
+            // Busy demolishing something: not advancing.
+            if (enemy.Sieging) speed = 0f;
 
             // Hard control: dead stop.
             ref var control = ref enemy.Statuses[(int)Channel.Control];
@@ -1314,6 +1344,46 @@ public static class Step
 
     /// <summary>Armed traps fire on surfaced ground enemies in radius: one
     /// charge per trigger event, hitting everything inside at once.</summary>
+    /// <summary>Rams stop and hit whatever structure is in reach. Runs after
+    /// movement so one that just closed the distance swings the same tick, and
+    /// before FireTowers so a structure destroyed this tick does not also get
+    /// a shot off — a tower that is rubble should not be firing.</summary>
+    private static void SiegeStructures(World w)
+    {
+        var destroyed = new List<Tower>();
+
+        foreach (var enemy in w.Enemies)
+        {
+            if (enemy.Dead) continue;
+            var def = Enemies.All[enemy.DefId];
+            if (def.StructureDps <= 0f) continue;
+
+            Tower? target = null;
+            float nearest = float.MaxValue;
+            foreach (var tower in w.Towers)
+            {
+                if (Towers.All[tower.DefId].StructureHp <= 0f) continue;   // indestructible
+                float d = enemy.Pos.DistanceTo(tower.Pos);
+                if (d <= def.StructureReach && d < nearest) { nearest = d; target = tower; }
+            }
+            if (target is null) { enemy.Sieging = false; continue; }
+
+            // Stopping to swing is the trade: a Ram working on a barricade is a
+            // Ram not advancing, so ignoring it costs structures and answering
+            // it costs tempo. MoveEnemies reads this flag.
+            enemy.Sieging = true;
+            target.Hp -= def.StructureDps * Balance.Dt;
+            w.Emit(new SimEvent.StructureDamaged(target.Id, enemy.Id, MathF.Max(0f, target.Hp)));
+            if (target.Hp <= 0f && !destroyed.Contains(target)) destroyed.Add(target);
+        }
+
+        foreach (var tower in destroyed)
+        {
+            w.Towers.Remove(tower);
+            w.Emit(new SimEvent.StructureDestroyed(tower.Id, tower.DefId, tower.SocketId));
+        }
+    }
+
     private static void TriggerTraps(World w)
     {
         foreach (var trap in w.Traps)

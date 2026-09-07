@@ -121,6 +121,32 @@ public static class Enemies
         ScrapYield: new Dictionary<ScrapType, int> { [ScrapType.Flux] = 2, [ScrapType.Gravium] = 1 },
         HealPerSecond: 7f, HealRadius: 6f);
 
+    /// <summary>M4 — the siege answer to a defence that never has to move.
+    /// Everything else walks past your towers; the Ram stops and hits them, so
+    /// a build that was correct five waves ago stops being correct while you
+    /// watch. Its head is armoured through a wide frontal arc and its engine is
+    /// exposed behind, which means the counter is not more dps, it is somebody
+    /// physically getting around it — the same question the Aegis asks, asked
+    /// while the clock is running on a structure.</summary>
+    public static readonly EnemyDef Ram = new(
+        Id: "ram", Hp: 220f, SpeedMetersPerSec: 1.7f, Bounty: 34, LeakDamage: 2,
+        Layer: EnemyLayer.Ground, ContactDamage: 14f, ScatterWidth: 0f,
+        BlocksSight: false,
+        FrontArmorArcDegrees: 150f, FrontArmorFactor: 0.35f, RearWeakFactor: 2.2f,
+        Shield: 0f, FlatArmor: 2f, Mass: 6f, Burrower: false,
+        SplitInto: null, SplitCount: 0,
+        ScrapYield: new Dictionary<ScrapType, int>
+        {
+            [ScrapType.Plating] = 3, [ScrapType.Gravium] = 1,
+        },
+        // Reach must clear the socket rule, not look plausible. Sockets are
+        // kept at least 3.5 m off the lane by the placement gate, so a reach of
+        // 3.2 m meant a Ram walking its route could never touch anything — it
+        // sieged nothing, ever, and read as a merely tanky walker. Every stat
+        // sweep I ran on it returned identical numbers, which was the clue.
+        StructureDps: 14f, StructureReach: 6f,
+        EnrageBelowHpFraction: 0.35f, EnrageSpeedFactor: 1.6f);
+
     public static readonly IReadOnlyDictionary<string, EnemyDef> All =
         new Dictionary<string, EnemyDef>
         {
@@ -134,5 +160,6 @@ public static class Enemies
             [Aegis.Id] = Aegis,
             [Shade.Id] = Shade,
             [Mender.Id] = Mender,
+            [Ram.Id] = Ram,
         };
 }

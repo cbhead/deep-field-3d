@@ -38,7 +38,12 @@ public sealed class Enemy
     public float Shield;
     public float ShieldTimer;     // counts down after damage; regen when expired
     public float CcResist;        // 0..1 gauge; full = immune to hard control
-    public bool Burrowed;         // Mole: untargetable while underground
+    public bool Burrowed;
+
+    /// <summary>Stopped to hit a structure. Not a status: it is a fact about
+    /// what the enemy is doing this tick, recomputed every tick from whether a
+    /// structure is in reach, so it cannot get stuck on.</summary>
+    public bool Sieging;         // Mole: untargetable while underground
 }
 
 public sealed class Tower
@@ -51,6 +56,13 @@ public sealed class Tower
     public int Spent;             // money sunk (placement + upgrades) for sell refunds
     public int Kills;
     public float DamageDealt;
+
+    /// <summary>Current structure health. TowerDef has carried StructureHp
+    /// since M2 and nothing read it, because the thing that attacks structures
+    /// is the Ram — so the Barricade's 300 hp was a number in a table. Towers
+    /// with StructureHp 0 are indestructible and Hp stays at 0 for them, which
+    /// keeps the common case free of bookkeeping.</summary>
+    public float Hp;
 
     /// <summary>Level per upgrade path, parallel to TowerDef.UpgradePaths (0 = unbought).</summary>
     public int[] PathLevels = System.Array.Empty<int>();

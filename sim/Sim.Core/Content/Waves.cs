@@ -145,10 +145,14 @@ public static class Waves
                 },
                 // Mender debuts behind the warden pair — shoot the healer, not
                 // the shield. One aegis steps aside to pay for it.
+                // The Ram takes the Monolith's slot rather than adding a wave:
+                // both are the wave's one big thing, so the weight holds and
+                // the question changes from "shoot the wall" to "the wall is
+                // demolishing what you built". It debuts on the barricade map
+                // because b1 is the only structure whose loss reshapes a map.
                 new[]
                 {
-                    new WaveGroup("monolith", 1, 0, 0, "groundShort"),
-                    new WaveGroup("aegis", 1, 90, 80, "ground"),
+                    new WaveGroup("ram", 1, 0, 0, "groundShort"),
                     new WaveGroup("warden", 2, 80, 140, "groundShort"),
                     new WaveGroup("mender", 1, 0, 200, "groundShort"),
                 },
