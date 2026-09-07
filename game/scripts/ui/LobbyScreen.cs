@@ -30,6 +30,11 @@ public partial class LobbyScreen : Control
     private LineEdit _addressEdit = null!;
     private Label _status = null!;
     private Label _sectorLine = null!;
+    /// <summary>One row, however many factions there are. A wrapping grid was
+    /// tried and cut: two rows of this card need about 1280 px and a 1080p
+    /// screen has roughly 870 to give, so the second row fell off the bottom —
+    /// trading a horizontal overflow for a vertical one. The card content is
+    /// what has to stay narrow instead.</summary>
     private HBoxContainer _columns = null!;
     private MarginContainer _pageHost = null!;
     private string _page = "factions";
@@ -292,13 +297,31 @@ public partial class LobbyScreen : Control
     /// <summary>The sim stores a passive as an id; these are the effects it
     /// actually applies, read off Balance so the lobby cannot drift from the
     /// numbers the match uses.</summary>
-    private static string PassiveText(string passiveId) => passiveId switch
+    internal static string PassiveText(string passiveId) => passiveId switch
     {
         "buildDiscount" => $"−{(1f - Balance.ForgeBuildDiscount) * 100f:0}% build cost",
         "burnDuration" => $"+{(Balance.EmberBurnDurationFactor - 1f) * 100f:0}% burn duration",
         "reloadSpeed" => "+12% fire rate",
+        "chilledBonus" => $"+{(Balance.GlacierChilledDamageFactor - 1f) * 100f:0}% vs slowed",
+        "weakPoints" => "weak points shown",
+        // Falling through prints the raw content id at the player, which is
+        // exactly what Glacier and Specter did: both were added to the sim and
+        // nobody taught this switch about them, so the lobby advertised
+        // "chilledBonus" and "weakPoints" as if they were English. Plausible
+        // enough to survive a review, which is why UnwrittenPassives below is
+        // checked at boot rather than trusted.
         _ => passiveId,
     };
+
+    /// <summary>Factions whose passive has no human wording — the switch above
+    /// would show the player a content id. Empty is the only correct answer;
+    /// the asset audit prints an ERROR for anything here and CI fails on it,
+    /// because this exact gap shipped once already.</summary>
+    public static IReadOnlyList<string> UnwrittenPassives() =>
+        Factions.All.Values
+            .Where(f => PassiveText(f.Passive) == f.Passive)
+            .Select(f => $"{f.Id}/{f.Passive}")
+            .ToList();
 
     // =====================================================================
 
@@ -319,8 +342,18 @@ public partial class LobbyScreen : Control
 
             // Hero portrait well. The model is delivered; a lit well with the
             // faction diamond stands in until heroes render in the lobby.
+            //
+            // It is also the one element allowed to grow. Design laid this
+            // screen out for three columns at 1920 wide; there are five
+            // factions now and six planned, so the cards get narrower while the
+            // column stays the same height — which at full screen left roughly
+            // seven hundred pixels of nothing under every card. Everything else
+            // keeps design's size and the well takes the slack, because a
+            // taller picture box is a better hero portrait and dead air is not
+            // anything. 220 is design's own minimum.
             var well = Kit.Surface(Tokens.SurfaceInset, Tokens.BorderPanel, Tokens.ChamferSm, shadow: false);
-            well.CustomMinimumSize = new Vector2(0, 180);
+            well.CustomMinimumSize = new Vector2(0, 220);
+            well.SizeFlagsVertical = SizeFlags.ExpandFill;
             var wellRow = Kit.Row();
             wellRow.Alignment = BoxContainer.AlignmentMode.Center;
             wellRow.AddChild(Kit.SlotIcon(UiTheme.Icon($"faction_{def.Id}", accent), accent, 64));
@@ -356,11 +389,38 @@ public partial class LobbyScreen : Control
             var curve = new KitCurve { Level = level };
             panel.Body.AddChild(curve);
 
-            var legend = Kit.Row(Tokens.Space5);
-            legend.AddChild(Kit.Label("cooldown", Tokens.Arcane400));
-            legend.AddChild(Kit.Label("radius", Tokens.Brass400));
-            legend.AddChild(Kit.Label("magnitude", Tokens.Soul400));
+            // The legend carries the actual multipliers at this level, not just
+            // the three words — design shows "cooldown x0.94", and the numbers
+            // are what make the curve mean something.
+            // Stacked, not in a row: three multipliers side by side set the
+            // card's minimum width, and five of those minimums are wider than a
+            // 1080p screen. Vertically they cost nothing, because reclaiming
+            // that space is the point of this pass.
+            var legend = Kit.Col(2);
+            legend.AddChild(Kit.Label(
+                $"cooldown ×{Factions.CooldownFactor(level):0.00}", Tokens.Arcane400));
+            legend.AddChild(Kit.Label(
+                $"radius ×{Factions.RadiusFactor(level):0.00}", Tokens.Brass400));
+            legend.AddChild(Kit.Label(
+                $"magnitude ×{Factions.MagnitudeFactor(level):0.00}", Tokens.Soul400));
             panel.Body.AddChild(legend);
+
+            // Variant slot. Design has this row and we never built it; it is
+            // the reserved home for the high-level ability variants the plan
+            // puts at M5, so today it states honestly what unlocks it rather
+            // than showing a choice that does not exist.
+            var variant = Kit.Row(Tokens.Space4);
+            var slot = Kit.Surface(Tokens.SurfaceInset, Tokens.BorderPanel, Tokens.ChamferSm, shadow: false);
+            slot.CustomMinimumSize = new Vector2(40, 40);
+            variant.AddChild(slot);
+            var variantText = Kit.Col(2);
+            variantText.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            variantText.AddChild(Kit.Label("variant slot"));
+            variantText.AddChild(Kit.Body(
+                level >= 2 ? "none yet — M5" : "unlocks at level 2",
+                Tokens.SizeCaption, Tokens.TextSecondary));
+            variant.AddChild(variantText);
+            panel.Body.AddChild(variant);
 
             // Footer: pick it.
             string captured = def.Id;

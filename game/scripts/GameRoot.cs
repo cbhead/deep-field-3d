@@ -315,6 +315,12 @@ public partial class GameRoot : Node3D
         _map = Maps.All["foundry"];
         var built = new List<Node>();
 
+        // Copy lives client-side by convention, so the harness cannot reach it
+        // and this is the only place that checks a faction's passive has been
+        // written in English rather than left as its content id.
+        foreach (string gap in LobbyScreen.UnwrittenPassives())
+            GD.PrintErr($"ERROR: faction passive has no wording: {gap}");
+
         foreach (var def in Enemies.All.Values)
             built.Add(SpawnEnemyView(built.Count, def.Id));
 
