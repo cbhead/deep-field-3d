@@ -32,6 +32,8 @@ public partial class ArmoryScreen : Control
     private VBoxContainer _platformRail = null!;
     private Control _bench = null!;
     private bool _bought;
+    private SubViewportContainer? _modelHost;
+    private string _modelFor = "";
     private string _signature = "";
 
     /// <summary>Everything this screen renders, flattened. Cheap to build and
@@ -374,6 +376,93 @@ public partial class ArmoryScreen : Control
         return new Rect2((avail - size) * 0.5f, size);
     }
 
+    /// <summary>World-space bounds of every mesh under a node, merged.</summary>
+    private static Aabb MergedBounds(Node3D root)
+    {
+        Aabb? merged = null;
+        foreach (var m in root.FindChildren("*", "MeshInstance3D", true, false).OfType<MeshInstance3D>())
+        {
+            var box = m.GlobalTransform * m.GetAabb();
+            merged = merged is { } acc ? acc.Merge(box) : box;
+        }
+        return merged ?? new Aabb(Vector3.Zero, new Vector3(0.2f, 0.1f, 0.2f));
+    }
+
+    /// <summary>The weapon design actually shipped, rendered in the bench.
+    ///
+    /// The first attempts at this failed for a reason that had nothing to do
+    /// with framing, which is where I kept looking: a SubViewport inherits its
+    /// parent's World3D unless told otherwise, so the camera was rendering the
+    /// Foundry. That is why it looked like the lens was buried inside geometry
+    /// — it was, just not the gun's. The same code in the lobby looked correct
+    /// only because no level is loaded there.
+    ///
+    /// NOT CALLED. Left in place because the diagnosis in it is worth keeping
+    /// and the remaining fault is narrow, but calling it renders nothing at all,
+    /// which is worse than the outline the bench draws instead.</summary>
+    private void RebuildWeaponModel()
+    {
+        if (GodotObject.IsInstanceValid(_modelHost) && _modelFor == _weaponId) return;
+        if (GodotObject.IsInstanceValid(_modelHost)) _modelHost!.QueueFree();
+        _modelHost = null;
+        _modelFor = _weaponId;
+
+        string asset = AssetLibrary.Has($"weapon_{_weaponId}_world")
+            ? $"weapon_{_weaponId}_world" : $"weapon_{_weaponId}_vm";
+        if (!AssetLibrary.Has(asset)) return;
+
+        var viewport = new SubViewport
+        {
+            TransparentBg = true,
+            RenderTargetUpdateMode = SubViewport.UpdateMode.Always,
+            Size = new Vector2I(760, 320),
+            OwnWorld3D = true,
+        };
+        var stage = new Node3D();
+        viewport.AddChild(stage);
+
+        var gun = AssetLibrary.Instantiate(asset, () => new Node3D());
+        gun.RotationDegrees = new Vector3(10f, 208f, 0f);
+        stage.AddChild(gun);
+
+        _modelHost = new SubViewportContainer { Stretch = true, MouseFilter = MouseFilterEnum.Ignore };
+        _modelHost.AddChild(viewport);
+        _bench.AddChild(_modelHost);
+        _bench.MoveChild(_modelHost, 0);
+
+        // Size it here, not only in DrawBench. Stretch makes the container
+        // dictate the viewport's size, so a container left at zero renders a
+        // zero-pixel viewport — and now that Refresh only runs on change,
+        // DrawBench is no longer guaranteed to come along afterwards and fix it.
+        var r = BenchRect();
+        _modelHost.Position = r.Position + new Vector2(r.Size.X * 0.08f, r.Size.Y * 0.26f);
+        _modelHost.Size = new Vector2(r.Size.X * 0.84f, r.Size.Y * 0.44f);
+
+        // Read after attaching: GlobalTransform on a detached node warns and
+        // returns identity.
+        var bounds = MergedBounds(gun);
+        float reach = Mathf.Max(bounds.Size.Length(), 0.05f);
+        const float fov = 34f;
+        float back = reach / (2f * Mathf.Tan(Mathf.DegToRad(fov) * 0.5f)) * 1.25f;
+
+        stage.AddChild(new Camera3D
+        {
+            Position = bounds.GetCenter() + new Vector3(0f, reach * 0.05f, back),
+            RotationDegrees = new Vector3(-4f, 0f, 0f),
+            Fov = fov,
+            Current = true,
+        });
+        stage.AddChild(new DirectionalLight3D
+        {
+            RotationDegrees = new Vector3(-28f, 24f, 0f), LightEnergy = 1.7f,
+        });
+        stage.AddChild(new DirectionalLight3D
+        {
+            RotationDegrees = new Vector3(-6f, -50f, 0f), LightEnergy = 0.55f,
+            LightColor = Tokens.Arcane400.Lerp(Colors.White, 0.5f),
+        });
+    }
+
     private void DrawBench()
     {
         var rect = BenchRect();
@@ -383,11 +472,11 @@ public partial class ArmoryScreen : Control
 
         var body = new Rect2(origin + new Vector2(size.X * 0.16f, size.Y * 0.40f),
             new Vector2(size.X * 0.66f, size.Y * 0.20f));
+        _bench.DrawRect(body, Tokens.BorderPanel, filled: false, width: 2f);
         // Outline, not a fill. Design's frame puts the weapon's silhouette here
         // and this stands in for it until the viewmodels land — filled, at
         // design's own 900x640, it read as a grey slab across the middle of the
         // screen rather than as a guide for where the slots attach.
-        _bench.DrawRect(body, Tokens.BorderPanel, filled: false, width: 2f);
 
         // Barrel forward, grip below — enough shape to orient the slots.
         _bench.DrawRect(new Rect2(origin + new Vector2(size.X * 0.06f, size.Y * 0.45f),

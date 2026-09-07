@@ -347,6 +347,11 @@ public partial class LobbyScreen : Control
                 TransparentBg = true,
                 RenderTargetUpdateMode = SubViewport.UpdateMode.Always,
                 Size = new Vector2I(360, 480),
+                // Its own world, or the camera renders whatever level is
+                // loaded. This happens to look fine in the lobby because there
+                // is no level yet — which is exactly why the same code in the
+                // armory rendered the inside of the Foundry instead of a gun.
+                OwnWorld3D = true,
             };
 
             var stage = new Node3D();
