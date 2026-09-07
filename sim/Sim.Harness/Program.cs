@@ -1203,6 +1203,110 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
         $"guarded {guarded} ticks vs alone {alone} ticks");
 }
 
+// --- Gate 30 (M4): the Ram's front is armour and its back is the answer.
+//
+// The whole enemy is the gap between these two numbers. If the front is not
+// punishing, nobody moves and the Ram is a slow drifter; if the back is not
+// decisive, moving does not pay and the Ram is unanswerable. It also fails if
+// the arithmetic ever silently stops mattering — the first version of this
+// enemy had so much hp that changing it produced a byte-identical campaign log,
+// which is the failure mode a stat gate exists to catch.
+{
+    (float Hp, bool Dead) RamUnderFire(bool fromBehind)
+    {
+        var world = new World(Seed, Maps.Switchyard);
+        world.Enqueue(new Command.Join(1, "probe", "ember"));
+        Step.Advance(world);
+
+        var ram = new Enemy
+        {
+            Id = world.NextId(), DefId = "ram",
+            Hp = Enemies.Ram.Hp, MaxHp = Enemies.Ram.Hp,
+            Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 2,
+            RouteIndex = 0, Leg = 2, LegProgress = 4f,
+        };
+        world.Enemies.Add(ram);
+        Step.Advance(world);
+
+        var weapon = Weapons.All[world.Players[1].WeaponId];
+        for (int i = 0; i < Balance.TickHz * 12 && !ram.Dead; i++)
+        {
+            world.Enqueue(new Command.PlayerSync(1, ram.Pos + new Vec3(fromBehind ? -2.5f : 2.5f, 0f, 0f)));
+            world.Enqueue(new Command.PlayerHit(1, ram.Id, weapon.Id));
+            Step.Advance(world);
+        }
+        return (ram.Hp, ram.Dead);
+    }
+
+    var face = RamUnderFire(fromBehind: false);
+    var back = RamUnderFire(fromBehind: true);
+
+    Gate("ram: twelve seconds of fire kills it from behind and barely marks the front",
+        back.Dead && !face.Dead && face.Hp > Enemies.Ram.Hp * 0.5f,
+        $"to the face {face.Hp:0}/{Enemies.Ram.Hp:0} hp left | from behind dead {back.Dead}");
+}
+
+// --- Gate 31 (M4): the Ram demolishes what you build, and a wrench only slows it.
+//
+// Two halves, and the second is the one worth guarding. A siege enemy whose
+// damage a single repairing player can simply out-heal is not a threat, it is a
+// stalemate — the wrench is meant to buy time to kill the thing, never to
+// replace killing it. MeleeRepairFactor shipped at 1.4, which came to 27 hp/s
+// of repair against 14 dps of demolition, so one player held a barricade
+// against a Ram indefinitely while the description in the file claimed the
+// opposite.
+{
+    (float Hp, bool Destroyed, int Ticks) BarricadeUnderSiege(bool repairing)
+    {
+        var world = new World(Seed, Maps.Switchyard);
+        world.Money = 2000;
+        world.Enqueue(new Command.Join(1, "fixer", "forge"));
+        world.Enqueue(new Command.PlaceTower(0, "barricade", "b1"));
+        Step.Advance(world);
+
+        var barricade = world.Towers.Single();
+        var ram = new Enemy
+        {
+            Id = world.NextId(), DefId = "ram",
+            Hp = 100_000f, MaxHp = 100_000f,          // the demolition is the subject, not the kill
+            Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 2,
+            RouteIndex = 0, Leg = 0, LegProgress = 0f,
+        };
+        world.Enemies.Add(ram);
+
+        // Walk it in rather than placing it. MoveEnemies recomputes position
+        // from the route every tick, so a hand-set Pos is gone before
+        // SiegeStructures reads it — the first version of this gate held the
+        // Ram on the barricade and measured a demolition that never started.
+        // Arriving under its own power also exercises the part that makes the
+        // enemy work at all: it walks at the barricade instead of being turned
+        // onto the fallback route the way everything else is. Once in reach it
+        // pins itself, because sieging sets its speed to zero.
+        int approach = 0;
+        while (!ram.Sieging && !ram.Dead && approach++ < Balance.TickHz * 120) Step.Advance(world);
+
+        int ticks = 0;
+        for (; ticks < Balance.TickHz * 120 && world.Towers.Count > 0; ticks++)
+        {
+            if (repairing)
+            {
+                world.Enqueue(new Command.PlayerSync(1, barricade.Pos));
+                world.Enqueue(new Command.PlayerMelee(1, barricade.Pos + new Vec3(0f, 0f, 1f)));
+            }
+            Step.Advance(world);
+        }
+        return (barricade.Hp, world.Towers.Count == 0, ticks);
+    }
+
+    var alone = BarricadeUnderSiege(repairing: false);
+    var held = BarricadeUnderSiege(repairing: true);
+
+    Gate("ram: it demolishes a barricade, and one wrench slows that without stopping it",
+        alone.Destroyed && held.Destroyed && held.Ticks > alone.Ticks * 1.4f,
+        $"unattended {alone.Ticks} ticks | repaired {held.Ticks} ticks " +
+        $"({(float)held.Ticks / alone.Ticks:0.0}x)");
+}
+
 // --- Gate 23: socket placement is legal and generous.
 //
 // Build density is a player-freedom dial: too few sockets and there is only

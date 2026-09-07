@@ -74,6 +74,16 @@ public static class Balance
     /// number that decides whether anyone ever puts the gun away.</summary>
     public const float MeleeScrapBonus = 1.25f;
 
+    /// <summary>Repair per melee swing, as a multiple of the weapon's damage.
+    /// Sized so one player with a wrench slows a demolition by about half, two
+    /// hold it, and nobody holds it while also shooting — that is the trade the
+    /// Ram is for. 1.4 was written to that description and did not match it:
+    /// the wrench swings 1.4 times a second for 14, so the factor multiplies
+    /// out to 27 hp/s against a Ram's 14, and one player repaired faster than a
+    /// Ram could break, forever. A stalemate is the one outcome a siege enemy
+    /// must not have — killing it has to be the way out.</summary>
+    public const float MeleeRepairFactor = 0.35f;
+
     public const float BurrowCycleMeters = 14f;
     public const float BurrowedMeters = 8f;
 

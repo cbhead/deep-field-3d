@@ -27,11 +27,31 @@ public sealed class PlayerBot
     /// caveat the accuracy band carries, and for the same reason.</summary>
     public float MeleeUptime { get; init; }
 
+    /// <summary>Seconds spent getting around an enemy with a front arc before
+    /// any shot lands on its back. Nothing is fired while moving, so the cost
+    /// of flanking is measured in tempo — the rest of the wave walks on while
+    /// you do it.
+    ///
+    /// Without this the bot could not answer a directional-armour enemy at all:
+    /// it shoots from a hero station, stations sit ahead of the advance, and
+    /// ahead is exactly where the armour is. The Aegis and the Ram both ask
+    /// "will a player move?" and the synthetic hero could only ever say no,
+    /// which made a designed-for counter read as an impossible enemy.</summary>
+    public float FlankSeconds { get; init; } = 2.5f;
+
+    /// <summary>How far behind the target the bot stands to shoot it. Outside
+    /// contact range: the price of flanking here is time, not health, because
+    /// the bot has no positional fear and charging it for a risk it cannot
+    /// perceive would flatter the enemy rather than the player.</summary>
+    private const float FlankStandoffMeters = 3.0f;
+
     private readonly Rng _rng;
     private float _shotTimer;
     private float _travelTimer;
     private int _stationIndex;
     private bool _joined;
+    private float _flankTimer;
+    private int _flankTargetId = -1;
 
     public PlayerBot(uint seed)
     {
@@ -49,8 +69,8 @@ public sealed class PlayerBot
 
         if (!world.Players.TryGetValue(PlayerId, out var self)) return;
 
-        // Reposition: chase the station nearest the frontmost enemy.
-        var front = FrontEnemy(world);
+        // Reposition: chase the station nearest the enemy being answered.
+        var front = Target(world);
         if (front is not null && world.Map.HeroStations.Count > 0)
         {
             int bestStation = _stationIndex;
@@ -76,6 +96,28 @@ public sealed class PlayerBot
         var stationPos = world.Map.HeroStations.Count > 0
             ? world.Map.HeroStations[_stationIndex].Pos
             : world.Map.HeroSpawn;
+
+        // Flank anything whose front is armoured and whose back is not. The
+        // walk around costs FlankSeconds of firing nothing, and it restarts if
+        // the answer changes target, so a wave full of armour is expensive to
+        // answer rather than free.
+        if (front is not null && Flankable(front))
+        {
+            if (_flankTargetId != front.Id) { _flankTargetId = front.Id; _flankTimer = FlankSeconds; }
+            if (_flankTimer > 0f)
+            {
+                _flankTimer -= Balance.Dt;
+                return;                          // still walking round: no shots
+            }
+            var facing = front.Facing;
+            float len = facing.Length();
+            if (len > 0.01f) stationPos = front.Pos - facing * (FlankStandoffMeters / len);
+        }
+        else
+        {
+            _flankTargetId = -1;
+        }
+
         world.Enqueue(new Command.PlayerSync(PlayerId, stationPos));
 
         if (world.Phase != MatchPhase.Wave) return;
@@ -111,19 +153,55 @@ public sealed class PlayerBot
             world.Enqueue(new Command.PlayerHit(PlayerId, front.Id, weapon.Id));
     }
 
-    private static Enemy? FrontEnemy(World world)
+    private static bool Flankable(Enemy enemy)
     {
-        Enemy? best = null;
-        float bestTraveled = -1f;
+        var def = Enemies.All[enemy.DefId];
+        return def.FrontArmorArcDegrees > 0f && def.RearWeakFactor > 1f;
+    }
+
+    /// <summary>What the hero answers this tick: healers, then anything
+    /// demolishing a structure, then the frontmost enemy.
+    ///
+    /// Frontmost alone was wrong the moment a siege enemy existed. A Ram stops
+    /// to swing, so everything else overtakes it and it is never the front —
+    /// the bot would walk past the thing dismantling its defence to shoot a
+    /// drifter that was merely further along. In two full runs it fired at the
+    /// Ram exactly never, which reads as "the Ram is unkillable" rather than
+    /// "the bot is not looking at it".
+    ///
+    /// Healers outrank even that, and the measurement is why: with siege first,
+    /// the bot put 771 damage into a 220 hp Ram and did not kill it, because
+    /// the wave pairs it with a Mender and nobody was shooting the Mender.
+    /// Prioritising is the Mender's designed counter and refusing to kill a
+    /// healer is not a floor, it is a mistake — so the bot does not make it.
+    ///
+    /// All three tiers are target policy, which the plan names as a bot dial.
+    /// Read the result as a competent player, not an optimal one: it still
+    /// only tracks one target at a time.</summary>
+    private static Enemy? Target(World world)
+    {
+        Enemy? healer = null, sieging = null, front = null;
+        float healerTraveled = -1f, siegeTraveled = -1f, bestTraveled = -1f;
+
         foreach (var enemy in world.Enemies)
         {
             if (enemy.Dead) continue;
+            if (Enemies.All[enemy.DefId].HealPerSecond > 0f && enemy.TotalTraveled > healerTraveled)
+            {
+                healerTraveled = enemy.TotalTraveled;
+                healer = enemy;
+            }
+            if (enemy.Sieging && enemy.TotalTraveled > siegeTraveled)
+            {
+                siegeTraveled = enemy.TotalTraveled;
+                sieging = enemy;
+            }
             if (enemy.TotalTraveled > bestTraveled)
             {
                 bestTraveled = enemy.TotalTraveled;
-                best = enemy;
+                front = enemy;
             }
         }
-        return best;
+        return healer ?? sieging ?? front;
     }
 }

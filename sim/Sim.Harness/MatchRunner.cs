@@ -88,6 +88,20 @@ public static class MatchRunner
         },
     };
 
+    /// <summary>The first entry in the build order whose socket is now empty,
+    /// or null if everything the policy built is still standing.</summary>
+    private static string? RebuildTarget(World world, string[] buildOrder)
+    {
+        foreach (string entry in buildOrder)
+        {
+            var parts = entry.Split(':');
+            if (!Towers.All.ContainsKey(parts[0])) continue;      // traps rearm themselves
+            if (Towers.All[parts[0]].StructureHp <= 0f) continue; // cannot be destroyed
+            if (!world.Towers.Any(t => t.SocketId == parts[1])) return entry;
+        }
+        return null;
+    }
+
     public static MatchResult Run(uint seed, MapDef map, params PlayerBot[] bots) =>
         RunWithBuild(seed, map, null, bots);
 
@@ -117,6 +131,20 @@ public static class MatchRunner
                     world.Enqueue(new Command.PlaceTower(0, parts[0], parts[1]));
                     buildCursor++;
                 }
+            }
+            // Rebuild what got demolished, before spending on anything else.
+            // The policy was a fixed list that could only ever go forwards,
+            // which was fine while nothing could take a structure away. The Ram
+            // takes the barricade away, and a floor policy that will not
+            // replace it is not measuring a floor — it is measuring what
+            // happens when a player watches their defence get dismantled and
+            // does nothing. A real team rebuilds; so does this.
+            else if (RebuildTarget(world, buildOrder) is { } rebuild)
+            {
+                var parts = rebuild.Split(':');
+                int cost = Towers.All[parts[0]].Cost;
+                if (world.Money >= cost)
+                    world.Enqueue(new Command.PlaceTower(0, parts[0], parts[1]));
             }
             else if (world.Money > 150 && world.Towers.Count > 0)
             {

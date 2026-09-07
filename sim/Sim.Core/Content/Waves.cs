@@ -152,9 +152,19 @@ public static class Waves
                     new WaveGroup("warden", 2, 80, 140, "groundShort"),
                     new WaveGroup("mender", 1, 0, 200, "groundShort"),
                 },
+                // Ram debuts here and not one wave earlier, where it was first
+                // written. That wave is the Mender's debut, and a Ram beside a
+                // Mender is not a hard wave, it is an unanswerable one: the
+                // measurement was 437 damage into a 220 hp body that healed
+                // through all of it. Two debuts in one wave also breaks the
+                // one-to-learn-on rule the rest of the arc keeps. Here it
+                // arrives alone, into the map's filler wave, where the thing
+                // to notice is that it stops at your buildings instead of
+                // walking past them. Four drifters step aside to pay for it.
                 new[]
                 {
-                    new WaveGroup("drifter", 10, 16, 0, "groundShort"),
+                    new WaveGroup("ram", 1, 0, 0, "groundShort"),
+                    new WaveGroup("drifter", 6, 16, 60, "groundShort"),
                     new WaveGroup("mole", 2, 50, 100, "ground"),
                     new WaveGroup("cluster", 2, 60, 200, "groundShort"),
                     new WaveGroup("skiff", 4, 30, 240, "air"),

@@ -844,6 +844,15 @@ public partial class GameRoot : Node3D
                     ReleaseStructureView(sold.TowerId);
                     break;
 
+                // A demolished structure has to leave the map, or the Ram's
+                // work is invisible and the player keeps counting on a tower
+                // that stopped firing. Damage ticks thirty times a second and
+                // is deliberately not announced — the loss is the event.
+                case SimEvent.StructureDestroyed wrecked:
+                    ReleaseStructureView(wrecked.TowerId);
+                    Post($"{wrecked.DefId} destroyed", UiTheme.Danger);
+                    break;
+
                 // Refusals answer at the surface that caused them, not only in
                 // the feed — the player is looking at the wheel, not the corner.
                 case SimEvent.BuildRejected rejected:
@@ -930,6 +939,10 @@ public partial class GameRoot : Node3D
             case "towerUpgraded": OnTowerUpgraded(int.Parse(p[2]), p[3], int.Parse(p[4])); break;
             case "towerSold":
                 ReleaseStructureView(int.Parse(p[2]));
+                break;
+            case "structureDestroyed":
+                ReleaseStructureView(int.Parse(p[2]));
+                Post($"{p[3]} destroyed", UiTheme.Danger);
                 break;
             case "buildRejected":
                 _wheel.ShowRefusal(Explain(p[5]));

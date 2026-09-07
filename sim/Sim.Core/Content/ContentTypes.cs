@@ -41,7 +41,11 @@ public sealed record EnemyDef(
     bool Stealth = false,          // Shade: towers cannot target it unless revealed
     float StealthSpeedBonus = 0f,  // Shade: faster while unseen — being ignored pays
     float HealPerSecond = 0f,      // Mender: hp/sec restored to nearby allies
-    float HealRadius = 0f);
+    float HealRadius = 0f,
+    float StructureDps = 0f,       // Ram: hp/sec dealt to a structure in reach
+    float StructureReach = 0f,     // how close it must be to start swinging
+    float EnrageBelowHpFraction = 0f, // Ram: speeds up when hurt
+    float EnrageSpeedFactor = 1f);
 
 public sealed record UpgradePathDef(
     string Id,                    // "damage" | "range" | "rate"

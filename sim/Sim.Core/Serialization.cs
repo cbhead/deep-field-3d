@@ -17,7 +17,13 @@ public static class Serialization
     private sealed record TowerState(
         int Id, string DefId, string SocketId, float Cooldown, int Spent, int Kills,
         float DamageDealt, int[] PathLevels, float BuffTimer, float BuffFactor,
-        int RampTargetId = -1, float RampSeconds = 0f);
+        int RampTargetId = -1, float RampSeconds = 0f,
+        // Trailing optional: a save written before structures could be damaged
+        // loads with Hp 0, which would read as "already rubble", so a missing
+        // value is restored to the def's full health rather than taken
+        // literally. -1 is the sentinel because 0 is a legitimate value only
+        // for towers that cannot be damaged at all.
+        float Hp = -1f);
     private sealed record TrapState(int Id, string DefId, string SocketId, int ChargesLeft, float RearmTimer);
     private sealed record ProjectileState(
         int Id, int FiredBy, int TargetId, float X, float Y, float Z,
@@ -61,7 +67,7 @@ public static class Serialization
             w.Towers.Select(t => new TowerState(
                 t.Id, t.DefId, t.SocketId, t.Cooldown, t.Spent, t.Kills,
                 t.DamageDealt, t.PathLevels, t.BuffTimer, t.BuffFactor,
-                t.RampTargetId, t.RampSeconds)).ToList(),
+                t.RampTargetId, t.RampSeconds, t.Hp)).ToList(),
             w.Projectiles.Where(p => !p.Dead).Select(p => new ProjectileState(
                 p.Id, p.FiredBy, p.TargetId, p.Pos.X, p.Pos.Y, p.Pos.Z,
                 p.Speed, p.Damage, p.SplashRadius, p.SplashFalloff)).ToList(),
@@ -138,6 +144,7 @@ public static class Serialization
                 Cooldown = t.Cooldown, Spent = t.Spent, Kills = t.Kills, DamageDealt = t.DamageDealt,
                 PathLevels = t.PathLevels, BuffTimer = t.BuffTimer, BuffFactor = t.BuffFactor,
                 RampTargetId = t.RampTargetId, RampSeconds = t.RampSeconds,
+                Hp = t.Hp >= 0f ? t.Hp : Towers.All[t.DefId].StructureHp,
             });
         }
 
