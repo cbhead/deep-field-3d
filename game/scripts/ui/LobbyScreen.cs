@@ -189,7 +189,11 @@ public partial class LobbyScreen : Control
             panel.Modulate = unlocked ? Colors.White : new Color(1, 1, 1, 0.45f);
             _columns.AddChild(panel);
 
+            // The sketch takes the card's slack, for the same reason the hero
+            // well does on the factions tab: it is the card's picture, and a
+            // bigger route diagram is more readable than a gap under a small one.
             var sketch = new KitRouteSketch { Map = map };
+            sketch.SizeFlagsVertical = SizeFlags.ExpandFill;
             panel.Body.AddChild(sketch);
 
             // Legend, so the sketch is readable without a caption.

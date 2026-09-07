@@ -250,21 +250,43 @@ public partial class ArmoryScreen : Control
     /// <summary>The gun silhouette, drawn rather than modelled — design's frame
     /// shows the weapon's outline with the slots arranged around it, and a
     /// placeholder polygon reads the same at this size.</summary>
+    /// <summary>Design's bench is 900x640 and the slot coordinates are
+    /// fractions of it. Scaling that to whatever the window happens to be made
+    /// the weapon a grey slab most of a metre wide at 1080p and pushed the
+    /// slots to the far corners. The bench is now centred at design's size,
+    /// shrinking only if the panel is too small to hold it — the composition is
+    /// authored, so it should not stretch.</summary>
+    private Rect2 BenchRect()
+    {
+        var avail = _bench.Size;
+        float scale = Mathf.Min(1f, Mathf.Min(avail.X / 900f, avail.Y / 640f));
+        var size = new Vector2(900f * scale, 640f * scale);
+        return new Rect2((avail - size) * 0.5f, size);
+    }
+
     private void DrawBench()
     {
-        var size = _bench.Size;
+        var rect = BenchRect();
+        var origin = rect.Position;
+        var size = rect.Size;
         if (size.X < 10 || size.Y < 10) return;
 
-        var body = new Rect2(size.X * 0.16f, size.Y * 0.40f, size.X * 0.66f, size.Y * 0.20f);
-        _bench.DrawRect(body, Tokens.Obsidian500);
-        _bench.DrawRect(body, Tokens.BorderStrong, filled: false, width: 1f);
+        var body = new Rect2(origin + new Vector2(size.X * 0.16f, size.Y * 0.40f),
+            new Vector2(size.X * 0.66f, size.Y * 0.20f));
+        // Outline, not a fill. Design's frame puts the weapon's silhouette here
+        // and this stands in for it until the viewmodels land — filled, at
+        // design's own 900x640, it read as a grey slab across the middle of the
+        // screen rather than as a guide for where the slots attach.
+        _bench.DrawRect(body, Tokens.BorderPanel, filled: false, width: 2f);
 
         // Barrel forward, grip below — enough shape to orient the slots.
-        _bench.DrawRect(new Rect2(size.X * 0.06f, size.Y * 0.45f, size.X * 0.12f, size.Y * 0.07f), Tokens.Obsidian500);
-        _bench.DrawRect(new Rect2(size.X * 0.34f, size.Y * 0.58f, size.X * 0.09f, size.Y * 0.16f), Tokens.Obsidian500);
+        _bench.DrawRect(new Rect2(origin + new Vector2(size.X * 0.06f, size.Y * 0.45f),
+            new Vector2(size.X * 0.12f, size.Y * 0.07f)), Tokens.BorderPanel, filled: false, width: 2f);
+        _bench.DrawRect(new Rect2(origin + new Vector2(size.X * 0.34f, size.Y * 0.58f),
+            new Vector2(size.X * 0.09f, size.Y * 0.16f)), Tokens.BorderPanel, filled: false, width: 2f);
 
         if (Tokens.Display is { } font)
-            _bench.DrawString(font, new Vector2(size.X * 0.16f, size.Y * 0.36f),
+            _bench.DrawString(font, origin + new Vector2(size.X * 0.16f, size.Y * 0.36f),
                 _weaponId.ToUpperInvariant(), HorizontalAlignment.Left, -1,
                 Tokens.SizeCaption, Tokens.TextMuted);
     }
@@ -279,7 +301,9 @@ public partial class ArmoryScreen : Control
         if (_view.Local is not { } local) return;
 
         var mounted = local.AttachmentsFor(_weaponId);
-        var size = _bench.Size;
+        var rect = BenchRect();
+        var origin = rect.Position;
+        var size = rect.Size;
         if (size.X < 10) return;
 
         foreach (var (slot, fx, fy) in BenchLayout)
@@ -289,7 +313,7 @@ public partial class ArmoryScreen : Control
             bool selected = slot == _slot;
 
             var column = Kit.Col(Tokens.Space2);
-            column.Position = new Vector2(size.X * fx, size.Y * fy);
+            column.Position = origin + new Vector2(size.X * fx, size.Y * fy);
             _bench.AddChild(column);
 
             var well = Kit.SlotBox(selected, Tokens.SlotLg);

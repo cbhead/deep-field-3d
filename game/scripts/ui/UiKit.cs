@@ -511,13 +511,22 @@ public partial class KitButton : Button
         {
             bool hot = state is "hover" or "pressed";
             bool off = state == "disabled";
-            AddThemeStyleboxOverride(state, new ChamferBox
+            var box = new ChamferBox
             {
                 Fill = off ? fill with { A = fill.A * 0.4f } : hot ? fill.Lightened(0.12f) : fill,
                 Stroke = stroke,
                 Chamfer = 7f,
                 DropShadow = tone != Tone.Ghost,
-            });
+            };
+            // Room for the letter-spacing. Labels are drawn through a
+            // FontVariation with tracking applied, and Godot sizes the button
+            // from the untracked string — so the text renders wider than the
+            // box it was measured for and the last glyph gets cut. RECRAFT read
+            // as "IECRAFT" and every FIT button lost its F. The chamfer eats
+            // the corners too, so the padding covers both.
+            box.ContentMarginLeft = Tokens.Space5;
+            box.ContentMarginRight = Tokens.Space5;
+            AddThemeStyleboxOverride(state, box);
         }
 
         AddThemeColorOverride("font_color", ink);

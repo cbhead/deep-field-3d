@@ -243,7 +243,11 @@ public partial class MatchScreens : CanvasLayer
         _endScreen.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         AddChild(_endScreen);
 
-        var backdrop = new ColorRect { Color = Tokens.SurfaceOverlay };
+        // Opaque, not the translucent overlay. The end screen sat on a scrim
+        // thin enough that the match kept showing through it — the yard on one
+        // side and the intermission panel behind the word VICTORY. A result
+        // screen should end the picture, not tint it.
+        var backdrop = new ColorRect { Color = Tokens.Obsidian900 };
         backdrop.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         _endScreen.AddChild(backdrop);
 
