@@ -63,6 +63,29 @@ public static class MatchRunner
             "tar:t2", "nova:g7", "lance:w2", "lance:g1",
             "spike:t4", "skywatch:w4",
         },
+        // Spire: the core is on the roof, so the build reads bottom-to-top and
+        // the last entries matter most — anything that leaks arrives at the
+        // thing you are defending. Roof anti-air is not optional here because
+        // the air route skips every floor between the street and the core.
+        // Derived by measurement, not taste: a greedy pass picks whichever
+        // free socket adds the most previously-uncovered lane, ground towers
+        // against the two climbing routes and Skywatch against the spiral.
+        // That reaches 99% of the ground lanes and 54% of the air one — the
+        // air figure is low because the spiral only comes within reach of the
+        // building near the top, which is the map's point rather than a gap.
+        //
+        // The two Detectors are placed by a different measure and that mattered:
+        // scoring them on new coverage put one somewhere useless, because a
+        // Detector's job is not covering lane, it is seeing the stair the
+        // Shades climb. Picked on stair coverage instead, w19 and w3 reveal
+        // half of it between them, and shade leaks went from eight to nothing.
+        ["spire"] = new[]
+        {
+            "lance:w21", "skywatch:w44", "lance:w34", "arc:w1",
+            "nova:g9", "skywatch:w41", "detector:w19", "lance:g13",
+            "skywatch:g2", "detector:w3", "singularity:w15", "lance:w23",
+            "nova:g10", "lance:g1", "tar:t2", "spike:t6",
+        },
     };
 
     public static MatchResult Run(uint seed, MapDef map, params PlayerBot[] bots) =>

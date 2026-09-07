@@ -289,11 +289,171 @@ public static class Maps
             [8] = Conditions.Night.Id,
         });
 
+    /// <summary>Sector 3. A tower block, and the only map where the core is at
+    /// the top: enemies come in at street level and climb, so every fight is
+    /// uphill and the last stand is on the roof. That inverts the thing both
+    /// earlier maps taught — there is no "far end of the lane" to hold, only a
+    /// height to give up slowly.
+    ///
+    /// Two ground routes with opposite characters. The stair winds through the
+    /// building's interior, which is tight, sightline-poor and full of corners
+    /// worth trapping. The fire escape zigzags up the outside, wide open and
+    /// visible from everywhere, which makes it the lane towers want and heroes
+    /// find boring. Choosing which one to fortify is the map's question.
+    ///
+    /// The air route spirals the exterior and arrives at the roof directly,
+    /// skipping every floor. On Foundry and Switchyard flyers were a coverage
+    /// tax; here they are a shortcut past the entire map, so roof anti-air
+    /// stops being optional.</summary>
+    public static readonly MapDef Spire = new(
+        Id: "spire",
+        Routes: new[]
+        {
+            // Interior stair: lobby, then four flights around the atrium.
+            new RouteDef("stair", EnemyLayer.Ground, new[]
+            {
+                new Vec3(-34f, 0f, 0f),
+                new Vec3(-14f, 0f, 0f),
+                new Vec3(-14f, 0f, -14f),
+                new Vec3(-4f, 10f, -14f),
+                new Vec3(14f, 10f, -14f),
+                new Vec3(14f, 20f, -4f),
+                new Vec3(14f, 20f, 14f),
+                new Vec3(-4f, 30f, 14f),
+                new Vec3(-14f, 30f, 14f),
+                new Vec3(-14f, 40f, 0f),
+                new Vec3(0f, 40f, 0f),
+            }),
+            // Fire escape: the long way up the outside, fully exposed, and it
+            // re-enters the building at floor three. Two independent forty-metre
+            // climbs was double the defensive burden against one life pool and
+            // measured that way; converging them means the lower half is a
+            // choice of lanes and the upper half is one shared flight you have
+            // to hold. It is also what a fire escape does.
+            new RouteDef("escape", EnemyLayer.Ground, new[]
+            {
+                new Vec3(-34f, 0f, 16f),
+                new Vec3(-18f, 0f, 18f),
+                new Vec3(18f, 0f, 18f),
+                new Vec3(20f, 10f, 10f),
+                new Vec3(20f, 20f, 2f),
+                new Vec3(14f, 20f, 14f),
+                new Vec3(-4f, 30f, 14f),
+                new Vec3(-14f, 30f, 14f),
+                new Vec3(-14f, 40f, 0f),
+                new Vec3(0f, 40f, 0f),
+            }),
+            // Flyers spiral the outside and land on the roof, skipping every
+            // floor between. The whole building is their shortcut.
+            new RouteDef("air", EnemyLayer.Air, new[]
+            {
+                new Vec3(-40f, 8f, 0f),
+                new Vec3(-26f, 20f, -26f),
+                new Vec3(26f, 30f, -26f),
+                new Vec3(26f, 40f, 20f),
+                new Vec3(0f, 44f, 0f),
+            }),
+        },
+        // Generated against the routes rather than placed by eye, then filtered
+        // on the same rules the placement gate enforces — off the road, not
+        // stranded, 4.8 m apart within a tier. The margin lesson from Foundry's
+        // deck is baked in: every socket sits about 6 m off its leg, which is
+        // reach to spare for every tower and leaves Fog something to take away
+        // without switching anything off.
+        Sockets: new[]
+        {
+            new SocketDef("g1", new Vec3(-27.0f, 0.0f, 6.0f), SocketTag.Ground),
+            new SocketDef("g2", new Vec3(-27.0f, 0.0f, -6.0f), SocketTag.Ground),
+            new SocketDef("g3", new Vec3(-19.0f, 0.0f, 6.0f), SocketTag.Ground),
+            new SocketDef("g4", new Vec3(-19.0f, 0.0f, -6.0f), SocketTag.Ground),
+            new SocketDef("g5", new Vec3(-8.0f, 0.0f, -4.9f), SocketTag.Ground),
+            new SocketDef("g6", new Vec3(-8.0f, 0.0f, -10.5f), SocketTag.Ground),
+            new SocketDef("g7", new Vec3(-29.1f, 0.0f, 22.7f), SocketTag.Ground),
+            new SocketDef("g8", new Vec3(-22.7f, 0.0f, 23.5f), SocketTag.Ground),
+            new SocketDef("g9", new Vec3(-21.3f, 0.0f, 11.5f), SocketTag.Ground),
+            new SocketDef("g10", new Vec3(-5.4f, 0.0f, 24.0f), SocketTag.Ground),
+            new SocketDef("g11", new Vec3(-5.4f, 0.0f, 12.0f), SocketTag.Ground),
+            new SocketDef("g12", new Vec3(9.0f, 0.0f, 24.0f), SocketTag.Ground),
+            new SocketDef("g13", new Vec3(9.0f, 0.0f, 12.0f), SocketTag.Ground),
+            new SocketDef("w1", new Vec3(-10.5f, 3.5f, -8.0f), SocketTag.Wall),
+            new SocketDef("w2", new Vec3(-10.5f, 3.5f, -20.0f), SocketTag.Wall),
+            new SocketDef("w3", new Vec3(-6.5f, 7.5f, -8.0f), SocketTag.Wall),
+            new SocketDef("w4", new Vec3(-6.5f, 7.5f, -20.0f), SocketTag.Wall),
+            new SocketDef("w5", new Vec3(2.3f, 10.0f, -8.0f), SocketTag.Wall),
+            new SocketDef("w6", new Vec3(2.3f, 10.0f, -20.0f), SocketTag.Wall),
+            new SocketDef("w7", new Vec3(9.5f, 10.0f, -8.0f), SocketTag.Wall),
+            new SocketDef("w8", new Vec3(9.5f, 10.0f, -20.0f), SocketTag.Wall),
+            new SocketDef("w9", new Vec3(8.0f, 13.5f, -10.5f), SocketTag.Wall),
+            new SocketDef("w10", new Vec3(20.0f, 13.5f, -10.5f), SocketTag.Wall),
+            new SocketDef("w11", new Vec3(8.0f, 17.5f, -6.5f), SocketTag.Wall),
+            new SocketDef("w12", new Vec3(20.0f, 17.5f, -6.5f), SocketTag.Wall),
+            new SocketDef("w13", new Vec3(8.0f, 20.0f, 2.3f), SocketTag.Wall),
+            new SocketDef("w14", new Vec3(8.0f, 20.0f, 9.5f), SocketTag.Wall),
+            new SocketDef("w15", new Vec3(7.7f, 23.5f, 8.0f), SocketTag.Wall),
+            new SocketDef("w16", new Vec3(7.7f, 23.5f, 20.0f), SocketTag.Wall),
+            new SocketDef("w17", new Vec3(0.5f, 27.5f, 8.0f), SocketTag.Wall),
+            new SocketDef("w18", new Vec3(0.5f, 27.5f, 20.0f), SocketTag.Wall),
+            new SocketDef("w19", new Vec3(-7.5f, 30.0f, 8.0f), SocketTag.Wall),
+            new SocketDef("w20", new Vec3(-7.5f, 30.0f, 20.0f), SocketTag.Wall),
+            new SocketDef("w21", new Vec3(-8.0f, 33.5f, 9.1f), SocketTag.Wall),
+            new SocketDef("w22", new Vec3(-20.0f, 33.5f, 9.1f), SocketTag.Wall),
+            new SocketDef("w23", new Vec3(-8.0f, 37.5f, 3.5f), SocketTag.Wall),
+            new SocketDef("w24", new Vec3(-20.0f, 37.5f, 3.5f), SocketTag.Wall),
+            new SocketDef("w25", new Vec3(-9.1f, 40.0f, 6.0f), SocketTag.Wall),
+            new SocketDef("w26", new Vec3(-9.1f, 40.0f, -6.0f), SocketTag.Wall),
+            new SocketDef("w27", new Vec3(-3.5f, 40.0f, 6.0f), SocketTag.Wall),
+            new SocketDef("w28", new Vec3(-3.5f, 40.0f, -6.0f), SocketTag.Wall),
+            new SocketDef("w29", new Vec3(24.5f, 3.5f, 16.7f), SocketTag.Wall),
+            new SocketDef("w30", new Vec3(12.9f, 3.5f, 13.7f), SocketTag.Wall),
+            new SocketDef("w31", new Vec3(25.3f, 7.5f, 13.5f), SocketTag.Wall),
+            new SocketDef("w32", new Vec3(13.7f, 7.5f, 10.5f), SocketTag.Wall),
+            new SocketDef("w33", new Vec3(26.0f, 13.5f, 7.2f), SocketTag.Wall),
+            new SocketDef("w34", new Vec3(14.0f, 13.5f, 7.2f), SocketTag.Wall),
+            new SocketDef("w35", new Vec3(26.0f, 17.5f, 4.0f), SocketTag.Wall),
+            new SocketDef("w36", new Vec3(23.3f, 20.0f, 8.9f), SocketTag.Wall),
+            new SocketDef("w37", new Vec3(20.9f, 20.0f, 13.7f), SocketTag.Wall),
+            new SocketDef("w38", new Vec3(9.0f, 40.0f, 0.0f), SocketTag.Wall),
+            new SocketDef("w39", new Vec3(4.5f, 40.0f, 7.8f), SocketTag.Wall),
+            new SocketDef("w40", new Vec3(4.5f, 40.0f, -7.8f), SocketTag.Wall),
+            new SocketDef("w41", new Vec3(24.0f, 30.0f, -18.0f), SocketTag.Wall),
+            new SocketDef("w43", new Vec3(24.0f, 38.0f, 12.0f), SocketTag.Wall),
+            new SocketDef("w44", new Vec3(16.0f, 40.0f, 14.0f), SocketTag.Wall),
+            new SocketDef("t1", new Vec3(-24.0f, 0.0f, 0.0f), SocketTag.Trap),
+            new SocketDef("t2", new Vec3(-9.0f, 5.0f, -14.0f), SocketTag.Trap),
+            new SocketDef("t3", new Vec3(14.0f, 15.0f, -9.0f), SocketTag.Trap),
+            new SocketDef("t4", new Vec3(5.0f, 25.0f, 14.0f), SocketTag.Trap),
+            new SocketDef("t5", new Vec3(-14.0f, 35.0f, 7.0f), SocketTag.Trap),
+            new SocketDef("t6", new Vec3(-26.0f, 0.0f, 17.0f), SocketTag.Trap),
+            new SocketDef("t7", new Vec3(19.0f, 5.0f, 14.0f), SocketTag.Trap),
+            new SocketDef("t8", new Vec3(17.0f, 20.0f, 8.0f), SocketTag.Trap),
+            new SocketDef("t9", new Vec3(-9.0f, 30.0f, 14.0f), SocketTag.Trap),
+            new SocketDef("t10", new Vec3(-7.0f, 40.0f, 0.0f), SocketTag.Trap),
+        },
+        HeroSpawn: new Vec3(-30f, 0f, 8f),
+        ArmoryPos: new Vec3(-26f, 0f, 10f),
+        HeroStations: new[]
+        {
+            new HeroStationDef("lobby", new Vec3(-18f, 0f, 6f)),
+            new HeroStationDef("mezzanine", new Vec3(4f, 10f, -18f)),
+            new HeroStationDef("midFloor", new Vec3(18f, 20f, 6f)),
+            new HeroStationDef("upperFloor", new Vec3(-8f, 30f, 18f)),
+            new HeroStationDef("roof", new Vec3(0f, 40f, -8f)),
+        },
+        TotalWaves: 12,
+        // Night on the Shade wave, Fog on the roof finale — fog on a map whose
+        // fight ends forty metres up is a different threat to fog on a yard.
+        ConditionScheduleOrNull: new Dictionary<int, string>
+        {
+            [7] = Conditions.Night.Id,
+            [11] = Conditions.Fog.Id,
+        });
+
     public static readonly IReadOnlyDictionary<string, MapDef> All =
         new Dictionary<string, MapDef>
         {
             [TestLane.Id] = TestLane,
             [Foundry.Id] = Foundry,
             [Switchyard.Id] = Switchyard,
+            [Spire.Id] = Spire,
         };
 }

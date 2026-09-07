@@ -25,11 +25,22 @@ in_manifest() {  # in_manifest <name> — exact row, or the glob row covering it
 if [ "${1:-}" = --verify ]; then
   log="${2:?usage: asset-report.sh --verify <audit.log>}"
   drift=0
+  # Two shapes of audit line. The content-table audit reports placeholders; a
+  # real match reports every name it asked for, which is the only way map kits,
+  # skyboxes and traversal fixtures get checked at all — they were unverified
+  # until a third map turned up requesting four of them. Icons are excluded:
+  # they live in the brief's icon list, not the model manifest.
+  names=$(mktemp)
+  trap 'rm -f "$names"' EXIT
+  {
+    sed -n 's/.*\[asset-audit\] placeholder: \([a-z0-9_]*\) .*/\1/p' "$log"
+    sed -n 's/.*\[asset-audit\] requested \([a-z0-9_]*\)$/\1/p' "$log" | grep -v '^icon_' || true
+  } | sort -u > "$names"
   while IFS= read -r name; do
     in_manifest "$name" && continue
     echo "code requests '$name' but docs/asset-manifest.tsv does not name it" >&2
     drift=$((drift + 1))
-  done < <(sed -n 's/.*\[asset-audit\] placeholder: \([a-z0-9_]*\) .*/\1/p' "$log" | sort -u)
+  done < "$names"
   [ $drift -eq 0 ] && echo "asset names: code and brief agree" && exit 0
   echo "$drift name(s) out of sync — update the brief and the manifest together" >&2
   exit 1

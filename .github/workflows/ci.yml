@@ -66,14 +66,14 @@ jobs:
 
       # A real solo match on each map: drives the sim, every UI surface, and
       # the view/event plumbing that only runs once a world exists.
-      - name: Solo match smoke (both maps)
+      - name: Solo match smoke (every sector)
         run: |
-          for MAP in foundry switchyard; do
+          for MAP in foundry switchyard spire; do
             # Capture the exit code rather than letting -e kill the step: a
             # crash here printed nothing at all, which made a CI-only failure
             # impossible to diagnose from the run page.
             set +e
-            godot --headless --path game --quit-after 1800 -- --solo $MAP > solo-$MAP.log 2>&1
+            godot --headless --path game --quit-after 1800 -- --solo $MAP --dump-assets > solo-$MAP.log 2>&1
             code=$?
             set -e
             if [ $code -ne 0 ]; then
@@ -82,6 +82,10 @@ jobs:
               exit $code
             fi
             grep -q "\[solo\] started on $MAP" solo-$MAP.log
+            # Map kits and traversal fixtures are only requested by a real
+            # match, so this is the only place their names get checked against
+            # the manifest. The content-table audit above cannot reach them.
+            ./tools/asset-report.sh --verify "solo-$MAP.log"
             if grep -qiE "^ERROR|SCRIPT ERROR|Unhandled exception" solo-$MAP.log; then
               echo "=== $MAP reported errors ==="
               grep -iE "^ERROR|SCRIPT ERROR|Unhandled exception" -A 4 "solo-$MAP.log" | head -40

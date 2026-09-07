@@ -4,12 +4,12 @@ First-person co-op tower defense (1–4 players, self-hosted over Tailscale).
 The 3D rebuild of [deep-field-td](https://github.com/cbhead/deep-field-td):
 Bloons-depth counters and machine-swept balance, Sanctum-style build-and-shoot.
 
-**Status: M3 in progress.** Two maps, ten enemies, eight towers, five factions,
+**Status: M3 in progress.** Three maps, ten enemies, eight towers, five factions,
 and the full design system worn across all sixteen UI surfaces — Claude Design's
 380 models and 58 icons replacing the graybox everywhere the code reaches.
 Information warfare has landed: stealth and healing enemies, the Detector and
 Filament towers, poison and detection channels, and Night/Fog conditions.
-35 harness gates + 19 unit tests green.
+41 harness gates + 19 unit tests green.
 
 Design's spec is the source of truth for colour ([docs/PALETTE.md](docs/PALETTE.md));
 the delivery contract and its gotchas are in

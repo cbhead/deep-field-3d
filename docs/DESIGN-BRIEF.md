@@ -220,7 +220,8 @@ Weapons/ammo/attachments: `icon_weapon_sidearm` · `icon_weapon_rifle` ·
 attachment in §3.4
 Factions/abilities: `icon_faction_forge` · `icon_faction_ember` ·
 `icon_faction_tempest` · `icon_ability_overdrive` ·
-`icon_ability_ignitionwave` · `icon_ability_chainsurge`
+`icon_ability_ignitionwave` · `icon_faction_glacier` · `icon_faction_specter` ·
+  `icon_ability_cryofield` · `icon_ability_revealpulse` · `icon_ability_chainsurge`
 Upgrade paths: `icon_path_damage` · `icon_path_range` · `icon_path_rate`
 
 ## 4. Forward manifest — design ahead of M3–M5
@@ -268,7 +269,16 @@ Same conventions; titles fixed now so nothing renames later.
   `prop_barrel_explosive.glb` · `prop_container_droppable.glb` ·
   `shared_cache_hidden.glb` / `_opened.glb` · map-morph states (e.g.
   `switchyard_bridge_intact.glb` / `_collapsed.glb`)
-- **Map 3 kit**: theme TBD with the user — budget a third full environment
+- **Spire — sector 3's kit** (theme settled: a tower block, and the map is
+  built): `spire_floor` (plate segments, interior finish) · `spire_facade`
+  (exterior curtain wall) · `spire_roof` (the fight ends here, so it has to
+  read as a place) · `spire_fireescape` (landings and zigzag runs) ·
+  `spire_stairwell` (the atrium the interior route threads) · `spire_lobby`
+  (street entrance) · dressing `spire_hvac` · `spire_watertank` ·
+  `spire_antenna`. Sized to `Maps.Spire`: 40x40 footprint, a floor every 10 m,
+  roof at 40 m, core on the roof. Interior and exterior are both on screen
+  constantly — the escape route climbs the outside in full view of the inside,
+  which is the map's whole idea — so neither half can be treated as backdrop.
 - **Scrap pickups**: `pickup_alloy.glb` · `pickup_flux.glb` ·
   `pickup_plating.glb` · `pickup_gravium.glb` · `pickup_primecore.glb` (M4)
   — visually distinct per type so "what did that wave pay" reads at a glance

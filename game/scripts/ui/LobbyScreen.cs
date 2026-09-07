@@ -255,6 +255,10 @@ public partial class LobbyScreen : Control
             + "strand climbs out of ground-tower reach across the middle.",
         "switchyard" => "Three tiers. The freight cut is fast and badly covered; "
             + "a barricade closes it and forces the long switchback past the kill-boxes.",
+        "spire" => "A tower block, and the core is on the roof. Enemies climb: "
+            + "the stair through the inside, the fire escape up the outside, and "
+            + "flyers spiralling past both. The last two flights are shared, so "
+            + "whatever you let through downstairs, you meet again at the top.",
         _ => "",
     };
 

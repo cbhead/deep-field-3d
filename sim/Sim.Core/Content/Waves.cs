@@ -172,5 +172,86 @@ public static class Waves
                     new WaveGroup("mote", 8, 9, 380, "groundShort"),
                 },
             },
+
+            // Spire: twelve waves that climb. The teaching order is different
+            // from the earlier maps because the map is — the first lesson is
+            // that there are two ways up and you cannot hold both.
+            ["spire"] = new IReadOnlyList<WaveGroup>[]
+            {
+                // W1: the stair only. Learn the interior.
+                new[] { new WaveGroup("drifter", 7, 24, 0, "stair") },
+                // W2: the fire escape opens. Both ways up, at once, forever.
+                new[]
+                {
+                    new WaveGroup("drifter", 6, 24, 0, "stair"),
+                    new WaveGroup("drifter", 6, 24, 40, "escape"),
+                },
+                // W3: motes up the open outside, where splash pays.
+                new[]
+                {
+                    new WaveGroup("mote", 12, 8, 0, "escape"),
+                    new WaveGroup("drifter", 5, 26, 80, "stair"),
+                },
+                // W4: skiffs skip the whole building. The roof needs answering.
+                new[]
+                {
+                    new WaveGroup("skiff", 5, 36, 0, "air"),
+                    new WaveGroup("drifter", 6, 24, 60, "stair"),
+                },
+                new[]
+                {
+                    new WaveGroup("aegis", 2, 90, 0, "stair"),
+                    new WaveGroup("mote", 8, 9, 60, "escape"),
+                },
+                // W6: a Monolith in a stairwell is a cork; the escape is the
+                // only way past it, which is the point.
+                new[]
+                {
+                    new WaveGroup("monolith", 1, 0, 0, "stair"),
+                    new WaveGroup("drifter", 8, 20, 40, "escape"),
+                    new WaveGroup("skiff", 4, 34, 90, "air"),
+                },
+                new[]
+                {
+                    new WaveGroup("warden", 3, 70, 0, "escape"),
+                    new WaveGroup("mole", 3, 55, 80, "stair"),
+                },
+                // W8 rides NIGHT: shades in a dark stairwell.
+                new[]
+                {
+                    new WaveGroup("shade", 3, 70, 0, "stair"),
+                    new WaveGroup("drifter", 6, 22, 80, "escape"),
+                },
+                new[]
+                {
+                    new WaveGroup("cluster", 4, 60, 0, "escape"),
+                    new WaveGroup("skiff", 5, 30, 40, "air"),
+                    new WaveGroup("mole", 3, 55, 100, "stair"),
+                },
+                new[]
+                {
+                    new WaveGroup("mender", 1, 0, 0, "stair"),
+                    new WaveGroup("warden", 2, 80, 40, "stair"),
+                    new WaveGroup("aegis", 2, 90, 120, "escape"),
+                },
+                new[]
+                {
+                    new WaveGroup("monolith", 1, 0, 0, "escape"),
+                    new WaveGroup("shade", 2, 60, 60, "stair"),
+                    new WaveGroup("cluster", 3, 60, 140, "escape"),
+                    new WaveGroup("skiff", 4, 30, 180, "air"),
+                },
+                // W12 rides FOG, on a roof, forty metres up. Everything comes.
+                new[]
+                {
+                    new WaveGroup("monolith", 1, 0, 0, "stair"),
+                    new WaveGroup("aegis", 2, 90, 60, "escape"),
+                    new WaveGroup("mender", 1, 0, 140, "stair"),
+                    new WaveGroup("warden", 2, 80, 180, "escape"),
+                    new WaveGroup("shade", 2, 70, 220, "stair"),
+                    new WaveGroup("skiff", 5, 28, 260, "air"),
+                    new WaveGroup("mote", 8, 9, 320, "escape"),
+                },
+            },
         };
 }

@@ -761,7 +761,7 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
 // the wrong dial.
 {
     var offenders = new List<string>();
-    foreach (var map in new[] { Maps.Foundry, Maps.Switchyard })
+    foreach (var map in Campaign.Sectors.Select(id => Maps.All[id]))
     {
         foreach (var condition in Conditions.All.Values)
         {
@@ -856,6 +856,23 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
     Gate("switchyard: mid-band clears; towers-only holds ≥10 waves",
         mid.Victory && floor.WavesCleared >= 10,
         $"mid waves {mid.WavesCleared}/{Maps.Switchyard.TotalWaves} lives {mid.LivesLeft} | floor waves {floor.WavesCleared} lives {floor.LivesLeft} leaks {string.Join(",", leaksByDef)}");
+}
+
+// --- Gate 21b (M3): Spire clears for the mid-band bot; the floor holds deep.
+//
+// Same contract as the other two sectors, on a map whose shape argues with
+// them: the core is at the top, so a leak is not something that got past you,
+// it is something that climbed over you.
+{
+    var mid = MatchRunner.Run(Seed, Maps.Spire, MidBot());
+    var floor = MatchRunner.Run(Seed, Maps.Spire);
+    var leaks = floor.EventLog.Where(l => l.Contains(" enemyLeaked "))
+        .GroupBy(l => l.Split(' ')[3]).Select(g => $"{g.Key}:{g.Count()}");
+
+    Gate("spire: mid-band clears; towers-only holds \u226510 waves",
+        mid.Victory && floor.WavesCleared >= 10,
+        $"mid waves {mid.WavesCleared}/{Maps.Spire.TotalWaves} lives {mid.LivesLeft} | "
+        + $"floor waves {floor.WavesCleared} lives {floor.LivesLeft} leaks {string.Join(",", leaks)}");
 }
 
 // --- Gate 22 (M2): a barricade on b1 reroutes shortcut spawns to the long way.
@@ -1206,18 +1223,27 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
 
     static float PointToSegment(Vec3 p, Vec3 a, Vec3 b)
     {
-        // Flat distance: height is what separates a deck socket from the lane
-        // under it, and that separation is the point of a wall mount.
-        float abx = b.X - a.X, abz = b.Z - a.Z;
-        float lengthSq = abx * abx + abz * abz;
-        if (lengthSq < 0.001f) return MathF.Sqrt((p.X - a.X) * (p.X - a.X) + (p.Z - a.Z) * (p.Z - a.Z));
-        float t = Math.Clamp(((p.X - a.X) * abx + (p.Z - a.Z) * abz) / lengthSq, 0f, 1f);
-        float cx = a.X + abx * t, cz = a.Z + abz * t;
-        return MathF.Sqrt((p.X - cx) * (p.X - cx) + (p.Z - cz) * (p.Z - cz));
+        // True distance, height included. This was flat for a long time, on the
+        // premise that height is what separates a deck socket from the lane
+        // under it — fine while every map was a yard with a deck over it, and
+        // wrong the moment one was a tower block. On the Spire a street-level
+        // socket sits directly beneath a stairwell thirty metres up, which flat
+        // distance calls "standing in the road".
+        //
+        // Measuring properly says the same thing about the old maps (a deck
+        // socket six metres up is six metres from the lane, comfortably clear)
+        // and the right thing about the new one.
+        float abx = b.X - a.X, aby = b.Y - a.Y, abz = b.Z - a.Z;
+        float lengthSq = abx * abx + aby * aby + abz * abz;
+        if (lengthSq < 0.001f) return (p - a).Length();
+        float t = Math.Clamp(
+            ((p.X - a.X) * abx + (p.Y - a.Y) * aby + (p.Z - a.Z) * abz) / lengthSq, 0f, 1f);
+        float cx = a.X + abx * t, cy = a.Y + aby * t, cz = a.Z + abz * t;
+        return MathF.Sqrt((p.X - cx) * (p.X - cx) + (p.Y - cy) * (p.Y - cy) + (p.Z - cz) * (p.Z - cz));
     }
 
     var problems = new List<string>();
-    foreach (var map in new[] { Maps.Foundry, Maps.Switchyard })
+    foreach (var map in Campaign.Sectors.Select(id => Maps.All[id]))
     {
         var sockets = map.Sockets;
 
@@ -1270,7 +1296,11 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
     Gate("sockets: placement legal, spaced, and dense enough to choose from",
         problems.Count == 0,
         problems.Count == 0
-            ? $"foundry {Maps.Foundry.Sockets.Count}, switchyard {Maps.Switchyard.Sockets.Count}"
+            // Named from the campaign rather than hardcoded: this gate checked
+            // exactly two maps by name and would have let a third map's
+            // sockets through unexamined, which is precisely the rot the
+            // campaign-chain gate was written to catch one file over.
+            ? string.Join(", ", Campaign.Sectors.Select(id => $"{id} {Maps.All[id].Sockets.Count}"))
             : string.Join(" | ", problems.Take(6)));
 }
 

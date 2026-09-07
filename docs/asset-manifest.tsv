@@ -47,6 +47,8 @@ foundry_dress_lightrig	maps	no
 foundry_dress_pipes	maps	no
 foundry_dress_steamvent	maps	no
 foundry_path_ground	maps	no
+spire_path_ground	maps	no
+spire_skybox	maps	no
 foundry_pillar	maps	no
 foundry_terrain	maps	no
 foundry_vent_tunnel	maps	no
@@ -103,6 +105,10 @@ socket_ground_empty	structures	no
 socket_trap_empty	structures	no
 socket_wall_base	structures	no
 socket_wall_empty	structures	no
+spire_facade	maps	no
+spire_fireescape	maps	no
+spire_floor	maps	no
+spire_roof	maps	no
 switchyard_bridge_intact	maps	no
 switchyard_catwalk	maps	no
 switchyard_cut_channel	maps	no

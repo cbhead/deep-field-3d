@@ -1444,6 +1444,7 @@ public partial class GameRoot : Node3D
 
         if (map.Id == "foundry") BuildFoundryStructures();
         if (map.Id == "switchyard") BuildSwitchyardStructures();
+        if (map.Id == "spire") BuildSpireStructures();
 
         // Armory station.
         var armory = AddStaticBox(ToGd(map.ArmoryPos) + new Vector3(0, 1.25f, 0),
@@ -1856,6 +1857,128 @@ public partial class GameRoot : Node3D
 
     /// <summary>Three tiers: mid deck over the yard, catwalk over the air lane.
     /// Ladders chain tier to tier; the launcher skips straight to the deck.</summary>
+    /// <summary>The Spire: five floor plates, the stair well that threads them,
+    /// the fire escape up the east face, and the roof the core sits on.
+    ///
+    /// Built as real collision because the whole map is a traversal problem —
+    /// on Foundry a player who falls lands on the yard, here they land five
+    /// storeys down and have to climb again, and that cost is the point.
+    ///
+    /// This is also where M3's traversal set debuts: a cargo lift that actually
+    /// serves the height, a pair of teleport pads for the rotation the lift is
+    /// too slow for, and two sniper nests that only pay if you commit to
+    /// reaching them.</summary>
+    private void BuildSpireStructures()
+    {
+        // Floor plates. The atrium is left open so the stair reads as a well
+        // rather than as five separate rooms.
+        for (int floor = 1; floor <= 4; floor++)
+        {
+            float y = floor * 10f;
+            foreach (var (cx, cz, sx, sz) in new[]
+            {
+                (-13f, 0f, 12f, 40f),      // west wing
+                (13f, 0f, 12f, 40f),       // east wing
+                (0f, -15f, 14f, 10f),      // north bridge
+                (0f, 15f, 14f, 10f),       // south bridge
+            })
+            {
+                var plate = AddStaticBox(new Vector3(cx, y - 0.2f, cz),
+                    new Vector3(sx, 0.4f, sz), new Color(0.42f, 0.45f, 0.52f), layer: 1);
+                MapKit.MountRun(plate, "spire_floor", Mathf.Max(sx, sz), 4f,
+                    alongX: sx >= sz, MapKit.GroundLocal(plate));
+            }
+        }
+
+        // Exterior shell: four faces with the east one cut away for the fire
+        // escape, so the outside route is visible from inside the building.
+        foreach (var (cx, cz, sx, sz) in new[]
+        {
+            (0f, -20f, 40f, 1f),
+            (-20f, 0f, 1f, 40f),
+            (0f, 20f, 40f, 1f),
+        })
+        {
+            var wall = AddStaticBox(new Vector3(cx, 20f, cz),
+                new Vector3(sx, 40f, sz), new Color(0.34f, 0.36f, 0.42f), layer: 1);
+            MapKit.MountRun(wall, "spire_facade", Mathf.Max(sx, sz), 8f,
+                alongX: sx >= sz, MapKit.GroundLocal(wall));
+            MapKit.NoShadow(wall);
+        }
+
+        // Fire escape: the zigzag the escape route walks, as real landings.
+        foreach (float y in new[] { 10f, 20f, 30f })
+        {
+            var landing = AddStaticBox(new Vector3(20f, y - 0.2f, 10f - (y - 10f) * 0.8f),
+                new Vector3(6f, 0.4f, 8f), new Color(0.5f, 0.42f, 0.3f), layer: 1);
+            MapKit.MountRun(landing, "spire_fireescape", 8f, 3f, alongX: false,
+                MapKit.GroundLocal(landing));
+        }
+
+        // Roof and the core it carries.
+        var roof = AddStaticBox(new Vector3(0f, 39.8f, 0f), new Vector3(40f, 0.4f, 40f),
+            new Color(0.4f, 0.43f, 0.5f), layer: 1);
+        MapKit.MountRun(roof, "spire_roof", 40f, 8f, alongX: true, MapKit.GroundLocal(roof));
+
+        // --- M3 traversal debut ------------------------------------------
+
+        // Cargo lift: the honest way to the top and slow enough that taking it
+        // is a decision. Serves the full height of the shaft.
+        var liftShaft = AddStaticBox(new Vector3(-17f, 20f, -17f), new Vector3(5f, 40f, 5f),
+            new Color(0.3f, 0.32f, 0.38f), layer: 0);
+        MapKit.MountRun(liftShaft, "shared_elevator_shaft", 40f, 5f, alongX: false,
+            MapKit.GroundLocal(liftShaft));
+        MapKit.NoShadow(liftShaft);
+        var lift = AddStaticBox(new Vector3(-17f, 0.6f, -17f), new Vector3(4f, 0.4f, 4f),
+            new Color(0.62f, 0.55f, 0.28f), layer: 1);
+        lift.AddChild(MakeArea("elevator", new BoxShape3D { Size = new Vector3(4.4f, 3f, 4.4f) }));
+        MapKit.Mount(lift, "shared_elevator", MapKit.GroundLocal(lift));
+
+        // Teleport pads: lobby to roof and back, for the rotation the lift is
+        // too slow to serve. Paired, so using one is committing to the other end.
+        foreach (var (pos, id) in new[]
+        {
+            (new Vector3(-24f, 0.3f, -6f), "padGround"),
+            (new Vector3(-6f, 40.3f, 12f), "padRoof"),
+        })
+        {
+            var pad = AddStaticBox(pos, new Vector3(3f, 0.2f, 3f),
+                new Color(0.35f, 0.7f, 0.85f), layer: 0);
+            pad.AddChild(MakeArea("teleporter", new BoxShape3D { Size = new Vector3(3.2f, 2.5f, 3.2f) }));
+            pad.SetMeta("pad_id", id);
+            MapKit.Mount(pad, "shared_teleporter_pad", MapKit.GroundLocal(pad));
+        }
+
+        // Sniper nests: reachable only by committing to the climb, and they see
+        // the stair well the ground floor cannot. The plan's rule that every map
+        // has a vantage towers cannot cover and a traversing hero can.
+        foreach (var pos in new[] { new Vector3(17f, 30.2f, -17f), new Vector3(-17f, 30.2f, 17f) })
+        {
+            var nest = AddStaticBox(pos, new Vector3(5f, 0.4f, 5f),
+                new Color(0.45f, 0.4f, 0.3f), layer: 1);
+            nest.AddChild(MakeArea("nest", new BoxShape3D { Size = new Vector3(5f, 3f, 5f) }));
+            MapKit.Mount(nest, "shared_snipernest", MapKit.GroundLocal(nest));
+        }
+
+        // Ladders between floors on the west side, so the stair is not the only
+        // way up on foot and a downed player has a route back.
+        for (int floor = 0; floor < 4; floor++)
+        {
+            var ladder = AddStaticBox(new Vector3(-19f, floor * 10f + 5f, 6f),
+                new Vector3(1.2f, 10f, 0.15f), new Color(0.7f, 0.6f, 0.3f), layer: 0);
+            ladder.AddChild(MakeArea("ladder", new BoxShape3D { Size = new Vector3(1.6f, 10.4f, 1.4f) }));
+            MapKit.Mount(ladder, "shared_ladder", MapKit.GroundLocal(ladder));
+        }
+
+        // One zipline down, because a map that is only climbable is a map you
+        // spend the intermission walking.
+        var anchor = AddStaticBox(new Vector3(6f, 40.5f, -14f), new Vector3(1f, 1.4f, 1f),
+            new Color(0.55f, 0.5f, 0.35f), layer: 0);
+        anchor.AddChild(MakeArea("zipline", new BoxShape3D { Size = new Vector3(2.4f, 2.6f, 2.4f) }));
+        anchor.SetMeta("zip_to", new Vector3(-26f, 1f, -6f));
+        MapKit.Mount(anchor, "shared_zipline_anchor", MapKit.GroundLocal(anchor));
+    }
+
     private void BuildSwitchyardStructures()
     {
         // Mid deck (y=5) with its wall sockets w1/w2.

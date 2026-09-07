@@ -19,6 +19,7 @@ public static class Campaign
     {
         "foundry",
         "switchyard",
+        "spire",
     };
 
     /// <summary>Zero-based position in the campaign, or -1 for a map that is not
