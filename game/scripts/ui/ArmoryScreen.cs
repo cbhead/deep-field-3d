@@ -31,6 +31,7 @@ public partial class ArmoryScreen : Control
 
     private VBoxContainer _platformRail = null!;
     private Control _bench = null!;
+    private bool _bought;
     private HFlowContainer _ammoRow = null!;
     private KitPanel _statPanel = null!;
     private KitPanel _recipePanel = null!;
@@ -156,16 +157,18 @@ public partial class ArmoryScreen : Control
     /// it works.</summary>
     public bool ProbeClick()
     {
-        var before = _slot;
+        _bought = false;
         // The infusion slot, bottom-right of the bench.
         Button? target = null;
         void Find(Node n)
         {
-            if (n is Button b && b.Size == new Vector2(60, 60)) target = b;   // take the last
+            // The Buy button on the first unowned platform: the control a
+            // player reaches for first, and the one that was unreachable.
+            if (n is Button b && b.Text == "BUY" && !b.Disabled) target ??= b;
             foreach (var c in n.GetChildren()) Find(c);
         }
         Find(this);
-        if (target is null) { GD.PrintErr("ERROR: probe found no slot button"); return false; }
+        if (target is null) { GD.PrintErr("ERROR: probe found no enabled Buy button"); return false; }
 
         var centre = target.GetGlobalRect().GetCenter();
         foreach (bool down in new[] { true, false })
@@ -179,10 +182,10 @@ public partial class ArmoryScreen : Control
             };
             GetViewport().PushInput(ev);
         }
-        bool moved = _slot != before;
-        if (moved) GD.Print($"[probe] gunsmith slot click works: {before} -> {_slot}");
-        else GD.PrintErr($"ERROR: gunsmith slot at {centre} is inert — click did not change selection");
-        return moved;
+        bool bought = _bought;
+        if (bought) GD.Print($"[probe] gunsmith Buy click works: reached the handler");
+        else GD.PrintErr($"ERROR: gunsmith Buy at {centre} is inert — the click never reached it");
+        return bought;
     }
 
     /// <summary>Every interactive control with its rect, for when a probe
@@ -272,6 +275,7 @@ public partial class ArmoryScreen : Control
                 buy.Disabled = _view.Money < def.Cost;
                 buy.Pressed += () =>
                 {
+                    _bought = true;
                     Submit?.Invoke(new Command.BuyWeapon(_view.LocalPlayerId, captured));
                     _weaponId = captured;
                 };
@@ -292,11 +296,22 @@ public partial class ArmoryScreen : Control
                 row.AddChild(Kit.TagArcane("1"));
             }
 
-            // Clicking anywhere on the card inspects that platform.
+            // Clicking anywhere on the card inspects that platform — but
+            // underneath the row, not over it. Added last it covered the whole
+            // card including Buy and Equip, and since input goes to the topmost
+            // control and MouseFilter.Pass propagates to the parent rather than
+            // to siblings beneath, those buttons never saw a click: pressing Buy
+            // silently re-selected the platform instead of buying it.
+            //
+            // The row is set to Ignore so clicks on its labels and icon fall
+            // through to this, while the Buttons inside it still take their own
+            // — a control's filter governs itself, not its children.
             var hit = new Button { Flat = true, MouseFilter = MouseFilterEnum.Pass };
             hit.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
             hit.Pressed += () => { _weaponId = captured; Refresh(_view); };
             card.AddChild(hit);
+            card.MoveChild(hit, 0);
+            row.MouseFilter = MouseFilterEnum.Ignore;
 
             _platformRail.AddChild(card);
         }
