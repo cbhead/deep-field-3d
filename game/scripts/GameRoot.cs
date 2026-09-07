@@ -63,6 +63,7 @@ public partial class GameRoot : Node3D
     private readonly Queue<(int Frames, System.Action Step)> _shotStages = new();
     private int _stageWaited;
     private string? _intermissionShotPath;
+    private int _intermissionLastWave = -1;
     private string? _shotPath;
     private string _shotView = "eye";
     private int _shotCountdown;
@@ -92,6 +93,13 @@ public partial class GameRoot : Node3D
     private readonly Dictionary<int, int> _killsByPlayer = new();
     private int _reactionCount;
     private int _lastWaveLeaks;
+
+    /// <summary>Each player's match kill total as it stood when the wave began.
+    /// The recap is headed "last wave" and GameView carries match totals only,
+    /// so printing those under that heading would be a wrong number rather than
+    /// a missing one. Subtracting the snapshot is what makes it true.</summary>
+    private readonly Dictionary<int, int> _killsAtWaveStart = new();
+
     private uint _seed;
     private bool _matchOver;
     private bool _paused;
@@ -755,7 +763,7 @@ public partial class GameRoot : Node3D
         // Intermission panel rides the phase, not an event, so a late joiner
         // sees it immediately.
         if (_view.Phase == MatchPhase.Intermission && !_matchOver)
-            _screens.ShowIntermission(_view, _map, _seed, _lastWaveLeaks);
+            _screens.ShowIntermission(_view, _map, _seed, _lastWaveLeaks, KillsThisWave());
         else
             _screens.HideIntermission();
 
@@ -997,6 +1005,7 @@ public partial class GameRoot : Node3D
                 case SimEvent.WaveStarted started:
                     _screens.HideIntermission();
                     _lastWaveLeaks = 0;
+                    SnapshotKills();
                     Post($"wave {started.WaveIndex + 1} — {started.EnemyCount} inbound");
                     break;
                 case SimEvent.WaveCleared cleared:
@@ -1077,6 +1086,7 @@ public partial class GameRoot : Node3D
             case "waveStarted":
                 _screens.HideIntermission();
                 _lastWaveLeaks = 0;
+                SnapshotKills();
                 Post($"wave {int.Parse(p[2]) + 1} — {p[3]} inbound");
                 break;
             case "waveCleared": Post($"wave {int.Parse(p[2]) + 1} cleared", UiTheme.Good); break;
@@ -1824,6 +1834,29 @@ public partial class GameRoot : Node3D
                     : "FAIL: the turret is tracking but pointed away");
     }
 
+    private void SnapshotKills()
+    {
+        _killsAtWaveStart.Clear();
+        if (!_view.Valid) return;
+        foreach (var player in _view.Players) _killsAtWaveStart[player.Id] = player.Kills;
+    }
+
+    /// <summary>What each connected player killed during the wave just ended.
+    /// A player who joined mid-wave has no snapshot, so their whole total
+    /// counts — everything they have is from this wave anyway.</summary>
+    private List<(string Name, int Kills)> KillsThisWave()
+    {
+        var rows = new List<(string Name, int Kills)>();
+        if (!_view.Valid) return rows;
+        foreach (var player in _view.Players)
+        {
+            if (!player.Connected) continue;
+            int before = _killsAtWaveStart.TryGetValue(player.Id, out int at) ? at : 0;
+            rows.Add((player.Name, Mathf.Max(0, player.Kills - before)));
+        }
+        return rows;
+    }
+
     private void Stage(int frames, System.Action step) => _shotStages.Enqueue((frames, step));
 
     /// <summary>Arms the capture and records, beside the picture, whether the
@@ -1863,14 +1896,56 @@ public partial class GameRoot : Node3D
     private void TickIntermissionShot()
     {
         if (_intermissionShotPath is null || _view is not { Valid: true }) return;
+
+        // Shoot while the wave runs. Without this the towers do all the killing
+        // and the recap's kill line is a truthful nought, which demonstrates
+        // nothing — the shot exists to show the panel with real numbers on it.
+        // The sim refuses anything out of range or on cooldown, so this is the
+        // ordinary fire path and not a way of granting kills.
+        if (_world is not null && _view.Phase == MatchPhase.Wave
+            && _world.Players.TryGetValue(LocalPlayerId, out var shooter))
+        {
+            Enemy? nearest = null;
+            float best = float.MaxValue;
+            foreach (var enemy in _world.Enemies)
+            {
+                if (enemy.Dead || enemy.Burrowed) continue;
+                float d = shooter.Pos.DistanceTo(enemy.Pos);
+                if (d < best) { best = d; nearest = enemy; }
+            }
+            if (nearest is not null)
+                Submit(new Command.PlayerHit(LocalPlayerId, nearest.Id, shooter.WeaponId));
+        }
+
         if (_view.Wave < 0 || _view.Phase != MatchPhase.Intermission) return;
+        if (_view.Wave <= _intermissionLastWave) return;    // same intermission, later frame
+        _intermissionLastWave = _view.Wave;
+
+        // Shoot the second intermission, not the first. After one wave a
+        // per-wave count and a match total are the same number, so a shot there
+        // proves nothing about the subtraction that makes "last wave" true.
+        if (_view.Wave == 0)
+        {
+            Submit(new Command.StartWave(LocalPlayerId));
+            return;
+        }
 
         Engine.TimeScale = 1f;
         string path = _intermissionShotPath;
         _intermissionShotPath = null;
         // One frame at normal speed before the shot, so the panel is laid out
         // and the world behind it is not mid-blur from the fast-forward.
-        Stage(2, () => ShootSurface(path, "intermission", _view.Phase == MatchPhase.Intermission));
+        Stage(2, () =>
+        {
+            // Record the recap's numbers beside the picture, so the kill line
+            // can be checked against the sim rather than read off a screenshot.
+            string rows = string.Join(", ", KillsThisWave().Select(r => $"{r.Name}={r.Kills}"));
+            ShootSurface(path, "intermission", _view.Phase == MatchPhase.Intermission);
+            string totals = string.Join(", ", _view.Players.Select(pl => $"{pl.Name}={pl.Kills}"));
+            System.IO.File.AppendAllText(path + ".txt",
+                $"wave {_view.Wave} recap: leaks {_lastWaveLeaks}, kills this wave {rows}" +
+                $" | match totals {totals}\n");
+        });
     }
 
     private void TickShotStages()

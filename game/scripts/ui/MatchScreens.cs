@@ -83,7 +83,8 @@ public partial class MatchScreens : CanvasLayer
     /// <summary>Wave composition is a pure function of (seed, map, wave,
     /// players), so the client previews the next wave honestly without asking
     /// the server — and the same call the sim will make is the one drawn here.</summary>
-    public void ShowIntermission(GameView view, MapDef map, uint seed, int lastWaveLeaks)
+    public void ShowIntermission(GameView view, MapDef map, uint seed, int lastWaveLeaks,
+        IReadOnlyList<(string Name, int Kills)> killsLastWave)
     {
         _intermission.Visible = true;
         foreach (var child in _intermissionBody.GetChildren()) child.QueueFree();
@@ -185,6 +186,18 @@ public partial class MatchScreens : CanvasLayer
             ? Kit.Body("—", Tokens.SizeCaption, Tokens.TextMuted)
             : Kit.Body(lastWaveLeaks > 0 ? $"leaked {lastWaveLeaks}" : "held clean",
                 Tokens.SizeCaption, lastWaveLeaks > 0 ? UiTheme.Warn : UiTheme.Good));
+
+        // Who did the work, best first. Kills are per-wave, not per-match: the
+        // caller subtracts each player's total as it stood when the wave began,
+        // because this line says "last wave" and a match total under that
+        // heading is a wrong number rather than a missing one.
+        if (view.Wave >= 0 && killsLastWave.Count > 0)
+        {
+            footer.AddChild(Kit.Label("kills"));
+            foreach (var (name, kills) in killsLastWave.OrderByDescending(p => p.Kills))
+                footer.AddChild(Kit.Tag($"{name} {kills}"));
+        }
+
         footer.AddChild(Kit.Label("core"));
         footer.AddChild(Kit.Numeral(view.Lives.ToString(), Tokens.SizeStatSm,
             view.Lives <= 5 ? UiTheme.Danger : Tokens.Lives));
