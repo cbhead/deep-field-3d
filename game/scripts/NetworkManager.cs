@@ -251,10 +251,17 @@ public partial class NetworkManager : Node
         {
             var levels = new Godot.Collections.Array();
             foreach (int level in tower.PathLevels) levels.Add(level);
+            float maxHp = Towers.All[tower.DefId].StructureHp;
             structures.Add(new Godot.Collections.Dictionary
             {
                 ["id"] = tower.Id, ["def"] = tower.DefId, ["socket"] = tower.SocketId,
                 ["levels"] = levels, ["trap"] = false, ["charges"] = 0,
+                // Health rides here rather than being reconstructed from damage
+                // events: a Ram takes a tower down over seconds, which is
+                // continuous state, and the pulled channel is where continuous
+                // state goes. A client that missed one unreliable packet still
+                // shows the right bar on the next one.
+                ["hp"] = maxHp > 0f ? tower.Hp / maxHp : 1f,
             });
         }
         foreach (var trap in _world.Traps)
@@ -263,7 +270,7 @@ public partial class NetworkManager : Node
             {
                 ["id"] = trap.Id, ["def"] = trap.DefId, ["socket"] = trap.SocketId,
                 ["levels"] = new Godot.Collections.Array(), ["trap"] = true,
-                ["charges"] = trap.ChargesLeft,
+                ["charges"] = trap.ChargesLeft, ["hp"] = 1f,
             });
         }
 

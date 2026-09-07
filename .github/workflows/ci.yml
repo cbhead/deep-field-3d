@@ -87,6 +87,19 @@ jobs:
           tail -5 /tmp/aim.txt
           grep -q "^PASS" /tmp/aim.txt
 
+      # No ordinary run reaches this: solo builds nothing, so nothing has a
+      # structure for a Ram to demolish, and the first version of the health
+      # bar shipped without any client having ever destroyed a tower. This
+      # builds a barricade, walks a Ram into it, and checks the two halves a
+      # player depends on — that the damage was visible while it happened, and
+      # that the wreck left the map when it finished.
+      - name: Siege probe (a demolition is visible, and the wreck leaves)
+        run: |
+          godot --headless --path game --quit-after 14400 -- \
+            --shot switchyard /tmp/siege.txt siege > siege.log 2>&1 || true
+          tail -4 /tmp/siege.txt
+          grep -q "^PASS" /tmp/siege.txt
+
       # A real solo match on each map: drives the sim, every UI surface, and
       # the view/event plumbing that only runs once a world exists.
       - name: Solo match smoke (every sector)

@@ -51,6 +51,11 @@ public sealed class StructureView
     public int[] PathLevels = System.Array.Empty<int>();
     public bool IsTrap;
     public int ChargesLeft;
+
+    /// <summary>Structure health, 0..1. A fraction rather than raw hp so no
+    /// reader needs the def to make sense of it, and so anything that cannot be
+    /// damaged is simply always 1 instead of a special case.</summary>
+    public float HpFraction = 1f;
 }
 
 public sealed class GameView
@@ -123,10 +128,12 @@ public sealed class GameView
         Structures.Clear();
         foreach (var t in world.Towers)
         {
+            float maxHp = Towers.All[t.DefId].StructureHp;
             Structures.Add(new StructureView
             {
                 Id = t.Id, DefId = t.DefId, SocketId = t.SocketId,
                 PathLevels = (int[])t.PathLevels.Clone(),
+                HpFraction = maxHp > 0f ? Mathf.Clamp(t.Hp / maxHp, 0f, 1f) : 1f,
             });
         }
         foreach (var t in world.Traps)
@@ -214,6 +221,7 @@ public sealed class GameView
                 Id = (int)entry["id"], DefId = (string)entry["def"],
                 SocketId = (string)entry["socket"], PathLevels = levels.ToArray(),
                 IsTrap = (bool)entry["trap"], ChargesLeft = (int)entry["charges"],
+                HpFraction = (float)entry["hp"],
             });
         }
     }

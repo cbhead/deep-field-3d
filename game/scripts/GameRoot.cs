@@ -46,6 +46,13 @@ public partial class GameRoot : Node3D
     private float _aimWorst;                  // worst |angle| between a turret and its target
     private int _aimSettled;                  // samples taken after the turn settled
     private float _aimElapsed;                // seconds the probe has been running
+    private List<string>? _siegeReport;       // --shot siege: what a player would see
+    private string _siegeReportPath = "";
+    private float _siegeElapsed;
+    private int _siegeLastLog = -1;
+    private int _siegeSawBar;                 // frames with a bar up at partial health
+    private bool _siegeCapture;               // photograph it instead of scoring it
+    private bool _siegeSawStructure;          // the barricade existed at least once
     private string? _shotPath;
     private string _shotView = "eye";
     private int _shotCountdown;
@@ -71,6 +78,7 @@ public partial class GameRoot : Node3D
 
     private readonly GameView _view = new();
     private readonly Dictionary<int, EnemyOverhead> _overheads = new();
+    private readonly Dictionary<int, StructureOverhead> _structureBars = new();
     private readonly Dictionary<int, int> _killsByPlayer = new();
     private int _reactionCount;
     private int _lastWaveLeaks;
@@ -291,6 +299,32 @@ public partial class GameRoot : Node3D
             // before it flushes, so the verdict goes to a file or it is lost.
             _aimReportPath = path;
             _aimReport = new List<string> { $"lance on {best}, {bestD:0.0} m from the route" };
+            _shotView = "eye";
+            return;
+        }
+
+        // Siege check: build a barricade, walk a Ram into it, and watch what the
+        // player would see. Bought because the structure-health work shipped
+        // once with nothing having ever destroyed a tower in a client — solo
+        // builds nothing, so no ordinary run reaches this path at all.
+        //
+        // "siege" measures and writes a verdict; "siegeshot" waits until the
+        // barricade is visibly hurt and photographs it. The numbers only say a
+        // bar exists — the picture is what says it is the right size, in the
+        // right place, and not buried inside the model.
+        if (_shotView is "siege" or "siegeshot" && _world is not null)
+        {
+            _siegeCapture = _shotView == "siegeshot";
+            Submit(new Command.PlaceTower(LocalPlayerId, "barricade", "b1"));
+            _world.Enemies.Add(new Enemy
+            {
+                Id = _world.NextId(), DefId = "ram",
+                Hp = 100_000f, MaxHp = 100_000f,   // the demolition is the subject, not the kill
+                Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 2,
+                RouteIndex = 0, Leg = 0, LegProgress = 0f,
+            });
+            _siegeReportPath = path;
+            _siegeReport = new List<string> { "barricade on b1, one ram walking route 0" };
             _shotView = "eye";
             return;
         }
@@ -609,6 +643,7 @@ public partial class GameRoot : Node3D
         if (Mode == RunMode.Dedicated) return;
 
         RebuildView();
+        SyncStructureHealth();
         RefreshUi(delta);
     }
 
@@ -1285,6 +1320,145 @@ public partial class GameRoot : Node3D
             _overheads.Remove(id);
     }
 
+    /// <summary>Health bars over damaged structures, read from GameView rather
+    /// than from the world, so a network client watches its towers come down
+    /// exactly the way the host does.
+    ///
+    /// The bar is the whole point of the pass: before the Ram, a structure was
+    /// either standing or gone, and the first news of a demolition was the
+    /// toast telling you it had already finished.</summary>
+    private void SyncStructureHealth()
+    {
+        if (!_view.Valid) return;
+        var camera = GetViewport().GetCamera3D();
+
+        foreach (var structure in _view.Structures)
+        {
+            if (!_towerViews.TryGetValue(structure.Id, out var view) || !IsInstanceValid(view)) continue;
+
+            if (!_structureBars.TryGetValue(structure.Id, out var bar) || !IsInstanceValid(bar))
+            {
+                bar = new StructureOverhead { TopHeight = StructureBarHeight(view) };
+                view.AddChild(bar);
+                _structureBars[structure.Id] = bar;
+            }
+
+            float distance = camera is null ? 0f : camera.GlobalPosition.DistanceTo(view.Position);
+            bar.Set(structure.HpFraction, distance);
+        }
+
+        // Views are freed with the structure they hang under, so this only has
+        // to drop the stale keys.
+        foreach (int id in _structureBars.Keys.Where(id => !_towerViews.ContainsKey(id)).ToList())
+            _structureBars.Remove(id);
+
+        if (_siegeReport is not null) WatchSiege();
+    }
+
+    /// <summary>Records what a player would actually see while a Ram works on a
+    /// barricade: the bar's fraction, whether it is on screen, and whether the
+    /// structure leaves the map when it falls. Passing needs all three — a bar
+    /// visible at some partial health, and the view gone afterwards.</summary>
+    private void WatchSiege()
+    {
+        var report = _siegeReport!;
+        _siegeElapsed += (float)GetProcessDeltaTime();
+
+        var barricade = _view.Structures.FirstOrDefault(s => s.DefId == "barricade");
+        if (barricade is not null)
+        {
+            _siegeSawStructure = true;
+            bool onScreen = _structureBars.TryGetValue(barricade.Id, out var bar)
+                            && IsInstanceValid(bar) && bar.Visible;
+            if (onScreen && barricade.HpFraction > 0.001f && barricade.HpFraction < 0.999f)
+                _siegeSawBar++;
+
+            // Photograph it half-eaten: full health hides the bar and rubble has
+            // none, so there is exactly one interesting moment to catch.
+            if (_siegeCapture && onScreen && barricade.HpFraction < 0.55f
+                && _towerViews.TryGetValue(barricade.Id, out var wreck))
+            {
+                var target = wreck.Position;
+                var eye = new Camera3D { Position = target + new Vector3(7f, 4.5f, 7f), Far = 500f };
+                AddChild(eye);
+                eye.LookAt(target + new Vector3(0f, 1.2f, 0f), Vector3.Up);
+                eye.MakeCurrent();
+
+                // Record what the bar is supposed to be reading, next to the
+                // picture of it. Eyeballing a fill fraction off a screenshot is
+                // how a bar that is drawing the wrong number looks fine.
+                System.IO.File.WriteAllText(_siegeReportPath + ".txt",
+                    $"captured at hp {barricade.HpFraction:0.000}, bar height {StructureBarHeight(wreck):0.00} m\n");
+
+                _siegeReport = null;          // the picture is the report
+                _shotPath = _siegeReportPath;
+                _shotCountdown = 2;           // one frame for the camera to take
+                return;
+            }
+
+            if (Mathf.FloorToInt(_siegeElapsed) > _siegeLastLog)
+            {
+                _siegeLastLog = Mathf.FloorToInt(_siegeElapsed);
+                report.Add($"{_siegeElapsed:0}s hp {barricade.HpFraction:0.00} bar {(onScreen ? "shown" : "hidden")}");
+            }
+            if (_siegeElapsed < 120f) return;
+            WriteProbe(report, _siegeReportPath, false,
+                "INCONCLUSIVE: the barricade never fell, so removal was never exercised");
+            return;
+        }
+
+        // Absent from the read model means two different things, and conflating
+        // them made this probe pass by luck: PlaceTower is queued, so for the
+        // first frames the barricade has not been built yet, and reading that
+        // as "destroyed" reported a demolition at zero seconds that had not
+        // happened. Only absence after it has been seen is destruction.
+        if (!_siegeSawStructure)
+        {
+            if (_siegeElapsed < 120f) return;
+            WriteProbe(report, _siegeReportPath, false,
+                "INCONCLUSIVE: the barricade was never built, so nothing was measured");
+            return;
+        }
+
+        // Gone after being there: the sim destroyed it. The view must have gone
+        // with it, which is the half that was never tested before.
+        bool viewGone = !_towerViews.Values.Any(v => IsInstanceValid(v)
+                                                    && (string)v.GetMeta("def_id", "") == "barricade");
+        report.Add($"{_siegeElapsed:0}s barricade destroyed | bar seen mid-demolition {_siegeSawBar} frames " +
+                   $"| view removed {viewGone}");
+        bool pass = _siegeSawBar > 0 && viewGone;
+        WriteProbe(report, _siegeReportPath, pass, pass
+            ? "PASS: the demolition was visible and the wreck left the map"
+            : _siegeSawBar == 0
+                ? "FAIL: the barricade fell without a health bar ever showing"
+                : "FAIL: the structure was destroyed but its view is still standing");
+    }
+
+    /// <summary>Where the bar sits, measured off the model instead of assumed.
+    /// Structures run from a flat trap plate to a Nova on a mast, so a single
+    /// constant would float over the traps and sit inside the towers.
+    ///
+    /// Every corner of every mesh is transformed into the view's own space
+    /// first. Taking a mesh's local AABB and adding that one node's position —
+    /// which is what this did at first — ignores every level of nesting above
+    /// it, and design's models are rigs several deep. The bar came out low
+    /// enough to be buried in the barricade's top plate, which is the kind of
+    /// thing only a screenshot tells you.</summary>
+    private static float StructureBarHeight(Node3D view)
+    {
+        float top = 0f;
+        var toLocal = view.GlobalTransform.AffineInverse();
+        foreach (var visual in view.FindChildren("*", nameof(VisualInstance3D), true, false)
+                     .OfType<VisualInstance3D>())
+        {
+            var aabb = visual.GetAabb();
+            var xform = toLocal * visual.GlobalTransform;
+            for (int corner = 0; corner < 8; corner++)
+                top = Mathf.Max(top, (xform * aabb.GetEndpoint(corner)).Y);
+        }
+        return Mathf.Max(1.2f, top + 0.45f);
+    }
+
     private void SyncEnemyViewsRemote(double delta)
     {
         if (_net.SnapshotBuffer.Count == 0) return;
@@ -1560,12 +1734,21 @@ public partial class GameRoot : Node3D
         _aimReport = null;
         bool aimed = _aimSettled > 0 && _aimWorst < 5f;
         report.Add($"worst error once settled: {_aimWorst:0.0} deg over {_aimSettled} samples");
-        report.Add(_aimSettled == 0
+        WriteProbe(report, _aimReportPath, aimed, _aimSettled == 0
             ? "INCONCLUSIVE: no tower ever held a target long enough to measure"
             : aimed ? "PASS: the turret faces what it is shooting"
                     : "FAIL: the turret is tracking but pointed away");
-        System.IO.File.WriteAllLines(_aimReportPath, report);
-        GetTree().Quit(aimed ? 0 : 1);
+    }
+
+    /// <summary>Writes a probe's samples and verdict, then quits with a status
+    /// CI can read. The file matters: Godot buffers stdout and mono's headless
+    /// teardown aborts before flushing it, so a probe that only printed would
+    /// report nothing at all on the machine that most needs to hear it.</summary>
+    private void WriteProbe(List<string> report, string path, bool pass, string verdict)
+    {
+        report.Add(verdict);
+        System.IO.File.WriteAllLines(path, report);
+        GetTree().Quit(pass ? 0 : 1);
     }
 
     private static void UpdateEnemyStates(Node3D view, bool burrowed, float shieldFraction)

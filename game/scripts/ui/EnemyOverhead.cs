@@ -13,9 +13,9 @@ public partial class EnemyOverhead : Node3D
 {
     private const float MaxVisibleDistance = 45f;
 
-    private MeshInstance3D _hpBack = null!;
-    private MeshInstance3D _hpFill = null!;
-    private MeshInstance3D _shieldFill = null!;
+    private WorldBar _hpBack = null!;
+    private WorldBar _hpFill = null!;
+    private WorldBar _shieldFill = null!;
     private readonly List<Sprite3D> _statusIcons = new();
 
     private float _lastHp = 1f;
@@ -26,32 +26,22 @@ public partial class EnemyOverhead : Node3D
 
     public override void _Ready()
     {
-        _hpBack = MakeBar(new Color(0, 0, 0, 0.65f), 0f);
-        _hpFill = MakeBar(Tokens.BarHp, 0.001f);
-        _shieldFill = MakeBar(Tokens.BarShield, 0.002f);
+        _hpBack = WorldBar.Make(new Color(0, 0, 0, 0.65f), 0f, BarSize);
+        _hpFill = WorldBar.Make(Tokens.BarHp, 0.001f, BarSize);
+        _shieldFill = WorldBar.Make(Tokens.BarShield, 0.002f, BarSize);
+        // The shield rides its own row above the hp bar. Set here rather than
+        // after each Set(), which is where it used to be: Set shifts the bar
+        // left as it drains, and re-centring it afterwards made the shield
+        // shrink towards its middle instead of emptying the way everything
+        // else does. Set only touches X, so this survives.
+        _shieldFill.Position = new Vector3(0f, 0.17f, 0.002f);
         AddChild(_hpBack);
         AddChild(_hpFill);
         AddChild(_shieldFill);
         Visible = false;
     }
 
-    private static MeshInstance3D MakeBar(Color color, float depthNudge)
-    {
-        return new MeshInstance3D
-        {
-            Mesh = new QuadMesh { Size = new Vector2(1.1f, 0.13f) },
-            MaterialOverride = new StandardMaterial3D
-            {
-                AlbedoColor = color,
-                ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
-                BillboardMode = BaseMaterial3D.BillboardModeEnum.Enabled,
-                Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-                NoDepthTest = false,
-                RenderPriority = 1,
-            },
-            Position = new Vector3(0, 0, depthNudge),
-        };
-    }
+    private static readonly Vector2 BarSize = new(1.1f, 0.13f);
 
     /// <summary>hpFraction/shieldFraction in 0..1; statusBits packed per
     /// Protocol.PackStatusBits (bit index = Channel).</summary>
@@ -74,38 +64,19 @@ public partial class EnemyOverhead : Node3D
         float alpha = Mathf.Clamp(1.4f - cameraDistance / MaxVisibleDistance, 0.25f, 1f);
 
         _hpBack.Visible = true;
-        SetBar(_hpBack, 1f, alpha * 0.65f);
+        _hpBack.Set(1f, alpha * 0.65f);
         // Design's single hp threshold: venom green until 30%, threat red under
         // it. Same rule as the player's own bar, so one colour means one thing.
-        if (_hpFill.MaterialOverride is StandardMaterial3D hpMaterial)
-        {
-            var want = Kit.HpColor(hpFraction);
-            hpMaterial.AlbedoColor = want with { A = hpMaterial.AlbedoColor.A };
-            hpMaterial.Emission = want;
-        }
-        SetBar(_hpFill, hpFraction, alpha);
+        _hpFill.Set(hpFraction, alpha);
+        _hpFill.Tint(Kit.HpColor(hpFraction));
         _hpFill.Visible = hpFraction > 0.001f;
 
         _shieldFill.Visible = shieldFraction > 0.001f;
-        if (_shieldFill.Visible)
-        {
-            SetBar(_shieldFill, shieldFraction, alpha);
-            _shieldFill.Position = new Vector3(0, 0.17f, 0.002f);
-        }
+        if (_shieldFill.Visible) _shieldFill.Set(shieldFraction, alpha);
 
         if (statusBits != _lastBits) RebuildStatusIcons(statusBits);
         _lastBits = statusBits;
         _lastHp = hpFraction;
-    }
-
-    private static void SetBar(MeshInstance3D bar, float fraction, float alpha)
-    {
-        fraction = Mathf.Clamp(fraction, 0f, 1f);
-        bar.Scale = new Vector3(fraction, 1f, 1f);
-        // Quads scale about their center; shift left so the bar drains rightward.
-        bar.Position = new Vector3(-(1f - fraction) * 0.55f, bar.Position.Y, bar.Position.Z);
-        if (bar.MaterialOverride is StandardMaterial3D material)
-            material.AlbedoColor = material.AlbedoColor with { A = alpha };
     }
 
     private void RebuildStatusIcons(byte bits)
