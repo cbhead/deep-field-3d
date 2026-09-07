@@ -318,8 +318,6 @@ public static class Step
             BeginReload(w, player, weapon.Id);
             return;
         }
-        player.Magazine[weapon.Id] = rounds - 1;
-
         var enemy = w.Enemies.FirstOrDefault(e => e.Id == hit.EnemyId && !e.Dead);
         if (enemy is null || enemy.Burrowed) return;
 
@@ -338,6 +336,13 @@ public static class Step
         float rate = weapon.ShotsPerSecond * build.RateFactor();
         if (player.FactionId == Factions.Tempest.Id) rate *= Balance.TempestRateFactor;
         player.WeaponCooldown = 1f / rate;
+
+        // Spend the round once the shot is known to be real. Charging it at the
+        // top cost ammo for hits on enemies that had already died and for shots
+        // out of range — neither of which set a cooldown either, so the magazine
+        // drained on shots that never happened and the reload rate was roughly
+        // double what the numbers said.
+        player.Magazine[weapon.Id] = rounds - 1;
 
         float damage = weapon.Damage * build.DamageFactor(armored);
         // Glacier passive: slowed things take more from this player. Checked on
