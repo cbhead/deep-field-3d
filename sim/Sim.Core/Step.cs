@@ -1760,6 +1760,7 @@ public static class Step
                     Amount = personal,
                     Pos = enemy.Pos + offset,
                     Life = Balance.ScrapPickupSeconds,
+                    GroundY = GroundHeightUnder(w, enemy.Pos),
                 };
                 w.Pickups.Add(pickup);
                 w.Emit(new SimEvent.ScrapSpawned(pickup.Id, type.ToString(), personal,
@@ -1770,6 +1771,36 @@ public static class Step
         }
 
         w.Emit(new SimEvent.ScrapDropped(enemy.Id, string.Join(",", parts)));
+    }
+
+    /// <summary>The height of the walkable surface under a point: the Y of the
+    /// nearest ground-route waypoint at or below it. Ground routes are where
+    /// enemies walk, so they are where a player can stand — which is the only
+    /// definition of "floor" a sim with no physics has, and it is the right one
+    /// on a map like the Spire where the floor is at forty different heights.
+    /// Never above the drop: scrap falls, it does not climb.</summary>
+    private static float GroundHeightUnder(World w, Vec3 pos)
+    {
+        float best = float.MaxValue, bestY = 0f;
+        bool found = false;
+        float lowest = float.MaxValue;
+
+        foreach (var route in w.Map.Routes)
+        {
+            if (route.Layer != EnemyLayer.Ground) continue;
+            foreach (var point in route.Waypoints)
+            {
+                lowest = MathF.Min(lowest, point.Y);
+                if (point.Y > pos.Y + 0.5f) continue;
+                float dx = point.X - pos.X, dz = point.Z - pos.Z;
+                float distance = dx * dx + dz * dz;
+                if (distance >= best) continue;
+                best = distance;
+                bestY = point.Y;
+                found = true;
+            }
+        }
+        return found ? bestY : (lowest < float.MaxValue ? lowest : 0f);
     }
 
     /// <summary>Scrap on the floor drifts to a nearby player and is collected
@@ -1783,6 +1814,16 @@ public static class Step
         foreach (var pickup in w.Pickups)
         {
             if (pickup.Dead) continue;
+
+            // Fall first. A drop from the air lane is collectable on the way
+            // down if a player happens to be under it, which is a nice thing
+            // to have happen rather than a rule worth preventing.
+            if (pickup.Pos.Y > pickup.GroundY)
+            {
+                float fallen = Balance.ScrapFallSpeed * Balance.Dt;
+                float y = MathF.Max(pickup.GroundY, pickup.Pos.Y - fallen);
+                pickup.Pos = new Vec3(pickup.Pos.X, y, pickup.Pos.Z);
+            }
 
             PlayerState? nearest = null;
             float best = float.MaxValue;

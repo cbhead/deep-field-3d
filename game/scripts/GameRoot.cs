@@ -103,6 +103,12 @@ public partial class GameRoot : Node3D
     public Vfx Vfx { get; private set; } = null!;
     private bool _shotFire;                   // --shot vm-<weapon>: fire one round before the capture
     private float _launchAfter = -1f;         // --launch-after: seconds until a hosted party launches itself
+    private List<string>? _traversalReport;   // --shot <map> <txt> traversal
+    private string _traversalReportPath = "";
+    private int _traversalIndex = -1;
+    private float _traversalTimer;
+    private readonly List<(string Id, Vector3 Base, Vector3 Deck)> _climbs = new();
+    private readonly List<string> _unreachable = new();
     private float _partyElapsed;
 
     private readonly GameView _view = new();
@@ -490,6 +496,32 @@ public partial class GameRoot : Node3D
             _shotPath = path;
             _shotCountdown = 40;
             _shotFire = true;
+            return;
+        }
+
+        // Traversal: every deck a player is expected to build on has to be one
+        // they can actually stand on. A ladder that tops out against the
+        // underside of the deck it serves looks completely correct from every
+        // angle and from the map file, and leaves a whole tier — and the air
+        // lane it was the only answer to — unusable.
+        if (_shotView == "traversal")
+        {
+            _shotView = "eye";
+            _traversalReportPath = path;
+            _traversalReport = new List<string> { $"traversal probe on {_map.Id}" };
+            foreach (var area in FindLadderAreas())
+            {
+                var centre = area.GlobalPosition;
+                float half = LadderHalfHeight(area);
+                // Foot of the rungs, wherever they start: on the Spire a ladder
+                // can begin twenty metres up, and standing the probe at y=0.6
+                // would have it climbing thin air.
+                var foot = new Vector3(centre.X, centre.Y - half + 0.6f, centre.Z);
+                _climbs.Add((Describe(area), foot, centre + new Vector3(0f, half, 0f)));
+            }
+            _traversalReport.Add($"{_climbs.Count} climb(s) found");
+            _traversalIndex = 0;
+            _traversalTimer = 0f;
             return;
         }
 
@@ -890,6 +922,7 @@ public partial class GameRoot : Node3D
     {
         TickShotStages();
         TickIntermissionShot();
+        if (_traversalReport is not null) TickTraversalProbe(delta);
         if (_shotPath is not null && _shotFire && _shotCountdown == 2 && _player is not null) { _player.FireForReview(); _shotFire = false; }
         if (_shotPath is not null && --_shotCountdown <= 0) CaptureShot();
         TickCoreFlash(delta);
@@ -2407,6 +2440,118 @@ public partial class GameRoot : Node3D
     /// CI can read. The file matters: Godot buffers stdout and mono's headless
     /// teardown aborts before flushing it, so a probe that only printed would
     /// report nothing at all on the machine that most needs to hear it.</summary>
+    private static float LadderHalfHeight(Area3D area)
+    {
+        foreach (var child in area.GetChildren())
+            if (child is CollisionShape3D shape && shape.Shape is BoxShape3D box)
+                return box.Size.Y * 0.5f;
+        return 3f;
+    }
+
+    /// <summary>A ladder named by where it is, so the report reads as a place
+    /// rather than as an engine node id.</summary>
+    private static string Describe(Area3D area)
+    {
+        var p = area.GlobalPosition;
+        return $"ladder at ({p.X:0.#}, {p.Y:0.#}, {p.Z:0.#})";
+    }
+
+    /// <summary>Somewhere to step off at the top: the nearest wall socket
+    /// within reach of the rungs' head, or nothing, in which case the probe
+    /// just lets go and sees whether the player is left standing.</summary>
+    private Vector3? StepOffTarget(Vector3 head)
+    {
+        Vector3? best = null;
+        float bestDistance = 10f * 10f;
+        foreach (var socket in _map.Sockets)
+        {
+            if (socket.Tag != SocketTag.Wall) continue;
+            var pos = ToGd(socket.Pos);
+            if (Mathf.Abs(pos.Y - head.Y) > 4f) continue;
+            float distance = (pos with { Y = 0f } - head with { Y = 0f }).LengthSquared();
+            if (distance >= bestDistance) continue;
+            bestDistance = distance;
+            best = pos;
+        }
+        return best;
+    }
+
+    /// <summary>Every ladder volume in the level, in a stable order.</summary>
+    private List<Area3D> FindLadderAreas()
+    {
+        var found = new List<Area3D>();
+        void Walk(Node n)
+        {
+            if (n is Area3D area && (string)area.GetMeta("kind", "") == "ladder") found.Add(area);
+            foreach (var child in n.GetChildren()) Walk(child);
+        }
+        Walk(this);
+        found.Sort((a, b) => a.GlobalPosition.X != b.GlobalPosition.X
+            ? a.GlobalPosition.X.CompareTo(b.GlobalPosition.X)
+            : a.GlobalPosition.Z.CompareTo(b.GlobalPosition.Z));
+        return found;
+    }
+
+    /// <summary>Drives the probe: put the player at the foot of each climb,
+    /// hold the climb for four seconds, and record where they ended up and
+    /// whether they were standing on anything when they got there.</summary>
+    private void TickTraversalProbe(double delta)
+    {
+        if (_traversalReport is null || _player is null) return;
+
+        if (_traversalIndex >= _climbs.Count)
+        {
+            // The question every map can answer: does each ladder leave you
+            // standing on something at the top of its own rungs? Asking
+            // instead that every wall socket sit under a ladder would be a
+            // lie on the Spire, where the routes climb and you walk the tiers.
+            bool pass = _climbs.Count > 0 && _unreachable.Count == 0;
+            _traversalReport.Add(_unreachable.Count == 0
+                ? "every ladder leaves you standing at the top of it"
+                : "ladders that go nowhere: " + string.Join("; ", _unreachable));
+            WriteProbe(_traversalReport, _traversalReportPath, pass,
+                pass ? "PASS: every climb this map offers lands on something"
+                     : "FAIL: a climb tops out against the thing it was meant to reach");
+            return;
+        }
+
+        var climb = _climbs[_traversalIndex];
+        if (_traversalTimer <= 0f)
+        {
+            _player.GlobalPosition = climb.Base;
+            _player.ClimbHeld = true;
+            _player.WalkHeld = Vector3.Zero;
+        }
+        _traversalTimer += (float)delta;
+
+        // Climb, then walk at the deck this ladder serves and let go: if there
+        // is something to stand on, they end up standing on it at its height.
+        if (_traversalTimer < 4f) return;
+        if (_traversalTimer < 6.5f)
+        {
+            _player.ClimbHeld = false;
+            // Step off toward whatever the rungs' head is next to.
+            if (StepOffTarget(climb.Deck) is { } target)
+            {
+                var toDeck = (target - _player.GlobalPosition) with { Y = 0f };
+                _player.WalkHeld = toDeck.LengthSquared() > 0.01f ? toDeck : Vector3.Zero;
+            }
+            return;
+        }
+
+        _player.WalkHeld = Vector3.Zero;
+        float reached = _player.GlobalPosition.Y;
+        // Two metres of slack: the step off lands you on the deck, which sits
+        // a little under the head of the rungs.
+        bool landed = _player.Standing && reached >= climb.Deck.Y - 2f;
+        _traversalReport.Add($"{climb.Id}: rungs end at {climb.Deck.Y:0.0} m, " +
+            $"left standing at {reached:0.0} m " + (landed ? "-> lands on it" : "-> GOES NOWHERE"));
+        if (!landed)
+            _unreachable.Add($"{climb.Id} tops out at {reached:0.0} m for rungs ending at {climb.Deck.Y:0.0} m");
+        _traversalIndex++;
+        _traversalTimer = 0f;
+    }
+
     private void WriteProbe(List<string> report, string path, bool pass, string verdict)
     {
         report.Add(verdict);
@@ -2755,9 +2900,14 @@ public partial class GameRoot : Node3D
         MapKit.Mount(bridgeLadder, "shared_ladder", MapKit.GroundLocal(bridgeLadder));
 
         // Ladder up the deck's south face. Moved off x=-8 so it no longer
-        // shares a footprint with the vent tunnel's mouth.
-        var ladderVisual = AddStaticBox(new Vector3(-11f, 3f, -12.4f), new Vector3(1.2f, 6f, 0.15f), new Color(0.7f, 0.6f, 0.3f), layer: 0);
-        ladderVisual.AddChild(MakeArea("ladder", new BoxShape3D { Size = new Vector3(1.6f, 6.4f, 1.4f) }));
+        // shares a footprint with the vent tunnel's mouth — and then off
+        // z=-12.4, which was a metre *inside* the deck it served: the climb
+        // stopped dead against the underside at 3.8 m for a 6 m deck, so this
+        // was a ladder to nowhere and the launcher was the only way up. The
+        // traversal probe found it; the deck's south face is z=-12, so the
+        // rungs belong just clear of it.
+        var ladderVisual = AddStaticBox(new Vector3(-11f, 3f, -11.3f), new Vector3(1.2f, 6f, 0.15f), new Color(0.7f, 0.6f, 0.3f), layer: 0);
+        ladderVisual.AddChild(MakeArea("ladder", new BoxShape3D { Size = new Vector3(1.6f, 7f, 1.6f) }));
         MapKit.Mount(ladderVisual, "shared_ladder", MapKit.GroundLocal(ladderVisual));
 
         // Hero launcher: pad in the spawn yard that flings you onto the deck.
@@ -3026,11 +3176,17 @@ public partial class GameRoot : Node3D
 
         // Ladders between floors on the west side, so the stair is not the only
         // way up on foot and a downed player has a route back.
+        //
+        // The west wing runs to x=-19, and these stood at exactly x=-19: every
+        // one of the four climbed into the underside of the floor it served and
+        // stopped two metres short, on a map whose entire shape is climbing.
+        // The rungs belong just clear of the edge — same fix as Foundry's deck
+        // ladder and both of Switchyard's, all found by the traversal probe.
         for (int floor = 0; floor < 4; floor++)
         {
-            var ladder = AddStaticBox(new Vector3(-19f, floor * 10f + 5f, 6f),
+            var ladder = AddStaticBox(new Vector3(-20f, floor * 10f + 5f, 6f),
                 new Vector3(1.2f, 10f, 0.15f), new Color(0.7f, 0.6f, 0.3f), layer: 0);
-            ladder.AddChild(MakeArea("ladder", new BoxShape3D { Size = new Vector3(1.6f, 10.4f, 1.4f) }));
+            ladder.AddChild(MakeArea("ladder", new BoxShape3D { Size = new Vector3(1.6f, 11f, 1.6f) }));
             MapKit.Mount(ladder, "shared_ladder", MapKit.GroundLocal(ladder));
         }
 
@@ -3045,11 +3201,17 @@ public partial class GameRoot : Node3D
 
     private void BuildSwitchyardStructures()
     {
-        // Mid deck (y=5) with its wall sockets w1/w2.
-        var midDeck = AddStaticBox(new Vector3(-6, 4.8f, -18), new Vector3(24, 0.4f, 8), new Color(0.45f, 0.48f, 0.55f), layer: 1);
-        MapKit.MountRun(midDeck, "switchyard_middeck", 24f, 4f, alongX: true, MapKit.GroundLocal(midDeck));
-        var midColumn = AddStaticBox(new Vector3(-6, 2.4f, -18), new Vector3(1.2f, 4.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
-        MapKit.Mount(midColumn, "switchyard_column", MapKit.GroundLocal(midColumn));
+        // Mid deck (y=5), moved north from z=-18 to sit over the long route's
+        // southern leg and within a Nova's reach of the freight cut. Where it
+        // was, it saw only what the catwalk saw and none of the air, so it was
+        // a climb with nothing at the top of it.
+        var midDeck = AddStaticBox(new Vector3(-7, 4.8f, -12), new Vector3(26, 0.4f, 8), new Color(0.45f, 0.48f, 0.55f), layer: 1);
+        MapKit.MountRun(midDeck, "switchyard_middeck", 26f, 4f, alongX: true, MapKit.GroundLocal(midDeck));
+        foreach (float columnX in new[] { -17f, -7f, 3f })
+        {
+            var midColumn = AddStaticBox(new Vector3(columnX, 2.4f, -12), new Vector3(1.2f, 4.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
+            MapKit.Mount(midColumn, "switchyard_column", MapKit.GroundLocal(midColumn));
+        }
 
         // Upper catwalk (y=10) carrying w3/w4 over the air lane. Extended west
         // to x=-16 so its climb has somewhere to land clear of the lane.
@@ -3064,23 +3226,35 @@ public partial class GameRoot : Node3D
         }
 
         // Ladders: yard → mid deck, and ground → catwalk.
-        var ladder1 = AddStaticBox(new Vector3(-14f, 2.5f, -14.2f), new Vector3(1.2f, 5f, 0.15f), new Color(0.7f, 0.6f, 0.3f), layer: 0);
-        ladder1.AddChild(MakeArea("ladder", new BoxShape3D { Size = new Vector3(1.6f, 5.6f, 1.4f) }));
+        //
+        // Both of these used to stand *under* the deck they served. A climb
+        // there tops out against the slab's underside — the probe measured 2.8
+        // and 7.8 metres for decks at 5 and 10 — so the mid deck was awkward
+        // and the catwalk was unreachable, which took the whole air lane with
+        // it because those four sockets are the only ones that cover it. The
+        // fix is the same both times: stand the rungs off the edge so the
+        // climb is beside the deck rather than beneath it, and run them a
+        // little past the surface so there is something to step off onto.
+        // `--shot switchyard <txt> traversal` is what keeps them honest.
+        //
+        // Mid deck spans z −16…−8, so the yard side of it is z < −16.
+        var ladder1 = AddStaticBox(new Vector3(-14f, 3f, -16.8f), new Vector3(1.2f, 6f, 0.15f), new Color(0.7f, 0.6f, 0.3f), layer: 0);
+        ladder1.AddChild(MakeArea("ladder", new BoxShape3D { Size = new Vector3(1.6f, 7f, 1.6f) }));
         MapKit.Mount(ladder1, "shared_ladder", MapKit.GroundLocal(ladder1));
+        MapKit.Prop(ladder1, "shared_ladder", new Vector3(0, MapKit.GroundLocal(ladder1) + 3.2f, 0));
 
-        // This one used to start at y=4.8 in open air: it was drawn as a
-        // mid-deck-to-catwalk climb, but those two decks are eight metres apart
-        // in Z and never touch. It now runs from the ground to the catwalk's
-        // west end, which is a climb you can actually begin.
-        var ladder2 = AddStaticBox(new Vector3(-13f, 5f, 0.6f), new Vector3(1.2f, 10f, 0.15f), new Color(0.7f, 0.6f, 0.3f), layer: 0);
-        ladder2.AddChild(MakeArea("ladder", new BoxShape3D { Size = new Vector3(1.6f, 10.4f, 1.4f) }));
-        MapKit.Mount(ladder2, "shared_ladder", MapKit.GroundLocal(ladder2));
-        MapKit.Prop(ladder2, "shared_ladder", new Vector3(0, MapKit.GroundLocal(ladder2) + 6.5f, 0));
+        // Catwalk spans x −16…14, so its west face is x < −16.
+        var ladder2 = AddStaticBox(new Vector3(-16.9f, 5.5f, 3f), new Vector3(0.15f, 11f, 1.2f), new Color(0.7f, 0.6f, 0.3f), layer: 0);
+        ladder2.AddChild(MakeArea("ladder", new BoxShape3D { Size = new Vector3(1.6f, 12f, 1.6f) }));
+        MapKit.Mount(ladder2, "shared_ladder", MapKit.GroundLocal(ladder2), yawDegrees: 90f);
+        MapKit.Prop(ladder2, "shared_ladder", new Vector3(0, MapKit.GroundLocal(ladder2) + 6.5f, 0), 90f);
 
         // Launcher pad: spawn yard straight onto the mid deck.
         var launcher = AddStaticBox(new Vector3(8, 0.15f, -22), new Vector3(2.2f, 0.3f, 2.2f), new Color(0.9f, 0.5f, 0.9f), layer: 1);
         var launchArea = MakeArea("launcher", new BoxShape3D { Size = new Vector3(2.2f, 1.2f, 2.2f) });
-        launchArea.SetMeta("launch_velocity", new Vector3(-8f, 11f, 3f));
+        // Re-aimed with the deck: an 11 m/s hop is back at deck height after
+        // 1.6 s, so this is the ten metres west and ten north to land on it.
+        launchArea.SetMeta("launch_velocity", new Vector3(-9.3f, 11f, 6.2f));
         launcher.AddChild(launchArea);
         MapKit.Mount(launcher, "shared_launcher_idle", MapKit.GroundLocal(launcher));
 

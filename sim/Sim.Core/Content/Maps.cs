@@ -232,12 +232,18 @@ public static class Maps
             new SocketDef("g18", new Vec3(34f, 0f, -2f), SocketTag.Ground),
             new SocketDef("g19", new Vec3(36f, 0f, 14f), SocketTag.Ground),
 
-            // --- Mid deck (y=5) over the freight cut.
-            new SocketDef("w1", new Vec3(-12f, 5f, -18f), SocketTag.Wall),
-            new SocketDef("w2", new Vec3(0f, 5f, -18f), SocketTag.Wall),
-            new SocketDef("w5", new Vec3(-16.5f, 5f, -15f), SocketTag.Wall),
-            new SocketDef("w6", new Vec3(-6f, 5f, -16f), SocketTag.Wall),
-            new SocketDef("w7", new Vec3(5f, 5f, -21f), SocketTag.Wall),
+            // --- Mid deck (y=5). It sat at z=-18 and this comment claimed it
+            // covered the freight cut; it was eighteen metres away and covered
+            // nothing the catwalk did not already cover better, which is what
+            // made it the deck nobody had a reason to climb to. It is over the
+            // long route's southern leg now and within a Nova's reach of the
+            // cut, and — deliberately — out of range of the air strand, so the
+            // two decks answer different questions instead of the same one.
+            new SocketDef("w1", new Vec3(-16f, 5f, -11f), SocketTag.Wall),
+            new SocketDef("w2", new Vec3(-7f, 5f, -14.5f), SocketTag.Wall),
+            new SocketDef("w5", new Vec3(-19f, 5f, -15f), SocketTag.Wall),
+            new SocketDef("w6", new Vec3(-11f, 5f, -11.5f), SocketTag.Wall),
+            new SocketDef("w7", new Vec3(-2.5f, 5f, -12.5f), SocketTag.Wall),
 
             // --- Upper catwalk (y=10) hangs over the air lane — the only
             // sockets that see the whole strand rather than its low dips.

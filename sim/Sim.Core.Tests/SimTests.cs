@@ -461,3 +461,76 @@ public class ScrapEconomyTests
         Assert.Equal(w.Pickups[0].Amount, back.Pickups[0].Amount);
     }
 }
+
+/// <summary>Scrap from the air lane has to come down to where a player is.</summary>
+public class AirborneScrapTests
+{
+    [Fact]
+    public void ScrapFromAFlyerFallsToTheFloorAndIsCollectable()
+    {
+        var w = new World(21, Maps.Foundry);
+        w.Enqueue(new Command.Join(1, "solo", "ember"));
+        Step.Advance(w);
+        var player = w.Players[1];
+
+        // A Skiff dies on the air strand, well above the deck.
+        var air = Maps.Foundry.Routes.First(r => r.Layer == EnemyLayer.Air);
+        var high = air.Waypoints.OrderByDescending(p => p.Y).First();
+        Assert.True(high.Y > 5f, $"the air lane should be off the ground (was {high.Y})");
+
+        player.Pos = new Vec3(high.X + 14f, 0f, high.Z);
+        w.Enqueue(new Command.PlayerSync(1, player.Pos));
+        var skiff = new Enemy
+        {
+            Id = w.NextId(), DefId = "skiff", Hp = 1f, MaxHp = 40f,
+            RouteIndex = 0, Leg = 1, LegProgress = 1f, Pos = high,
+            Facing = new Vec3(1, 0, 0), Bounty = 8, LeakDamage = 1,
+        };
+        w.Enemies.Add(skiff);
+        w.Enqueue(new Command.PlayerHit(1, skiff.Id, "sidearm"));
+        Step.Advance(w);
+
+        var drop = Assert.Single(w.Pickups);
+        Assert.True(drop.Pos.Y > 5f, "it starts where the flyer died");
+
+        // It comes down on its own.
+        for (int i = 0; i < Balance.TickHz * 5; i++) Step.Advance(w);
+        drop = Assert.Single(w.Pickups);
+        Assert.True(drop.Pos.Y <= 0.01f, $"scrap should reach the floor, rested at {drop.Pos.Y}");
+
+        // And a player standing on the floor can reach it.
+        w.Enqueue(new Command.PlayerSync(1, drop.Pos));
+        Step.Advance(w);
+        Assert.Empty(w.Pickups);
+        Assert.True(player.Scrap.Values.Sum() > 0);
+    }
+
+    [Fact]
+    public void OnAClimbingMapScrapLandsOnTheTierBelowItNotTheStreet()
+    {
+        var w = new World(21, Maps.Spire);
+        w.Enqueue(new Command.Join(1, "solo", "ember"));
+        Step.Advance(w);
+        var player = w.Players[1];
+
+        // Over the upper stair (y = 20), not over the street.
+        var over = new Vec3(14f, 34f, 0f);
+        player.Pos = new Vec3(over.X + 12f, 20f, over.Z);
+        w.Enqueue(new Command.PlayerSync(1, player.Pos));
+        var skiff = new Enemy
+        {
+            Id = w.NextId(), DefId = "skiff", Hp = 1f, MaxHp = 40f,
+            RouteIndex = 0, Leg = 1, LegProgress = 1f, Pos = over,
+            Facing = new Vec3(1, 0, 0), Bounty = 8, LeakDamage = 1,
+        };
+        w.Enemies.Add(skiff);
+        w.Enqueue(new Command.PlayerHit(1, skiff.Id, "sidearm"));
+        Step.Advance(w);
+        for (int i = 0; i < Balance.TickHz * 6; i++) Step.Advance(w);
+
+        var drop = Assert.Single(w.Pickups);
+        Assert.True(drop.Pos.Y > 1f,
+            $"a drop over the upper tiers must not fall to the street (rested at {drop.Pos.Y})");
+        Assert.True(drop.Pos.Y <= over.Y, "and it must not climb");
+    }
+}

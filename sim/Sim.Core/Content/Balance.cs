@@ -108,4 +108,8 @@ public static class Balance
     public const float ScrapMagnetMeters = 4.5f;
     public const float ScrapMagnetSpeed = 9f;
     public const float ScrapCollectMeters = 1.6f;
+
+    /// <summary>How fast a drop from the air lane falls to the floor. Fast
+    /// enough not to be a wait, slow enough to read as a thing falling.</summary>
+    public const float ScrapFallSpeed = 11f;
 }

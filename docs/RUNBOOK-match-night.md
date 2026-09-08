@@ -56,6 +56,9 @@ next intermission.
   The wheel only offers what that socket accepts and greys out what you can't
   afford. **Hold U** at a placed structure to level a path (1–3) or **hold X**
   to sell.
+- **Scrap from flyers falls.** A Skiff dies over the lane and its scrap comes
+  down to the floor under it rather than hanging where it died, so the drop you
+  earned is one you can reach.
 - **Walk over the scrap.** A kill banks the team's half instantly and drops
   your half on the floor; it drifts to you when you get close, and what nobody
   collects goes to the team pool after 45 seconds. Weapon and melee platforms
