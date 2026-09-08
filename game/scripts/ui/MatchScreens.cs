@@ -90,9 +90,9 @@ public partial class MatchScreens : CanvasLayer
         foreach (var child in _intermissionBody.GetChildren()) child.QueueFree();
 
         int next = view.Wave + 1;
-        bool more = next < map.TotalWaves;
-        _intermissionTitle.Text = more
-            ? $"wave {next + 1} of {map.TotalWaves}"
+        bool more = view.Endless || next < map.TotalWaves;
+        _intermissionTitle.Text = view.Endless ? $"wave {next + 1} · endless · threat ×{view.Threat:0.0}"
+            : more ? $"wave {next + 1} of {map.TotalWaves}"
             : "final wave cleared";
 
         if (!more)
@@ -331,7 +331,9 @@ public partial class MatchScreens : CanvasLayer
         _endScreen.Visible = true;
         HideIntermission();          // the match is over; stop previewing it
 
-        _endSubtitle.Text = $"wave {Mathf.Max(1, view.Wave + 1)} of {view.TotalWaves}";
+        _endSubtitle.Text = view.Endless
+            ? $"wave {Mathf.Max(1, view.Wave + 1)} · endless"
+            : $"wave {Mathf.Max(1, view.Wave + 1)} of {view.TotalWaves}";
         _endTitle.Text = victory ? "VICTORY" : "CORE LOST";
         _endTitle.AddThemeColorOverride("font_color", victory ? Tokens.Brass400 : Tokens.Threat500);
         _endCoreLine.Text = victory

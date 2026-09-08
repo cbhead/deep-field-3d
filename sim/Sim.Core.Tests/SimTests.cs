@@ -235,3 +235,80 @@ public class StatusTests
         Assert.True(enemy.Statuses[(int)Channel.Movement].TimeLeft > 0.5f);
     }
 }
+
+/// <summary>The party lobby and endless mode, both flags on the world.</summary>
+public class LobbyAndEndlessTests
+{
+    private static void Advance(World w, float seconds)
+    {
+        for (int i = 0; i < (int)(seconds * Balance.TickHz); i++) Step.Advance(w);
+    }
+
+    [Fact]
+    public void LobbyHoldsUntilTheLaunchSeatLaunches()
+    {
+        var w = new World(3, Maps.TestLane) { Lobby = true };
+        w.Enqueue(new Command.Join(1, "host", "ember"));
+        w.Enqueue(new Command.Join(2, "guest", "forge"));
+        w.Enqueue(new Command.StartWave(1));         // ignored while assembling
+        Advance(w, Balance.IntermissionSeconds * 3);
+        Assert.Equal(MatchPhase.Intermission, w.Phase);
+        Assert.Equal(-1, w.WaveIndex);
+
+        // Re-picking a taken faction is refused, the same rule as joining.
+        w.Enqueue(new Command.SetFaction(2, "ember"));
+        Step.Advance(w);
+        Assert.Contains(w.Events, e => e is SimEvent.JoinRejected { PlayerId: 2, Reason: "factionTaken" });
+        Assert.Equal("forge", w.Players[2].FactionId);
+        w.Enqueue(new Command.SetFaction(2, "tempest"));
+        Step.Advance(w);
+        Assert.Equal("tempest", w.Players[2].FactionId);
+
+        // Only the launch seat launches.
+        w.Enqueue(new Command.Launch(2));
+        Step.Advance(w);
+        Assert.True(w.Lobby);
+        w.Enqueue(new Command.Launch(1));
+        Step.Advance(w);
+        Assert.False(w.Lobby);
+        Assert.Contains(w.Events, e => e is SimEvent.MatchLaunched);
+
+        Advance(w, Balance.IntermissionSeconds + 1f);
+        Assert.Equal(MatchPhase.Wave, w.Phase);
+        Assert.Equal(0, w.WaveIndex);
+    }
+
+    [Fact]
+    public void EndlessRollsPastTheAuthoredArc()
+    {
+        var w = new World(3, Maps.TestLane) { Endless = true };
+        w.Enqueue(new Command.Join(1, "solo", "ember"));
+        int target = Maps.TestLane.TotalWaves + 2;
+        for (int tick = 0; tick < Balance.TickHz * 600 && w.WaveIndex < target; tick++)
+        {
+            // Clear the field as it fills, so the arc advances on the sim's own clock.
+            foreach (var enemy in w.Enemies) { enemy.Hp = 0f; enemy.Dead = true; }
+            if (w.Phase == MatchPhase.Intermission) w.Enqueue(new Command.StartWave(1));
+            Step.Advance(w);
+            Assert.NotEqual(MatchPhase.Victory, w.Phase);
+        }
+        Assert.True(w.WaveIndex >= target, $"reached wave index {w.WaveIndex}");
+        Assert.NotEqual(MatchPhase.Victory, w.Phase);
+
+        // The same authored table, but heavier: hp compounds on the raw index
+        // and the second lap adds bodies.
+        int arc = Maps.TestLane.TotalWaves;
+        Assert.True(WavePlan.HpScale(arc + 1, 1) > WavePlan.HpScale(1, 1));
+        Assert.True(WavePlan.PlanWave(3, Maps.TestLane, arc + 1, 1).Count
+                    >= WavePlan.PlanWave(3, Maps.TestLane, 1, 1).Count);
+    }
+
+    [Fact]
+    public void LobbyAndEndlessSurviveSerialization()
+    {
+        var w = new World(5, Maps.TestLane) { Lobby = true, Endless = true };
+        var back = Serialization.Deserialize(Serialization.Serialize(w));
+        Assert.True(back.Lobby);
+        Assert.True(back.Endless);
+    }
+}

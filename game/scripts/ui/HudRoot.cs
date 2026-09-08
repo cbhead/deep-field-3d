@@ -26,6 +26,10 @@ public partial class HudRoot : CanvasLayer
     private Label _phaseLine = null!;
     private Label _aliveLine = null!;
     private KitPips _wavePips = null!;
+    private Label _threatLine = null!;
+    /// <summary>The profile's deepest endless run on this map; the HUD shows
+    /// it beside the threat so the number to beat is always in view.</summary>
+    public int BestEndlessWave;
     private KitDiamond _coreDiamond = null!;
 
     // Vitals (bottom-left)
@@ -232,6 +236,10 @@ public partial class HudRoot : CanvasLayer
         _wavePips = new KitPips();
         _wavePips.Breakpoints = System.Array.Empty<int>();
         phase.AddChild(_wavePips);
+        // Endless swaps the pip strip for an open counter: threat and best.
+        _threatLine = Kit.Numeral("", Tokens.SizeStatSm, Tokens.WaveBoss);
+        _threatLine.Visible = false;
+        phase.AddChild(_threatLine);
         row.AddChild(phase);
 
         row.AddChild(VerticalRule());
@@ -462,6 +470,13 @@ public partial class HudRoot : CanvasLayer
             _ => "",
         };
         _wavePips.Set(Mathf.Max(0, view.Wave + 1), Mathf.Max(1, view.TotalWaves));
+        _wavePips.Visible = !view.Endless;
+        _threatLine.Visible = view.Endless;
+        if (view.Endless)
+        {
+            _threatLine.Text = $"threat ×{view.Threat:0.0}" + (BestEndlessWave > 0 ? $"  ·  best {BestEndlessWave}" : "");
+            if (active) _waveLine.AddThemeColorOverride("font_color", Tokens.WaveBoss);
+        }
         _aliveLine.Text = view.EnemiesRemaining.ToString();
 
         // Lives: a single tabular numeral beside the core diamond, flipping to

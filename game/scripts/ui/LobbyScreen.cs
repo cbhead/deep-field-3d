@@ -21,6 +21,28 @@ public partial class LobbyScreen : Control
     public System.Action<string>? OnSolo;            // faction
     public System.Action<string>? OnHost;            // faction
     public System.Action<string, string>? OnJoin;    // address, faction
+    public System.Action<string>? OnPickFaction;     // party: re-pick against the sim
+    public System.Action? OnLaunch;                  // party: the launch seat starts the match
+    public System.Action? OnLeave;
+
+    /// <summary>Party mode: a world exists and is holding in the lobby. The
+    /// seats row and the faction claims come from the view every frame, the
+    /// matchmaking controls give way to Launch / Leave, and Select re-picks
+    /// through the sim so the duplicate rule is enforced where it lives.</summary>
+    public bool InParty { get; private set; }
+    public bool EndlessSelected { get; private set; }
+    private bool _isHost;
+    private GameView? _party;
+    private string _partySignature = "";
+    private Control _seatsHost = null!;
+    private HBoxContainer _seats = null!;
+    private Label _seatsCount = null!;
+    private Control[] _matchmaking = System.Array.Empty<Control>();
+    private KitButton _launch = null!;
+    private KitButton _leave = null!;
+    private KitButton _swap = null!;
+    private KitButton _endless = null!;
+    private Label _waiting = null!;
 
     private Profile _profile = new();
     private string _faction = "ember";
@@ -87,14 +109,38 @@ public partial class LobbyScreen : Control
         _status = Kit.Body("", Tokens.SizeCaption, UiTheme.Warn);
         header.AddChild(_status);
 
+        // --- seats row (party only): who is here, what they picked, N / 4
+        _seatsHost = new MarginContainer { Visible = false };
+        foreach (string side in new[] { "left", "right", "top" })
+            _seatsHost.AddThemeConstantOverride($"margin_{side}", Tokens.Space8);
+        frame.AddChild(_seatsHost);
+        var seatsRow = Kit.Row(Tokens.Space4);
+        _seatsHost.AddChild(seatsRow);
+        _seats = Kit.Row(Tokens.Space4);
+        _seats.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        seatsRow.AddChild(_seats);
+        _seatsCount = Kit.Label("");
+        seatsRow.AddChild(_seatsCount);
+
         // --- faction columns
         var margin = new MarginContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
         foreach (string side in new[] { "left", "right", "top", "bottom" })
             margin.AddThemeConstantOverride($"margin_{side}", Tokens.Space8);
         frame.AddChild(margin);
 
+        // Scrolls when the window is shorter than the columns (1440×810 is),
+        // so the launch strip below is never pushed off the bottom.
+        var scroll = new ScrollContainer
+        {
+            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+            VerticalScrollMode = ScrollContainer.ScrollMode.Auto,
+            SizeFlagsVertical = SizeFlags.ExpandFill,
+        };
+        margin.AddChild(scroll);
         _columns = Kit.Row(Tokens.Space7);
-        margin.AddChild(_columns);
+        _columns.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        _columns.SizeFlagsVertical = SizeFlags.ExpandFill;
+        scroll.AddChild(_columns);
         _pageHost = margin;
 
         // --- launch strip
@@ -107,9 +153,19 @@ public partial class LobbyScreen : Control
         _sectorLine = Kit.Title("", Tokens.SizeBody);
         stripRow.AddChild(_sectorLine);
 
-        var swap = new KitButton("Change", KitButton.Tone.Ghost, Tokens.ControlSm);
-        swap.Pressed += CycleMap;
-        stripRow.AddChild(swap);
+        _swap = new KitButton("Change", KitButton.Tone.Ghost, Tokens.ControlSm);
+        _swap.Pressed += CycleMap;
+        stripRow.AddChild(_swap);
+        // Endless is a mode toggle on the selected sector (design's sector
+        // page); it rides the strip so it is visible whichever tab is up.
+        _endless = new KitButton("Endless: off", KitButton.Tone.Ghost, Tokens.ControlSm);
+        _endless.Pressed += () =>
+        {
+            EndlessSelected = !EndlessSelected;
+            _endless.Text = EndlessSelected ? "ENDLESS: ON" : "ENDLESS: OFF";
+            RefreshSector();
+        };
+        stripRow.AddChild(_endless);
         stripRow.AddChild(Kit.Spacer());
 
         _addressEdit = new LineEdit
@@ -138,6 +194,19 @@ public partial class LobbyScreen : Control
         var host = new KitButton("Host", KitButton.Tone.Primary, Tokens.ControlLg);
         host.Pressed += () => { Persist(); OnHost?.Invoke(_faction); };
         stripRow.AddChild(host);
+        _matchmaking = new Control[] { _addressEdit, join, solo, host };
+
+        _waiting = Kit.Label("waiting for the host to launch", Tokens.TextSecondary);
+        _waiting.Visible = false;
+        stripRow.AddChild(_waiting);
+        _launch = new KitButton("Launch", KitButton.Tone.Primary, Tokens.ControlLg);
+        _launch.Visible = false;
+        _launch.Pressed += () => OnLaunch?.Invoke();
+        stripRow.AddChild(_launch);
+        _leave = new KitButton("Leave", KitButton.Tone.Secondary);
+        _leave.Visible = false;
+        _leave.Pressed += () => OnLeave?.Invoke();
+        stripRow.AddChild(_leave);
 
         var stripMargin = new MarginContainer();
         foreach (string side in new[] { "left", "right", "bottom" })
@@ -148,6 +217,85 @@ public partial class LobbyScreen : Control
         RebuildPage();
         RefreshSector();
     }
+
+    // =====================================================================
+    // Party
+    // =====================================================================
+
+    public void EnterParty(bool isHost)
+    {
+        InParty = true;
+        _isHost = isHost;
+        _partySignature = "";
+        Visible = true;
+        _page = "factions";
+        foreach (var c in _matchmaking) c.Visible = false;
+        _swap.Disabled = true;
+        _endless.Disabled = true;
+        _launch.Visible = isHost;
+        _waiting.Visible = !isHost;
+        _leave.Visible = true;
+        _status.Text = isHost ? "friends can join now — launch when everyone has picked" : "";
+        RebuildPage();
+    }
+
+    public void LeaveParty()
+    {
+        InParty = false;
+        _party = null;
+        Visible = false;
+    }
+
+    /// <summary>Redraws the seats and the faction claims when the party's
+    /// state changes — not every frame, for the same reason the armory does
+    /// not: a rebuilt button never sees the release of the click it got.</summary>
+    public void RefreshParty(GameView view)
+    {
+        _party = view;
+        var sb = new System.Text.StringBuilder();
+        foreach (var p in view.Players.OrderBy(p => p.Id))
+            sb.Append(p.Id).Append(':').Append(p.Name).Append(':').Append(p.FactionId).Append(':').Append(p.Connected).Append('|');
+        sb.Append(view.LocalPlayerId).Append('|').Append(_page).Append('|').Append(view.Endless);
+        string signature = sb.ToString();
+        if (signature == _partySignature) return;
+        _partySignature = signature;
+
+        if (view.Local is { } me) _faction = me.FactionId;
+        _seatsHost.Visible = true;
+        foreach (var child in _seats.GetChildren()) child.QueueFree();
+        var seated = view.Players.Where(p => p.Connected).OrderBy(p => p.Id).ToList();
+        for (int seat = 0; seat < 4; seat++)
+        {
+            var p = seat < seated.Count ? seated[seat] : null;
+            var chip = Kit.Surface(Tokens.SurfaceInset, p is null ? Tokens.BorderPanel : p.Id == view.LocalPlayerId ? Tokens.Brass500 : Tokens.BorderPanel,
+                Tokens.ChamferSm, shadow: false);
+            chip.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            chip.CustomMinimumSize = new Vector2(0, 44);
+            if (p is null && chip.GetThemeStylebox("panel") is ChamferBox empty) empty.Hazard = true;
+            var row = Kit.Row(Tokens.Space4);
+            chip.AddChild(row);
+            if (p is not null)
+            {
+                row.AddChild(new KitDiamond(10f, UiTheme.Faction(p.FactionId)));
+                row.AddChild(Kit.Title(p.Name.ToUpperInvariant(), Tokens.SizeCaption));
+                row.AddChild(Kit.Spacer());
+                row.AddChild(p.Id == view.LocalPlayerId ? Kit.TagBrass("you") : Kit.TagOk(UiTheme.ShortLabel(p.FactionId)));
+            }
+            else
+            {
+                row.AddChild(Kit.Label("open seat", Tokens.TextDisabled));
+            }
+            _seats.AddChild(chip);
+        }
+        _seatsCount.Text = $"{seated.Count} / 4" + (view.Endless ? " · endless" : "") + (_isHost ? "" : " · waiting for the host");
+        _launch.Disabled = seated.Count == 0;
+        RebuildPage();
+    }
+
+    /// <summary>Who else in the party holds a faction, so the column can say
+    /// "taken · name" before the sim has to refuse anyone.</summary>
+    private string? TakenBy(string factionId) =>
+        _party?.Players.FirstOrDefault(p => p.Connected && p.Id != _party.LocalPlayerId && p.FactionId == factionId)?.Name;
 
     /// <summary>Swaps the body between the faction columns and sector select.
     /// Both are grids of panels, so the page host just gets a new row.</summary>
@@ -294,8 +442,9 @@ public partial class LobbyScreen : Control
     private void RefreshSector()
     {
         int sockets = _map.Sockets.Count;
-        _sectorLine.Text =
-            $"{_map.Id.ToUpperInvariant()} · {_map.TotalWaves} WAVES · {sockets} SOCKETS";
+        _sectorLine.Text = EndlessSelected
+            ? $"{_map.Id.ToUpperInvariant()} · ENDLESS · {sockets} SOCKETS"
+            : $"{_map.Id.ToUpperInvariant()} · {_map.TotalWaves} WAVES · {sockets} SOCKETS";
     }
 
     /// <summary>The sim stores a passive as an id; these are the effects it
@@ -431,12 +580,14 @@ public partial class LobbyScreen : Control
         foreach (var def in Factions.All.Values)
         {
             bool mine = def.Id == _faction;
+            string? takenBy = InParty ? TakenBy(def.Id) : null;
             int level = _profile.LevelFor(def.Id);
             var accent = UiTheme.Faction(def.Id);
 
             var panel = new KitPanel(def.Id, mine ? Tokens.Brass500 : null);
             panel.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            panel.HeaderTrailing(mine ? Kit.TagBrass("you") : Kit.Tag("open"));
+            panel.HeaderTrailing(mine ? Kit.TagBrass("you") : takenBy is not null ? Kit.TagDanger($"taken · {takenBy}") : Kit.Tag("open"));
+            if (takenBy is not null) panel.Modulate = new Color(1, 1, 1, 0.72f);
             _columns.AddChild(panel);
 
             // Hero portrait well. The model is delivered; a lit well with the
@@ -524,12 +675,23 @@ public partial class LobbyScreen : Control
             // Footer: pick it.
             string captured = def.Id;
             var footer = Kit.Row();
-            footer.AddChild(Kit.Label(mine ? "selected" : "available"));
+            footer.AddChild(Kit.Label(mine ? "selected" : takenBy is not null ? $"{takenBy} · ready" : "available"));
             footer.AddChild(Kit.Spacer());
-            if (!mine)
+            if (takenBy is not null)
+            {
+                footer.AddChild(Kit.TagOk("ready"));
+            }
+            else if (!mine)
             {
                 var pick = new KitButton("Select", KitButton.Tone.Secondary, Tokens.ControlSm);
-                pick.Pressed += () => { _faction = captured; RebuildFactions(); };
+                pick.Pressed += () =>
+                {
+                    // In a party the pick is a command: the sim owns the
+                    // duplicate rule, and the column follows the view.
+                    if (InParty) { OnPickFaction?.Invoke(captured); return; }
+                    _faction = captured;
+                    RebuildFactions();
+                };
                 footer.AddChild(pick);
             }
             else

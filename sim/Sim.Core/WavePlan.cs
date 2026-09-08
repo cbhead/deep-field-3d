@@ -13,11 +13,16 @@ public static class WavePlan
     public static List<SpawnEntry> PlanWave(uint seed, MapDef map, int waveIndex, int playerCount)
     {
         var rng = RngStreams.StreamFor(seed, RngStreams.Wave, (uint)waveIndex);
-        var groups = Waves.ByMap[map.Id][waveIndex];
+        // Past the authored arc (endless) the tables cycle. The hp curve keeps
+        // compounding on the raw wave index, and each lap adds bodies on top,
+        // so a wave 27 is an authored wave 7 with the numbers of a 27.
+        var tables = Waves.ByMap[map.Id];
+        int lap = waveIndex / tables.Count;
+        var groups = tables[waveIndex % tables.Count];
 
-        float countScale = 1f + Balance.CountScalePerExtraPlayer * (playerCount - 1);
-        float hpScale = (1f + Balance.HpScalePerExtraPlayer * (playerCount - 1))
-                        * MathF.Pow(Balance.HpGrowth, waveIndex);
+        float countScale = (1f + Balance.CountScalePerExtraPlayer * (playerCount - 1))
+                           * MathF.Pow(Balance.EndlessCountGrowthPerLap, lap);
+        float hpScale = HpScale(waveIndex, playerCount);
 
         var entries = new List<SpawnEntry>();
         foreach (var group in groups)
@@ -46,6 +51,12 @@ public static class WavePlan
             : string.CompareOrdinal(a.DefId, b.DefId));
         return entries;
     }
+
+    /// <summary>The hp multiplier a wave spawns with: the campaign growth curve
+    /// compounded on the wave index, times the player-count factor. Exposed so
+    /// the HUD's endless threat readout is the sim's number, not a copy.</summary>
+    public static float HpScale(int waveIndex, int playerCount) =>
+        (1f + Balance.HpScalePerExtraPlayer * (playerCount - 1)) * MathF.Pow(Balance.HpGrowth, waveIndex);
 
     /// <summary>Weather's contribution to a wave, appended after the authored
     /// groups are fully planned and drawn from the condition stream. Order

@@ -99,6 +99,8 @@ public partial class GameRoot : Node3D
     /// client-side (see Vfx.cs). The player fires straight into it.</summary>
     public Vfx Vfx { get; private set; } = null!;
     private bool _shotFire;                   // --shot vm-<weapon>: fire one round before the capture
+    private float _launchAfter = -1f;         // --launch-after: seconds until a hosted party launches itself
+    private float _partyElapsed;
 
     private readonly GameView _view = new();
     private readonly Dictionary<int, EnemyOverhead> _overheads = new();
@@ -190,6 +192,21 @@ public partial class GameRoot : Node3D
                 StartClient(args[i + 1], "forge");
                 return;
             }
+            // --host: open a party from the command line (the Host button),
+            // --launch-after N: launch it N seconds later. Together they are
+            // the loopback smoke for the party lobby.
+            if (args[i] == "--host")
+            {
+                // Flags to the right of --host are read first: StartHost is
+                // the end of the parse.
+                for (int j = i + 1; j + 1 < args.Length; j++)
+                    if (args[j] == "--launch-after" && float.TryParse(args[j + 1], out float later)) _launchAfter = later;
+                _playerName = "host";
+                StartHost(_profile.PreferredFaction);
+                return;
+            }
+            if (args[i] == "--launch-after" && i + 1 < args.Length && float.TryParse(args[i + 1], out float after))
+                _launchAfter = after;
             if (args[i] == "--solo")
             {
                 if (i + 1 < args.Length && Maps.All.TryGetValue(args[i + 1], out var chosen))
@@ -223,6 +240,14 @@ public partial class GameRoot : Node3D
                 {
                     if (_shotView == "sector") _lobby.ShowSectorTab();
                     _shotView = "eye";
+                    return;
+                }
+                if (_shotView == "party")
+                {
+                    // The lobby as a party: hosting from the lobby, before launch.
+                    StartHost("ember");
+                    _shotView = "eye";
+                    _shotCountdown = 30;
                     return;
                 }
                 StartSolo("ember");
@@ -676,17 +701,24 @@ public partial class GameRoot : Node3D
     public void StartHost(string faction)
     {
         Mode = RunMode.Host;
-        BeginLocalWorld(faction);
-        _net.HostServer(Protocol.DefaultPort, _world!);
+        // Hosting opens a party, not a match: the world exists and holds in
+        // the lobby until the host launches, so friends can join, pick their
+        // factions against each other's, and start together.
+        BeginLocalWorld(faction, lobby: true);
+        int port = ParsePort(OS.GetCmdlineUserArgs());
+        _net.HostServer(port, _world!);
         _net.ServerEnqueue = c => _world!.Enqueue(c);
 
         _info = new InfoServer { Name = "Info" };
         AddChild(_info);
         _info.StatusProvider = ServerInfo;
-        _info.Start(Protocol.DefaultPort);
-        Post(_info.TailscaleIp is { } ip
-            ? $"hosting — invite: {ip}:{Protocol.DefaultPort}"
-            : "hosting (no tailscale ip found — friends need your LAN ip)");
+        _info.Start(port);
+        string invite = _info.TailscaleIp is { } ip
+            ? $"invite: {ip}:{port}"
+            : "no tailscale ip found — friends need your LAN ip";
+        Post($"hosting — {invite}");
+        _lobby.SetStatus($"hosting — {invite} — launch when everyone has picked");
+        GD.Print($"[party] hosting on udp:{port}, holding in the lobby");
     }
 
     public void StartClient(string address, string faction)
@@ -715,15 +747,17 @@ public partial class GameRoot : Node3D
         _net.JoinServer(address, port);
     }
 
-    private void BeginLocalWorld(string faction)
+    private void BeginLocalWorld(string faction, bool lobby = false)
     {
         _factionId = faction;
-        _lobby.Visible = false;
         _seed = FreshSeed();
-        _world = new SimWorld(_seed, _map);
+        _world = new SimWorld(_seed, _map) { Lobby = lobby, Endless = _lobby.EndlessSelected };
         _world.Enqueue(new Command.Join(1, _playerName, faction, _profile.LevelFor(faction)));
         BuildLevel(_map);
         SpawnLocalPlayer();
+        _hud.BestEndlessWave = _profile.BestWave.GetValueOrDefault($"{_map.Id}:endless", 0);
+        if (lobby) { _lobby.EnterParty(isHost: true); Input.MouseMode = Input.MouseModeEnum.Visible; }
+        else _lobby.Visible = false;
         _markers.ShowDamageNumbers = _profile.ShowDamageNumbers;
         _hud.Scale = new Vector2(_profile.HudScale, _profile.HudScale);
         SetMasterVolume(_profile.MasterVolume);
@@ -832,6 +866,25 @@ public partial class GameRoot : Node3D
     {
         if (!_view.Valid) return;
 
+        // The party screen owns the frame until the launch seat launches.
+        if (_lobby.InParty)
+        {
+            _lobby.RefreshParty(_view);
+            _partyElapsed += (float)delta;
+            if (_launchAfter >= 0f && _view.Lobby && _partyElapsed >= _launchAfter && Mode == RunMode.Host)
+            {
+                Submit(new Command.Launch(LocalPlayerId));
+                _launchAfter = -1f;
+            }
+            if (!_view.Lobby)
+            {
+                _lobby.LeaveParty();
+                Input.MouseMode = Input.MouseModeEnum.Captured;
+                GD.Print("[party] match started");
+            }
+            return;
+        }
+
         if (_world is not null && _world.Players.TryGetValue(LocalPlayerId, out var me))
             _hud.SetBleedout(me.BleedoutTimer);
         _hud.Refresh(_view, delta, Input.MouseMode == Input.MouseModeEnum.Captured, _hint);
@@ -932,6 +985,17 @@ public partial class GameRoot : Node3D
             foreach (var trap in _shadow.Traps)
                 OnTowerPlaced(trap.Id, trap.DefId, trap.SocketId);
             SpawnLocalPlayer();
+            _hud.BestEndlessWave = _profile.BestWave.GetValueOrDefault($"{_map.Id}:endless", 0);
+            // The world is here: the syncing card comes down. It used to stay
+            // up for the whole match, because nothing ever told it to go.
+            _screens.HideStatus();
+            if (_shadow.Lobby)
+            {
+                _lobby.EnterParty(isHost: false);
+                Input.MouseMode = Input.MouseModeEnum.Visible;
+                GD.Print("[party] in the lobby, waiting for the host to launch");
+            }
+            else _lobby.Visible = false;
             GD.Print($"[client] joined seat {LocalPlayerId} on map {_map.Id}");
             Toast($"joined as seat {LocalPlayerId}");
         }
@@ -1080,8 +1144,18 @@ public partial class GameRoot : Node3D
                     _armory.ShowNotice(Explain(rejected.Reason));
                     Post($"craft: {Explain(rejected.Reason)}", UiTheme.Danger);
                     break;
+                case SimEvent.JoinRejected rejected when _lobby.InParty && rejected.PlayerId == LocalPlayerId:
+                    _lobby.SetStatus(Explain(rejected.Reason));
+                    break;
                 case SimEvent.JoinRejected rejected:
                     _screens.ShowStatus("JOIN REFUSED", Explain(rejected.Reason));
+                    break;
+                case SimEvent.FactionChanged changed:
+                    if (changed.PlayerId == LocalPlayerId) { _factionId = changed.FactionId; _lobby.SetStatus(""); }
+                    break;
+                case SimEvent.MatchLaunched launched:
+                    GD.Print($"[party] launched by seat {launched.ByPlayerId}");
+                    Post("launched — first wave incoming", UiTheme.Warn);
                     break;
 
                 case SimEvent.WaveStarted started:
@@ -1181,6 +1255,16 @@ public partial class GameRoot : Node3D
                 OnBreach(int.Parse(p[2]));
                 break;
             case "reaction": _reactionCount++; OnReaction(int.Parse(p[2]), p[3]); break;
+            case "joinRejected" when _lobby.InParty && int.Parse(p[2]) == LocalPlayerId:
+                _lobby.SetStatus(Explain(p[3]));
+                break;
+            case "factionChanged":
+                if (int.Parse(p[2]) == LocalPlayerId) { _factionId = p[3]; _lobby.SetStatus(""); }
+                break;
+            case "matchLaunched":
+                GD.Print($"[party] launched by seat {p[2]}");
+                Post("launched — first wave incoming", UiTheme.Warn);
+                break;
             case "playerDowned":
                 Post(int.Parse(p[2]) == LocalPlayerId
                     ? "DOWNED — hold on, a teammate can revive you"
@@ -1283,7 +1367,7 @@ public partial class GameRoot : Node3D
         // because the world lived on the host's machine would be absurd. The
         // wave number is safe to read here in any mode: it rides the meta
         // channel, and MatchEnded reaches clients the same as anyone.
-        _profile.RecordResult(_map.Id, _view.Wave + 1, victory);
+        _profile.RecordResult(_view.Endless ? $"{_map.Id}:endless" : _map.Id, _view.Wave + 1, victory);
 
         _screens.HideIntermission();
         _screens.ShowEnd(_view, victory, _bankedXp, _factionId, _killsByPlayer, _reactionCount);
@@ -3146,6 +3230,9 @@ public partial class GameRoot : Node3D
         _lobby.OnSolo = faction => { _map = _lobby.SelectedMap; _playerName = _lobby.PlayerName; StartSolo(faction); };
         _lobby.OnHost = faction => { _map = _lobby.SelectedMap; _playerName = _lobby.PlayerName; StartHost(faction); };
         _lobby.OnJoin = (address, faction) => { _playerName = _lobby.PlayerName; StartClient(address, faction); };
+        _lobby.OnPickFaction = faction => Submit(new Command.SetFaction(LocalPlayerId, faction, _profile.LevelFor(faction)));
+        _lobby.OnLaunch = () => Submit(new Command.Launch(LocalPlayerId));
+        _lobby.OnLeave = () => GetTree().Quit();
 
         // World-space marker layer.
         _markers = new WorldMarkers { Name = "Markers" };
@@ -3163,7 +3250,7 @@ public partial class GameRoot : Node3D
 
     /// <summary>True while any surface owns the mouse — Player suspends look
     /// and fire while these are up.</summary>
-    public bool UiCapturesMouse => _armory.IsOpen || _screens.PauseOpen;
+    public bool UiCapturesMouse => _armory.IsOpen || _screens.PauseOpen || _lobby.Visible;
 
     public bool WheelOpen => _wheel.IsOpen;
     public bool UpgradeOpen => _upgrade.IsOpen;

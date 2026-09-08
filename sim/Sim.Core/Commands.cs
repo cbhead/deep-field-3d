@@ -13,6 +13,13 @@ public abstract record Command
 
     public sealed record Leave(int PlayerId) : Command;
 
+    /// <summary>Lobby: re-pick a faction before launch. Refused with
+    /// "factionTaken" if another player holds it.</summary>
+    public sealed record SetFaction(int PlayerId, string FactionId, int FactionLevel = 1) : Command;
+
+    /// <summary>Lobby: start the match. Only the launch seat may.</summary>
+    public sealed record Launch(int PlayerId) : Command;
+
     /// <summary>Client-authoritative avatar transform, streamed in and stamped
     /// into PlayerState. Position feeds contact damage, revive range, abilities.</summary>
     public sealed record PlayerSync(int PlayerId, Vec3 Pos) : Command;

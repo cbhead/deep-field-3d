@@ -68,6 +68,13 @@ public sealed class GameView
     public MatchPhase Phase = MatchPhase.Intermission;
     public float PhaseTimer;
     public int EnemiesRemaining;
+    /// <summary>The party is still assembling (World.Lobby); the match has
+    /// not launched.</summary>
+    public bool Lobby;
+    public bool Endless;
+    /// <summary>The hp multiplier the current wave spawned with — the sim's
+    /// own number (WavePlan.HpScale), shown on the endless HUD as threat.</summary>
+    public float Threat = 1f;
 
     public Dictionary<ScrapType, int> TeamScrap = new();
     public List<PlayerView> Players = new();
@@ -99,6 +106,9 @@ public sealed class GameView
         Phase = world.Phase;
         PhaseTimer = world.PhaseTimer;
         EnemiesRemaining = world.Enemies.Count + world.PendingSpawns.Count;
+        Lobby = world.Lobby;
+        Endless = world.Endless;
+        Threat = WavePlan.HpScale(System.Math.Max(0, world.WaveIndex), System.Math.Max(1, world.ConnectedPlayerCount));
 
         TeamScrap = new Dictionary<ScrapType, int>(world.TeamScrap);
 
@@ -158,6 +168,9 @@ public sealed class GameView
         Phase = (MatchPhase)(int)meta["phase"];
         PhaseTimer = (float)meta["phaseTimer"];
         EnemiesRemaining = meta.TryGetValue("enemies", out var remaining) ? (int)remaining : 0;
+        Lobby = meta.TryGetValue("lobby", out var lobby) && (bool)lobby;
+        Endless = meta.TryGetValue("endless", out var endless) && (bool)endless;
+        Threat = meta.TryGetValue("threat", out var threat) ? (float)threat : 1f;
 
         TeamScrap.Clear();
         foreach (var (key, value) in meta["teamScrap"].AsGodotDictionary())

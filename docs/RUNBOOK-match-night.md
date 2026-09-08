@@ -7,8 +7,15 @@ The verified path for hosting a co-op Foundry match over Tailscale.
 ```sh
 cd ~/dev/deepfield-3d
 make check                      # gates green or don't host
-./play                          # window opens → click HOST
+./play                          # window opens → click HOST: the lobby becomes your party
 ```
+
+**HOST opens a party, not a match.** The world exists and holds in the lobby:
+the seats row fills as friends join, everyone picks a faction against each
+other's (a taken one says so before the sim has to refuse it), and the match
+starts when you press **LAUNCH**. Toggle **ENDLESS** in the strip before
+hosting for an open-ended run. The header shows the invite address the moment
+you host.
 
 Or dedicated (no window, e.g. from Mission Control or a spare machine):
 
@@ -32,9 +39,16 @@ curl -s http://localhost:8787/info
 
 ## 2. Invite
 
-Send friends the ip from `/info`: they enter `100.x.x.x` (or `ip:port`) in the
-JOIN field. Each player picks a different faction — the sim refuses duplicates
-("factionTaken" means pick the other one).
+Send friends the ip from `/info` (or from the lobby header): they enter
+`100.x.x.x` (or `ip:port`) in the JOIN field and land in the same lobby, with
+"waiting for the host to launch" in the strip. Each player picks a different
+faction — a column another player holds is marked `taken · name`, and the sim
+refuses duplicates anyway ("factionTaken" means pick another one). A dedicated
+server (`--server`) has no lobby: joiners drop straight in at the next
+intermission, as before.
+
+Someone joining a match already under way skips the lobby and drops in at the
+next intermission.
 
 ## 3. Play
 

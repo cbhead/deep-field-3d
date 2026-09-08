@@ -45,12 +45,14 @@ public static class Step
             {
                 case Command.Join join: ApplyJoin(w, join); break;
                 case Command.Leave leave: ApplyLeave(w, leave); break;
+                case Command.SetFaction pick: ApplySetFaction(w, pick); break;
+                case Command.Launch launch: ApplyLaunch(w, launch); break;
                 case Command.PlayerSync sync: ApplyPlayerSync(w, sync); break;
                 case Command.PlaceTower place: ApplyPlaceTower(w, place); break;
                 case Command.SellTower sell: ApplySellTower(w, sell); break;
                 case Command.UpgradeTower upgrade: ApplyUpgradeTower(w, upgrade); break;
                 case Command.StartWave:
-                    if (w.Phase == MatchPhase.Intermission) w.PhaseTimer = 0f;
+                    if (w.Phase == MatchPhase.Intermission && !w.Lobby) w.PhaseTimer = 0f;
                     break;
                 case Command.PlayerHit hit: ApplyPlayerHit(w, hit); break;
                 case Command.PlayerMelee swing: ApplyPlayerMelee(w, swing); break;
@@ -116,6 +118,38 @@ public static class Step
 
         w.Players[join.PlayerId] = player;
         w.Emit(new SimEvent.PlayerJoined(join.PlayerId, join.Name, join.FactionId));
+    }
+
+    /// <summary>Faction exclusivity holds in the lobby exactly as it does at
+    /// join: the pick is refused, not silently reassigned.</summary>
+    private static void ApplySetFaction(World w, Command.SetFaction pick)
+    {
+        if (!w.Lobby || !w.Players.TryGetValue(pick.PlayerId, out var player)) return;
+        if (!Factions.All.ContainsKey(pick.FactionId))
+        {
+            w.Emit(new SimEvent.JoinRejected(pick.PlayerId, "unknownFaction"));
+            return;
+        }
+        foreach (var other in w.Players.Values)
+        {
+            if (other.Id != player.Id && other.Connected && other.FactionId == pick.FactionId)
+            {
+                w.Emit(new SimEvent.JoinRejected(pick.PlayerId, "factionTaken"));
+                return;
+            }
+        }
+        player.FactionId = pick.FactionId;
+        player.FactionLevel = System.Math.Clamp(pick.FactionLevel, 1, Factions.MaxLevel);
+        w.Emit(new SimEvent.FactionChanged(player.Id, player.FactionId));
+    }
+
+    private static void ApplyLaunch(World w, Command.Launch launch)
+    {
+        if (!w.Lobby || launch.PlayerId != w.LaunchSeat) return;
+        w.Lobby = false;
+        w.Phase = MatchPhase.Intermission;
+        w.PhaseTimer = Balance.IntermissionSeconds;
+        w.Emit(new SimEvent.MatchLaunched(launch.PlayerId));
     }
 
     private static void ApplyLeave(World w, Command.Leave leave)
@@ -694,6 +728,7 @@ public static class Step
     {
         if (w.Phase == MatchPhase.Intermission)
         {
+            if (w.Lobby) return;
             if (w.WaitForPlayers && w.ConnectedPlayerCount == 0) return;
             w.PhaseTimer -= Balance.Dt;
             if (w.PhaseTimer <= 0f)
@@ -1570,7 +1605,9 @@ public static class Step
         {
             w.Emit(new SimEvent.WaveCleared(w.WaveIndex));
 
-            if (w.WaveIndex + 1 >= w.Map.TotalWaves)
+            // Endless has no last wave; the arc rolls over and the core is
+            // the only thing that can end the run.
+            if (!w.Endless && w.WaveIndex + 1 >= w.Map.TotalWaves)
             {
                 w.Phase = MatchPhase.Victory;
                 w.Emit(new SimEvent.MatchEnded(true, w.WaveIndex + 1, w.Lives));
