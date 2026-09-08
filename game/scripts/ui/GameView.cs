@@ -121,9 +121,14 @@ public sealed class GameView
 
         TeamScrap = new Dictionary<ScrapType, int>(world.TeamScrap);
 
-        Pickups.Clear();
-        foreach (var p in world.Pickups)
-            Pickups.Add(new PickupView { Id = p.Id, Type = p.Type, Amount = p.Amount, Pos = new Vector3(p.Pos.X, p.Pos.Y, p.Pos.Z) });
+        // Rebuilt only when there is something to rebuild: this runs every
+        // frame, and a match spends most of it with a clean floor.
+        if (Pickups.Count > 0 || world.Pickups.Count > 0)
+        {
+            Pickups.Clear();
+            foreach (var p in world.Pickups)
+                Pickups.Add(new PickupView { Id = p.Id, Type = p.Type, Amount = p.Amount, Pos = new Vector3(p.Pos.X, p.Pos.Y, p.Pos.Z) });
+        }
 
         Players.Clear();
         foreach (var p in world.Players.Values)
