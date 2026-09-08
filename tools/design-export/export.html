@@ -159,7 +159,13 @@ const put = async (name, data) => {
   if (!r.ok) throw new Error(`PUT ${name}: ${r.status}`);
 };
 
-const TOTAL = FILES.length + EXTRA_COUNT;
+/* Hands come in three poses in the source (weapon.handsPose: rifle / pistol / tool) and the base export ships
+   only the default. The game holds pistols and the wrench too, so the other two are exported as
+   hands_<id>_pistol / hands_<id>_tool beside the rifle-posed hands_<id>. `?only=hands` exports just these. */
+const HAND_POSES = ['pistol', 'tool'];
+const HAND_ITEMS = [...WEAPONS.filter((w) => w.id === 'hands'), ...HEROES.filter((h) => h.id.startsWith('hands_'))];
+const ONLY = new URLSearchParams(location.search).get('only');
+const TOTAL = ONLY === 'hands' ? HAND_ITEMS.length * HAND_POSES.length : FILES.length + EXTRA_COUNT + HAND_ITEMS.length * HAND_POSES.length;
 say(`Ready — ${TOTAL} GLB files; starting`);
 const manifest = { version: '1.0', generated: new Date().toISOString(), units: 'metres', up: '+Y', forward: '-Z', files: [] };
 let done = 0;
@@ -173,8 +179,16 @@ const add = async (name, obj, meta) => {
   say(`${done} / ${TOTAL} · ${name} · ${data.length} bytes`);
   await tick();
 };
+async function exportHandPoses() {
+  for (const pose of HAND_POSES) for (const it of HAND_ITEMS) {
+    kit.__handsPose = pose;
+    const m = it.build(kit);
+    await add(it.file.replace(/\.glb$/, `_${pose}.glb`), m, { kind: 'hands', id: `${it.id}_${pose}`, pose, note: it.note });
+  }
+  delete kit.__handsPose;
+}
 try {
-  for (const t of TOWERS) {
+  for (const t of ONLY === 'hands' ? [] : TOWERS) {
     const rigMeta = t.rig ? { rig: { yaw: t.id + '_yaw', pitch: t.id + '_pitch', muzzle: t.id + '_muzzle', yawLimits: t.rig.yaw, pitchLimits: t.rig.pitch, traverseDegPerSec: t.rig.traverse, elevateDegPerSec: t.rig.elevate, pitchSign: -1 } } : { spin: t.id + '_spin' };
     if (t.id === 'barricade') {
       for (const [file, v] of [['tower_barricade.glb', null], ['tower_barricade_damaged.glb', 'damaged'], ['tower_barricade_broken.glb', 'broken']])
@@ -191,10 +205,12 @@ try {
       await add(`tower_${t.id}_${p.id}_s${s}.glb`, staged, { tower: t.id, kind: 'module', path: p.id, stage: s, breakpoint: [4, 7, 10].includes(s), adds: p.steps[s] || null, increments: Array.from({ length: s - 1 }, (_, i) => `${t.id}_up_${p.id}_l${i + 2}`) });
     }
   }
-  for (const c of EXTRA) for (const it of c.items) {
+  for (const c of ONLY === 'hands' ? [] : EXTRA) for (const it of c.items) {
     const m = it.build(kit);
     await add(it.file, m, { kind: c.kind, id: it.id, note: it.note });
   }
+  await exportHandPoses();
+  if (ONLY !== 'hands') {
   say('Bundling palette, icons, manifest, design system…');
   await put('game/assets/structures/manifest.json', new TextEncoder().encode(JSON.stringify(manifest, null, 2)));
   await put('docs/forward-manifest.json', await text('game/assets/forward-manifest.json'));
@@ -207,6 +223,7 @@ try {
   for (const t of ['base', 'colors', 'effects', 'fonts', 'spacing', 'typography']) await put(`docs/design-system/${t}.css`, await text(`ds/tokens/${t}.css`));
   for (const f of ['ui-kit.css', 'ui-screens.js', 'ui-branding.js', 'ui-weapon-view.js']) await put('docs/design-system/' + f, await text(f));
   await put('docs/design-system/ui-screens.html', new TextEncoder().encode((await (await fetch('Deep Field 3D - UI Screens.html')).text()).replaceAll('ds/tokens/', '')));
+  }
   say(`DONE — ${done} GLB files exported`);
 } catch (err) {
   say('ERROR export failed: ' + (err.stack || err.message));

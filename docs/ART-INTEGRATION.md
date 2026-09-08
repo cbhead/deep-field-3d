@@ -113,6 +113,26 @@ graybox has none of these nodes and still turns as a whole. The muzzle node is
 found but not yet used: sim projectiles start 1.5 m above the socket, and the
 view follows the sim.
 
+**The first-person view is design's assembly.** `weapon_<id>_vm.glb` has the
+grip at the origin and the bore along −Z; `hands_<faction>.glb` is authored in
+the same frame, so the two only share a parent under the camera
+(`Player.RefreshViewModel`). Fitted modules mount on the platform's
+`<id>_mount_<slot>` nodes exactly as on the armory bench (`WeaponAssembly`),
+so the gun you built is the gun you hold. Hands ship in the rifle pose; the
+export also emits `hands_<faction>_pistol` and `_tool` from the same source,
+and the viewmodel picks the pose by platform. Muzzle flash, tracer and impact
+come from `Vfx.cs` the instant the trigger is pulled — the sim decides
+separately whether the shot hurt.
+
+**Effects are meshes, not particles.** Design's `vfx_*` files are static hero
+frames the client scales, turns and fades over a short life, with named
+sub-groups (`_spin`, `_pulse`, `_rise`) it can drive without lookups. Towers
+flash `vfx_muzzle_<tower>` at their rig's muzzle node and burst
+`vfx_impact_<tower>` where a round stops existing; hero weapons use the Lance
+flash and impact tinted to the ammo, and `vfx_tracer_<ammo>` stretched from
+muzzle to hit. `TowerFired` is not relayed, so only the host sees tower
+flashes; a teammate's shot is reconstructed from the damage it does.
+
 **Multi-state units are separate files.** `enemy_warden_shield` is its own node
 so it can pop and regrow; `enemy_mole_burrowed` swaps in when the Mole is
 under. Both toggle from sim state every frame.

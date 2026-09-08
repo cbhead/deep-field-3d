@@ -255,3 +255,24 @@ vfx_lanewash	vfx	no
 vfx_status_poison	vfx	no
 vfx_status_reveal	vfx	no
 vfx_status_stun	vfx	no
+# Hand poses: design authors three (rifle / pistol / tool) and the base file is the rifle;
+# the export emits the other two beside it. Requested by the viewmodel per platform.
+hands_firstperson_pistol	weapons	yes
+hands_firstperson_tool	weapons	yes
+hands_ember_pistol	weapons	yes
+hands_ember_tool	weapons	yes
+hands_forge_pistol	weapons	yes
+hands_forge_tool	weapons	yes
+hands_tempest_pistol	weapons	yes
+hands_tempest_tool	weapons	yes
+hands_glacier_pistol	weapons	yes
+hands_glacier_tool	weapons	yes
+hands_specter_pistol	weapons	yes
+hands_specter_tool	weapons	yes
+# M3 gunsmith content the code asks for and design has not modelled yet (not on the forward
+# manifest either): the shock and toxin rounds, their tracers, and the toxin feed infusion.
+ammo_shock	weapons	yes
+ammo_toxin	weapons	yes
+attach_toxinfeed	weapons	yes
+vfx_tracer_shock	vfx	yes
+vfx_tracer_toxin	vfx	yes

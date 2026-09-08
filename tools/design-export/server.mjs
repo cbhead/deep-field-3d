@@ -89,7 +89,15 @@ http.createServer(async (req, res) => {
       serveFile(res, file);
       return;
     }
-    if (rel === '/' || rel === '/export.html') { serveFile(res, path.join(HERE, 'export.html')); return; }
+    if (rel === '/export.html') { serveFile(res, path.join(HERE, 'export.html')); return; }
+    if (rel === '/') {
+      // The export page runs on load and overwrites game/assets, so the root
+      // is an index rather than the page itself.
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      res.end('<h3>Deep Field design export host</h3><ul><li><a href="/export.html">Export everything into the repo</a></li>'
+        + '<li><a href="/export.html?only=hands">Export the hand poses only</a></li></ul>');
+      return;
+    }
     const file = safe(ROOT, rel);
     if (!file) { res.writeHead(400); res.end(); return; }
     serveFile(res, file);
