@@ -34,6 +34,8 @@ public partial class GameRoot : Node3D
     private readonly Dictionary<int, Node3D> _enemyViews = new();
     private readonly Dictionary<int, Node3D> _projectileViews = new();
     private readonly Dictionary<int, ScrapPickupView> _pickupViews = new();
+    private readonly HashSet<int> _livePickups = new();
+    private readonly List<int> _collectedPickups = new();
     private readonly Dictionary<int, Node3D> _towerViews = new();
     /// <summary>Design's yaw/pitch/spin nodes per tower view, resolved once per
     /// build of the view (an upgrade rebuilds it, so the entry is keyed on the
@@ -162,6 +164,15 @@ public partial class GameRoot : Node3D
         Kit.ReleaseCaches();
         AssetLibrary.ReleaseCaches();
         TowerRig.ReleaseCaches();
+        // Same rule for the view maps this class keeps: they hold managed
+        // wrappers for nodes the SceneTree is about to take away, and anything
+        // still referenced when mono shuts down is reported as leaked.
+        _pickupViews.Clear();
+        _projectileViews.Clear();
+        _towerViews.Clear();
+        _enemyViews.Clear();
+        _avatarViews.Clear();
+        _towerRigs.Clear();
     }
 
     public override void _Ready()
@@ -1720,6 +1731,13 @@ public partial class GameRoot : Node3D
     private void SyncPickupViews()
     {
         if (!_view.Valid) return;
+        // Nothing on the floor and nothing drawn: the common case by far, and
+        // it used to allocate a set, a projection and a list every frame in
+        // order to iterate an empty list. That churn is what pushed the
+        // headless teardown over the edge on CI — see the note beside
+        // ReleaseCaches: what survives to mono's shutdown gets reported as a
+        // leak, and more garbage means more survivors.
+        if (_view.Pickups.Count == 0 && _pickupViews.Count == 0) return;
 
         foreach (var pickup in _view.Pickups)
         {
@@ -1732,8 +1750,13 @@ public partial class GameRoot : Node3D
             _pickupViews[pickup.Id] = ScrapPickupView.Spawn(this, pickup.Type, pickup.Pos, pickup.Amount);
         }
 
-        var live = new HashSet<int>(_view.Pickups.Select(p => p.Id));
-        foreach (int id in _pickupViews.Keys.Where(id => !live.Contains(id)).ToList())
+        // Reused rather than rebuilt: this runs every frame a drop exists.
+        _livePickups.Clear();
+        foreach (var pickup in _view.Pickups) _livePickups.Add(pickup.Id);
+        _collectedPickups.Clear();
+        foreach (int id in _pickupViews.Keys)
+            if (!_livePickups.Contains(id)) _collectedPickups.Add(id);
+        foreach (int id in _collectedPickups)
         {
             if (_pickupViews.TryGetValue(id, out var view) && IsInstanceValid(view)) view.QueueFree();
             _pickupViews.Remove(id);
