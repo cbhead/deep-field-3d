@@ -29,6 +29,7 @@ public static class Serialization
         int Id, int FiredBy, int TargetId, float X, float Y, float Z,
         float Speed, float Damage, float SplashRadius, float SplashFalloff);
     private sealed record SpawnState(string DefId, int TickOffset, float HpFactor, int RouteIndex, float LateralOffset);
+    private sealed record PickupState(int Id, string Type, int Amount, float X, float Y, float Z, float Life);
     private sealed record PlayerStateDto(
         int Id, string Name, string FactionId, int FactionLevel, int MatchXp, float X, float Y, float Z,
         float Hp, bool Downed, float BleedoutTimer, float ReviveProgress, float RespawnTimer,
@@ -51,7 +52,8 @@ public static class Serialization
         int Phase, float PhaseTimer, int WaveIndex, long WaveStartTick,
         List<EnemyState> Enemies, List<TowerState> Towers, List<ProjectileState> Projectiles,
         List<SpawnState> PendingSpawns, List<PlayerStateDto> Players,
-        List<TrapState>? Traps, int NextId, bool Lobby = false, bool Endless = false);
+        List<TrapState>? Traps, int NextId, bool Lobby = false, bool Endless = false,
+        List<PickupState>? Pickups = null);
 
     public static string Serialize(World w)
     {
@@ -89,7 +91,9 @@ public static class Serialization
                 p.MeleeBuilds.ToDictionary(kv => kv.Key, kv => kv.Value.MasteryLevel),
                 p.MeleeCooldown)).ToList(),
             w.Traps.Select(t => new TrapState(t.Id, t.DefId, t.SocketId, t.ChargesLeft, t.RearmTimer)).ToList(),
-            w.NextIdValue, w.Lobby, w.Endless);
+            w.NextIdValue, w.Lobby, w.Endless,
+            w.Pickups.Select(p => new PickupState(
+                p.Id, p.Type.ToString(), p.Amount, p.Pos.X, p.Pos.Y, p.Pos.Z, p.Life)).ToList());
         return JsonSerializer.Serialize(state);
     }
 
@@ -157,6 +161,15 @@ public static class Serialization
                 Id = p.Id, FiredBy = p.FiredBy, TargetId = p.TargetId,
                 Pos = new Vec3(p.X, p.Y, p.Z), Speed = p.Speed, Damage = p.Damage,
                 SplashRadius = p.SplashRadius, SplashFalloff = p.SplashFalloff,
+            });
+        }
+
+        foreach (var p in state.Pickups ?? new List<PickupState>())
+        {
+            world.Pickups.Add(new ScrapPickup
+            {
+                Id = p.Id, Type = System.Enum.Parse<ScrapType>(p.Type), Amount = p.Amount,
+                Pos = new Vec3(p.X, p.Y, p.Z), Life = p.Life,
             });
         }
 

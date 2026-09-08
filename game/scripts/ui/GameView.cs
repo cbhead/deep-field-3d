@@ -43,6 +43,14 @@ public sealed class PlayerView
 }
 
 /// <summary>Covers towers, traps, and barricades — anything occupying a socket.</summary>
+public sealed class PickupView
+{
+    public int Id;
+    public ScrapType Type;
+    public int Amount;
+    public Vector3 Pos;
+}
+
 public sealed class StructureView
 {
     public int Id;
@@ -79,6 +87,7 @@ public sealed class GameView
     public Dictionary<ScrapType, int> TeamScrap = new();
     public List<PlayerView> Players = new();
     public List<StructureView> Structures = new();
+    public List<PickupView> Pickups = new();
 
     public PlayerView? Local => Players.FirstOrDefault(p => p.Id == LocalPlayerId);
 
@@ -111,6 +120,10 @@ public sealed class GameView
         Threat = WavePlan.HpScale(System.Math.Max(0, world.WaveIndex), System.Math.Max(1, world.ConnectedPlayerCount));
 
         TeamScrap = new Dictionary<ScrapType, int>(world.TeamScrap);
+
+        Pickups.Clear();
+        foreach (var p in world.Pickups)
+            Pickups.Add(new PickupView { Id = p.Id, Type = p.Type, Amount = p.Amount, Pos = new Vector3(p.Pos.X, p.Pos.Y, p.Pos.Z) });
 
         Players.Clear();
         foreach (var p in world.Players.Values)
@@ -175,6 +188,17 @@ public sealed class GameView
         TeamScrap.Clear();
         foreach (var (key, value) in meta["teamScrap"].AsGodotDictionary())
             TeamScrap[System.Enum.Parse<ScrapType>((string)key)] = (int)value;
+
+        Pickups.Clear();
+        if (meta.TryGetValue("pickups", out var dropped))
+            foreach (Godot.Collections.Dictionary entry in dropped.AsGodotArray())
+                Pickups.Add(new PickupView
+                {
+                    Id = (int)entry["id"],
+                    Type = System.Enum.Parse<ScrapType>((string)entry["type"]),
+                    Amount = (int)entry["amount"],
+                    Pos = new Vector3((float)entry["x"], (float)entry["y"], (float)entry["z"]),
+                });
 
         Players.Clear();
         foreach (Godot.Collections.Dictionary entry in meta["players"].AsGodotArray())

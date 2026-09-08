@@ -46,6 +46,16 @@ Known gaps of that kind:
 - **Per-tower kills / uptime / coverage** in the upgrade panel. The sim tracks
   damage dealt but not the rest.
 - **Early-start scrap bonus** on the intermission panel. No such bonus exists.
+- **Platform prices are scrap, not credits.** The brief and design's armory
+  frame price weapon platforms in money; they now cost personal scrap, because
+  money is the shared team wallet and a gun is not a shared thing. Attachments
+  and ammo already worked this way, so the whole personal ladder is one
+  currency and the shared wallet is the towers'. Design's own card anticipated
+  it — the buy state reads `Scrap N` — and the rail draws the have/need chips
+  the recipe rows use. Melee platforms moved with them.
+- **Melee mastery is still bought with money.** Every other personal upgrade is
+  scrap; this one was not converted with the platforms and is the last thing in
+  the gunsmith drawing on the shared wallet.
 - **Elite tags on the endless HUD.** Endless exists (waves cycle, threat
   climbs, best wave is kept), but elite modifiers (`EliteModDef`: gilded,
   juggernaut, voltaic, swift, umbral) are not in the sim yet, so the HUD shows

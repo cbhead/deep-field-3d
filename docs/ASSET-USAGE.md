@@ -1,6 +1,6 @@
 # Asset usage
 
-**504 delivered · 370 consumed · 134 unused** — regenerate with `make usage`.
+**504 delivered · 375 consumed · 129 unused** — regenerate with `make usage`.
 
 `asset-report.sh` answers *has design shipped it*. This answers the question that
 rots silently: an asset can be delivered, imported, and never referenced by a
@@ -27,7 +27,7 @@ and nothing gets hurt, so state variants the code *does* request — a spent tra
 plate, a half-demolished barricade — never come up in the measurement. They are
 marked `wired=yes` in the manifest by reading the code, and show as unused here.
 
-## What the unused 134 are
+## What the unused 129 are
 
 The 2026-09-07 drop (427 models, 65 icons) replaced the first delivery's
 geometry and added 47 names beyond the brief — M4/M5 enemies, the Glacier and
@@ -47,7 +47,6 @@ waits on the system it is for.
 | Projectile tier variants (`_t2`, `_t3`) | 6 | No tier escalation wiring; projectiles use the base model at every level. |
 | Hero revive poses | 5 | Downed poses are wired; the revive-crouch pose is not. |
 | Trap spent/triggered/rearming states | 5 | **Requested by code** (`RefreshTrapArt` follows `ChargesLeft`) — the blind spot above. |
-| Scrap pickups | 5 | Scrap is credited on kill; nothing is dropped in the world. |
 | Faction-neutral hands, wrench viewmodel | 4 | Every player has a faction, so `hands_firstperson` (all three poses) is only a fallback; the wrench has no first-person view yet. |
 | Barricade damaged/broken | 2 | **Requested by code** (`RefreshBarricadeArt` follows structure health) — the blind spot above: nothing gets hurt in a solo match. |
 | Icons | 2 | `icon_tower_overclock` (no tower) and `icon_weapon_wrench` (melee has no armory card). |
@@ -93,6 +92,13 @@ with different names and reparented the whole module instead. Nothing showed,
 because the whole tower turned as one node. It surfaced the moment the yaw and
 pitch nodes started being driven (`TowerRig`); the merge now starts below the
 wrapper.
+
+**Scrap had no floor to land on.** The five `pickup_*` models were delivered
+and unused because a kill credited scrap straight into the wallet. Enemies drop
+the personal half of it now and a player walks over to collect it, so all five
+are consumed. Nothing automated kills anything in a `--solo` run, so the
+content audit asks for the models directly rather than waiting for a match that
+never shoots.
 
 **Five M3 names had no manifest row.** The armory and the first-person view
 now ask for `ammo_shock`, `ammo_toxin`, `attach_toxinfeed`, `vfx_tracer_shock`

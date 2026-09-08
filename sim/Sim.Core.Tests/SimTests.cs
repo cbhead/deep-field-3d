@@ -312,3 +312,152 @@ public class LobbyAndEndlessTests
         Assert.True(back.Endless);
     }
 }
+
+/// <summary>Scrap: personal drops land on the floor, the team's half does not,
+/// and a platform is bought with what you picked up.</summary>
+public class ScrapEconomyTests
+{
+    private static World WithPlayer(out PlayerState player)
+    {
+        var w = new World(11, Maps.TestLane);
+        w.Enqueue(new Command.Join(1, "solo", "ember"));
+        Step.Advance(w);
+        player = w.Players[1];
+        return w;
+    }
+
+    private static Enemy Drifter(World w, Vec3 at) => new()
+    {
+        Id = w.NextId(), DefId = "drifter", Hp = 1f, MaxHp = 30f,
+        RouteIndex = 0, Leg = 1, LegProgress = 1f, Pos = at,
+        Facing = new Vec3(1, 0, 0), Bounty = 5, LeakDamage = 1,
+    };
+
+    [Fact]
+    public void APlayerKillDropsScrapOnTheFloorAndTheTeamHalfBanksAtOnce()
+    {
+        var w = WithPlayer(out var player);
+        // Close enough to shoot (sidearm reaches 60 m), far enough that the
+        // magnet does not sweep the drop up on the tick it lands.
+        player.Pos = new Vec3(12, 0, 0);
+        w.Enqueue(new Command.PlayerSync(1, player.Pos));
+
+        var enemy = Drifter(w, new Vec3(0, 0, 0));
+        w.Enemies.Add(enemy);
+        w.Enqueue(new Command.PlayerHit(1, enemy.Id, "sidearm"));
+        Step.Advance(w);
+
+        Assert.NotEmpty(w.Pickups);
+        Assert.Contains(w.Events, e => e is SimEvent.ScrapSpawned);
+        // The team's half never hits the floor.
+        Assert.True(w.TeamScrap.GetValueOrDefault(ScrapType.Alloy) > 0);
+        // The personal half is not credited until someone walks to it.
+        Assert.Equal(0, player.Scrap.GetValueOrDefault(ScrapType.Alloy));
+    }
+
+    [Fact]
+    public void WalkingOverADropCollectsIt()
+    {
+        var w = WithPlayer(out var player);
+        player.Pos = new Vec3(12, 0, 0);
+        w.Enqueue(new Command.PlayerSync(1, player.Pos));
+        var enemy = Drifter(w, new Vec3(0, 0, 0));
+        w.Enemies.Add(enemy);
+        w.Enqueue(new Command.PlayerHit(1, enemy.Id, "sidearm"));
+        Step.Advance(w);
+        var pickup = Assert.Single(w.Pickups);
+        int amount = pickup.Amount;
+
+        w.Enqueue(new Command.PlayerSync(1, pickup.Pos));
+        Step.Advance(w);
+
+        Assert.Empty(w.Pickups);
+        Assert.Equal(amount, player.Scrap.GetValueOrDefault(ScrapType.Alloy));
+        Assert.Contains(w.Events, e => e is SimEvent.ScrapCollected { PlayerId: 1 });
+    }
+
+    [Fact]
+    public void UncollectedScrapBanksToTheTeamRatherThanVanishing()
+    {
+        var w = WithPlayer(out var player);
+        player.Pos = new Vec3(12, 0, 0);
+        w.Enqueue(new Command.PlayerSync(1, player.Pos));
+        var enemy = Drifter(w, new Vec3(0, 0, 0));
+        w.Enemies.Add(enemy);
+        w.Enqueue(new Command.PlayerHit(1, enemy.Id, "sidearm"));
+        Step.Advance(w);
+        // Out of magnet range for the rest of the run, so it times out.
+        w.Enqueue(new Command.PlayerSync(1, new Vec3(200, 0, 200)));
+        int team = w.TeamScrap.GetValueOrDefault(ScrapType.Alloy);
+        int onFloor = w.Pickups.Sum(p => p.Amount);
+
+        for (int i = 0; i < (int)((Balance.ScrapPickupSeconds + 1f) * Balance.TickHz); i++) Step.Advance(w);
+
+        Assert.Empty(w.Pickups);
+        Assert.Equal(0, player.Scrap.GetValueOrDefault(ScrapType.Alloy));
+        Assert.Equal(team + onFloor, w.TeamScrap.GetValueOrDefault(ScrapType.Alloy));
+    }
+
+    [Fact]
+    public void ATowerKillHasNoPersonalHalfToDrop()
+    {
+        var w = WithPlayer(out var player);
+        // Standing on the far side of the map: whatever kills this, it is not
+        // the player, and there is nobody near the corpse either way.
+        player.Pos = new Vec3(0, 0, -14);
+        w.Enqueue(new Command.PlayerSync(1, player.Pos));
+        w.Money = 1000;
+        w.Enqueue(new Command.PlaceTower(1, "lance", "s3"));
+        Step.Advance(w);
+        Assert.Single(w.Towers);
+
+        var enemy = Drifter(w, new Vec3(4, 0, 4));   // beside the Lance on s3
+        enemy.Hp = enemy.MaxHp = 30f;
+        w.Enemies.Add(enemy);
+        for (int i = 0; i < Balance.TickHz * 20 && w.Enemies.Contains(enemy); i++) Step.Advance(w);
+
+        Assert.DoesNotContain(enemy, w.Enemies);
+        Assert.True(w.TeamScrap.GetValueOrDefault(ScrapType.Alloy) > 0,
+            "a tower kill still pays the team");
+        Assert.Empty(w.Pickups);
+        Assert.Equal(0, player.Scrap.GetValueOrDefault(ScrapType.Alloy));
+    }
+
+    [Fact]
+    public void PlatformsCostPersonalScrapNotTheSharedWallet()
+    {
+        var w = WithPlayer(out var player);
+        w.Money = 100000;                       // the wallet cannot buy a gun
+
+        w.Enqueue(new Command.BuyWeapon(1, "rifle"));
+        Step.Advance(w);
+        Assert.DoesNotContain("rifle", player.OwnedWeapons);
+        Assert.Contains(w.Events, e => e is SimEvent.PurchaseRejected { Reason: "insufficientScrap" });
+        Assert.Equal(100000, w.Money);
+
+        foreach (var (type, amount) in Weapons.Rifle.Recipe) player.Scrap[type] = amount;
+        w.Enqueue(new Command.BuyWeapon(1, "rifle"));
+        Step.Advance(w);
+        Assert.Contains("rifle", player.OwnedWeapons);
+        Assert.Equal(100000, w.Money);          // still untouched
+        foreach (var type in Weapons.Rifle.Recipe.Keys)
+            Assert.Equal(0, player.Scrap.GetValueOrDefault(type));
+    }
+
+    [Fact]
+    public void PickupsSurviveSerialization()
+    {
+        var w = WithPlayer(out var player);
+        player.Pos = new Vec3(12, 0, 0);
+        w.Enqueue(new Command.PlayerSync(1, player.Pos));
+        var enemy = Drifter(w, new Vec3(0, 0, 0));
+        w.Enemies.Add(enemy);
+        w.Enqueue(new Command.PlayerHit(1, enemy.Id, "sidearm"));
+        Step.Advance(w);
+
+        var back = Serialization.Deserialize(Serialization.Serialize(w));
+        Assert.Equal(w.Pickups.Count, back.Pickups.Count);
+        Assert.Equal(w.Pickups[0].Type, back.Pickups[0].Type);
+        Assert.Equal(w.Pickups[0].Amount, back.Pickups[0].Amount);
+    }
+}

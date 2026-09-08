@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using DeepField.Sim;
@@ -17,7 +18,12 @@ public sealed record MatchResult(
     long Ticks,
     Dictionary<ScrapType, int> TeamScrapEnd,
     string EventLogHash,
-    List<string> EventLog);
+    List<string> EventLog,
+    // Personal scrap only reaches a player by being walked over now, so the
+    // sweep has to be able to see whether that loop actually closes.
+    Dictionary<ScrapType, int>? PersonalScrapEnd = null,
+    int ScrapCollected = 0,
+    int ScrapExpired = 0);
 
 /// <summary>Runs a full seeded match headlessly with a scripted builder and any
 /// number of PlayerBots — the M1 seed of campaign.ts/sweep.ts.</summary>
@@ -176,9 +182,17 @@ public static class MatchRunner
             }
         }
 
+        var personal = new Dictionary<ScrapType, int>();
+        foreach (var p in world.Players.Values)
+            foreach (var (type, amount) in p.Scrap)
+                personal[type] = personal.GetValueOrDefault(type) + amount;
+
         return new MatchResult(
             victory, wavesCleared, world.Lives, spawned, towerKills, playerKills, leaked, reactions,
-            world.Tick, new Dictionary<ScrapType, int>(world.TeamScrap), HashLog(log), log);
+            world.Tick, new Dictionary<ScrapType, int>(world.TeamScrap), HashLog(log), log,
+            personal,
+            log.Count(l => l.Contains("scrapCollected")),
+            log.Count(l => l.Contains("scrapExpired")));
     }
 
     public static string HashLog(IEnumerable<string> log)

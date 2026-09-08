@@ -62,11 +62,11 @@ hero_glacier	heroes	yes
 hero_forge	heroes	yes
 hero_specter	heroes	yes
 hero_tempest	heroes	yes
-pickup_alloy	economy	no
-pickup_flux	economy	no
-pickup_gravium	economy	no
-pickup_plating	economy	no
-pickup_primecore	economy	no
+pickup_alloy	economy	yes
+pickup_flux	economy	yes
+pickup_gravium	economy	yes
+pickup_plating	economy	yes
+pickup_primecore	economy	yes
 proj_arc_beam	vfx	yes
 proj_filament_beam	vfx	yes
 proj_lance_bolt	vfx	yes

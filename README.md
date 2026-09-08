@@ -41,6 +41,7 @@ the core does.
 | **hold E** at a socket | build wheel — steer with the mouse, release to build |
 | **hold U** at a structure | upgrade paths (1–3), **hold X** to sell |
 | LMB / RMB | fire · melee swing (arc; melee kills pay +25% scrap) |
+| walk over a drop | collect scrap — it buys your weapons, attachments and ammo |
 | **Q** faction ability · **hold R** revive | |
 | **Tab** | armory + gunsmith · **F** start wave early · **Esc** menu |
 | E on a zipline, W on a ladder | traversal |
