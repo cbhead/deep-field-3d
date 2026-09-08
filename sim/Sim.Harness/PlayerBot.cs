@@ -58,6 +58,31 @@ public sealed class PlayerBot
         _rng = RngStreams.StreamFor(seed, RngStreams.Bot, 0);
     }
 
+    /// <summary>Where to step for scrap, or null to hold the station. Between
+    /// waves the whole field is in reach; during one, only what landed close
+    /// enough that a player would not have to leave their post for it.</summary>
+    private static Vec3? NearestPickup(World world, Vec3 from)
+    {
+        if (world.Pickups.Count == 0) return null;
+        float reach = world.Phase == MatchPhase.Wave ? InFightSweepMeters : float.MaxValue;
+
+        Vec3? best = null;
+        float bestDistance = reach;
+        foreach (var pickup in world.Pickups)
+        {
+            float d = from.DistanceTo(pickup.Pos);
+            if (d > bestDistance) continue;
+            bestDistance = d;
+            best = pickup.Pos;
+        }
+        return best;
+    }
+
+    /// <summary>How far a bot will stray from its post mid-wave for a drop.
+    /// Small on purpose: leaving the kill-box during a wave should cost the
+    /// defence something, and the sweep should feel that.</summary>
+    private const float InFightSweepMeters = 10f;
+
     public void Act(World world)
     {
         if (!_joined)
@@ -117,6 +142,12 @@ public sealed class PlayerBot
         {
             _flankTargetId = -1;
         }
+
+        // Scrap on the floor. A player hoovers the field between waves and
+        // steps sideways for anything that drops at their feet during one;
+        // a bot that never did would model a hero with no gunsmith at all,
+        // and every build sweep would quietly be measuring the base platform.
+        if (NearestPickup(world, stationPos) is { } scrap) stationPos = scrap;
 
         world.Enqueue(new Command.PlayerSync(PlayerId, stationPos));
 

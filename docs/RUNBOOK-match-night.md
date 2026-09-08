@@ -56,6 +56,10 @@ next intermission.
   The wheel only offers what that socket accepts and greys out what you can't
   afford. **Hold U** at a placed structure to level a path (1–3) or **hold X**
   to sell.
+- **Walk over the scrap.** A kill banks the team's half instantly and drops
+  your half on the floor; it drifts to you when you get close, and what nobody
+  collects goes to the team pool after 45 seconds. Weapon and melee platforms
+  are bought with that personal scrap, so the shared wallet stays the towers'.
 - **F** starts a wave early, **Q** is your faction ability, **hold R** revives a
   downed teammate (their beacon shows through walls), **Tab** opens the armory
   and gunsmith, **Esc** is the menu.

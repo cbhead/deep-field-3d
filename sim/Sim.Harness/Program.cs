@@ -213,6 +213,16 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
         && r.EventLog.Any(l => l.Contains("scrapDropped"));
     Gate("scrap: drops flow and the team pool fills", reachable,
         $"end pool alloy {alloy}, plating {plating}");
+
+    // The personal half is a thing on the floor now, and a bot that never
+    // walks over one has no gunsmith at all — which would quietly hollow out
+    // every build sweep while every other gate stayed green. Measure the loop,
+    // not the intent: some of what dropped has to end up in a pocket.
+    int collected = r.ScrapCollected, expired = r.ScrapExpired;
+    int inPockets = r.PersonalScrapEnd?.Values.Sum() ?? 0;
+    Gate("scrap: what drops on the floor gets picked up",
+        collected > 0 && inPockets > 0,
+        $"collected {collected}, expired to the team {expired}, in pockets {inPockets}");
 }
 
 // --- Gate 13 (M2): Cluster splits into 5 scaled children on death, not on leak.
@@ -440,10 +450,15 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
     bool apCrafted = world.Players[1].CraftedAmmo.Contains("ap")
         && world.Players[1].BuildFor("sidearm").AmmoId == "ap";
 
-    // Reachability: every recipe's scrap types must drop from at least one enemy.
+    // Reachability: every recipe's scrap types must drop from at least one
+    // enemy. Platforms are on this list now too — weapons and melee are bought
+    // with personal scrap, so a recipe naming a type nothing drops would be a
+    // gun you can never own.
     var droppable = Enemies.All.Values.SelectMany(e => e.ScrapYield.Keys).ToHashSet();
     bool reachable = Attachments.All.Values.All(a => a.Recipe.Keys.All(droppable.Contains))
-        && Ammo.All.Values.All(a => a.Recipe.Keys.All(droppable.Contains));
+        && Ammo.All.Values.All(a => a.Recipe.Keys.All(droppable.Contains))
+        && Weapons.All.Values.All(x => x.Recipe.Keys.All(droppable.Contains))
+        && Melee.All.Values.All(m => m.Recipe.Keys.All(droppable.Contains));
 
     Gate("gunsmith: crafting flows and every recipe is reachable",
         apCrafted && reachable && baseline > 0f,
@@ -591,8 +606,10 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
     world.Enqueue(new Command.Join(1, "p1", "forge"));
     Step.Advance(world);
 
-    world.Players[1].Scrap[ScrapType.Flux] = 20;
-    world.Players[1].Scrap[ScrapType.Alloy] = 20;
+    // Stocked in every type: a platform is bought with personal scrap now, and
+    // the Maul's recipe wants Plating the fixture never used to need.
+    foreach (ScrapType type in System.Enum.GetValues<ScrapType>())
+        world.Players[1].Scrap[type] = 20;
     world.Enqueue(new Command.BuyMelee(1, "maul"));
     Step.Advance(world);
     world.Enqueue(new Command.CraftMeleeAttachment(1, "maul", "cryoCore"));

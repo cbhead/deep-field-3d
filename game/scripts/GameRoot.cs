@@ -33,6 +33,7 @@ public partial class GameRoot : Node3D
 
     private readonly Dictionary<int, Node3D> _enemyViews = new();
     private readonly Dictionary<int, Node3D> _projectileViews = new();
+    private readonly Dictionary<int, ScrapPickupView> _pickupViews = new();
     private readonly Dictionary<int, Node3D> _towerViews = new();
     /// <summary>Design's yaw/pitch/spin nodes per tower view, resolved once per
     /// build of the view (an upgrade rebuilds it, so the entry is keyed on the
@@ -413,6 +414,49 @@ public partial class GameRoot : Node3D
             return;
         }
 
+        // Scrap review: kill something at the player's feet so the floor has
+        // drops on it, and photograph them before the magnet takes them.
+        if (_shotView == "scrap" && _world is not null)
+        {
+            Submit(new Command.StartWave(LocalPlayerId));
+            // Spawns arrive on tick offsets, so the frame after StartWave has
+            // an empty field. Wait for the lane to put something on the map.
+            for (int i = 0; i < Balance.TickHz * 20 && _world.Enemies.Count < 4; i++) Step.Advance(_world);
+
+            // An enemy's position is its route progress, so moving one does not
+            // stick: it is back on the lane by the next tick and its drop lands
+            // there. Kill them where they walk, then take the picture from the
+            // scrap rather than staging the scrap for the picture.
+            foreach (var enemy in _world.Enemies) enemy.Hp = 1f;
+            // Three shots a second: a burst inside one tick is refused on
+            // cooldown and only the first round ever lands.
+            foreach (var enemy in _world.Enemies.ToList())
+            {
+                Submit(new Command.PlayerHit(LocalPlayerId, enemy.Id, "sidearm"));
+                for (int i = 0; i < 12; i++) Step.Advance(_world);
+            }
+            RebuildView();
+
+            if (_world.Pickups.Count > 0 && _player is not null)
+            {
+                var centre = Vector3.Zero;
+                foreach (var pickup in _world.Pickups) centre += ToGd(pickup.Pos);
+                centre /= _world.Pickups.Count;
+                // Stand back past the magnet radius, or the shot is of a floor
+                // that was just tidied up.
+                _player.AimFrom(centre + new Vector3(0f, 2.6f, 7f), centre);
+                Submit(new Command.PlayerSync(LocalPlayerId,
+                    new Vec3(centre.X, centre.Y, centre.Z + 7f)));
+                Step.Advance(_world);
+                RebuildView();
+            }
+
+            _shotView = "eye";
+            _shotPath = path;
+            _shotCountdown = 6;
+            return;
+        }
+
         // First-person review: buy and equip a platform, fit a barrel, and
         // fire one round on the frame before the capture so the flash and the
         // streak are in the picture.
@@ -451,7 +495,11 @@ public partial class GameRoot : Node3D
                 // only thing a screenshot could show is an unmodified gun.
                 if (_world is not null && _world.Players.TryGetValue(LocalPlayerId, out var smith))
                 {
-                    smith.Scrap[ScrapType.Alloy] = 40;
+                    // Every type, because a platform is bought with scrap now:
+                    // with an empty pocket every Buy button is correctly
+                    // disabled and the click probe has nothing to press.
+                    foreach (ScrapType type in System.Enum.GetValues<ScrapType>())
+                        smith.Scrap[type] = 40;
                     Submit(new Command.CraftAttachment(LocalPlayerId, "sidearm", "longBarrel"));
                     Step.Advance(_world);
                     RebuildView();
@@ -621,6 +669,12 @@ public partial class GameRoot : Node3D
             if (WeaponAssembly.Build(weapon.Id, everything, world: false) is { } vm) built.Add(vm);
         }
         foreach (var def in Attachments.All.Values) built.Add(AssetLibrary.Instantiate($"attach_{def.Id}", () => new Node3D()));
+        // Scrap on the floor: a solo match only drops it when the player kills
+        // something, which no automated run does, so the audit asks for the
+        // models directly rather than reporting them unused forever.
+        foreach (ScrapType type in System.Enum.GetValues<ScrapType>())
+            built.Add(AssetLibrary.Instantiate($"pickup_{type.ToString().ToLowerInvariant()}", () => new Node3D()));
+        built.Add(AssetLibrary.Instantiate("pickup_primecore", () => new Node3D()));
         foreach (var def in Ammo.All.Values)
         {
             built.Add(AssetLibrary.Instantiate($"ammo_{def.Id}", () => new Node3D()));
@@ -849,6 +903,7 @@ public partial class GameRoot : Node3D
 
         RebuildView();
         SyncStructureHealth();
+        SyncPickupViews();
         RefreshUi(delta);
     }
 
@@ -1144,6 +1199,11 @@ public partial class GameRoot : Node3D
                     _armory.ShowNotice(Explain(rejected.Reason));
                     Post($"craft: {Explain(rejected.Reason)}", UiTheme.Danger);
                     break;
+                case SimEvent.ScrapCollected collected when collected.PlayerId == LocalPlayerId:
+                    Post($"+{collected.Amount} {collected.ScrapType.ToLowerInvariant()}",
+                        UiTheme.Scrap(System.Enum.Parse<ScrapType>(collected.ScrapType)));
+                    break;
+
                 case SimEvent.JoinRejected rejected when _lobby.InParty && rejected.PlayerId == LocalPlayerId:
                     _lobby.SetStatus(Explain(rejected.Reason));
                     break;
@@ -1255,6 +1315,10 @@ public partial class GameRoot : Node3D
                 OnBreach(int.Parse(p[2]));
                 break;
             case "reaction": _reactionCount++; OnReaction(int.Parse(p[2]), p[3]); break;
+            case "scrapCollected" when int.Parse(p[3]) == LocalPlayerId:
+                Post($"+{p[5]} {p[4].ToLowerInvariant()}", UiTheme.Scrap(System.Enum.Parse<ScrapType>(p[4])));
+                break;
+
             case "joinRejected" when _lobby.InParty && int.Parse(p[2]) == LocalPlayerId:
                 _lobby.SetStatus(Explain(p[3]));
                 break;
@@ -1646,6 +1710,34 @@ public partial class GameRoot : Node3D
             _structureBars.Remove(id);
 
         if (_siegeReport is not null) WatchSiege();
+    }
+
+    /// <summary>Scrap on the floor, from whichever source this process has —
+    /// the world on a host, the meta channel on a client. Views follow the
+    /// sim's list: one appears when something drops it and goes when the sim
+    /// says it is gone, whether that was a player collecting it or its timer
+    /// banking it to the team.</summary>
+    private void SyncPickupViews()
+    {
+        if (!_view.Valid) return;
+
+        foreach (var pickup in _view.Pickups)
+        {
+            if (_pickupViews.TryGetValue(pickup.Id, out var existing) && IsInstanceValid(existing))
+            {
+                // The drop drifts once a player is close enough to pull it.
+                existing.Position = pickup.Pos;
+                continue;
+            }
+            _pickupViews[pickup.Id] = ScrapPickupView.Spawn(this, pickup.Type, pickup.Pos, pickup.Amount);
+        }
+
+        var live = new HashSet<int>(_view.Pickups.Select(p => p.Id));
+        foreach (int id in _pickupViews.Keys.Where(id => !live.Contains(id)).ToList())
+        {
+            if (_pickupViews.TryGetValue(id, out var view) && IsInstanceValid(view)) view.QueueFree();
+            _pickupViews.Remove(id);
+        }
     }
 
     /// <summary>Design ships the barricade in three states — intact, damaged,

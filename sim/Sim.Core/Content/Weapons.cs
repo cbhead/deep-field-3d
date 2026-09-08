@@ -1,10 +1,16 @@
+using System.Collections.Generic;
+
 namespace DeepField.Sim.Content;
 
 public static class Weapons
 {
+    /// <summary>The starter's price: nothing. A player with an empty pocket is
+    /// still armed.</summary>
+    private static readonly IReadOnlyDictionary<ScrapType, int> Free = new Dictionary<ScrapType, int>();
+
     /// <summary>The starter sidearm — never taken away, so nobody is ever a spectator.</summary>
     public static readonly WeaponDef Sidearm = new(
-        Id: "sidearm", Cost: 0,
+        Id: "sidearm", Recipe: Free,
         Damage: 5f, ShotsPerSecond: 3f, RangeMeters: 60f,
         Applies: System.Array.Empty<string>(),
         MagazineSize: 12, ReloadSeconds: 1.3f, Automatic: false);
@@ -13,14 +19,20 @@ public static class Weapons
     /// (modeled as its Applies — every hit marks at M1; alt-fire split arrives
     /// with gunsmith v2).</summary>
     public static readonly WeaponDef Rifle = new(
-        Id: "rifle", Cost: 120,
+        // Precision costs a bit of everything: the generalist is the one build
+        // you cannot fund by farming a single lane.
+        Id: "rifle", Recipe: new Dictionary<ScrapType, int>
+            { [ScrapType.Alloy] = 8, [ScrapType.Flux] = 5, [ScrapType.Plating] = 2 },
         Damage: 11f, ShotsPerSecond: 2.2f, RangeMeters: 80f,
         Applies: new[] { "mark" },
         MagazineSize: 24, ReloadSeconds: 1.9f, Automatic: true);
 
     /// <summary>Close-range burst: the panic weapon for swarms at the perch.</summary>
     public static readonly WeaponDef Scattergun = new(
-        Id: "scattergun", Cost: 100,
+        // Bulk steel and armour plate: the swarm answer is paid for by the
+        // swarms and the armoured things you already stood next to.
+        Id: "scattergun", Recipe: new Dictionary<ScrapType, int>
+            { [ScrapType.Alloy] = 10, [ScrapType.Plating] = 3 },
         Damage: 24f, ShotsPerSecond: 1.1f, RangeMeters: 14f,
         Applies: System.Array.Empty<string>(),
         MagazineSize: 6, ReloadSeconds: 2.4f, Automatic: false);
@@ -28,7 +40,8 @@ public static class Weapons
     /// <summary>Ember pistol: low dps, applies burn — the shooter's half of the
     /// Thermal Shock combo when no Ember player is in the lobby.</summary>
     public static readonly WeaponDef EmberPistol = new(
-        Id: "emberPistol", Cost: 90,
+        Id: "emberPistol", Recipe: new Dictionary<ScrapType, int>
+            { [ScrapType.Alloy] = 6, [ScrapType.Flux] = 4 },
         Damage: 4f, ShotsPerSecond: 2.0f, RangeMeters: 40f,
         Applies: new[] { "burn" },
         MagazineSize: 10, ReloadSeconds: 1.5f, Automatic: false);
@@ -37,7 +50,10 @@ public static class Weapons
     /// The hero half of the toxin answer — it rots a Warden that eats fire whole
     /// and an Aegis that shrugs off chip, because poison ignores both.</summary>
     public static readonly WeaponDef PoisonStream = new(
-        Id: "poisonStream", Cost: 110,
+        // Plating-heavy on purpose: you craft the armour answer out of the
+        // armour that stopped you, the same rule the AP round follows.
+        Id: "poisonStream", Recipe: new Dictionary<ScrapType, int>
+            { [ScrapType.Plating] = 6, [ScrapType.Flux] = 4 },
         Damage: 2f, ShotsPerSecond: 6f, RangeMeters: 18f,
         Applies: new[] { "poison" },
         MagazineSize: 40, ReloadSeconds: 2.2f, Automatic: true);
@@ -46,7 +62,8 @@ public static class Weapons
     /// Freeze, or with any burn source for Thermal Shock: its job is to be the
     /// hero half of a reaction the builder sets up.</summary>
     public static readonly WeaponDef CryoSprayer = new(
-        Id: "cryoSprayer", Cost: 105,
+        Id: "cryoSprayer", Recipe: new Dictionary<ScrapType, int>
+            { [ScrapType.Flux] = 8, [ScrapType.Alloy] = 4 },
         Damage: 1.6f, ShotsPerSecond: 7f, RangeMeters: 14f,
         Applies: new[] { "chill" },
         MagazineSize: 45, ReloadSeconds: 2.1f, Automatic: true);

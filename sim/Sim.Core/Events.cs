@@ -114,6 +114,25 @@ public abstract record SimEvent
         public override string LogLine() => $"{Tick} upgradeRejected {PlayerId} {TowerId} {Reason}";
     }
 
+    /// <summary>The personal half of a drop landed on the floor as a thing to
+    /// walk over.</summary>
+    public sealed record ScrapSpawned(int PickupId, string ScrapType, int Amount, float X, float Y, float Z) : SimEvent
+    {
+        public override string LogLine() =>
+            $"{Tick} scrapSpawned {PickupId} {ScrapType} {Amount} {X:0.##} {Y:0.##} {Z:0.##}";
+    }
+
+    public sealed record ScrapCollected(int PickupId, int PlayerId, string ScrapType, int Amount) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} scrapCollected {PickupId} {PlayerId} {ScrapType} {Amount}";
+    }
+
+    /// <summary>Nobody came for it; the team pool gets it instead.</summary>
+    public sealed record ScrapExpired(int PickupId, string ScrapType, int Amount) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} scrapExpired {PickupId} {ScrapType} {Amount}";
+    }
+
     public sealed record ScrapDropped(int EnemyId, string ScrapCounts) : SimEvent
     {
         public override string LogLine() => $"{Tick} scrapDropped {EnemyId} {ScrapCounts}";

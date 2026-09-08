@@ -190,6 +190,26 @@ public sealed class PlayerState
     public bool Alive => !Downed && RespawnTimer <= 0f;
 }
 
+/// <summary>Scrap lying on the floor where something died. The team's half of
+/// a drop is banked the instant the kill lands — tower money is everyone's
+/// problem and nobody should have to walk for it — but the personal half is a
+/// physical thing you go and get, which is what makes leaving the perch cost
+/// something and pays you for taking the risk.
+///
+/// Uncollected scrap is not destroyed: when it expires it goes to the team
+/// pool. The economy is conserved either way, so a wave nobody could reach
+/// still funds the defence; you just don't get to spend it on your own gun.</summary>
+public sealed class ScrapPickup
+{
+    public int Id;
+    public ScrapType Type;
+    public int Amount;
+    public Vec3 Pos;
+    /// <summary>Seconds before it banks to the team pool.</summary>
+    public float Life;
+    public bool Dead;
+}
+
 public enum MatchPhase
 {
     Intermission,
@@ -247,6 +267,7 @@ public sealed class World
     public List<Tower> Towers = new();
     public List<Trap> Traps = new();
     public List<Projectile> Projectiles = new();
+    public List<ScrapPickup> Pickups = new();
     public Dictionary<int, PlayerState> Players = new();
 
     public List<Command> PendingCommands = new();

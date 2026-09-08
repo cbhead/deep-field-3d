@@ -244,6 +244,19 @@ public partial class NetworkManager : Node
             });
         }
 
+        // Scrap on the floor rides the meta channel with the structures: it is
+        // continuous state a client draws, few in number, and a dropped packet
+        // costs nothing because the next one carries the whole picture.
+        var pickups = new Godot.Collections.Array();
+        foreach (var pickup in _world.Pickups)
+        {
+            pickups.Add(new Godot.Collections.Dictionary
+            {
+                ["id"] = pickup.Id, ["type"] = pickup.Type.ToString(), ["amount"] = pickup.Amount,
+                ["x"] = pickup.Pos.X, ["y"] = pickup.Pos.Y, ["z"] = pickup.Pos.Z,
+            });
+        }
+
         // Structures ride the meta channel so clients can drive the build wheel
         // and upgrade panel (they need per-path levels, which events don't carry).
         var structures = new Godot.Collections.Array();
@@ -289,6 +302,7 @@ public partial class NetworkManager : Node
             ["teamScrap"] = ScrapDict(_world.TeamScrap),
             ["players"] = players,
             ["structures"] = structures,
+            ["pickups"] = pickups,
         };
     }
 

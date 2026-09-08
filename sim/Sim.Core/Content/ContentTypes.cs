@@ -99,7 +99,13 @@ public sealed record TrapDef(
 
 public sealed record WeaponDef(
     string Id,
-    int Cost,                     // armory money price (0 = starter, always owned)
+    // A weapon is yours, so you buy it with what is yours. Money is the shared
+    // team wallet and belongs to the towers everyone benefits from; a platform
+    // comes out of the personal scrap you picked up off the floor, in the same
+    // currency its attachments and ammo already cost. Empty = the starter,
+    // always owned. (The design brief priced platforms in money; this is a
+    // deliberate departure, recorded in docs/design-system/README.md.)
+    IReadOnlyDictionary<ScrapType, int> Recipe,
     float Damage,
     float ShotsPerSecond,
     float RangeMeters,

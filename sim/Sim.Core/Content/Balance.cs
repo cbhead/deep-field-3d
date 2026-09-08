@@ -98,4 +98,14 @@ public static class Balance
     /// top of the hp curve that never stops. Count-first, like player scaling,
     /// so late waves are crowds rather than sponges.</summary>
     public const float EndlessCountGrowthPerLap = 1.15f;
+
+    /// <summary>Scrap on the floor: how long the personal half of a drop waits
+    /// to be collected before it banks to the team pool, how close you have to
+    /// be for it to come to you, how fast it comes, and how close it has to get
+    /// before you have it. Generous on purpose — the decision worth pricing is
+    /// "do I leave the perch", not "can I stand on a pixel".</summary>
+    public const float ScrapPickupSeconds = 45f;
+    public const float ScrapMagnetMeters = 4.5f;
+    public const float ScrapMagnetSpeed = 9f;
+    public const float ScrapCollectMeters = 1.6f;
 }

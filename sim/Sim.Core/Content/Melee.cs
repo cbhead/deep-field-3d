@@ -29,7 +29,8 @@ public sealed record MeleeAttachmentDef(
 
 public sealed record MeleeDef(
     string Id,
-    int Cost,
+    /// <summary>Personal scrap, like a ranged platform: see WeaponDef.Recipe.</summary>
+    IReadOnlyDictionary<ScrapType, int> Recipe,
     float Damage,
     float SwingsPerSecond,
     float ReachMeters,
@@ -49,7 +50,7 @@ public static class Melee
     /// nobody is ever a spectator — a player with no money and no scrap can
     /// still walk up to something and get paid for it.</summary>
     public static readonly MeleeDef Wrench = new(
-        Id: "wrench", Cost: 0,
+        Id: "wrench", Recipe: new Dictionary<ScrapType, int>(),
         Damage: 14f, SwingsPerSecond: 1.4f, ReachMeters: 2.6f, ArcDegrees: 45f,
         KnockbackMeters: 0f,
         Applies: System.Array.Empty<string>(),
@@ -58,7 +59,7 @@ public static class Melee
     /// <summary>Fast and narrow. The single-target answer, and the platform an
     /// infusion pays off on most because it applies its status the most often.</summary>
     public static readonly MeleeDef Blade = new(
-        Id: "blade", Cost: 85,
+        Id: "blade", Recipe: new Dictionary<ScrapType, int> { [ScrapType.Alloy] = 7 },
         Damage: 19f, SwingsPerSecond: 2.0f, ReachMeters: 2.4f, ArcDegrees: 35f,
         KnockbackMeters: 0f,
         Applies: System.Array.Empty<string>(),
@@ -68,7 +69,8 @@ public static class Melee
     /// into a Mote scatter is worth more than any number of Blade pokes, and
     /// the knockback buys the space a melee player otherwise does not have.</summary>
     public static readonly MeleeDef Maul = new(
-        Id: "maul", Cost: 110,
+        Id: "maul", Recipe: new Dictionary<ScrapType, int>
+            { [ScrapType.Alloy] = 6, [ScrapType.Plating] = 4 },
         Damage: 34f, SwingsPerSecond: 0.8f, ReachMeters: 3.0f, ArcDegrees: 80f,
         KnockbackMeters: 3.5f,
         Applies: System.Array.Empty<string>(),
@@ -78,7 +80,8 @@ public static class Melee
     /// things that hurt to stand next to: it out-ranges contact damage, so an
     /// Aegis can be hit in the back without being hit back.</summary>
     public static readonly MeleeDef Spear = new(
-        Id: "spear", Cost: 95,
+        Id: "spear", Recipe: new Dictionary<ScrapType, int>
+            { [ScrapType.Alloy] = 5, [ScrapType.Flux] = 3 },
         Damage: 22f, SwingsPerSecond: 1.1f, ReachMeters: 4.2f, ArcDegrees: 25f,
         KnockbackMeters: 0f,
         Applies: System.Array.Empty<string>(),

@@ -29,6 +29,7 @@ public static class Step
         StepTowerProjectiles(w);
         StepPlayerOrdnance(w);
         ResolveDeaths(w);
+        UpdatePickups(w);
         Cleanup(w);
         CheckEndState(w);
     }
@@ -477,12 +478,13 @@ public static class Step
         }
         if (!player.OwnedMelee.Contains(def.Id))
         {
-            if (w.Money < def.Cost)
+            // Same rule as a ranged platform: a weapon in your hands is
+            // bought with the scrap in your pocket.
+            if (!PayScrap(player, def.Recipe))
             {
-                w.Emit(new SimEvent.PurchaseRejected(buy.PlayerId, def.Id, "insufficientFunds"));
+                w.Emit(new SimEvent.PurchaseRejected(buy.PlayerId, def.Id, "insufficientScrap"));
                 return;
             }
-            w.Money -= def.Cost;
             player.OwnedMelee.Add(def.Id);
         }
         player.MeleeId = def.Id;
@@ -560,13 +562,13 @@ public static class Step
             w.Emit(new SimEvent.PurchaseRejected(buy.PlayerId, buy.WeaponId, "alreadyOwned"));
             return;
         }
-        if (w.Money < weapon.Cost)
+        // Personal scrap, not the shared wallet: see WeaponDef.Recipe.
+        if (!PayScrap(player, weapon.Recipe))
         {
-            w.Emit(new SimEvent.PurchaseRejected(buy.PlayerId, buy.WeaponId, "insufficientFunds"));
+            w.Emit(new SimEvent.PurchaseRejected(buy.PlayerId, buy.WeaponId, "insufficientScrap"));
             return;
         }
 
-        w.Money -= weapon.Cost;
         player.OwnedWeapons.Add(buy.WeaponId);
         player.WeaponId = buy.WeaponId;
         w.Emit(new SimEvent.WeaponBought(buy.PlayerId, buy.WeaponId));
@@ -1589,6 +1591,7 @@ public static class Step
     {
         w.Enemies.RemoveAll(e => e.Dead);
         w.Projectiles.RemoveAll(p => p.Dead);
+        w.Pickups.RemoveAll(p => p.Dead);
     }
 
     private static void CheckEndState(World w)
@@ -1734,15 +1737,86 @@ public static class Step
                 : (int)MathF.Round(amount * Balance.ScrapTeamShare, MidpointRounding.AwayFromZero);
             int personal = amount - teamShare;
 
+            // The team's half banks immediately: it pays for towers, which are
+            // everyone's, and a defence that depended on someone walking to it
+            // would be a defence you can lose by being busy.
             if (teamShare > 0)
                 w.TeamScrap[type] = w.TeamScrap.GetValueOrDefault(type, 0) + teamShare;
-            if (personal > 0 && killerPlayerId is int pid && w.Players.TryGetValue(pid, out var killer))
-                killer.Scrap[type] = killer.Scrap.GetValueOrDefault(type, 0) + personal;
+
+            // The personal half hits the floor. A tower kill has no personal
+            // half at all, which is why towers-only runs are unchanged.
+            if (personal > 0 && killerPlayerId is not null)
+            {
+                // Spread by scrap type so a Monolith's three drops are three
+                // things rather than one pile. Deterministic: the offset comes
+                // from the type, never from an RNG stream.
+                int slot = (int)type;
+                float angle = slot * 2.399963f;      // golden angle, evenly spaced
+                var offset = new Vec3(MathF.Cos(angle) * 0.6f, 0f, MathF.Sin(angle) * 0.6f);
+                var pickup = new ScrapPickup
+                {
+                    Id = w.NextId(),
+                    Type = type,
+                    Amount = personal,
+                    Pos = enemy.Pos + offset,
+                    Life = Balance.ScrapPickupSeconds,
+                };
+                w.Pickups.Add(pickup);
+                w.Emit(new SimEvent.ScrapSpawned(pickup.Id, type.ToString(), personal,
+                    pickup.Pos.X, pickup.Pos.Y, pickup.Pos.Z));
+            }
 
             parts.Add($"{type}:{amount}");
         }
 
         w.Emit(new SimEvent.ScrapDropped(enemy.Id, string.Join(",", parts)));
+    }
+
+    /// <summary>Scrap on the floor drifts to a nearby player and is collected
+    /// on contact; what nobody reaches banks to the team pool when it expires.
+    /// Players are walked in seat order and pickups in spawn order, so two
+    /// players equidistant from the same drop always resolve the same way.</summary>
+    private static void UpdatePickups(World w)
+    {
+        if (w.Pickups.Count == 0) return;
+
+        foreach (var pickup in w.Pickups)
+        {
+            if (pickup.Dead) continue;
+
+            PlayerState? nearest = null;
+            float best = float.MaxValue;
+            foreach (var player in w.Players.Values)
+            {
+                if (!player.Connected || !player.Alive) continue;
+                float distance = player.Pos.DistanceTo(pickup.Pos);
+                if (distance >= best) continue;
+                best = distance;
+                nearest = player;
+            }
+
+            if (nearest is not null && best <= Balance.ScrapCollectMeters)
+            {
+                nearest.Scrap[pickup.Type] = nearest.Scrap.GetValueOrDefault(pickup.Type, 0) + pickup.Amount;
+                pickup.Dead = true;
+                w.Emit(new SimEvent.ScrapCollected(pickup.Id, nearest.Id, pickup.Type.ToString(), pickup.Amount));
+                continue;
+            }
+
+            if (nearest is not null && best <= Balance.ScrapMagnetMeters && best > 0.001f)
+            {
+                var toward = (nearest.Pos - pickup.Pos) * (1f / best);
+                pickup.Pos += toward * (Balance.ScrapMagnetSpeed * Balance.Dt);
+            }
+
+            pickup.Life -= Balance.Dt;
+            if (pickup.Life <= 0f)
+            {
+                w.TeamScrap[pickup.Type] = w.TeamScrap.GetValueOrDefault(pickup.Type, 0) + pickup.Amount;
+                pickup.Dead = true;
+                w.Emit(new SimEvent.ScrapExpired(pickup.Id, pickup.Type.ToString(), pickup.Amount));
+            }
+        }
     }
 
     private static int? SourcePlayerId(string source) =>

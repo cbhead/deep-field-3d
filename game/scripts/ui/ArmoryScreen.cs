@@ -445,7 +445,7 @@ public partial class ArmoryScreen : Control
     {
         foreach (var child in _platformRail.GetChildren()) child.QueueFree();
 
-        foreach (var def in Weapons.All.Values.OrderBy(w => w.Cost).ThenBy(w => w.Id, System.StringComparer.Ordinal))
+        foreach (var def in Weapons.All.Values.OrderBy(ScrapPrice).ThenBy(w => w.Id, System.StringComparer.Ordinal))
         {
             bool owned = local.OwnedWeapons.Contains(def.Id);
             bool equipped = def.Id == local.WeaponId;
@@ -460,15 +460,36 @@ public partial class ArmoryScreen : Control
             var text = Kit.Col(2);
             text.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             text.AddChild(Kit.Title(UiTheme.ShortLabel(def.Id).ToUpperInvariant(), Tokens.SizeBody));
-            text.AddChild(Kit.Label(equipped ? "equipped" : owned ? "owned" : $"{def.Cost} credits",
-                equipped ? Tokens.TextArcane : Tokens.TextMuted));
+            if (equipped || owned)
+            {
+                text.AddChild(Kit.Label(equipped ? "equipped" : "owned",
+                    equipped ? Tokens.TextArcane : Tokens.TextMuted));
+            }
+            else if (def.Recipe.Count == 0)
+            {
+                text.AddChild(Kit.Label("free", Tokens.TextMuted));
+            }
+            else
+            {
+                // A platform costs personal scrap, so the card says which
+                // enemies to go and farm — the same have/need chip the
+                // attachment recipes use, for the same reason.
+                var price = new HFlowContainer();
+                price.AddThemeConstantOverride("h_separation", Tokens.Space3);
+                price.AddThemeConstantOverride("v_separation", 2);
+                foreach (var (type, need) in def.Recipe)
+                    price.AddChild(UiTheme.CountChip($"scrap_{type.ToString().ToLowerInvariant()}",
+                        _view.PersonalScrapOf(type), UiTheme.Scrap(type), need));
+                text.AddChild(price);
+            }
             row.AddChild(text);
 
             string captured = def.Id;
+            bool affordable = def.Recipe.All(kv => _view.PersonalScrapOf(kv.Key) >= kv.Value);
             if (!owned)
             {
-                var buy = new KitButton("Buy", KitButton.Tone.Primary, Tokens.ControlSm);
-                buy.Disabled = _view.Money < def.Cost;
+                var buy = new KitButton("Buy", affordable ? KitButton.Tone.Primary : KitButton.Tone.Secondary, Tokens.ControlSm);
+                buy.Disabled = !affordable;
                 buy.Pressed += () =>
                 {
                     _bought = true;
@@ -713,6 +734,10 @@ public partial class ArmoryScreen : Control
     /// <summary>A label that yields rather than dictates: five ammo cards
     /// across a 1440-wide window cannot each demand their full text width, or
     /// the frame grows past the screen and the right column leaves with it.</summary>
+    /// <summary>Total scrap a platform costs, for ordering the rail cheapest
+    /// first — the same order the money price used to give.</summary>
+    private static int ScrapPrice(WeaponDef def) => def.Recipe.Values.Sum();
+
     private static Label Clipped(Label label)
     {
         label.ClipText = true;
@@ -1038,7 +1063,7 @@ public partial class ArmoryScreen : Control
         foreach (var child in _blueprintGrid.GetChildren()) child.QueueFree();
 
         int cells = 0;
-        foreach (var weapon in Weapons.All.Values.OrderBy(w => w.Cost).ThenBy(w => w.Id, System.StringComparer.Ordinal))
+        foreach (var weapon in Weapons.All.Values.OrderBy(ScrapPrice).ThenBy(w => w.Id, System.StringComparer.Ordinal))
         {
             if (BlueprintSlots?.Invoke(weapon.Id) is not { } saved || saved.Count == 0) continue;
             _blueprintGrid.AddChild(BlueprintCard(weapon, saved, BlueprintAmmo?.Invoke(weapon.Id) ?? Ammo.Standard.Id, local));
