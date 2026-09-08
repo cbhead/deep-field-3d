@@ -3,6 +3,9 @@ name: release
 on:
   push:
     tags: ['v*']
+  # Dry run: everything but the publish, so the export can be checked on a
+  # branch before a tag makes it public.
+  workflow_dispatch:
 
 jobs:
   build:
@@ -33,13 +36,35 @@ jobs:
       - name: Export all presets
         run: |
           mkdir -p export
-          godot --headless --path game --export-release mac
-          godot --headless --path game --export-release windows
-          godot --headless --path game --export-release server-linux
+          godot --headless --path game --export-release mac 2>&1 | tee export/mac.log
+          godot --headless --path game --export-release windows 2>&1 | tee export/windows.log
+          godot --headless --path game --export-release server-linux 2>&1 | tee export/server.log
+      # Godot exits 0 after printing "ERROR: Export .NET Project: ..." and
+      # ships a binary with no C# in it — v0.2.0 and v0.3.0 crashed on launch
+      # for exactly that. Read the log, and check the exe is a real build.
+      - name: Verify exports
+        run: |
+          ls -la export
+          ! grep -h "ERROR" export/*.log
+          test -s export/DeepField3D-windows.exe
+          test $(stat -c %s export/DeepField3D-windows.exe) -gt 100000000
+          test -s export/DeepField3D-mac.zip
+          test -s export/deepfield3d-server-linux
       - name: Package windows zip
         run: |
-          cd export && zip DeepField3D-windows.zip DeepField3D-windows.* && rm DeepField3D-windows.exe || true
+          cd export && zip -r DeepField3D-windows.zip DeepField3D-windows.exe $(ls -d data_* 2>/dev/null) && rm -rf DeepField3D-windows.exe data_*
+      - name: Keep the exports from a dry run
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: exports
+          path: |
+            export/DeepField3D-windows.zip
+            export/DeepField3D-mac.zip
+            export/deepfield3d-server-linux
+          retention-days: 3
       - name: Create release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: |
