@@ -538,9 +538,20 @@ public partial class GameRoot : Node3D
         {
             if (!_armory.ProbeClick()) _armory.DumpHitAreas();
         }
-        var image = GetViewport().GetTexture().GetImage();
-        image.SavePng(path);
-        GD.Print($"[shot] wrote {path}  ({image.GetWidth()}x{image.GetHeight()})");
+        // Headless has no framebuffer: reading one logs an engine ERROR, and
+        // CI treats any ERROR in a probe log as a failure. The probes and the
+        // surface verdict files are what a headless run is for; the png is
+        // for a windowed one.
+        if (DisplayServer.GetName() == "headless")
+        {
+            GD.Print($"[shot] headless run — no frame to write for {path}");
+        }
+        else
+        {
+            var image = GetViewport().GetTexture().GetImage();
+            image.SavePng(path);
+            GD.Print($"[shot] wrote {path}  ({image.GetWidth()}x{image.GetHeight()})");
+        }
         GetTree().Quit();
     }
 
