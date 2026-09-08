@@ -51,7 +51,7 @@ public static class Serialization
         int Phase, float PhaseTimer, int WaveIndex, long WaveStartTick,
         List<EnemyState> Enemies, List<TowerState> Towers, List<ProjectileState> Projectiles,
         List<SpawnState> PendingSpawns, List<PlayerStateDto> Players,
-        List<TrapState>? Traps, int NextId);
+        List<TrapState>? Traps, int NextId, bool Lobby = false, bool Endless = false);
 
     public static string Serialize(World w)
     {
@@ -89,7 +89,7 @@ public static class Serialization
                 p.MeleeBuilds.ToDictionary(kv => kv.Key, kv => kv.Value.MasteryLevel),
                 p.MeleeCooldown)).ToList(),
             w.Traps.Select(t => new TrapState(t.Id, t.DefId, t.SocketId, t.ChargesLeft, t.RearmTimer)).ToList(),
-            w.NextIdValue);
+            w.NextIdValue, w.Lobby, w.Endless);
         return JsonSerializer.Serialize(state);
     }
 
@@ -107,6 +107,8 @@ public static class Serialization
             PhaseTimer = state.PhaseTimer,
             WaveIndex = state.WaveIndex,
             WaveStartTick = state.WaveStartTick,
+            Lobby = state.Lobby,
+            Endless = state.Endless,
         };
 
         foreach (var (typeName, amount) in state.TeamScrap)

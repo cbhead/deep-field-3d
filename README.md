@@ -27,6 +27,12 @@ the delivery contract and its gotchas are in
 shell; on Windows, `.\play.cmd` takes the same flags. `make run` does the same
 if your PATH is set up — see [docs/INSTALL.md](docs/INSTALL.md).
 
+**Host** opens a party: the lobby stays up with a seats row while friends join
+and pick factions, and the match starts on **Launch**. **Endless** is a toggle
+on the sector — the authored waves cycle with hp and numbers still climbing,
+the HUD shows the threat multiplier and your best wave, and the run ends when
+the core does.
+
 ### Controls
 
 | | |

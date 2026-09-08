@@ -117,6 +117,8 @@ public static class Protocol
     {
         Command.Join c => $"join|{c.PlayerId}|{Sanitize(c.Name)}|{c.FactionId}|{c.FactionLevel}",
         Command.Leave c => $"leave|{c.PlayerId}",
+        Command.SetFaction c => $"setFaction|{c.PlayerId}|{c.FactionId}|{c.FactionLevel}",
+        Command.Launch c => $"launch|{c.PlayerId}",
         Command.PlayerSync c => $"sync|{c.PlayerId}|{F(c.Pos.X)}|{F(c.Pos.Y)}|{F(c.Pos.Z)}",
         Command.PlaceTower c => $"place|{c.PlayerId}|{c.TowerId}|{c.SocketId}",
         Command.SellTower c => $"sell|{c.PlayerId}|{c.TowerId}",
@@ -147,6 +149,8 @@ public static class Protocol
                 "join" => new Command.Join(int.Parse(p[1]), p[2], p[3],
                     p.Length > 4 ? int.Parse(p[4]) : 1),
                 "leave" => new Command.Leave(int.Parse(p[1])),
+                "setFaction" => new Command.SetFaction(int.Parse(p[1]), p[2], int.Parse(p[3])),
+                "launch" => new Command.Launch(int.Parse(p[1])),
                 "sync" => new Command.PlayerSync(int.Parse(p[1]), new Vec3(Pf(p[2]), Pf(p[3]), Pf(p[4]))),
                 "place" => new Command.PlaceTower(int.Parse(p[1]), p[2], p[3]),
                 "sell" => new Command.SellTower(int.Parse(p[1]), int.Parse(p[2])),
@@ -178,6 +182,8 @@ public static class Protocol
     {
         Command.Join c => c.PlayerId == seatPlayerId,
         Command.Leave c => c.PlayerId == seatPlayerId,
+        Command.SetFaction c => c.PlayerId == seatPlayerId,
+        Command.Launch c => c.PlayerId == seatPlayerId,
         Command.PlayerSync c => c.PlayerId == seatPlayerId,
         Command.PlaceTower c => c.PlayerId == seatPlayerId,
         Command.SellTower c => c.PlayerId == seatPlayerId,

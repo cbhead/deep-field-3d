@@ -19,6 +19,18 @@ public abstract record SimEvent
         public override string LogLine() => $"{Tick} waveStarted {WaveIndex} {EnemyCount}";
     }
 
+    /// <summary>The party launched: the intermission clock starts.</summary>
+    public sealed record MatchLaunched(int ByPlayerId) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} matchLaunched {ByPlayerId}";
+    }
+
+    /// <summary>A lobby re-pick went through.</summary>
+    public sealed record FactionChanged(int PlayerId, string FactionId) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} factionChanged {PlayerId} {FactionId}";
+    }
+
     public sealed record WaveCleared(int WaveIndex) : SimEvent
     {
         public override string LogLine() => $"{Tick} waveCleared {WaveIndex}";

@@ -1,3 +1,4 @@
+using System.Linq;
 using DeepField.Sim.Content;
 
 namespace DeepField.Sim;
@@ -220,6 +221,22 @@ public sealed class World
     /// of burning waves before anyone joins. Harness worlds leave it false —
     /// towers-only runs legitimately have zero players.</summary>
     public bool WaitForPlayers;
+
+    /// <summary>The party is still assembling: the intermission clock does
+    /// not run and StartWave is ignored until the lowest-seated connected
+    /// player launches (Command.Launch). Off by default so harness worlds and
+    /// solo matches start the way they always have.</summary>
+    public bool Lobby;
+
+    /// <summary>Endless: the authored arc never ends. Past the last authored
+    /// wave the tables cycle, hp keeps compounding on the wave index and the
+    /// count grows per lap. There is no Victory — the run ends when the core
+    /// does, and the wave reached is the score.</summary>
+    public bool Endless;
+
+    /// <summary>Who may launch from the lobby: the lowest connected seat, so a
+    /// dedicated server's first joiner and a hosting player both qualify.</summary>
+    public int LaunchSeat => Players.Values.Where(p => p.Connected).Select(p => p.Id).DefaultIfEmpty(1).Min();
 
     /// <summary>Index of the current (or just-cleared) wave; -1 before the first.</summary>
     public int WaveIndex = -1;

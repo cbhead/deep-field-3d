@@ -46,6 +46,10 @@ Known gaps of that kind:
 - **Per-tower kills / uptime / coverage** in the upgrade panel. The sim tracks
   damage dealt but not the rest.
 - **Early-start scrap bonus** on the intermission panel. No such bonus exists.
+- **Elite tags on the endless HUD.** Endless exists (waves cycle, threat
+  climbs, best wave is kept), but elite modifiers (`EliteModDef`: gilded,
+  juggernaut, voltaic, swift, umbral) are not in the sim yet, so the HUD shows
+  wave, threat and best without the elite strip.
 Closed since: per-player damage / builds / revives now ride `GameView`, the
 version-mismatch modal names both builds, and the intermission condition banner
 is live — Night and Fog exist, the schedule is authored on the `MapDef`, and the

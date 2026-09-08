@@ -93,4 +93,9 @@ public static class Balance
     /// position — a dial, not a magic number, because tightening it is a
     /// balance decision and not a networking one.</summary>
     public const float HitRangeSlack = 1.15f;
+
+    /// <summary>Endless: extra bodies per lap of the authored wave tables, on
+    /// top of the hp curve that never stops. Count-first, like player scaling,
+    /// so late waves are crowds rather than sponges.</summary>
+    public const float EndlessCountGrowthPerLap = 1.15f;
 }

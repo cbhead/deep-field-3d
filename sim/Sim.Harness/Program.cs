@@ -462,6 +462,8 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
     {
         new Command.Join(1, "p", "forge"),
         new Command.Leave(1),
+        new Command.SetFaction(1, "tempest", 3),
+        new Command.Launch(1),
         new Command.PlayerSync(1, new Vec3(1.5f, 2f, -3.25f)),
         new Command.PlaceTower(1, "lance", "g1"),
         new Command.SellTower(1, 7),
