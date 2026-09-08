@@ -74,6 +74,11 @@ and missing**, all M3 content that is not on design's forward manifest yet:
 
 List them with `./play --headless --quit-after 600 -- --asset-audit | grep MISSING`.
 
+Five *models* are in the same position — requested by the armory and the
+first-person view, not yet on design's forward manifest: `ammo_shock`,
+`ammo_toxin`, `attach_toxinfeed`, `vfx_tracer_shock`, `vfx_tracer_toxin`. The
+ammo rail and the slot card draw the icon until they land.
+
 This class of gap was invisible until the build wheel became reviewable. The
 audit printed what the game *asked for* and said nothing about what arrived,
 and the fallback is a labelled chip that reads as a deliberate control rather

@@ -1,6 +1,6 @@
 # Asset usage
 
-**492 delivered · 320 consumed · 172 unused** — regenerate with `make usage`.
+**504 delivered · 370 consumed · 134 unused** — regenerate with `make usage`.
 
 `asset-report.sh` answers *has design shipped it*. This answers the question that
 rots silently: an asset can be delivered, imported, and never referenced by a
@@ -27,18 +27,20 @@ and nothing gets hurt, so state variants the code *does* request — a spent tra
 plate, a half-demolished barricade — never come up in the measurement. They are
 marked `wired=yes` in the manifest by reading the code, and show as unused here.
 
-## What the unused 172 are
+## What the unused 134 are
 
 The 2026-09-07 drop (427 models, 65 icons) replaced the first delivery's
 geometry and added 47 names beyond the brief — M4/M5 enemies, the Glacier and
-Specter heroes, map elements, status VFX. Most of the new names wait on the
-system they are for.
+Specter heroes, map elements, status VFX. The armory redesign and the
+first-person pass then put the weapon models, attachments, ammo, hands (now in
+three poses, +12 files), tracers, muzzle flashes and impacts to work, and the
+content audit builds all of them so the measurement sees it. What is left
+waits on the system it is for.
 
 | Group | Count | Why |
 |---|---|---|
-| VFX | 40 | No VFX system. Status particles, reaction bursts, ability effects, muzzle flashes, impacts, tracers and the Detector/Overclock/lane-wash effects all wait on it. |
 | Overclock tower (chassis + 30 stage modules) | 31 | Overclock does not exist as a tower yet (M4). Delivered early on purpose — art lead time is the schedule risk. |
-| Weapon viewmodels, world models, attachments, ammo models, hands | 28 | Only the sidearm viewmodel is mounted so far. The other platforms, every attachment model, ammo model and the faction hands wait on the viewmodel work reaching them. |
+| VFX | 27 | No status/ability/reaction VFX system yet: status particles, reaction bursts, ability effects, shield pop/regen, tower place/sell/upgrade, wave start/clear, the Detector pulse, Overclock link and lane wash. (Muzzle flashes, impacts and tracers are consumed now.) |
 | `_s1` stage modules | 19 | **Correct and intentional.** Design's chassis *is* the level-1 state and `_s1` is an empty root, so sim level N asks for stage N+1 and `_s1` is never requested. |
 | Map elements | 17 | Teleporter pad states, elevator, sniper nest, crusher, floodgate, operated gate, destructible wall, control-point and launcher-pad states, caches, physics props — M3/M4 map elements the sim does not drive yet (the pads and nest that *are* placed use the idle/neutral state). |
 | M4/M5 enemies and states | 8 | Broodmother, Carapace (+ plate), Leaper (+ windup, airborne), the Ram's enraged state, the Shade's shimmer. Ram, Shade and Mender themselves are wired. |
@@ -46,8 +48,9 @@ system they are for.
 | Hero revive poses | 5 | Downed poses are wired; the revive-crouch pose is not. |
 | Trap spent/triggered/rearming states | 5 | **Requested by code** (`RefreshTrapArt` follows `ChargesLeft`) — the blind spot above. |
 | Scrap pickups | 5 | Scrap is credited on kill; nothing is dropped in the world. |
-| Icons | 3 | `icon_tower_overclock` (no tower), `icon_weapon_wrench` (melee has no armory card), and `icon_ammo_cryo` — see the naming note below. |
-| Barricade damaged/broken | 2 | Structure HP draws a bar over the intact model; the damaged and broken states are not swapped in yet. |
+| Faction-neutral hands, wrench viewmodel | 4 | Every player has a faction, so `hands_firstperson` (all three poses) is only a fallback; the wrench has no first-person view yet. |
+| Barricade damaged/broken | 2 | **Requested by code** (`RefreshBarricadeArt` follows structure health) — the blind spot above: nothing gets hurt in a solo match. |
+| Icons | 2 | `icon_tower_overclock` (no tower) and `icon_weapon_wrench` (melee has no armory card). |
 | Socket base plates | 2 | The occupied-socket art is the tower's own foot. |
 | `ui_nameplate` | 1 | No world-space nameplates yet. |
 
@@ -90,6 +93,12 @@ with different names and reparented the whole module instead. Nothing showed,
 because the whole tower turned as one node. It surfaced the moment the yaw and
 pitch nodes started being driven (`TowerRig`); the merge now starts below the
 wrapper.
+
+**Five M3 names had no manifest row.** The armory and the first-person view
+now ask for `ammo_shock`, `ammo_toxin`, `attach_toxinfeed`, `vfx_tracer_shock`
+and `vfx_tracer_toxin`; design has not modelled them and the brief never named
+them, so `--verify` failed the moment the code was honest about wanting them.
+They are in the manifest as requested-and-missing now.
 
 **One icon name drifted.** The brief and the drop name the cryo ammo icon
 `icon_ammo_cryo`; the sim's M3 ammo rows are `cryoRounds`, `shockRounds`,

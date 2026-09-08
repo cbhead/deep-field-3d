@@ -34,18 +34,50 @@ intermission with catch-up scrap.
 3. **Node 22+** — only for `make design-export`, which rebuilds the models from
    Claude Design's sources in `docs/design/` (see docs/ART-INTEGRATION.md). Not
    needed to build or play.
-3. **GNU make** (this machine's Xcode CLT shim is broken; brew's make sidesteps it):
+4. **GNU make** (this machine's Xcode CLT shim is broken; brew's make sidesteps it):
    ```sh
    brew install make
    export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
    ```
-4. Clone and verify:
+5. Clone and verify:
    ```sh
    git clone <repo> deepfield-3d && cd deepfield-3d
    make check           # sim build + unit tests + harness gates + game build
    ./play               # windowed game (controls in the README)
    ./play --headless -- --solo foundry   # headless match, for smoke-testing
    ```
+
+## Developer setup (Windows)
+
+`play.cmd` / `play.ps1` are the Windows twins of `./play`: same flags, same
+refusal of engine flags placed after `--`. They look for the tools where the
+steps below put them, fall back to whatever is on PATH, and take
+`$env:DOTNET` / `$env:GODOT` overrides.
+
+1. **.NET 8 SDK**:
+   ```powershell
+   winget install Microsoft.DotNet.SDK.8
+   ```
+2. **Godot 4.7.x mono (C#)** — unzip to `%USERPROFILE%\Applications\Godot_mono\`
+   so the launcher finds `Godot_v4.7.2-stable_mono_win64.exe` there:
+   ```powershell
+   New-Item -ItemType Directory -Force "$env:USERPROFILE\Applications\Godot_mono" | Out-Null
+   Invoke-WebRequest -OutFile "$env:TEMP\godot-mono.zip" `
+     "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_mono_win64.zip"
+   Expand-Archive -Force "$env:TEMP\godot-mono.zip" "$env:USERPROFILE\Applications\Godot_mono"
+   ```
+   (The zip unpacks into a `Godot_v4.7.2-stable_mono_win64\` folder; move the
+   `.exe` and its `GodotSharp\` folder up one level, or point `$env:GODOT` at it.)
+3. **Node 22+** — optional, for `make design-export` only.
+4. Clone and verify:
+   ```powershell
+   git clone <repo> deepfield-3d; cd deepfield-3d
+   dotnet build sim\Sim.Core; dotnet test; dotnet run --project sim\Sim.Harness
+   .\play.cmd                                  # windowed game
+   .\play.cmd --headless -- --solo foundry     # headless match
+   ```
+   `make` targets assume a POSIX shell; on Windows run the commands they wrap
+   (the Makefile lists them) or use Git Bash / WSL.
 
 `./play` is self-contained (absolute paths to dotnet + Godot) and works from any
 shell regardless of PATH; `make run` does the same but needs the PATH line above.

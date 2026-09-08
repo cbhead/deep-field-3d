@@ -95,6 +95,10 @@ public partial class GameRoot : Node3D
     private WorldMarkers _markers = null!;
     private LobbyScreen _lobby = null!;
     private CanvasLayer _overlay = null!;
+    /// <summary>Design's mesh effects — flashes, streaks, impacts — driven
+    /// client-side (see Vfx.cs). The player fires straight into it.</summary>
+    public Vfx Vfx { get; private set; } = null!;
+    private bool _shotFire;                   // --shot vm-<weapon>: fire one round before the capture
 
     private readonly GameView _view = new();
     private readonly Dictionary<int, EnemyOverhead> _overheads = new();
@@ -384,13 +388,38 @@ public partial class GameRoot : Node3D
             return;
         }
 
-        if (_shotView is "armory" or "wheel" or "upgrade")
+        // First-person review: buy and equip a platform, fit a barrel, and
+        // fire one round on the frame before the capture so the flash and the
+        // streak are in the picture.
+        if (_shotView.StartsWith("vm-") && _world is not null)
+        {
+            string weapon = _shotView[3..];
+            if (_world.Players.TryGetValue(LocalPlayerId, out var me) && Weapons.All.ContainsKey(weapon))
+            {
+                _world.Money = 1000;
+                me.Scrap[ScrapType.Alloy] = 40;
+                Submit(new Command.BuyWeapon(LocalPlayerId, weapon));
+                Submit(new Command.SelectWeapon(LocalPlayerId, weapon));
+                Submit(new Command.CraftAttachment(LocalPlayerId, weapon, "longBarrel"));
+                Step.Advance(_world);
+                Submit(new Command.StartWave(LocalPlayerId));
+                Step.Advance(_world);
+                RebuildView();
+            }
+            _shotView = "eye";
+            _shotPath = path;
+            _shotCountdown = 40;
+            _shotFire = true;
+            return;
+        }
+
+        if (_shotView is "armory" or "blueprints" or "wheel" or "upgrade")
         {
             string surface = _shotView;
             _shotView = "eye";
             _shotPath = path;
             _shotCountdown = 4;
-            if (surface == "armory")
+            if (surface is "armory" or "blueprints")
             {
                 // Stage a fitted attachment so the shot proves modules mount on
                 // the weapon. A fresh match has no scrap, so without this the
@@ -403,7 +432,15 @@ public partial class GameRoot : Node3D
                     RebuildView();
                 }
                 ToggleArmory();
-                _dumpHits = true;
+                if (surface == "blueprints") _armory.ShowBlueprints();
+                else _dumpHits = true;
+                // Headless has no window: the root viewport is a 64×64 stub,
+                // and Godot's hit test finds nothing at any point on a frame
+                // laid out at full size — which is why this probe reported
+                // every control inert for months. Give the root a real size
+                // and the layout a few frames to settle before the click.
+                if (DisplayServer.WindowGetSize() == Vector2I.Zero)
+                    GetTree().Root.Size = new Vector2I(1440, 810);
             }
             // Both of these used to open their surface in this one frame and
             // shoot four frames later, which produced two pictures of the
@@ -537,10 +574,30 @@ public partial class GameRoot : Node3D
         foreach (var def in Traps.All.Values)
             built.Add(SpawnStructureView(def.Id, Vector3.Zero, null));
 
+        // What the armory bench and the first-person view build: every
+        // platform with every module on it, each round on the ammo rail, the
+        // hands in every pose, and the effects a shot draws. None of these
+        // come up in a played match that never opens the armory or fires.
+        foreach (var weapon in Weapons.All.Values)
+        {
+            var everything = Attachments.All.Values.GroupBy(a => a.Slot).ToDictionary(g => g.Key, g => g.First().Id);
+            if (WeaponAssembly.Build(weapon.Id, everything) is { } world) built.Add(world);
+            if (WeaponAssembly.Build(weapon.Id, everything, world: false) is { } vm) built.Add(vm);
+        }
+        foreach (var def in Attachments.All.Values) built.Add(AssetLibrary.Instantiate($"attach_{def.Id}", () => new Node3D()));
+        foreach (var def in Ammo.All.Values)
+        {
+            built.Add(AssetLibrary.Instantiate($"ammo_{def.Id}", () => new Node3D()));
+            built.Add(AssetLibrary.Instantiate($"vfx_tracer_{def.Id}", () => new Node3D()));
+        }
+        foreach (string effect in new[] { "vfx_muzzle_lance", "vfx_impact_lance", "vfx_muzzle_nova", "vfx_impact_nova", "vfx_muzzle_arc", "vfx_impact_arc", "vfx_muzzle_skywatch", "vfx_impact_skywatch" })
+            built.Add(AssetLibrary.Instantiate(effect, () => new Node3D()));
         foreach (var def in Factions.All.Values)
         {
             built.Add(AssetLibrary.Instantiate($"hero_{def.Id}", () => Placeholders.Hero(def.Id)));
             built.Add(AssetLibrary.Instantiate($"hero_{def.Id}_downed", () => Placeholders.Hero(def.Id)));
+            foreach (string suffix in new[] { "", "_pistol", "_tool" })
+                built.Add(AssetLibrary.Instantiate($"hands_{def.Id}{suffix}", () => new Node3D()));
         }
 
         // Icons follow the same content tables the UI derives them from, so
@@ -723,6 +780,7 @@ public partial class GameRoot : Node3D
     {
         TickShotStages();
         TickIntermissionShot();
+        if (_shotPath is not null && _shotFire && _shotCountdown == 2 && _player is not null) { _player.FireForReview(); _shotFire = false; }
         if (_shotPath is not null && --_shotCountdown <= 0) CaptureShot();
         TickCoreFlash(delta);
 
@@ -980,6 +1038,9 @@ public partial class GameRoot : Node3D
                 case SimEvent.TowerSold sold:
                     ReleaseStructureView(sold.TowerId);
                     break;
+                case SimEvent.TowerFired fired:
+                    OnTowerFired(fired.TowerId);
+                    break;
 
                 // A demolished structure has to leave the map, or the Ram's
                 // work is invisible and the player keeps counting on a tower
@@ -1134,6 +1195,19 @@ public partial class GameRoot : Node3D
 
     // ---- Shared event reactions (identical in every mode) -----------------
 
+    /// <summary>Design's flash at the rig's muzzle, facing where the barrel
+    /// points. Only the host sees these: TowerFired is not relayed, and a
+    /// client's projectile views tell the same story a beat later.</summary>
+    private void OnTowerFired(int towerId)
+    {
+        if (!_towerViews.TryGetValue(towerId, out var view) || !IsInstanceValid(view)) return;
+        string defId = (string)view.GetMeta("def_id", "");
+        if (defId.Length == 0) return;
+        var rig = RigFor(towerId, view, defId);
+        if (rig.Muzzle is null || !IsInstanceValid(rig.Muzzle)) return;
+        Vfx.TowerFired(defId, rig.Muzzle.GlobalPosition, rig.Forward);
+    }
+
     private void OnEnemyDamaged(int enemyId, float amount, string source)
     {
         bool mine = source == $"player{LocalPlayerId}";
@@ -1141,6 +1215,12 @@ public partial class GameRoot : Node3D
 
         if (EnemyWorldPos(enemyId) is { } pos)
         {
+            // A teammate's shot never crosses the wire as a shot; the damage
+            // it did does. Draw their streak from where they stand.
+            if (!mine && source.StartsWith("player") && int.TryParse(source[6..], out int who)
+                && _avatarViews.TryGetValue(who, out var avatar) && IsInstanceValid(avatar))
+                Vfx.RemoteShot(avatar.Position + new Vector3(0f, 1.5f, 0f), pos + new Vector3(0f, 1f, 0f));
+
             var color = source.StartsWith("player")
                 ? (mine ? UiTheme.Ink : UiTheme.InkDim)
                 : source.StartsWith("tower") ? UiTheme.Accent : UiTheme.Warn;
@@ -1655,6 +1735,12 @@ public partial class GameRoot : Node3D
             }
             view.Position = ToGd(projectile.Pos);
         }
+        // A round that is no longer in the sim landed this tick; its view's
+        // last position is the hit, and design's impact goes there.
+        var live = new HashSet<int>(_world.Projectiles.Select(p => p.Id));
+        foreach (var (id, view) in _projectileViews)
+            if (!live.Contains(id) && IsInstanceValid(view))
+                Vfx.ProjectileLanded((string)view.GetMeta("def_id", "lance"), view.Position);
         SweepViews(_projectileViews, _world.Projectiles.Select(p => p.Id));
 
         foreach (var trap in _world.Traps)
@@ -2984,6 +3070,7 @@ public partial class GameRoot : Node3D
         };
 
         var root = new Node3D();
+        root.SetMeta("def_id", towerDefId);
         root.AddChild(AssetLibrary.Instantiate(asset, () => Placeholders.Projectile(towerDefId)));
         AddChild(root);
         return root;
@@ -3037,6 +3124,9 @@ public partial class GameRoot : Node3D
         _armory.Submit = Submit;
         _armory.RecraftBlueprint = RecraftBlueprint;
         _armory.HasBlueprint = weaponId => _profile.BlueprintSlots.ContainsKey(weaponId);
+        _armory.BlueprintSlots = weaponId => _profile.BlueprintSlots.TryGetValue(weaponId, out var slots) ? slots : null;
+        _armory.BlueprintAmmo = weaponId => _profile.BlueprintAmmo.TryGetValue(weaponId, out var ammo) ? ammo : null;
+        _armory.SaveBlueprint = SaveBlueprint;
         _overlay.AddChild(_armory);
 
         _lobby = new LobbyScreen { Name = "Lobby" };
@@ -3049,6 +3139,8 @@ public partial class GameRoot : Node3D
         // World-space marker layer.
         _markers = new WorldMarkers { Name = "Markers" };
         AddChild(_markers);
+        Vfx = new Vfx { Name = "Vfx" };
+        AddChild(Vfx);
 
         _ghost = new BuildGhost { Name = "BuildGhost" };
         AddChild(_ghost);
@@ -3232,6 +3324,17 @@ public partial class GameRoot : Node3D
 
     /// <summary>Blueprint recraft: replay the saved build for a weapon as craft
     /// commands (the sim refuses whatever scrap can't cover).</summary>
+    /// <summary>Writes the build as it stands into the profile. Crafting already
+    /// records each module as it lands, so this mostly matters for the ammo and
+    /// for saving a build on purpose from the Blueprints tab.</summary>
+    public void SaveBlueprint(string weaponId)
+    {
+        if (_view.Local is not { } local) return;
+        foreach (var (slot, attachmentId) in local.AttachmentsFor(weaponId))
+            _profile.RecordAttachment(weaponId, slot.ToString(), attachmentId);
+        _profile.RecordAmmo(weaponId, local.AmmoFor(weaponId));
+    }
+
     public void RecraftBlueprint(string weaponId)
     {
         if (_profile.BlueprintSlots.TryGetValue(weaponId, out var slots))

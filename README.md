@@ -24,8 +24,8 @@ the delivery contract and its gotchas are in
 ```
 
 `./play` is self-contained (absolute paths to dotnet + Godot) and works from any
-shell. `make run` does the same if your PATH is set up — see
-[docs/INSTALL.md](docs/INSTALL.md).
+shell; on Windows, `.\play.cmd` takes the same flags. `make run` does the same
+if your PATH is set up — see [docs/INSTALL.md](docs/INSTALL.md).
 
 ### Controls
 

@@ -25,7 +25,10 @@ jobs:
           include-templates: true
       - name: Import + build solutions
         run: |
-          godot --headless --import game
+          # `--import game` silently does nothing on 4.7 (ART-INTEGRATION.md);
+          # the working form is --path first. Without it every model in the
+          # release is a placeholder and nothing fails.
+          godot --headless --path game --import
           godot --headless --path game --build-solutions --quit || true
       - name: Export all presets
         run: |

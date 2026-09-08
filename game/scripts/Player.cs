@@ -1,5 +1,6 @@
 using Godot;
 using System.Linq;
+using DeepField.Game.Ui;
 using DeepField.Sim;
 using DeepField.Sim.Content;
 
@@ -36,34 +37,92 @@ public partial class Player : CharacterBody3D
     private double _meleeCooldown;
     private bool _triggerHeld;
     private Node3D? _viewModel;
+    private Node3D? _muzzle;
     private string _viewModelFor = "";
+    private Vector3 _viewModelRest;
+    private float _recoil;
 
-    /// <summary>The gun in your hands. Design ships weapon_&lt;id&gt;_vm.glb and
-    /// hands_&lt;faction&gt;.glb and nothing had ever instanced either, so the
-    /// first-person view was a floating crosshair — you could not see what you
-    /// were holding, which is most of what a shooter's feel is.
+    /// <summary>The gun in your hands, assembled the way the armory assembles
+    /// it: design's viewmodel with the modules you fitted on their mounts, and
+    /// the faction's hands in the pose that platform is held in.
     ///
-    /// Parented to the camera at a fixed offset rather than framed by one: a
-    /// viewmodel is authored to sit exactly here, which is why this needs none
-    /// of the bounds-fitting the gunsmith bench does.</summary>
+    /// Design authors every viewmodel with the grip at the origin and the bore
+    /// along -Z, and the hands in the same frame, so the two only have to share
+    /// a parent. The parent sits low and right of the camera; the numbers are
+    /// per pose because a pistol is held closer than a rifle's handguard.
+    /// Hands ship in one pose per file (rifle); pistol and tool poses are
+    /// exported beside them as hands_&lt;faction&gt;_&lt;pose&gt;, and a missing
+    /// pose falls back to the rifle one rather than to nothing.</summary>
     private void RefreshViewModel(string weaponId, string factionId)
     {
-        if (_viewModelFor == weaponId && GodotObject.IsInstanceValid(_viewModel)) return;
+        var fitted = _root.View.Local?.AttachmentsFor(weaponId)
+            ?? new System.Collections.Generic.Dictionary<AttachmentSlot, string>();
+        string key = $"{weaponId}|{factionId}|" + string.Join(",", fitted.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}={kv.Value}"));
+        if (_viewModelFor == key && GodotObject.IsInstanceValid(_viewModel)) return;
         if (GodotObject.IsInstanceValid(_viewModel)) _viewModel!.QueueFree();
-        _viewModelFor = weaponId;
+        _viewModelFor = key;
+        _muzzle = null;
 
-        var rig = new Node3D { Position = new Vector3(0.24f, -0.20f, -0.5f) };
-        var gun = AssetLibrary.TryInstantiate($"weapon_{weaponId}_vm");
-        if (gun is not null) rig.AddChild(gun);
+        string pose = HandsPose(weaponId);
+        _viewModelRest = pose switch
+        {
+            "pistol" => new Vector3(0.20f, -0.22f, -0.42f),
+            "tool" => new Vector3(0.22f, -0.26f, -0.40f),
+            _ => new Vector3(0.18f, -0.25f, -0.36f),
+        };
+        var rig = new Node3D { Position = _viewModelRest };
 
-        var hands = AssetLibrary.TryInstantiate($"hands_{factionId}")
+        var gun = WeaponAssembly.Build(weaponId, fitted, world: false);
+        if (gun is not null)
+        {
+            rig.AddChild(gun);
+            // Where the round leaves: the fitted barrel's own muzzle mount if
+            // there is one, else the platform's.
+            _muzzle = gun.FindChild("attach_mount_muzzle", true, false) as Node3D
+                ?? gun.FindChild($"{weaponId.ToLowerInvariant()}_mount_muzzle", true, false) as Node3D;
+        }
+
+        // The rifle pose is the base file; only the other poses carry a suffix.
+        // Asked for in that order so the audit never sees a name that does
+        // not exist as a file.
+        string suffix = pose == "rifle" ? "" : $"_{pose}";
+        var hands = AssetLibrary.TryInstantiate($"hands_{factionId}{suffix}")
+                    ?? AssetLibrary.TryInstantiate($"hands_firstperson{suffix}")
+                    ?? AssetLibrary.TryInstantiate($"hands_{factionId}")
                     ?? AssetLibrary.TryInstantiate("hands_firstperson");
         if (hands is not null) rig.AddChild(hands);
 
         if (gun is null && hands is null) { _viewModel = null; return; }
 
+        // A viewmodel throws no shadow: it would paint the shape of your own
+        // gun across the floor in front of you.
+        MapKit.NoShadow(rig);
         _viewModel = rig;
         _camera.AddChild(rig);
+    }
+
+    /// <summary>Design's weapon.handsPose: how each platform is held.</summary>
+    private static string HandsPose(string weaponId) => weaponId switch
+    {
+        "sidearm" or "emberPistol" => "pistol",
+        "wrench" => "tool",
+        _ => "rifle",
+    };
+
+    /// <summary>The muzzle in world space, for the shot's flash and streak.
+    /// Falls back to a point in front of the camera when there is no model.</summary>
+    public Vector3 MuzzleWorld => _muzzle is not null && GodotObject.IsInstanceValid(_muzzle)
+        ? _muzzle.GlobalPosition
+        : _camera.GlobalPosition + (-_camera.GlobalTransform.Basis.Z) * 0.6f + _camera.GlobalTransform.Basis.X * 0.2f - _camera.GlobalTransform.Basis.Y * 0.15f;
+
+    /// <summary>Recoil: the rig kicks back and up a few centimetres and eases
+    /// home. Procedural, like every animation in this build.</summary>
+    private void TickViewModel(double delta)
+    {
+        if (_viewModel is null || !GodotObject.IsInstanceValid(_viewModel)) return;
+        _recoil = Mathf.MoveToward(_recoil, 0f, (float)delta * 6f);
+        _viewModel.Position = _viewModelRest + new Vector3(0f, _recoil * 0.02f, _recoil * 0.05f);
+        _viewModel.Rotation = new Vector3(_recoil * 0.06f, 0f, 0f);
     }
 
     private bool _onLadder;
@@ -260,6 +319,7 @@ public partial class Player : CharacterBody3D
         MoveAndSlide();
 
         RefreshViewModel(_root.CurrentWeaponId(), _root.LocalFactionId);
+        TickViewModel(delta);
 
         // Fire: blocked while a menu owns the mouse or a build surface is open.
         _fireCooldown -= delta;
@@ -406,7 +466,18 @@ public partial class Player : CharacterBody3D
         if (hit is { } result && result.Collider is Area3D area && area.HasMeta("enemy_id"))
             _root.Submit(new Command.PlayerHit(_root.LocalPlayerId,
                 area.GetMeta("enemy_id").AsInt32(), weapon.Id));
+
+        // The shot is drawn now, from the muzzle to wherever it stopped; the
+        // sim says separately whether it hurt. Instant feel, nothing waits.
+        var end = hit?.Position ?? _camera.GlobalPosition + (-_camera.GlobalTransform.Basis.Z) * weapon.RangeMeters;
+        string ammo = _root.View.Local?.AmmoFor(weapon.Id) ?? "standard";
+        _root.Vfx.GunShot(MuzzleWorld, end, ammo, hit is not null);
+        _recoil = 1f;
     }
+
+    /// <summary>For the review shots: one round down the lane so the frame
+    /// has a flash and a streak in it.</summary>
+    public void FireForReview() => Fire(Weapons.All[_root.CurrentWeaponId()]);
 
     private void UseAbility()
     {

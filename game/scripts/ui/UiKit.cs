@@ -20,6 +20,9 @@ public partial class ChamferBox : StyleBox
     public float StrokeWidth = Tokens.StrokePanel;
     public bool DropShadow;
     public Color Glow = new(0, 0, 0, 0);
+    /// <summary>Design's hazard tape: faint diagonal stripes over the fill,
+    /// for empty wells and slots that are waiting for something.</summary>
+    public bool Hazard;
 
     private static Vector2[] Points(Rect2 r, float c)
     {
@@ -48,6 +51,21 @@ public partial class ChamferBox : StyleBox
 
         var points = Points(rect, Chamfer);
         RenderingServer.CanvasItemAddPolygon(toCanvasItem, points, Fill3(Fill, points.Length));
+
+        if (Hazard)
+        {
+            // 45° stripes, each clipped to the rect by hand: the line runs
+            // x = left + d + t, y = top + t, and t is bounded by both edges.
+            var stripe = Tokens.Obsidian500 with { A = 0.55f };
+            float x0 = rect.Position.X, y0 = rect.Position.Y, w = rect.Size.X, h = rect.Size.Y;
+            for (float d = -h; d < w; d += 14f)
+            {
+                float tMin = Mathf.Max(0f, -d), tMax = Mathf.Min(h, w - d);
+                if (tMin >= tMax) continue;
+                RenderingServer.CanvasItemAddLine(toCanvasItem,
+                    new Vector2(x0 + d + tMin, y0 + tMin), new Vector2(x0 + d + tMax, y0 + tMax), stripe, 3f);
+            }
+        }
 
         if (Glow.A > 0.001f)
         {

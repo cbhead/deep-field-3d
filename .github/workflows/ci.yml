@@ -72,7 +72,7 @@ jobs:
         run: |
           godot --headless --path game --quit-after 900 -- \
             --shot foundry /tmp/probe.png armory > probe.log 2>&1 || true
-          grep -q "\[probe\] gunsmith slot click works" probe.log
+          grep -q "\[probe\] gunsmith Buy click works" probe.log
           ! grep -qiE "^ERROR|SCRIPT ERROR" probe.log
 
       # Turrets tracked correctly and pointed the wrong way for a whole
