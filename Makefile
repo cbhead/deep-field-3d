@@ -1,7 +1,7 @@
 GODOT ?= $(HOME)/Applications/Godot_mono.app/Contents/MacOS/Godot
 export PATH := $(HOME)/.dotnet:$(PATH)
 
-.PHONY: sim test gates game run import check audit assets usage usage-list design-export
+.PHONY: sim test gates game run import check audit assets usage usage-list design-export map-validate
 
 ## Build the pure sim (standalone — enforces the no-Godot boundary).
 sim:
@@ -36,6 +36,10 @@ assets:
 ## and node; writes straight into game/assets/ and docs/.
 design-export:
 	@./tools/design-export.sh
+
+## Every map against the rules in docs/MAP-AUTHORING.md §4.
+map-validate:
+	@./tools/map-validate.sh
 
 ## Which delivered assets does the game actually consume?
 usage:

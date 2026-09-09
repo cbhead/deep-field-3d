@@ -538,6 +538,41 @@ public partial class GameRoot : Node3D
         // underside of the deck it serves looks completely correct from every
         // angle and from the map file, and leaves a whole tier — and the air
         // lane it was the only answer to — unusable.
+        // Map validation: MAP-AUTHORING.md §4, measured on the assembled map.
+        //
+        // The rules this checks are not style. Each one is a defect this
+        // project actually shipped, and the coverage rules in particular have
+        // never been checked by anything — a map can pass every gate, every
+        // smoke run and every screenshot review while having an enemy lane no
+        // tower can reach. That is the difference between a map that builds
+        // and a map that plays.
+        if (_shotView == "validate")
+        {
+            var report = new List<string> { $"map validation on {_map.Id}" };
+            var failures = new List<string>();
+            // Sampled once and shared: rebuilding this inside each rule made
+            // the probe allocate its way through several thousand vectors, and
+            // on Switchyard that was enough to shift GC past mono's headless
+            // teardown and abort the process after the report was written.
+            var samples = RouteSamples();
+            var sockets = BuildableSockets();
+            RuleTiersAreReachable(sockets, report, failures);
+            RuleRoutesAreCovered(samples, sockets, report, failures);
+            RuleNoSocketCoversNothing(samples, sockets, report, failures);
+            RuleFallbackIsCovered(samples, sockets, report, failures);
+            RuleWallSocketsAreFooted(sockets, report, failures);
+            RuleLanesAreClear(samples, report, failures);
+
+            // The count is what CI ratchets on, so it goes in the file in a
+            // form a script can read without parsing prose.
+            report.Add($"violations={failures.Count}");
+            foreach (string failure in failures.Take(30)) report.Add(failure);
+            WriteProbe(report, path, failures.Count == 0, failures.Count == 0
+                ? "PASS: every rule this probe can measure holds"
+                : $"FAIL: {failures.Count} violation(s)");
+            return;
+        }
+
         // Railway review: the yard is laid out in code from a handful of
         // constants, and the failure it kept producing was not ugly — it was
         // *wrong*, and wrong in a way a screenshot hides. A running line
@@ -3735,6 +3770,262 @@ public partial class GameRoot : Node3D
                 MapKit.ThinOut(piece, i - bestStart, "cut_lamp_post", "cut_lamp");
         }
         _cutSpan = (samples[bestStart].At, samples[bestStart + bestLength - 1].At);
+    }
+
+    // =====================================================================
+    // Map validation — MAP-AUTHORING.md §4
+    // =====================================================================
+
+    /// <summary>Samples every ground and air route at 4 m, which is the lane
+    /// module's own repeat and fine enough that a hole in coverage cannot hide
+    /// between two samples.</summary>
+    private List<(RouteDef Route, Vector3 At)> RouteSamples()
+    {
+        var samples = new List<(RouteDef, Vector3)>();
+        foreach (var route in _map.Routes)
+            for (int i = 0; i < route.Waypoints.Count - 1; i++)
+            {
+                var a = ToGd(route.Waypoints[i]);
+                var b = ToGd(route.Waypoints[i + 1]);
+                int steps = Mathf.Max(1, Mathf.FloorToInt((b - a).Length() / 4f));
+                for (int k = 0; k <= steps; k++) samples.Add((route, a.Lerp(b, (float)k / steps)));
+            }
+        return samples;
+    }
+
+    /// <summary>Whether a tower built on this socket could shoot something at
+    /// <paramref name="target"/>.
+    ///
+    /// Level 1, because a lane that is only covered once someone has paid for
+    /// upgrades is a lane that is not covered on the wave it first matters.
+    /// Damage only: Detector and Singularity reach flyers but cannot kill one,
+    /// and a lane defended entirely by towers that do no damage is not
+    /// defended. Range is 3D — the whole point of an air lane is that it is
+    /// above you.</summary>
+    private static bool CanCover(Vector3 socket, Vector3 target, EnemyLayer layer)
+    {
+        float distance = socket.DistanceTo(target);
+        foreach (var def in Towers.All.Values)
+        {
+            if (def.Kind == TowerKind.Barricade || def.Damage <= 0f) continue;
+            if (!def.TargetLayers.Contains(layer)) continue;
+            if (distance <= def.RangeMeters && distance >= def.MinRangeMeters) return true;
+        }
+        return false;
+    }
+
+    private List<(SocketDef Def, Vector3 At)> BuildableSockets()
+    {
+        var list = new List<(SocketDef, Vector3)>();
+        foreach (var socket in _map.Sockets)
+            if (socket.Tag is SocketTag.Ground or SocketTag.Wall)
+                list.Add((socket, ToGd(socket.Pos)));
+        return list;
+    }
+
+    /// <summary>§4.1 — every tier that carries a socket can be got to.
+    ///
+    /// A tier with no way up is not a hard map, it is a dead one: on
+    /// Switchyard the catwalk carried the only four sockets that reach the air
+    /// strand, so one unreachable tier took a whole enemy layer with it.</summary>
+    private void RuleTiersAreReachable(List<(SocketDef Def, Vector3 At)> sockets,
+        List<string> report, List<string> failures)
+    {
+        var tops = new List<Vector3>();
+        void Walk(Node n)
+        {
+            if (n is Area3D area)
+            {
+                string kind = (string)area.GetMeta("kind", "");
+                // Where this piece of traversal leaves you.
+                if (kind == "ladder")
+                    tops.Add(area.GlobalPosition + new Vector3(0, LadderHalfHeight(area), 0));
+                else if (kind == "zipline" && area.HasMeta("zip_end"))
+                    tops.Add((Vector3)area.GetMeta("zip_end"));
+                else if (kind is "launcher" or "teleporter" or "elevator")
+                    tops.Add(area.GlobalPosition);
+            }
+            foreach (var child in n.GetChildren()) Walk(child);
+        }
+        Walk(this);
+
+        int unreachable = 0;
+        foreach (var (def, at) in BuildableSockets())
+        {
+            if (at.Y < 1.5f) continue;                    // ground tier needs no climb
+            bool served = tops.Any(t => Mathf.Abs(t.Y - at.Y) < 3f
+                && (t with { Y = 0 }).DistanceTo(at with { Y = 0 }) < 30f);
+            if (served) continue;
+            unreachable++;
+            failures.Add($"§4.1 socket {def.Id} at y {at.Y:0.0} has no traversal within reach");
+        }
+        report.Add($"§4.1 tiers reachable — {tops.Count} traversal exit(s), {unreachable} orphaned socket(s)");
+    }
+
+    /// <summary>§4.4 and §4.5 — every stretch of every lane is within reach of
+    /// at least three build pads, so there is a choice about how to answer it
+    /// rather than one forced tower.</summary>
+    private void RuleRoutesAreCovered(List<(RouteDef Route, Vector3 At)> samples,
+        List<(SocketDef Def, Vector3 At)> sockets, List<string> report, List<string> failures)
+    {
+        const int Want = 3;
+        foreach (var route in _map.Routes)
+        {
+            var layer = route.Layer;
+            int worst = int.MaxValue;
+            Vector3 worstAt = Vector3.Zero;
+            int thin = 0, count = 0;
+            foreach (var (r, at) in samples)
+            {
+                if (r.Id != route.Id) continue;
+                count++;
+                int cover = sockets.Count(s => CanCover(s.At, at, layer));
+                if (cover < worst) { worst = cover; worstAt = at; }
+                if (cover < Want) thin++;
+            }
+            if (count == 0) continue;
+            string rule = layer == EnemyLayer.Air ? "§4.5" : "§4.4";
+            report.Add($"{rule} route {route.Id} ({layer}) — thinnest point has {worst} pad(s), "
+                + $"{thin}/{count} sample(s) under {Want}");
+            if (thin > 0)
+                failures.Add($"{rule} route {route.Id} is under-covered at {thin} of {count} points "
+                    + $"— thinnest is {worst} pad(s) at ({worstAt.X:0},{worstAt.Y:0},{worstAt.Z:0})");
+        }
+    }
+
+    /// <summary>§4.6 — a pad that reaches no lane at any point is a pad nobody
+    /// will ever build on, and it is usually a sign the lane moved and the pad
+    /// did not.</summary>
+    private void RuleNoSocketCoversNothing(List<(RouteDef Route, Vector3 At)> samples,
+        List<(SocketDef Def, Vector3 At)> sockets, List<string> report, List<string> failures)
+    {
+        int dead = 0;
+        foreach (var (def, at) in BuildableSockets())
+        {
+            if (samples.Any(x => CanCover(at, x.At, x.Route.Layer))) continue;
+            dead++;
+            failures.Add($"§4.6 socket {def.Id} at ({at.X:0},{at.Y:0},{at.Z:0}) reaches no lane");
+        }
+        report.Add($"§4.6 dead pads — {dead}");
+    }
+
+    /// <summary>§4.7 — closing a shortcut must not hand the player a long way
+    /// round that nothing covers. The gate is the map's central decision; it is
+    /// only a decision if both answers are playable.</summary>
+    private void RuleFallbackIsCovered(List<(RouteDef Route, Vector3 At)> samples,
+        List<(SocketDef Def, Vector3 At)> sockets, List<string> report, List<string> failures)
+    {
+        var gated = _map.Routes.Where(r => r.BarricadeGate is not null).ToList();
+        if (gated.Count == 0) { report.Add("§4.7 no gated shortcut on this map"); return; }
+
+        foreach (var route in gated)
+        {
+            var fallback = _map.Routes.FirstOrDefault(r => r.Id == route.FallbackRouteId);
+            if (fallback is null)
+            {
+                failures.Add($"§4.7 route {route.Id} is gated by {route.BarricadeGate} "
+                    + "but names no fallback");
+                continue;
+            }
+            int thin = 0, count = 0;
+            foreach (var (r, at) in samples)
+            {
+                if (r.Id != fallback.Id) continue;
+                count++;
+                if (sockets.Count(s => CanCover(s.At, at, fallback.Layer)) < 3) thin++;
+            }
+            report.Add($"§4.7 {route.Id} falls back to {fallback.Id} — "
+                + $"{thin}/{count} sample(s) under-covered");
+            if (thin > 0)
+                failures.Add($"§4.7 closing {route.BarricadeGate} sends enemies down {fallback.Id}, "
+                    + $"which is under-covered at {thin} of {count} points");
+        }
+    }
+
+    /// <summary>§4.9 — a deck socket has to be standing on its deck, a metre
+    /// clear of the edge. w3 and w4 were both half a metre off the edge of the
+    /// catwalk, so a tower built on either hung in space.</summary>
+    private void RuleWallSocketsAreFooted(List<(SocketDef Def, Vector3 At)> sockets,
+        List<string> report, List<string> failures)
+    {
+        var space = GetWorld3D().DirectSpaceState;
+        int floating = 0, checkedCount = 0;
+        foreach (var (def, at) in BuildableSockets())
+        {
+            if (def.Tag != SocketTag.Wall) continue;
+            checkedCount++;
+            foreach (var offset in new[]
+            {
+                Vector3.Zero, new Vector3(1f, 0, 0), new Vector3(-1f, 0, 0),
+                new Vector3(0, 0, 1f), new Vector3(0, 0, -1f),
+            })
+            {
+                var from = at + offset + new Vector3(0, 0.6f, 0);
+                var query = PhysicsRayQueryParameters3D.Create(from, from - new Vector3(0, 2f, 0),
+                    collisionMask: 1);
+                if (space.IntersectRay(query).Count > 0) continue;
+                floating++;
+                failures.Add($"§4.9 socket {def.Id} has nothing under it "
+                    + $"{offset.Length():0} m to the {(offset == Vector3.Zero ? "centre" : "side")}");
+                break;
+            }
+        }
+        report.Add($"§4.9 deck pads footed — {checkedCount - floating}/{checkedCount}");
+    }
+
+    /// <summary>§4.8 and §4.10 — nothing solid standing in a walked lane, and
+    /// enough headroom over it to walk under.
+    ///
+    /// Decoration has no collision, so a wall across a lane does not stop
+    /// anything; it just means the map does not know where its own gameplay
+    /// is. Solid geometry in a lane is worse — it is a wall enemies walk
+    /// through, which is how the Switchyard retaining walls read before they
+    /// were moved to the perimeter.</summary>
+    private void RuleLanesAreClear(List<(RouteDef Route, Vector3 At)> samples,
+        List<string> report, List<string> failures)
+    {
+        var space = GetWorld3D().DirectSpaceState;
+        // One shape and one query object for the whole sweep. A BoxShape3D per
+        // sample is a physics-server resource per sample, and creating and
+        // dropping seventy of them left Godot's shutdown racing its own mutex
+        // — the report was written and the process still aborted after it.
+        var box = new BoxShape3D { Size = new Vector3(3.4f, 1.6f, 3.4f) };
+        var shape = new PhysicsShapeQueryParameters3D { Shape = box, CollisionMask = 1 };
+        int blocked = 0, lowClearance = 0, count = 0;
+        foreach (var (route, at) in samples)
+        {
+            if (route.Layer != EnemyLayer.Ground) continue;
+            count++;
+
+            // Knee to head height, across the lane's own width.
+            shape.Transform = new Transform3D(Basis.Identity, at + new Vector3(0, 1.1f, 0));
+            if (space.IntersectShape(shape, maxResults: 1).Count > 0)
+            {
+                blocked++;
+                failures.Add($"§4.8 lane {route.Id} is blocked by solid geometry "
+                    + $"at ({at.X:0},{at.Z:0})");
+            }
+
+            // Three metres of headroom: a player and an enemy both pass.
+            var up = PhysicsRayQueryParameters3D.Create(
+                at + new Vector3(0, 2f, 0), at + new Vector3(0, 3f, 0), collisionMask: 1);
+            if (space.IntersectRay(up).Count > 0)
+            {
+                lowClearance++;
+                failures.Add($"§4.10 lane {route.Id} has under 3 m of headroom "
+                    + $"at ({at.X:0},{at.Z:0})");
+            }
+        }
+        // Let the physics-server resources go while the tree is still up.
+        // Held until teardown, Godot's shutdown races its own mutex and aborts
+        // the process after the report has already been written — which reads
+        // in CI as a probe that crashed rather than one that failed.
+        shape.Shape = null;
+        shape.Dispose();
+        box.Dispose();
+
+        report.Add($"§4.8/§4.10 lanes clear — {count - blocked}/{count} unobstructed, "
+            + $"{count - lowClearance}/{count} with headroom");
     }
 
     /// <summary>True if any ground route other than <paramref name="exceptId"/>
