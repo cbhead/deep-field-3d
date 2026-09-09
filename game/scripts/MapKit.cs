@@ -49,7 +49,7 @@ public static class MapKit
     /// and centres the run, so a 28 m deck reads as deck segments rather than
     /// one stretched slab.</summary>
     public static bool MountRun(Node3D body, string asset, float span, float pieceLength,
-        bool alongX, float localY, float yawDegrees = 0f)
+        bool alongX, float localY, float yawDegrees = 0f, params string[] everyFifth)
     {
         if (AssetLibrary.TryInstantiate(asset) is not { } probe) return false;
         probe.QueueFree();
@@ -68,12 +68,31 @@ public static class MapKit
                 : new Vector3(0, localY, offset);
             piece.RotationDegrees = new Vector3(0, yawDegrees, 0);
             body.AddChild(piece);
+            ThinOut(piece, i, everyFifth);
         }
         HideBox(body);
         return true;
     }
 
-    /// <summary>Hides every descendant with a given name. Design's models name
+    /// <summary>Keeps a named part on one piece in five and hides it on the
+    /// rest.
+    ///
+    /// A tiling module may only contain features that are true at its own
+    /// repeat distance, and these modules are four metres long. Switchyard's
+    /// lane module carries a mile-marker post and the freight cut carries a
+    /// lamp post, both drawn as the once-in-a-while detail they would be on a
+    /// real line — so laid end to end they became a marker post every four
+    /// metres along every road and a lamp every four metres down the cutting.
+    /// One in five is twenty metres, which is the spacing those things want.
+    /// The real fix is design shipping them as separate props; this is what
+    /// the delivered module allows in the meantime.</summary>
+    public static void ThinOut(Node3D piece, int index, params string[] names)
+    {
+        if (names.Length == 0 || index % 5 == 0) return;
+        foreach (string name in names) HideNamed(piece, name);
+    }
+
+    /// <summary>Hides every descendant with a given name.    /// <summary>Hides every descendant with a given name. Design's models name
     /// their parts, which is what lets a placement borrow a model and leave one
     /// piece of it out — the yard lane wants the ballast and the sleeper kerbs
     /// but not the rail down the middle.</summary>

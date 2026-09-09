@@ -48,6 +48,10 @@ Known gaps of that kind:
   prints reach in metres and the world draws the ring, which is the part of
   "coverage" a player can act on.
 
+> The Switchyard asks below are written up in full, with dimensions, the map's
+> geometry and the reasoning, in **[docs/FORWARD-MANIFEST-switchyard.md](../FORWARD-MANIFEST-switchyard.md)**.
+> That document is the one to hand to design; these entries are the summary.
+
 - **Switchyard's terrain tile ships one variant of four.** Design's
   `buildVariant` draws four: standing water and weed tufts (v0), a **switch
   stand** (v1), a cable trough (v2), dropped sleepers (v3). The exporter calls

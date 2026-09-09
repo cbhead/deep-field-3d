@@ -605,7 +605,12 @@ public partial class GameRoot : Node3D
                 }
             }
 
-            report.Add($"{_railRuns.Count} run(s) of track laid");
+            report.Add($"{_railRuns.Count} run(s) of track laid, ladder at 1:{LadderRatio():0.0}");
+            // A yard turnout is a 1:6 to 1:8. Anything sharper is a set of
+            // points no track engineer would sign off, and it is the single
+            // thing that stops a throat reading as a throat.
+            if (LadderRatio() < 6f)
+                conflicts.Add($"ladder is 1:{LadderRatio():0.0} — sharper than a 1:6 yard turnout");
             report.Add(_cutSpan is { } span
                 ? $"freight cut runs ({span.From.X:0},{span.From.Z:0}) → ({span.To.X:0},{span.To.Z:0})"
                 : "freight cut: NOT PLACED");
@@ -2808,7 +2813,8 @@ public partial class GameRoot : Node3D
                 if (!air)
                 {
                     MapKit.MountRun(box, $"{map.Id}_path_ground", (b - a).Length(), 4f,
-                        alongX: true, MapKit.GroundLocal(box));
+                        alongX: true, MapKit.GroundLocal(box), 0f,
+                        "lane_marker", "lane_marker_cap");
                     // Switchyard's lane module carries a rail down its centre,
                     // and the routes it is laid along turn square corners —
                     // which is why the map read as a railway that made no
@@ -3496,7 +3502,14 @@ public partial class GameRoot : Node3D
     // running line and its roads sit north of z 19 and the depot road sits
     // south of z −28, and nothing a player stands on has a rail through it.
     private const float YardMainZ = 20.5f, YardRoadA = 24.5f, YardRoadB = 28f, YardRoadC = 31.5f;
-    private const float LeadFromX = -38f, LeadToX = 16f, BufferX = 37f;
+    // The ladder's angle is the angle of every turnout on it, and a yard
+    // turnout is a 1:6 to 1:8 — sharper than a running line's 1:8 to 1:12
+    // because nothing moves fast in a yard, but not sharper than 1:6. The lead
+    // ran -38 → 16 for the same 11 m of offset, which is 1:4.9: sharper than
+    // any turnout that has ever been laid, and the reason the throat read as
+    // tracks merging rather than as points. Stretched to 66 m it is 1:6.0, and
+    // the probe holds it there.
+    private const float LeadFromX = -42f, LeadToX = 24f, BufferX = 37f;
     private const float DepotZ = -32f;
     private const float NorthWallZ = 35f, SouthWallZ = -37f;
 
@@ -3556,9 +3569,7 @@ public partial class GameRoot : Node3D
 
         foreach (float z in new[] { YardRoadA, YardRoadB, YardRoadC })
         {
-            // Where the climbing lead crosses this road's centre — the turnout.
-            float x = LeadFromX + (LeadToX - LeadFromX)
-                * (z - YardMainZ) / (YardRoadC - YardMainZ);
+            float x = TurnoutX(z);
             RailRun(new Vector3(x, 0, z), new Vector3(BufferX - 1.5f, 0, z));
             // Facing the way a car arrives: these roads are entered from the
             // west, so the stop looks west.
@@ -3593,7 +3604,7 @@ public partial class GameRoot : Node3D
         // map is fifteen deep, so one per turnout would be a forest. Design
         // has no switch stand delivered — see the design-system notes — so a
         // signal standing at the points is what says "the track divides here".
-        foreach (float x in new[] { LeadFromX, -1.2f, 40f })
+        foreach (float x in new[] { LeadFromX, TurnoutX(YardRoadB), 40f })
             MapKit.Prop(this, "switchyard_dress_signaltower", new Vector3(x, 0, YardMainZ - 2.5f));
         MapKit.Prop(this, "switchyard_dress_signaltower", new Vector3(-40, 0, DepotZ - 2.5f));
 
@@ -3627,6 +3638,16 @@ public partial class GameRoot : Node3D
 
         ScatterTerrain("switchyard_terrain_scatter", 47f, 32f);
     }
+
+    /// <summary>Where the climbing lead crosses a road's centre — the
+    /// turnout that serves it.</summary>
+    private static float TurnoutX(float roadZ) =>
+        LeadFromX + (LeadToX - LeadFromX) * (roadZ - YardMainZ) / (YardRoadC - YardMainZ);
+
+    /// <summary>The ladder's ratio, quoted the way a railway quotes it: one
+    /// across for N along.</summary>
+    private static float LadderRatio() =>
+        (LeadToX - LeadFromX) / (YardRoadC - YardMainZ);
 
     /// <summary>The freight cut: the one piece of railway inside the
     /// playfield, and the map's whole lesson — the fast route that b1 closes.
@@ -3709,8 +3730,9 @@ public partial class GameRoot : Node3D
         for (int i = bestStart; i < bestStart + bestLength; i++)
         {
             var (at, along, _) = samples[i];
-            MapKit.Prop(this, "switchyard_cut_channel", new Vector3(at.X, 0, at.Z),
-                MapKit.YawAlongX(along));
+            if (MapKit.Prop(this, "switchyard_cut_channel", new Vector3(at.X, 0, at.Z),
+                    MapKit.YawAlongX(along)) is { } piece)
+                MapKit.ThinOut(piece, i - bestStart, "cut_lamp_post", "cut_lamp");
         }
         _cutSpan = (samples[bestStart].At, samples[bestStart + bestLength - 1].At);
     }
@@ -3747,7 +3769,8 @@ public partial class GameRoot : Node3D
         for (int i = 0; i < count; i++)
         {
             var at = from + along * ((i + 0.5f) / count);
-            MapKit.Prop(this, "switchyard_path_ground", new Vector3(at.X, 0.02f, at.Z), yaw);
+            if (MapKit.Prop(this, "switchyard_path_ground", new Vector3(at.X, 0.02f, at.Z), yaw) is { } piece)
+                MapKit.ThinOut(piece, i, "lane_marker", "lane_marker_cap");
         }
         _railRuns.Add((from, to));
     }
