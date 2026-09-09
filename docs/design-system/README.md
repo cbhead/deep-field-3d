@@ -48,6 +48,11 @@ Known gaps of that kind:
   prints reach in metres and the world draws the ring, which is the part of
   "coverage" a player can act on.
 
+> **How maps should be authored** — the contract, the engine's limits, the
+> rules a map must satisfy, and where each of the three maps stands — is in
+> **[docs/MAP-AUTHORING.md](../MAP-AUTHORING.md)**. Read that first if the
+> question is about a map rather than a model.
+>
 > The Switchyard asks below are written up in full, with dimensions, the map's
 > geometry and the reasoning, in **[docs/FORWARD-MANIFEST-switchyard.md](../FORWARD-MANIFEST-switchyard.md)**.
 > That document is the one to hand to design; these entries are the summary.
