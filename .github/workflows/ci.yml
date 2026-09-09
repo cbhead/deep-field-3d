@@ -115,6 +115,19 @@ jobs:
             grep -q "^PASS" /tmp/trav-$MAP.txt
           done
 
+      # Switchyard's yard is laid out in code from a handful of constants, and
+      # the way it went wrong was never ugly — it was wrong. A running line
+      # through four tower pads and a depot road four metres from the spawn
+      # both photograph perfectly well as a railway. This measures every metre
+      # of laid track against every socket, every walked route and every place
+      # a player is put down.
+      - name: Railway probe (no track through anything a player stands on)
+        run: |
+          godot --headless --path game --quit-after 6000 -- \
+            --shot switchyard /tmp/rail.txt railway > rail.log 2>&1 || true
+          cat /tmp/rail.txt
+          grep -q "^PASS" /tmp/rail.txt
+
       # The review shots for these three photographed the wrong screen for a
       # whole milestone: a fresh match sits in intermission and that panel draws
       # over everything, and both the wheel and the upgrade panel are

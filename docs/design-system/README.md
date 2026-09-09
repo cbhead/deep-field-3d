@@ -48,6 +48,33 @@ Known gaps of that kind:
   prints reach in metres and the world draws the ring, which is the part of
   "coverage" a player can act on.
 
+- **Switchyard's terrain tile ships one variant of four.** Design's
+  `buildVariant` draws four: standing water and weed tufts (v0), a **switch
+  stand** (v1), a cable trough (v2), dropped sleepers (v3). The exporter calls
+  `build()`, which returns v0, so only v0 exists as a GLB. Two things follow.
+  The ground repeats — one tile laid twenty-four times puts the same puddle in
+  the same place on a lattice, mitigated for now by turning alternate tiles a
+  half-turn. And the switch stand, the lever and target that work a turnout,
+  has never been delivered at all: the code that hid it from the tiles was
+  hiding a node that was never in the file. **Ask: export all four variants**
+  (`switchyard_terrain_v1…v3`) so the yard's ground stops repeating and the
+  turnouts can be marked with the prop design already drew. Until then a
+  signal stands at the throat and at one turnout, which is delivered art doing
+  the job approximately.
+
+- **Switchyard's terrain tile bakes track into the ground.** The 20 m tile
+  carries two "disused sidings" at its local z ±6, drawn as scenery. Tiled six
+  by four that is eight full-width tracks across the map on a perfect grid,
+  running through the lanes, the tower pads and the spawn, with no throat, no
+  turnout and no buffer at either end — out-numbering and contradicting every
+  metre of track laid deliberately. The tile's ballast bed is what it is for,
+  so the sidings are hidden and the railway is laid by
+  `BuildSwitchyardRailway`. If the sidings are wanted back, they need to be a
+  separate optional piece rather than part of the ground, because ground
+  repeats and track cannot. Alternate tiles are also turned a half-turn: one
+  tile repeated twenty-four times puts its puddle and its weed tufts on a
+  lattice.
+
 - **The coverage ring is code's, not design's.** Design's Structure frame gives
   the upgrade paths pips, a price and a breakpoint recipe, and nothing on the
   deck. Holding U now also draws the tower's reach as a ground ring, a dome

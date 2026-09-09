@@ -538,6 +538,86 @@ public partial class GameRoot : Node3D
         // underside of the deck it serves looks completely correct from every
         // angle and from the map file, and leaves a whole tier — and the air
         // lane it was the only answer to — unusable.
+        // Railway review: the yard is laid out in code from a handful of
+        // constants, and the failure it kept producing was not ugly — it was
+        // *wrong*, and wrong in a way a screenshot hides. A running line
+        // through four tower pads and a depot road through the spawn both
+        // looked perfectly like a railway. So measure it: every metre of track
+        // against every socket, every walked route and every place a player is
+        // put down.
+        if (_shotView == "railway")
+        {
+            var report = new List<string> { $"railway probe on {_map.Id}" };
+            var conflicts = new List<string>();
+
+            // The cutting is the exception to all of this: it is track the
+            // ground route is *supposed* to run inside.
+            var stands = new List<(string What, Vector3 At)>();
+            foreach (var socket in _map.Sockets)
+            {
+                var at = ToGd(socket.Pos);
+                if (at.Y > 1f) continue;                     // deck sockets are storeys above the rails
+                stands.Add(($"socket {socket.Id}", at));
+            }
+            stands.Add(("hero spawn", ToGd(_map.HeroSpawn)));
+            stands.Add(("armory", ToGd(_map.ArmoryPos)));
+            foreach (var station in _map.HeroStations)
+            {
+                var at = ToGd(station.Pos);
+                if (at.Y > 1f) continue;
+                stands.Add(($"hero station {station.Id}", at));
+            }
+
+            // A lane module is 3.4 m wide, so its own half-width is 1.7 m;
+            // three metres of centre-line clearance is a pad or a person
+            // standing beside the track rather than in it.
+            const float Clearance = 3f;
+            foreach (var (what, at) in stands)
+            {
+                float nearest = float.MaxValue;
+                foreach (var (from, to) in _railRuns)
+                    nearest = Mathf.Min(nearest, DistanceToSegment(Flat(at), Flat(from), Flat(to)));
+                if (nearest < Clearance)
+                    conflicts.Add($"{what} is {nearest:0.0} m from laid track");
+            }
+
+            // And the walked routes: an enemy lane is a haul road, and a haul
+            // road that runs *along* a running line for thirty metres is the
+            // same mistake in a different costume.
+            foreach (var route in _map.Routes)
+            {
+                if (route.Layer != EnemyLayer.Ground) continue;
+                for (int i = 0; i < route.Waypoints.Count - 1; i++)
+                {
+                    var a = ToGd(route.Waypoints[i]);
+                    var b = ToGd(route.Waypoints[i + 1]);
+                    for (int k = 0; k <= 10; k++)
+                    {
+                        var at = a.Lerp(b, k / 10f);
+                        foreach (var (from, to) in _railRuns)
+                        {
+                            float d = DistanceToSegment(Flat(at), Flat(from), Flat(to));
+                            if (d < Clearance)
+                                conflicts.Add($"route {route.Id} runs {d:0.0} m from laid track "
+                                    + $"at ({at.X:0},{at.Z:0})");
+                        }
+                    }
+                }
+            }
+
+            report.Add($"{_railRuns.Count} run(s) of track laid");
+            report.Add(_cutSpan is { } span
+                ? $"freight cut runs ({span.From.X:0},{span.From.Z:0}) → ({span.To.X:0},{span.To.Z:0})"
+                : "freight cut: NOT PLACED");
+            foreach (string conflict in conflicts.Distinct().Take(20)) report.Add(conflict);
+
+            bool ok = conflicts.Count == 0 && _cutSpan is not null;
+            WriteProbe(report, path, ok, ok
+                ? "PASS: no track runs through anything a player stands on"
+                : $"FAIL: {conflicts.Distinct().Count()} conflict(s)");
+            return;
+        }
+
         if (_shotView == "traversal")
         {
             _shotView = "eye";
@@ -677,6 +757,12 @@ public partial class GameRoot : Node3D
                 // players spawn into, and the air strand over the map.
                 "gate" => (new Vector3(-30, 9, 22), new Vector3(-40, 2, 0)),
                 "yard" => (new Vector3(4, 4f, -28), new Vector3(-6, 1.6f, -23)),
+                // Switchyard's two railway features, at eye level, because
+                // that is the only height at which "does this read as a
+                // railway" is a real question: down the freight cut, and
+                // across the yard from the apron.
+                "cut" => (new Vector3(-26, 2.6f, -3.4f), new Vector3(-8, 1.4f, -1f)),
+                "yardline" => (new Vector3(-40, 5f, 13), new Vector3(0, 1.2f, 27)),
                 "tunnel" => (new Vector3(11, 5, -3), new Vector3(0, 1, -8)),
                 "air" => (new Vector3(-14, 24, 38), new Vector3(0, 8, 0)),
                 "core" => (new Vector3(20, 10, 26), new Vector3(36, 2, 6)),
@@ -2673,7 +2759,31 @@ public partial class GameRoot : Node3D
                     // deliberately in BuildSwitchyardRailway; until there is a
                     // stand prop to put beside them, the scattered ones go.
                     if (tile is not null && map.Id == "switchyard")
-                        MapKit.HideNamed(tile, "terrain_switchstand");
+                    {
+                        // The tile bakes in two "disused sidings" at its
+                        // local z ±6. Tiled six by four, that is eight
+                        // full-width tracks laid straight across the map on a
+                        // grid — through the lanes, through the sockets,
+                        // through the spawn, with no throat, no turnout and no
+                        // buffer at either end. They out-number and contradict
+                        // every metre of track laid deliberately, which is the
+                        // single biggest reason this map read as a railway
+                        // that makes no sense. The ballast bed is what the
+                        // tile is for; the track is laid in
+                        // BuildSwitchyardRailway or it does not exist.
+                        MapKit.HideNamed(tile, "terrain_siding-6");
+                        MapKit.HideNamed(tile, "terrain_siding6");
+
+                        // One tile repeated twenty-four times puts its puddle,
+                        // its weed tufts and its drain grates on a perfect
+                        // lattice, which reads as wallpaper rather than
+                        // ground. Turning alternate tiles about their centre
+                        // breaks the repeat; a half-turn keeps the drain and
+                        // the ballast grain running east-west with the yard,
+                        // which a quarter-turn would not.
+                        if (((int)(x / 20f) + (int)(z / 20f)) % 2 != 0)
+                            tile.RotationDegrees = new Vector3(0, 180f, 0);
+                    }
                 }
         }
 
@@ -3370,29 +3480,7 @@ public partial class GameRoot : Node3D
             MapKit.Prop(this, "shared_zipline_trolley", zipStart + (zipEnd - zipStart) * 0.06f);
         }
 
-        // The freight cut is the map's whole lesson — the fast shortcut b1
-        // closes — so the channel is laid *along* it rather than parked in the
-        // middle of the yard where it means nothing.
-        var shortcut = System.Array.Find(_map.Routes.ToArray(), r => r.Id == "groundShort");
-        if (shortcut is not null && AssetLibrary.Has("switchyard_cut_channel"))
-        {
-            for (int i = 0; i < shortcut.Waypoints.Count - 1; i++)
-            {
-                var a = ToGd(shortcut.Waypoints[i]);
-                var b = ToGd(shortcut.Waypoints[i + 1]);
-                float span = (b - a).Length();
-                int count = Mathf.Max(1, Mathf.RoundToInt(span / 9.6f));
-                for (int s = 0; s < count; s++)
-                {
-                    var at = a.Lerp(b, (s + 0.5f) / count);
-                    MapKit.Prop(this, "switchyard_cut_channel", new Vector3(at.X, 0, at.Z),
-                        MapKit.YawTowards(b - a));
-                }
-            }
-        }
-
-        // Retaining walls flank the switchbacks; boundary matches the lane,
-        // which runs x −45 → +40.
+        BuildFreightCut();
         BuildSwitchyardRailway();
     }
 
@@ -3403,7 +3491,21 @@ public partial class GameRoot : Node3D
     /// <summary>Track centres. Four roads at 4 m, which is about what a
     /// classification yard uses (real ones sit near 3 m; the lane module is
     /// 3.4 m wide, so 4 m is the tightest that does not overlap).</summary>
-    private const float YardMainZ = 16f, YardRoadA = 20f, YardRoadB = 24f, YardRoadC = 28f;
+    // The yard's plan, in one place. The playfield — every ground socket,
+    // both ground routes and the spawn — lives between z −18 and z +16, so the
+    // running line and its roads sit north of z 19 and the depot road sits
+    // south of z −28, and nothing a player stands on has a rail through it.
+    private const float YardMainZ = 20.5f, YardRoadA = 24.5f, YardRoadB = 28f, YardRoadC = 31.5f;
+    private const float LeadFromX = -38f, LeadToX = 16f, BufferX = 37f;
+    private const float DepotZ = -32f;
+    private const float NorthWallZ = 35f, SouthWallZ = -37f;
+
+    /// <summary>Where the freight cut ended up, for the railway probe.</summary>
+    private (Vector3 From, Vector3 To)? _cutSpan;
+
+    /// <summary>Every run of track laid, so the railway probe can measure the
+    /// yard rather than anyone squinting at a screenshot of it.</summary>
+    private readonly List<(Vector3 From, Vector3 To)> _railRuns = new();
 
     /// <summary>The yard, laid out the way a yard is actually laid out.
     ///
@@ -3429,50 +3531,71 @@ public partial class GameRoot : Node3D
     /// cross the roads square rather than lying alongside them.</summary>
     private void BuildSwitchyardRailway()
     {
-        // --- The running line, straight through the yard, and a second road
-        // along the south side past the spawn platform.
+        // --- The running line, straight through the yard along its north
+        // side, and the depot road that serves the loading dock the players
+        // spawn on.
+        //
+        // Both used to sit further in. The running line was at z 16, which is
+        // where g10, g11, g21 and g19 are: four tower pads standing in the
+        // four-foot of a live main line. The depot road was at z −22, which is
+        // the hero station, four metres from the spawn point. Track is laid
+        // clear of anything a player stands on now, and the railway probe
+        // (`--shot switchyard <txt> railway`) is what keeps it that way.
         RailRun(new Vector3(-46, 0, YardMainZ), new Vector3(44, 0, YardMainZ));
-        RailRun(new Vector3(-46, 0, -22), new Vector3(44, 0, -22));
+        RailRun(new Vector3(-44, 0, DepotZ), new Vector3(24, 0, DepotZ));
+        MapKit.Prop(this, "switchyard_dress_buffer", new Vector3(25.5f, 0, DepotZ), 90f);
 
-        // --- The ladder: one lead off the running line, climbing 12 m over 60.
-        var leadFrom = new Vector3(-40, 0, YardMainZ);
-        var leadTo = new Vector3(20, 0, YardRoadC);
+        // --- The throat. One lead leaves the running line and climbs across
+        // the yard; each road leaves the lead where the lead reaches that
+        // road's centre. That is what makes this a ladder rather than a fan:
+        // every turnout branches the same way, off the same lead, in order —
+        // which is the arrangement a real classification yard is built to.
+        var leadFrom = new Vector3(LeadFromX, 0, YardMainZ);
+        var leadTo = new Vector3(LeadToX, 0, YardRoadC);
         RailRun(leadFrom, leadTo);
 
-        // Each road leaves the lead where the lead reaches its centre, and runs
-        // east to its buffer stop. Nearest road first, which is the order the
-        // turnouts come in.
-        foreach (var (z, branchX) in new[] { (YardRoadA, -20f), (YardRoadB, 0f), (YardRoadC, 20f) })
+        foreach (float z in new[] { YardRoadA, YardRoadB, YardRoadC })
         {
-            RailRun(new Vector3(branchX, 0, z), new Vector3(36, 0, z));
+            // Where the climbing lead crosses this road's centre — the turnout.
+            float x = LeadFromX + (LeadToX - LeadFromX)
+                * (z - YardMainZ) / (YardRoadC - YardMainZ);
+            RailRun(new Vector3(x, 0, z), new Vector3(BufferX - 1.5f, 0, z));
             // Facing the way a car arrives: these roads are entered from the
             // west, so the stop looks west.
-            MapKit.Prop(this, "switchyard_dress_buffer", new Vector3(37.5f, 0, z), 90f);
+            MapKit.Prop(this, "switchyard_dress_buffer", new Vector3(BufferX, 0, z), 90f);
         }
 
-        // --- Rolling stock, on the roads, in rakes. A 12 m car every 12.6 m
-        // reads as coupled without the buffers interpenetrating.
+        // --- Rolling stock, standing on the roads in rakes, east of the
+        // turnout that serves them. A 12 m car every 12.6 m reads as coupled
+        // without the buffers interpenetrating.
         foreach (var (z, firstX, count) in new[] { (YardRoadA, 6f, 3), (YardRoadB, 14f, 2), (YardRoadC, 26f, 1) })
             for (int i = 0; i < count; i++)
                 MapKit.Prop(this, "switchyard_dress_railcar", new Vector3(firstX + i * 12.6f, 0, z));
 
-        // --- Container terminal: stacked in rows aligned to the yard, beside
-        // the roads rather than strewn across them. Two high, which is what the
-        // model is drawn for.
+        // --- Container terminal, in the yard's north-west corner: west of
+        // every turnout and north of the lead, so it stands beside the railway
+        // rather than on it. Two high, which is what the model is drawn for.
         for (int row = 0; row < 3; row++)
-            for (int stack = 0; stack < 2; stack++)
+        {
+            float x = -39f + row * 6.4f;
+            foreach (float z in new[] { YardRoadB, YardRoadC })
             {
-                float x = -34f + row * 6.4f;
-                MapKit.Prop(this, "switchyard_dress_container", new Vector3(x, 0, 30 + stack * 2.6f));
-                if (stack == 0) MapKit.Prop(this, "switchyard_dress_container", new Vector3(x, 2.6f, 30));
+                MapKit.Prop(this, "switchyard_dress_container", new Vector3(x, 0, z));
+                if (z == YardRoadB) MapKit.Prop(this, "switchyard_dress_container", new Vector3(x, 2.6f, z));
             }
+        }
 
-        // --- Signals stand at the throat, where the turnouts are, and at the
-        // yard's east exit. Beside the road they govern, never on it.
-        MapKit.Prop(this, "switchyard_dress_signaltower", new Vector3(-42, 0, 12.5f));
-        MapKit.Prop(this, "switchyard_dress_signaltower", new Vector3(-18, 0, 12.5f));
-        MapKit.Prop(this, "switchyard_dress_signaltower", new Vector3(40, 0, 12.5f));
-        MapKit.Prop(this, "switchyard_dress_signaltower", new Vector3(-40, 0, -25.5f));
+        // --- Signals stand where they mean something: at the throat, at each
+        // turnout, and at the yard's east exit. On the running line's south
+        // side, never on the road they govern.
+        // The throat, a turnout partway up the ladder, and the yard's east
+        // exit. Only three: the mast is eight metres tall and this band of the
+        // map is fifteen deep, so one per turnout would be a forest. Design
+        // has no switch stand delivered — see the design-system notes — so a
+        // signal standing at the points is what says "the track divides here".
+        foreach (float x in new[] { LeadFromX, -1.2f, 40f })
+            MapKit.Prop(this, "switchyard_dress_signaltower", new Vector3(x, 0, YardMainZ - 2.5f));
+        MapKit.Prop(this, "switchyard_dress_signaltower", new Vector3(-40, 0, DepotZ - 2.5f));
 
         // --- Two overbridges across the yard. They cross the roads square, on
         // piers set outside the outermost track — the thing that was missing
@@ -3487,7 +3610,7 @@ public partial class GameRoot : Node3D
         // set dressing; now it comes from somewhere and goes somewhere.
         SwitchyardPortal(new Vector3(-45, 0, YardMainZ));
         SwitchyardPortal(new Vector3(43, 0, YardMainZ));
-        SwitchyardPortal(new Vector3(-45, 0, -22));
+        SwitchyardPortal(new Vector3(-45, 0, DepotZ));
 
         // --- Retaining walls hold the yard's boundary, which is what design
         // drew them for ("perimeter + tier faces"). They were briefly run down
@@ -3498,11 +3621,117 @@ public partial class GameRoot : Node3D
         // reads through its own channel module; it does not want walls.
         for (float x = -45f; x <= 45f; x += 10f)
         {
-            MapKit.Prop(this, "switchyard_retainingwall", new Vector3(x, 0, 34f), 180f);
-            MapKit.Prop(this, "switchyard_retainingwall", new Vector3(x, 0, -31f), 0f);
+            MapKit.Prop(this, "switchyard_retainingwall", new Vector3(x, 0, NorthWallZ), 180f);
+            MapKit.Prop(this, "switchyard_retainingwall", new Vector3(x, 0, SouthWallZ), 0f);
         }
 
         ScatterTerrain("switchyard_terrain_scatter", 47f, 32f);
+    }
+
+    /// <summary>The freight cut: the one piece of railway inside the
+    /// playfield, and the map's whole lesson — the fast route that b1 closes.
+    ///
+    /// Design draws it as a 4 m run of track at grade between 1.2 m concrete
+    /// kerb walls, and says in as many words: place it only where no other
+    /// route or socket crosses. It was laid along the entire shortcut route
+    /// with <c>YawTowards</c>, which aligns a piece's +Z — so every module sat
+    /// a quarter-turn wrong, its 4 m of track running across the lane and its
+    /// kerb walls straddling it, spaced by the module's width rather than its
+    /// length. Nine of those end to end is not a cutting; it is a row of
+    /// concrete gates over the shortcut, and it is most of what made this map
+    /// unreadable.
+    ///
+    /// So: walk the route, keep the longest stretch that is genuinely clear of
+    /// every socket and of the other ground route, and lay the module along
+    /// its own length down that. One cutting, in one place, that a player can
+    /// learn.</summary>
+    private void BuildFreightCut()
+    {
+        var shortcut = System.Array.Find(_map.Routes.ToArray(), r => r.Id == "groundShort");
+        if (shortcut is null || !AssetLibrary.Has("switchyard_cut_channel")) return;
+
+        // Sample the route every 4 m — the module's run length, so the pieces
+        // meet end to end instead of leaving 5.6 m gaps between them.
+        const float Step = 4f;
+        var samples = new List<(Vector3 At, Vector3 Along, bool Clear)>();
+        for (int i = 0; i < shortcut.Waypoints.Count - 1; i++)
+        {
+            var a = ToGd(shortcut.Waypoints[i]);
+            var b = ToGd(shortcut.Waypoints[i + 1]);
+            var along = (b - a).Normalized();
+            int count = Mathf.Max(1, Mathf.FloorToInt((b - a).Length() / Step));
+            for (int k = 0; k < count; k++)
+                samples.Add((a + along * ((k + 0.5f) * Step), along, false));
+        }
+
+        // The kerb walls stand 3.4 m either side of the centre line, so a tower
+        // pad needs about four metres to be outside the channel rather than
+        // in it, and the other ground route needs a little more than that to
+        // pass without being walled in. Barricade and trap sockets are exempt:
+        // b1 is the gate at the cut's mouth and the path plates are laid in
+        // the lane on purpose — both belong inside the channel, not clear of
+        // it.
+        const float SocketClearance = 4.2f, RouteClearance = 4.5f;
+        for (int i = 0; i < samples.Count; i++)
+        {
+            var at = samples[i].At;
+            bool clear = true;
+            foreach (var socket in _map.Sockets)
+            {
+                if (socket.Tag is SocketTag.Barricade or SocketTag.Trap) continue;
+                var pos = ToGd(socket.Pos);
+                if (pos.Y > 1f) continue;                    // deck sockets pass overhead
+                if (new Vector2(pos.X - at.X, pos.Z - at.Z).Length() < SocketClearance) { clear = false; break; }
+            }
+            if (clear) clear = !CrossesOtherGroundRoute(at, RouteClearance, shortcut.Id);
+            samples[i] = (samples[i].At, samples[i].Along, clear);
+        }
+
+        // The longest clear stretch, and only that one: two disconnected stubs
+        // of cutting say less than one continuous run of it.
+        int bestStart = -1, bestLength = 0, runStart = -1;
+        for (int i = 0; i <= samples.Count; i++)
+        {
+            bool clear = i < samples.Count && samples[i].Clear;
+            if (clear) { if (runStart < 0) runStart = i; continue; }
+            if (runStart >= 0 && i - runStart > bestLength) { bestLength = i - runStart; bestStart = runStart; }
+            runStart = -1;
+        }
+
+        // Three modules is twelve metres, about the shortest run that reads as
+        // a cutting rather than as a piece of wall someone dropped.
+        if (bestStart < 0 || bestLength < 3)
+        {
+            GD.PrintErr("ERROR: no stretch of the shortcut is clear enough for the freight cut");
+            return;
+        }
+
+        for (int i = bestStart; i < bestStart + bestLength; i++)
+        {
+            var (at, along, _) = samples[i];
+            MapKit.Prop(this, "switchyard_cut_channel", new Vector3(at.X, 0, at.Z),
+                MapKit.YawAlongX(along));
+        }
+        _cutSpan = (samples[bestStart].At, samples[bestStart + bestLength - 1].At);
+    }
+
+    /// <summary>True if any ground route other than <paramref name="exceptId"/>
+    /// passes within <paramref name="radius"/> of a point. The cutting has to
+    /// stay off the long route as well as off the sockets — a walled channel
+    /// laid across the switchback would wall in the route it is not about.</summary>
+    private bool CrossesOtherGroundRoute(Vector3 at, float radius, string exceptId)
+    {
+        foreach (var route in _map.Routes)
+        {
+            if (route.Layer != EnemyLayer.Ground || route.Id == exceptId) continue;
+            for (int i = 0; i < route.Waypoints.Count - 1; i++)
+            {
+                var a = ToGd(route.Waypoints[i]);
+                var b = ToGd(route.Waypoints[i + 1]);
+                if (DistanceToSegment(Flat(at), Flat(a), Flat(b)) < radius) return true;
+            }
+        }
+        return false;
     }
 
     /// <summary>A run of track between two points: the lane module every 4 m,
@@ -3520,6 +3749,7 @@ public partial class GameRoot : Node3D
             var at = from + along * ((i + 0.5f) / count);
             MapKit.Prop(this, "switchyard_path_ground", new Vector3(at.X, 0.02f, at.Z), yaw);
         }
+        _railRuns.Add((from, to));
     }
 
     /// <summary>An overbridge across the roads: a deck on two piers, set
@@ -3527,7 +3757,12 @@ public partial class GameRoot : Node3D
     /// the twenty-two feet a real structure over a railway is held to.</summary>
     private void SwitchyardOverbridge(float x)
     {
-        const float DeckY = 7f, SouthZ = 12f, NorthZ = 34f;
+        // The span reaches from just outside the running line to the yard's
+        // back wall. It used to start at z 12, which is inside the playfield —
+        // so both bridges put a pier and eleven metres of deck out over the
+        // ground the players fight on, and the structure that was meant to
+        // read as crossing the railway crossed the battlefield instead.
+        const float DeckY = 7f, SouthZ = 18.5f, NorthZ = NorthWallZ;
         var deck = AddStaticBox(new Vector3(x, DeckY, (SouthZ + NorthZ) * 0.5f),
             new Vector3(5f, 0.4f, NorthZ - SouthZ), new Color(0.44f, 0.46f, 0.53f), layer: 0);
         MapKit.MountRun(deck, "switchyard_middeck", NorthZ - SouthZ, 4f,
