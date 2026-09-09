@@ -2586,7 +2586,19 @@ public partial class GameRoot : Node3D
             MapKit.HideBox(ground);
             for (float x = -50f; x <= 50f; x += 20f)
                 for (float z = -30f; z <= 30f; z += 20f)
-                    MapKit.Prop(ground, $"{map.Id}_terrain", new Vector3(x, MapKit.GroundLocal(ground), z));
+                {
+                    var tile = MapKit.Prop(ground, $"{map.Id}_terrain", new Vector3(x, MapKit.GroundLocal(ground), z));
+                    // One variant of Switchyard's tile carries a switch stand —
+                    // the lever and target that work a turnout — and the tiles
+                    // are laid on a grid, so stands turned up in open ballast
+                    // with no points anywhere near them. A switch stand away
+                    // from a turnout is the clearest possible statement that
+                    // nobody looked at a railway. The turnouts are laid
+                    // deliberately in BuildSwitchyardRailway; until there is a
+                    // stand prop to put beside them, the scattered ones go.
+                    if (tile is not null && map.Id == "switchyard")
+                        MapKit.HideNamed(tile, "terrain_switchstand");
+                }
         }
 
         // Lane surfaces.
@@ -2608,8 +2620,17 @@ public partial class GameRoot : Node3D
                 // ground, because hanging them off a ribbon 9 m up put a row of
                 // masts in the sky.
                 if (!air)
+                {
                     MapKit.MountRun(box, $"{map.Id}_path_ground", (b - a).Length(), 4f,
                         alongX: true, MapKit.GroundLocal(box));
+                    // Switchyard's lane module carries a rail down its centre,
+                    // and the routes it is laid along turn square corners —
+                    // which is why the map read as a railway that made no
+                    // sense. The lane keeps its ballast, kerbs and markers and
+                    // loses the rail: it is the yard's haul road, and the
+                    // actual track is laid as track in BuildSwitchyardRailway.
+                    if (map.Id == "switchyard") MapKit.HideNamed(box, "lane_track");
+                }
             }
 
             if (air) BuildAirLaneSupports(route);
@@ -3296,21 +3317,167 @@ public partial class GameRoot : Node3D
 
         // Retaining walls flank the switchbacks; boundary matches the lane,
         // which runs x −45 → +40.
-        DressProp("switchyard_retainingwall", new Vector3(-33, 0, 20), 0f);
-        DressProp("switchyard_retainingwall", new Vector3(33, 0, -22), 180f);
-        BuildBoundary("foundry_wall_boundary", 47f, 32f);
+        BuildSwitchyardRailway();
+    }
 
-        DressProp("switchyard_dress_railcar", new Vector3(-36, 0, 22));
-        DressProp("switchyard_dress_railcar", new Vector3(26, 0, 26), 8f);
-        DressProp("switchyard_dress_railcar", new Vector3(-30, 0, -26), 4f);
-        DressProp("switchyard_dress_container", new Vector3(-42, 0, -22), 30f);
-        DressProp("switchyard_dress_container", new Vector3(44, 0, -2), -15f);
-        DressProp("switchyard_dress_container", new Vector3(20, 0, 27), 60f);
-        DressProp("switchyard_dress_signaltower", new Vector3(-24, 0, 27));
-        DressProp("switchyard_dress_signaltower", new Vector3(36, 0, -12));
-        DressProp("switchyard_dress_buffer", new Vector3(44, 0, -18), -90f);
-        DressProp("switchyard_dress_buffer", new Vector3(-44, 0, 12), 90f);
+    // =====================================================================
+    // Switchyard: the yard itself
+    // =====================================================================
+
+    /// <summary>Track centres. Four roads at 4 m, which is about what a
+    /// classification yard uses (real ones sit near 3 m; the lane module is
+    /// 3.4 m wide, so 4 m is the tightest that does not overlap).</summary>
+    private const float YardMainZ = 16f, YardRoadA = 20f, YardRoadB = 24f, YardRoadC = 28f;
+
+    /// <summary>The yard, laid out the way a yard is actually laid out.
+    ///
+    /// What was here was a single track following the enemy routes — which
+    /// turn square corners — plus railcars, containers, buffer stops and
+    /// signals dropped at whatever angle, none of them on a track. Track does
+    /// not turn ninety degrees and rolling stock does not stand across the
+    /// sleepers, so the whole thing read as scenery that had never seen a
+    /// railway.
+    ///
+    /// The arrangement here is a simple ladder, the standard one: a main line
+    /// with a diagonal lead off it, and each siding peeling from the lead in
+    /// turn. Every turnout branches the same way, which is the prototype rule —
+    /// it lets one worker line the whole ladder from one side without crossing
+    /// a track. The lead climbs at 1 in 5. A real turnout is 1 in 8 to 1 in 12
+    /// and this is steeper, because a prototype ladder for four roads wants
+    /// most of a hundred metres and the map is ninety-four wide; 1 in 5 is the
+    /// shallowest that fits and still reads as a fan rather than a corner.
+    ///
+    /// Everything else follows from the track: cars stand on roads in rakes,
+    /// buffer stops close the dead ends and face the way a car would arrive,
+    /// signals stand at the throat where the turnouts are, and the overbridges
+    /// cross the roads square rather than lying alongside them.</summary>
+    private void BuildSwitchyardRailway()
+    {
+        // --- The running line, straight through the yard, and a second road
+        // along the south side past the spawn platform.
+        RailRun(new Vector3(-46, 0, YardMainZ), new Vector3(44, 0, YardMainZ));
+        RailRun(new Vector3(-46, 0, -22), new Vector3(44, 0, -22));
+
+        // --- The ladder: one lead off the running line, climbing 12 m over 60.
+        var leadFrom = new Vector3(-40, 0, YardMainZ);
+        var leadTo = new Vector3(20, 0, YardRoadC);
+        RailRun(leadFrom, leadTo);
+
+        // Each road leaves the lead where the lead reaches its centre, and runs
+        // east to its buffer stop. Nearest road first, which is the order the
+        // turnouts come in.
+        foreach (var (z, branchX) in new[] { (YardRoadA, -20f), (YardRoadB, 0f), (YardRoadC, 20f) })
+        {
+            RailRun(new Vector3(branchX, 0, z), new Vector3(36, 0, z));
+            // Facing the way a car arrives: these roads are entered from the
+            // west, so the stop looks west.
+            MapKit.Prop(this, "switchyard_dress_buffer", new Vector3(37.5f, 0, z), 90f);
+        }
+
+        // --- Rolling stock, on the roads, in rakes. A 12 m car every 12.6 m
+        // reads as coupled without the buffers interpenetrating.
+        foreach (var (z, firstX, count) in new[] { (YardRoadA, 6f, 3), (YardRoadB, 14f, 2), (YardRoadC, 26f, 1) })
+            for (int i = 0; i < count; i++)
+                MapKit.Prop(this, "switchyard_dress_railcar", new Vector3(firstX + i * 12.6f, 0, z));
+
+        // --- Container terminal: stacked in rows aligned to the yard, beside
+        // the roads rather than strewn across them. Two high, which is what the
+        // model is drawn for.
+        for (int row = 0; row < 3; row++)
+            for (int stack = 0; stack < 2; stack++)
+            {
+                float x = -34f + row * 6.4f;
+                MapKit.Prop(this, "switchyard_dress_container", new Vector3(x, 0, 30 + stack * 2.6f));
+                if (stack == 0) MapKit.Prop(this, "switchyard_dress_container", new Vector3(x, 2.6f, 30));
+            }
+
+        // --- Signals stand at the throat, where the turnouts are, and at the
+        // yard's east exit. Beside the road they govern, never on it.
+        MapKit.Prop(this, "switchyard_dress_signaltower", new Vector3(-42, 0, 12.5f));
+        MapKit.Prop(this, "switchyard_dress_signaltower", new Vector3(-18, 0, 12.5f));
+        MapKit.Prop(this, "switchyard_dress_signaltower", new Vector3(40, 0, 12.5f));
+        MapKit.Prop(this, "switchyard_dress_signaltower", new Vector3(-40, 0, -25.5f));
+
+        // --- Two overbridges across the yard. They cross the roads square, on
+        // piers set outside the outermost track — the thing that was missing
+        // was any structure that reads as spanning the railway rather than
+        // running along beside it. Decoration: no collision, well clear of the
+        // decks the player actually fights on.
+        SwitchyardOverbridge(-30f);
+        SwitchyardOverbridge(30f);
+
+        // --- Portals where the running line leaves the map. A railway that
+        // stops at the edge of the world is the other half of why this read as
+        // set dressing; now it comes from somewhere and goes somewhere.
+        SwitchyardPortal(new Vector3(-45, 0, YardMainZ));
+        SwitchyardPortal(new Vector3(43, 0, YardMainZ));
+        SwitchyardPortal(new Vector3(-45, 0, -22));
+
+        // --- Retaining walls hold the yard's boundary, which is what design
+        // drew them for ("perimeter + tier faces"). They were briefly run down
+        // both sides of the freight cut instead: six metres tall, ten metres
+        // apart, straight through the middle of the map — a canyon across the
+        // playfield that hid the yard behind it and that enemies walked
+        // through, because dressing has no collision. The cut is at grade and
+        // reads through its own channel module; it does not want walls.
+        for (float x = -45f; x <= 45f; x += 10f)
+        {
+            MapKit.Prop(this, "switchyard_retainingwall", new Vector3(x, 0, 34f), 180f);
+            MapKit.Prop(this, "switchyard_retainingwall", new Vector3(x, 0, -31f), 0f);
+        }
+
         ScatterTerrain("switchyard_terrain_scatter", 47f, 32f);
+    }
+
+    /// <summary>A run of track between two points: the lane module every 4 m,
+    /// turned to lie along the run. This is the only thing in the map that
+    /// should carry a rail.</summary>
+    private void RailRun(Vector3 from, Vector3 to)
+    {
+        var along = to - from;
+        float span = along.Length();
+        if (span < 1f) return;
+        float yaw = MapKit.YawAlongX(along.Normalized());
+        int count = Mathf.Max(1, Mathf.RoundToInt(span / 4f));
+        for (int i = 0; i < count; i++)
+        {
+            var at = from + along * ((i + 0.5f) / count);
+            MapKit.Prop(this, "switchyard_path_ground", new Vector3(at.X, 0.02f, at.Z), yaw);
+        }
+    }
+
+    /// <summary>An overbridge across the roads: a deck on two piers, set
+    /// outside the outermost track. Seven metres of headroom, which is about
+    /// the twenty-two feet a real structure over a railway is held to.</summary>
+    private void SwitchyardOverbridge(float x)
+    {
+        const float DeckY = 7f, SouthZ = 12f, NorthZ = 34f;
+        var deck = AddStaticBox(new Vector3(x, DeckY, (SouthZ + NorthZ) * 0.5f),
+            new Vector3(5f, 0.4f, NorthZ - SouthZ), new Color(0.44f, 0.46f, 0.53f), layer: 0);
+        MapKit.MountRun(deck, "switchyard_middeck", NorthZ - SouthZ, 4f,
+            alongX: false, MapKit.GroundLocal(deck), 90f);
+
+        foreach (float z in new[] { SouthZ, NorthZ })
+        {
+            var pier = AddStaticBox(new Vector3(x, DeckY * 0.5f, z),
+                new Vector3(1.6f, DeckY, 1.6f), new Color(0.4f, 0.42f, 0.48f), layer: 0);
+            MapKit.Mount(pier, "switchyard_column", MapKit.GroundLocal(pier));
+        }
+    }
+
+    /// <summary>A portal where a road leaves the map: two abutments faced with
+    /// retaining wall and a header across them, so the line runs into something
+    /// instead of stopping in open ground.</summary>
+    private void SwitchyardPortal(Vector3 at)
+    {
+        foreach (int side in new[] { -1, 1 })
+        {
+            var abutment = AddStaticBox(at + new Vector3(0, 3f, side * 4f),
+                new Vector3(3f, 6f, 4f), new Color(0.38f, 0.39f, 0.44f), layer: 1);
+            MapKit.Mount(abutment, "switchyard_retainingwall", MapKit.GroundLocal(abutment), 90f);
+        }
+        AddStaticBox(at + new Vector3(0, 6.4f, 0), new Vector3(3f, 1.6f, 12f),
+            new Color(0.34f, 0.35f, 0.4f), layer: 1);
     }
 
     private static Area3D MakeArea(string kind, Shape3D shape)
