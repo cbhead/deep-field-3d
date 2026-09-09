@@ -116,10 +116,17 @@ public static class Maps
             new SocketDef("w1", new Vec3(-6f, 6f, -16f), SocketTag.Wall),
             new SocketDef("w2", new Vec3(2f, 6f, -16f), SocketTag.Wall),
             new SocketDef("w3", new Vec3(10f, 6f, -16f), SocketTag.Wall),
-            new SocketDef("w4", new Vec3(-10f, 6f, -12.8f), SocketTag.Wall),
-            new SocketDef("w5", new Vec3(-2f, 6f, -12.8f), SocketTag.Wall),
-            new SocketDef("w6", new Vec3(6f, 6f, -12.8f), SocketTag.Wall),
-            new SocketDef("w7", new Vec3(14f, 6f, -12.8f), SocketTag.Wall),
+            // The deck's north face is z −12 and a build pad is 1.1 m across,
+            // so at z −12.8 all four of these hung 30 cm of pad out over the
+            // edge. Pulled back to −13.4, which leaves the pad wholly on the
+            // deck and still puts the tower at the rail looking down into the
+            // lane. The deck cannot grow north instead: its south ladder
+            // stands at z −11.3, just clear of the face, and burying that
+            // again is the "ladder to nowhere" this map has already had once.
+            new SocketDef("w4", new Vec3(-10f, 6f, -13.4f), SocketTag.Wall),
+            new SocketDef("w5", new Vec3(-2f, 6f, -13.4f), SocketTag.Wall),
+            new SocketDef("w6", new Vec3(6f, 6f, -13.4f), SocketTag.Wall),
+            new SocketDef("w7", new Vec3(14f, 6f, -13.4f), SocketTag.Wall),
             new SocketDef("w8", new Vec3(-10f, 6f, -19.5f), SocketTag.Wall),
             new SocketDef("w9", new Vec3(6f, 6f, -19.5f), SocketTag.Wall),
             // Gantry bridge — it reaches out over the lane's elbow, so these

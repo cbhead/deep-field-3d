@@ -7,6 +7,6 @@
 # These are not targets. Every one of them should end at 0.
 #
 # map	max	what is still wrong
-foundry	5	air lane thin at the west mouth (6 of 23 points under 3 pads); four deck pads within 1 m of an edge
-switchyard	9	air lane thin (10 of 23); both ground routes thin at the west mouth; a catwalk column stands in the long lane
+foundry	1	air lane thin at the west mouth (6 of 23 points under 3 pads)
+switchyard	4	air lane thin (10 of 23); both ground routes thin at the west mouth, where the two share a spawn
 spire	90	never designed — 26 sockets with no way up, 32 of 43 deck pads with nothing under them, the air lane unreachable at 37 of 43 points. See MAP-AUTHORING.md §7.
