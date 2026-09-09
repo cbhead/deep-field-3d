@@ -68,6 +68,22 @@ Known gaps of that kind:
   currency and the shared wallet is the towers'. Design's own card anticipated
   it — the buy state reads `Scrap N` — and the rail draws the have/need chips
   the recipe rows use. Melee platforms moved with them.
+- **Switchyard wants three things from design that do not exist.** The yard is
+  laid out as a railway now — a main line, a ladder off it, sidings closed with
+  buffer stops — and the gaps show:
+  - a **switch stand** as its own prop, so a turnout can be marked where it
+    actually is. One is baked into a terrain-tile variant, and because the
+    tiles are laid on a grid it put stands in open ballast with no points near
+    them. They are hidden for now (`MapKit.HideNamed`), which loses the detail
+    rather than misplacing it.
+  - `switchyard_bridge_intact` and a **tunnel portal**. The brief names the
+    bridge and design has not modelled it; both are kitbashed from deck bays,
+    columns and retaining wall, which reads but is not the real thing.
+  - the **lane module carries a rail down its centre**, and the routes it is
+    laid along turn square corners. The rail is hidden on Switchyard's routes,
+    so the lane is ballast, kerbs and markers — a haul road, which is what a
+    walking route through a yard should be. A haul-road module without the
+    rail would say that properly.
 - **The Spire's four west ladders go nowhere.** They are embedded in the west
   facade: the wall occupies x −20.5…−19.5 and the west wing's plate starts at
   x −19, so the half-metre between them is narrower than the player, and every
