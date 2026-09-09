@@ -73,6 +73,22 @@ public static class MapKit
         return true;
     }
 
+    /// <summary>Hides every descendant with a given name. Design's models name
+    /// their parts, which is what lets a placement borrow a model and leave one
+    /// piece of it out — the yard lane wants the ballast and the sleeper kerbs
+    /// but not the rail down the middle.</summary>
+    public static void HideNamed(Node root, string name)
+    {
+        if (root is Node3D node && node.Name.ToString() == name) node.Visible = false;
+        foreach (var child in root.GetChildren()) HideNamed(child, name);
+    }
+
+    /// <summary>Yaw that lays a piece's local +X along a direction. MountRun and
+    /// the lane modules run along X; YawTowards aligns +Z, so it is the wrong
+    /// one for track.</summary>
+    public static float YawAlongX(Vector3 direction)
+        => Mathf.RadToDeg(Mathf.Atan2(-direction.Z, direction.X));
+
     /// <summary>A piece scaled to span two points — the zipline cable, whose
     /// model is a one-metre unit meant to be stretched.</summary>
     public static Node3D? MountSpan(Node3D parent, string asset, Vector3 from, Vector3 to)
