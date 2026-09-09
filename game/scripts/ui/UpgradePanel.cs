@@ -19,6 +19,10 @@ public partial class UpgradePanel : Control
     private StructureView? _target;
     private string _refusal = "";
     private double _sellHold;
+    /// <summary>The map the structure stands on, so the range this panel
+    /// prints is the range the tower will fight with this wave — weather and
+    /// all — and matches the ring drawn on the deck beside it.</summary>
+    private MapDef? _map;
 
     public bool IsOpen { get; private set; }
     public int TargetId => _target?.Id ?? -1;
@@ -56,9 +60,10 @@ public partial class UpgradePanel : Control
         _panel.SetFooter(_footer);
     }
 
-    public void Open(StructureView target, GameView view)
+    public void Open(StructureView target, GameView view, MapDef map)
     {
         _target = target;
+        _map = map;
         _refusal = "";
         _sellHold = 0;
         SellRequested = false;
@@ -142,8 +147,13 @@ public partial class UpgradePanel : Control
         for (int i = 0; i < def.UpgradePaths.Count; i++)
         {
             var path = def.UpgradePaths[i];
-            int level = i < _target.PathLevels.Length ? _target.PathLevels[i] : 0;
-            bool maxed = level >= path.LevelCosts.Count;
+            // PathLevels counts purchases; the level the player owns is one
+            // more, so a freshly built tower reads L1 and not L0 — and L1..L10
+            // is design's own numbering, the same number as the stage file
+            // drawing it.
+            int bought = i < _target.PathLevels.Length ? _target.PathLevels[i] : 0;
+            int level = bought + 1;
+            bool maxed = level >= path.MaxLevel;
 
             var card = Kit.Card(selected: i == 0);
             var row = Kit.Row(Tokens.Space5);
@@ -162,12 +172,33 @@ public partial class UpgradePanel : Control
             name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             head.AddChild(name);
             head.AddChild(Kit.Numeral(
-                maxed ? $"L{level} · MAX" : $"L{level} → L{level + 1}   ×{path.PerLevelFactor:0.00}",
+                maxed ? $"L{level} · MAX" : $"L{level} → L{level + 1} of {path.MaxLevel}   ×{path.PerLevelFactor:0.00}",
                 Tokens.SizeCaption, maxed ? Tokens.StateSuccess : Tokens.TextSecondary));
             column.AddChild(head);
 
+            // The path that moves reach says so in metres, and the ring on the
+            // deck grows to match. A multiplier alone never answers the only
+            // question worth asking here: does this buy the corner I keep
+            // leaking from?
+            if (_map is not null && i == TowerMath.RangePathIndex(def))
+            {
+                float now = TowerMath.Range(def, _target.PathLevels, _map, view.Wave);
+                var reach = Kit.Row(Tokens.Space3);
+                reach.AddChild(Kit.Label("reach", Tokens.TextMuted));
+                reach.AddChild(Kit.Numeral($"{now:0.0} m", Tokens.SizeCaption, Tokens.TextSecondary));
+                if (!maxed)
+                {
+                    float next = TowerMath.RangeAfterUpgrade(def, _target.PathLevels, i, _map, view.Wave);
+                    reach.AddChild(Kit.Label("→", Tokens.TextMuted));
+                    reach.AddChild(Kit.Numeral($"{next:0.0} m", Tokens.SizeCaption, Tokens.TextAccent));
+                    reach.AddChild(Kit.Label($"(+{next - now:0.0})", Tokens.TextMuted));
+                }
+                column.AddChild(reach);
+            }
+
             var pips = new KitPips();
-            pips.Set(level, path.LevelCosts.Count);
+            pips.Set(level, path.MaxLevel);
+            pips.Breakpoints = new[] { 4, 7, 10 };
             column.AddChild(pips);
 
             // Breakpoint chips: brass once reached, so a player can see which
@@ -175,14 +206,18 @@ public partial class UpgradePanel : Control
             var marks = Kit.Row(Tokens.Space3);
             foreach (int bp in new[] { 4, 7, 10 })
             {
-                if (bp > path.LevelCosts.Count) continue;
+                if (bp > path.MaxLevel) continue;
                 marks.AddChild(level >= bp
                     ? Kit.TagBrass($"L{bp}")
                     : Kit.Tag($"L{bp}"));
             }
-            if (path.BreakpointRecipe.Count > 0 && level < 4)
+            // The scrap the *next* breakpoint wants, not always the first one:
+            // at L6 the thing worth knowing is what L7 costs, and at L9 that
+            // the last level wants Gravium.
+            if (!maxed && path.RecipeFor(NextBreakpoint(level)) is { } recipe)
             {
-                foreach (var (type, amount) in path.BreakpointRecipe)
+                marks.AddChild(Kit.Label($"L{NextBreakpoint(level)}", Tokens.TextMuted));
+                foreach (var (type, amount) in recipe)
                     marks.AddChild(UiTheme.CountChip($"scrap_{type.ToString().ToLowerInvariant()}",
                         view.TeamScrapOf(type), UiTheme.Scrap(type), amount));
             }
@@ -195,7 +230,7 @@ public partial class UpgradePanel : Control
             }
             else
             {
-                int cost = path.LevelCosts[level];
+                int cost = path.LevelCosts[level - 1];
                 bool affordable = view.Money >= cost;
                 var upgrade = new KitButton($"Upgrade  {i + 1}",
                     affordable ? KitButton.Tone.Primary : KitButton.Tone.Secondary, Tokens.ControlSm);
@@ -220,6 +255,9 @@ public partial class UpgradePanel : Control
             ? _refusal
             : $"1-{def.UpgradePaths.Count} upgrade   ·   hold X to sell (≈{refund}c back)";
     }
+
+    /// <summary>The next level that costs scrap as well as money.</summary>
+    private static int NextBreakpoint(int level) => level < 4 ? 4 : level < 7 ? 7 : 10;
 
     private static string Pips(int level, int max)
     {

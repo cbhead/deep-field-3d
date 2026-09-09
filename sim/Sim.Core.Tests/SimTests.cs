@@ -128,13 +128,19 @@ public class CommandTests
         Step.Advance(w);
         int towerId = w.Towers[0].Id;
 
-        for (int i = 0; i < 7; i++)
+        foreach (ScrapType type in System.Enum.GetValues<ScrapType>())
+            w.TeamScrap[type] = 100;
+
+        for (int i = 0; i < 14; i++)
         {
             w.Enqueue(new Command.UpgradeTower(0, towerId, 0));
             Step.Advance(w);
         }
 
-        Assert.Equal(5, w.Towers[0].PathLevels[0]);   // L1-5 shipped at M1
+        // Ten levels: built at 1, nine purchases to 10, and no more.
+        var path = Towers.Lance.UpgradePaths[0];
+        Assert.Equal(10, path.MaxLevel);
+        Assert.Equal(9, w.Towers[0].PathLevels[0]);
         Assert.Contains(w.Events.OfType<SimEvent.UpgradeRejected>(), e => e.Reason == "maxLevel");
     }
 
@@ -153,8 +159,9 @@ public class CommandTests
             Step.Advance(w);
         }
 
-        // L1-3 succeed on money; L4 requires the scrap recipe the pool lacks.
-        Assert.Equal(3, w.Towers[0].PathLevels[0]);
+        // Built at L1; two purchases reach L3 on money alone, and the third —
+        // the one that arrives at L4 — wants a recipe the pool cannot pay.
+        Assert.Equal(2, w.Towers[0].PathLevels[0]);
         Assert.Contains(w.Events.OfType<SimEvent.UpgradeRejected>()
             .Select(e => e.Reason), r => r == "insufficientScrap");
     }
@@ -532,5 +539,181 @@ public class AirborneScrapTests
         Assert.True(drop.Pos.Y > 1f,
             $"a drop over the upper tiers must not fall to the street (rested at {drop.Pos.Y})");
         Assert.True(drop.Pos.Y <= over.Y, "and it must not climb");
+    }
+}
+
+/// <summary>The ten-level grid: design drew ten stages per path and the sim
+/// used to offer five of them.</summary>
+public class UpgradeGridTests
+{
+    [Fact]
+    public void EveryPathIsTenLevelsWithBreakpointsAtFourSevenAndTen()
+    {
+        foreach (var tower in Towers.All.Values)
+            foreach (var path in tower.UpgradePaths)
+            {
+                Assert.Equal(10, path.MaxLevel);
+                Assert.Equal(9, path.LevelCosts.Count);
+                foreach (int bp in new[] { 4, 7, 10 })
+                    Assert.True(path.RecipeFor(bp) is { Count: > 0 },
+                        $"{tower.Id}/{path.Id} has no recipe at L{bp}");
+                // Nothing else costs scrap: a breakpoint is meant to be the
+                // level that stands out.
+                for (int level = 2; level <= 10; level++)
+                    if (level is not (4 or 7 or 10))
+                        Assert.Null(path.RecipeFor(level));
+            }
+    }
+
+    [Fact]
+    public void TheTopOfAPathIsPaidForInTheRarestScrap()
+    {
+        foreach (var tower in Towers.All.Values)
+            foreach (var path in tower.UpgradePaths)
+            {
+                Assert.DoesNotContain(ScrapType.Gravium, path.RecipeFor(4)!.Keys);
+                Assert.Contains(ScrapType.Gravium, path.RecipeFor(10)!.Keys);
+            }
+    }
+
+    [Fact]
+    public void CostsClimbSoTheLastLevelsAreTheDecision()
+    {
+        var costs = Towers.Lance.UpgradePaths[0].LevelCosts;
+        for (int i = 1; i < costs.Count; i++)
+            Assert.True(costs[i] > costs[i - 1], "each level costs more than the last");
+        // The plan's shape: a campaign funds about one maxed path, so the top
+        // of the ladder has to dominate the bottom of it.
+        int firstSix = costs.Take(5).Sum(), lastFour = costs.Skip(5).Sum();
+        Assert.True(lastFour > firstSix,
+            $"levels 7-10 ({lastFour}) should cost more than 2-6 ({firstSix})");
+    }
+
+    [Fact]
+    public void APathCanBeTakenAllTheWayToTenAndTheArtFollowsIt()
+    {
+        var w = new World(4, Maps.TestLane);
+        w.Money = 100000;
+        foreach (ScrapType type in System.Enum.GetValues<ScrapType>()) w.TeamScrap[type] = 200;
+        w.Enqueue(new Command.PlaceTower(0, "lance", "s1"));
+        Step.Advance(w);
+        var tower = w.Towers[0];
+
+        for (int i = 0; i < 9; i++)
+        {
+            w.Enqueue(new Command.UpgradeTower(0, tower.Id, 0));
+            Step.Advance(w);
+            Assert.DoesNotContain(w.Events.OfType<SimEvent.UpgradeRejected>(), e => true);
+        }
+
+        Assert.Equal(9, tower.PathLevels[0]);
+        // The client draws stage (purchases + 1), which is design's own
+        // numbering: nine purchases is s10, the last stage it drew.
+        Assert.Equal(10, tower.PathLevels[0] + 1);
+        // And the path's damage actually compounded over all ten levels.
+        Assert.True(MathF.Pow(Towers.Lance.UpgradePaths[0].PerLevelFactor, 9) > 2f);
+    }
+}
+
+/// <summary>The range ring drawn on the deck and the range the tower fights
+/// with come out of <see cref="TowerMath"/>, so these are the tests that keep
+/// a player's picture of coverage honest.</summary>
+public class TowerRangeTests
+{
+    private static int[] Levels(TowerDef def) => new int[def.UpgradePaths.Count];
+
+    [Fact]
+    public void AFreshTowerReachesExactlyItsDefRange()
+    {
+        var map = Maps.All["foundry"];
+        foreach (var tower in Towers.All.Values)
+            Assert.Equal(tower.RangeMeters,
+                TowerMath.Range(tower, Levels(tower), map, waveIndex: 0), 3);
+    }
+
+    [Fact]
+    public void EveryTowerThatHasRangeHasAPathThatGrowsIt()
+    {
+        foreach (var tower in Towers.All.Values)
+        {
+            if (tower.RangeMeters <= 0f) continue;      // a barricade has no reach
+            Assert.True(TowerMath.RangePathIndex(tower) >= 0,
+                $"{tower.Id} has range but no path that grows it");
+        }
+        // And the one with no reach reports none, rather than pointing at a
+        // path that would draw a ring that never grows.
+        Assert.Equal(-1, TowerMath.RangePathIndex(Towers.Barricade));
+    }
+
+    [Fact]
+    public void TheRangePathCompoundsAndTheOthersDoNot()
+    {
+        var map = Maps.All["foundry"];
+        var lance = Towers.Lance;
+        int range = TowerMath.RangePathIndex(lance);
+
+        var levels = Levels(lance);
+        float baseline = TowerMath.Range(lance, levels, map, 0);
+
+        levels[range] = 9;                                    // L10
+        float maxed = TowerMath.Range(lance, levels, map, 0);
+        Assert.True(maxed > baseline * 2.5f, $"L10 range was only {maxed:0.0} m");
+
+        // Damage is path 0 on a Lance, and buying it must not move the ring.
+        var damageOnly = Levels(lance);
+        damageOnly[0] = 9;
+        Assert.Equal(baseline, TowerMath.Range(lance, damageOnly, map, 0), 3);
+    }
+
+    [Fact]
+    public void TheUpgradePreviewIsOneLevelAheadAndStopsAtTheCap()
+    {
+        var map = Maps.All["foundry"];
+        var lance = Towers.Lance;
+        int range = TowerMath.RangePathIndex(lance);
+        var path = lance.UpgradePaths[range];
+
+        var levels = Levels(lance);
+        float now = TowerMath.Range(lance, levels, map, 0);
+        float next = TowerMath.RangeAfterUpgrade(lance, levels, range, map, 0);
+        Assert.Equal(now * path.PerLevelFactor, next, 3);
+
+        // At the cap there is nothing further to preview, so the ring must not
+        // promise a level that cannot be bought.
+        levels[range] = path.MaxLevel - 1;
+        Assert.Equal(TowerMath.Range(lance, levels, map, 0),
+            TowerMath.RangeAfterUpgrade(lance, levels, range, map, 0), 3);
+
+        // A path that is not the range path previews no change at all.
+        Assert.Equal(TowerMath.Range(lance, Levels(lance), map, 0),
+            TowerMath.RangeAfterUpgrade(lance, Levels(lance), 0, map, 0), 3);
+    }
+
+    [Fact]
+    public void FogShrinksTheRingForEveryTowerItIsNotExemptFrom()
+    {
+        // Whichever wave the map's fog lands on, the ring has to shrink with
+        // it — a ring that ignores weather is wrong on exactly the wave a
+        // player checks it.
+        // Any map that schedules a range-shrinking condition will do; every
+        // map on a clear schedule simply has nothing to assert.
+        bool checkedOne = false;
+        foreach (var map in Maps.All.Values)
+        foreach (int wave in map.ConditionSchedule.Keys)
+        {
+            var condition = Conditions.ForWave(map, wave);
+            if (condition is null || condition.TowerRangeFactor >= 1f) continue;
+            foreach (var tower in Towers.All.Values)
+            {
+                if (tower.RangeMeters <= 0f) continue;
+                float expected = tower.RangeMeters
+                    * (condition.RangeExemptTowerIds.Contains(tower.Id) ? 1f : condition.TowerRangeFactor);
+                Assert.Equal(expected, TowerMath.Range(tower, Levels(tower), map, wave), 3);
+                checkedOne = true;
+            }
+        }
+        // A silent zero-iteration pass would let the weather term be deleted
+        // without a single test noticing.
+        Assert.True(checkedOne, "no map schedules a range-shrinking condition");
     }
 }

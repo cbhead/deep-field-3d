@@ -301,26 +301,32 @@ public static class Step
         }
 
         var path = def.UpgradePaths[upgrade.PathIndex];
-        int currentLevel = tower.PathLevels[upgrade.PathIndex];
-        if (currentLevel >= path.LevelCosts.Count)
+        // PathLevels counts purchases, so a freshly built tower is at 0 and the
+        // level the player sees is one more than that — design's L1, the
+        // chassis. Everything below talks in the level the player sees.
+        int currentLevel = tower.PathLevels[upgrade.PathIndex] + 1;
+        if (currentLevel >= path.MaxLevel)
         {
             w.Emit(new SimEvent.UpgradeRejected(upgrade.PlayerId, upgrade.TowerId, "maxLevel"));
             return;
         }
 
-        int moneyCost = path.LevelCosts[currentLevel];
+        int nextLevel = currentLevel + 1;
+        int moneyCost = path.LevelCosts[currentLevel - 1];
         if (w.Money < moneyCost)
         {
             w.Emit(new SimEvent.UpgradeRejected(upgrade.PlayerId, upgrade.TowerId, "insufficientFunds"));
             return;
         }
 
-        // L4 is the breakpoint level: it also costs the scrap recipe, from the
-        // team pool — the enemy-dependent economy loop.
-        bool isBreakpoint = currentLevel + 1 == 4;
-        if (isBreakpoint)
+        // 4, 7 and 10 are the breakpoints — the levels design gave a silhouette
+        // jump — and they cost scrap from the team pool on top of the money, in
+        // rarer types the higher you go. That is the enemy-dependent economy
+        // loop: a tenth level is paid for with Gravium, which only the heavies
+        // drop, so maxing a path means having fought the things that drop it.
+        if (path.RecipeFor(nextLevel) is { } recipe)
         {
-            foreach (var (type, amount) in path.BreakpointRecipe)
+            foreach (var (type, amount) in recipe)
             {
                 if (w.TeamScrap.GetValueOrDefault(type, 0) < amount)
                 {
@@ -328,14 +334,14 @@ public static class Step
                     return;
                 }
             }
-            foreach (var (type, amount) in path.BreakpointRecipe)
+            foreach (var (type, amount) in recipe)
                 w.TeamScrap[type] -= amount;
         }
 
         w.Money -= moneyCost;
         tower.Spent += moneyCost;
-        tower.PathLevels[upgrade.PathIndex] = currentLevel + 1;
-        w.Emit(new SimEvent.TowerUpgraded(tower.Id, path.Id, currentLevel + 1));
+        tower.PathLevels[upgrade.PathIndex]++;
+        w.Emit(new SimEvent.TowerUpgraded(tower.Id, path.Id, tower.PathLevels[upgrade.PathIndex]));
     }
 
     private static void ApplyPlayerHit(World w, Command.PlayerHit hit)
@@ -1322,23 +1328,13 @@ public static class Step
     private static float EffectiveDamage(Tower tower, TowerDef def) =>
         def.Damage * PathFactor(tower, def, "damage");
 
-    /// <summary>Range, whatever the tower calls the path that grows it —
-    /// Detector's is "field", Filament's is "optics". Only one exists per
-    /// tower, so multiplying all three is a lookup, not a stack.</summary>
-    /// <summary>Weather rides on top of the swept baseline, never replaces it,
-    /// so a condition can shrink a tower's reach but never decide it.</summary>
-    private static float EffectiveRange(World w, Tower tower, TowerDef def)
-    {
-        float range = def.RangeMeters
-            * PathFactor(tower, def, "range")
-            * PathFactor(tower, def, "field")
-            * PathFactor(tower, def, "optics");
-
-        var condition = Conditions.ForWave(w.Map, w.WaveIndex);
-        if (condition is not null && !condition.RangeExemptTowerIds.Contains(def.Id))
-            range *= condition.TowerRangeFactor;
-        return range;
-    }
+    /// <summary>Range, whatever the tower calls the path that grows it, and
+    /// whatever the weather is doing to it. Deferred to <see
+    /// cref="TowerMath"/> because the client draws a ring from the same
+    /// numbers, and a ring that disagrees with what the tower shoots is worse
+    /// than no ring.</summary>
+    private static float EffectiveRange(World w, Tower tower, TowerDef def) =>
+        TowerMath.Range(def, tower.PathLevels, w.Map, w.WaveIndex);
 
     /// <summary>Night's hesitation: a tower takes a beat to find something
     /// nobody has marked. Marked targets are acquired instantly, which is the
