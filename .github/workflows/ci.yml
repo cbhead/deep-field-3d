@@ -115,6 +115,15 @@ jobs:
             grep -q "^PASS" /tmp/trav-$MAP.txt
           done
 
+      # The rules in docs/MAP-AUTHORING.md §4, measured on the assembled map.
+      # A ratchet rather than a gate: all three maps fail the rules today, each
+      # carries a baseline, and this fails only when a map gets worse. The
+      # coverage rules are the point — nothing else here checks whether a lane
+      # can actually be defended, and a map can pass every other gate with an
+      # enemy lane no tower can reach.
+      - name: Map validation (no map may get worse)
+        run: ./tools/map-validate.sh
+
       # Switchyard's yard is laid out in code from a handful of constants, and
       # the way it went wrong was never ugly — it was wrong. A running line
       # through four tower pads and a depot road four metres from the spawn

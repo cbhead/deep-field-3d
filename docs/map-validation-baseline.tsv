@@ -1,0 +1,12 @@
+# Map validation ratchet — see docs/MAP-AUTHORING.md §4 and tools/map-validate.sh
+#
+# The number is how many §4 violations that map is currently allowed. CI fails
+# if a map exceeds its baseline, so no map can get worse; when a map improves,
+# lower the number in the same commit so the gain is locked in.
+#
+# These are not targets. Every one of them should end at 0.
+#
+# map	max	what is still wrong
+foundry	5	air lane thin at the west mouth (6 of 23 points under 3 pads); four deck pads within 1 m of an edge
+switchyard	9	air lane thin (10 of 23); both ground routes thin at the west mouth; a catwalk column stands in the long lane
+spire	90	never designed — 26 sockets with no way up, 32 of 43 deck pads with nothing under them, the air lane unreachable at 37 of 43 points. See MAP-AUTHORING.md §7.

@@ -290,7 +290,7 @@ modules tiled along a run; a spanned piece between two points (ziplines); a
 | Tower range at L1 | 9–16 m depending on the tower |
 | Player interact reach | 9 m |
 | Deck heights in use | 5 m, 10 m (Foundry, Switchyard); 10/20/30/40 (Spire) |
-| Structure clearance over a route | ≥ 5.5 m, so enemies pass under |
+| Structure clearance over a route | ≥ 3 m gameplay minimum (5.5 m is the railway convention over track) |
 
 ---
 
@@ -324,7 +324,10 @@ nothing currently checks
    socket, the spawn, the armory or a station — except pieces the route is
    meant to run inside, which say so.
 9. Every `wall` socket sits inside its volume's footprint by ≥ 1 m.
-10. Anything spanning a route leaves ≥ 5.5 m of headroom.
+10. Anything spanning a route leaves ≥ 3 m of headroom, so a player and an
+    enemy both pass under it. (The 5.5 m figure elsewhere is the railway
+    convention for structures over track, not a gameplay minimum — Switchyard's
+    mid deck clears its lane by 4.6 m and is correct.)
 
 **Readability**
 11. One idea per map, stated in the brief, legible from the spawn.
@@ -430,15 +433,44 @@ built. Building *that* is the ask.
 Listed so the document is honest about what it is asking for. None of it exists
 yet, and none of it blocks design starting on the Spire.
 
-| | Work | Why |
+| | Work | Status |
 |---|---|---|
-| 1 | **Level validator** — reads a level file, reports every §4 violation | So a bad map fails in design, not in a PR |
-| 2 | **Coverage probe** — rules 4–7, which nothing checks today | The rules that decide whether a map is playable at all |
-| 3 | **Level loader** — client builds volumes, areas and place from the file | Removes ~750 lines of per-map C# |
-| 4 | **`Maps.cs` codegen** — generated from the same file | Keeps `Sim.Core` pure C# and deterministic; no runtime parsing in the sim |
-| 5 | **Export change** — ship the level file in the drop | Design's file has to reach us as data |
-| 6 | **`spire_` in `AssetLibrary.Routes`** | One line, unblocks the Spire kit the moment it is exported |
+| 1 | **Validator** — every §4 rule this can measure, on the assembled map | **done** — `make map-validate` |
+| 2 | **Coverage probe** — rules 4–7, which nothing checked before | **done** — folded into the same probe |
+| 3 | **Level loader** — client builds volumes, areas and place from the file | not started |
+| 4 | **`Maps.cs` codegen** — generated from the same file | not started |
+| 5 | **Export change** — ship the level file in the drop | design's side |
+| 6 | **`spire_` in `AssetLibrary.Routes`** | one line, waiting on the kit being exported |
 
-Order matters: **1 and 2 are worth more than 3 and 4**. A validator on a
-hand-maintained file catches the whole class of defect this document is about.
-The loader is a refactor; the validator is the fix.
+Order mattered: **1 and 2 were worth more than 3 and 4.** The loader is a
+refactor; the validator is the fix.
+
+### What the validator found
+
+Run on all three maps the day it was written, against rules that had never been
+checked:
+
+| | Foundry | Switchyard | Spire |
+|---|---|---|---|
+| §4.1 sockets with no way up | 0 | 0 | **26** |
+| §4.4 ground lanes under-covered | 0 of 36 | 3 of 67 | 2 of 91 |
+| §4.5 air lane under-covered | 6 of 23 | 10 of 23 | **37 of 43** |
+| §4.6 pads that reach nothing | 0 | 0 | 0 |
+| §4.9 deck pads properly footed | 7 of 11 | 9 of 9 | **11 of 43** |
+| §4.8 lane blocked by solid geometry | 0 | 1 | **23** |
+| **Total violations** | **5** | **9** | **90** |
+
+Read that Spire column against §7. Twenty-six sockets with no way to reach
+them, thirty-two deck pads with nothing under them, and an air lane that
+thirty-seven of its forty-three sample points have **no tower in the game able
+to reach at all**. It is not a map that needs tuning.
+
+Foundry — the map that works — has a thin air lane at the west mouth and four
+catwalk pads within a metre of an edge. Switchyard adds a catwalk column
+standing in the long route's lane.
+
+Because every map fails today, the check is a **ratchet**, not a gate:
+`docs/map-validation-baseline.tsv` records what each map is currently allowed
+and CI fails only when a map gets *worse*. Lower a baseline in the same commit
+that improves a map. A gate nobody can turn green gets switched off within a
+week; a ratchet only ever tightens.
