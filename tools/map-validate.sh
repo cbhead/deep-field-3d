@@ -19,13 +19,31 @@ MAPS=${MAPS:-"foundry switchyard spire"}
 OUT=$(mktemp -d)
 status=0
 
+# CI puts Godot on PATH and in $GODOT; a developer machine has ./play, which
+# also fixes up DOTNET_ROOT before launching. Prefer whichever exists, because
+# a script that only worked in one of the two places is a check that only runs
+# in one of the two places — this one failed in CI the first time it ran, with
+# every map reporting "PROBE PRODUCED NOTHING".
+if [ -n "${GODOT:-}" ] && [ -x "${GODOT}" ]; then
+  run_probe() { "$GODOT" --headless --path game --quit-after 6000 -- "$@"; }
+elif command -v godot >/dev/null 2>&1; then
+  run_probe() { godot --headless --path game --quit-after 6000 -- "$@"; }
+elif [ -x ./play ]; then
+  run_probe() { ./play --headless --quit-after 6000 -- "$@"; }
+else
+  echo "no Godot found: set GODOT, put godot on PATH, or run from a checkout with ./play"
+  exit 1
+fi
+
 for MAP in $MAPS; do
   # The probe writes its verdict to a file and may still abort in Godot's
   # teardown, so the exit code is not the signal — the file is.
-  ./play --headless -- --shot "$MAP" "$OUT/$MAP.txt" validate > "$OUT/$MAP.log" 2>&1 || true
+  run_probe --shot "$MAP" "$OUT/$MAP.txt" validate > "$OUT/$MAP.log" 2>&1 || true
 
   if [ ! -s "$OUT/$MAP.txt" ]; then
-    echo "$MAP: PROBE PRODUCED NOTHING — see $OUT/$MAP.log"
+    echo "$MAP: PROBE PRODUCED NOTHING — the probe did not run, which is a"
+    echo "  harness problem, not a map problem. Last lines of its log:"
+    tail -5 "$OUT/$MAP.log" | sed 's/^/    /'
     status=1
     continue
   fi
