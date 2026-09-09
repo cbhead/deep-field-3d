@@ -43,8 +43,23 @@ Known gaps of that kind:
 
 - **Magazine / reserve counts** in the loadout cluster. The sim has no ammo
   pool; weapons fire on a cooldown. Waiting on the ammo-quantity system.
-- **Per-tower kills / uptime / coverage** in the upgrade panel. The sim tracks
-  damage dealt but not the rest.
+- **Per-tower kills / uptime** in the upgrade panel. The sim tracks damage
+  dealt but not the rest. Coverage is no longer on this list: the panel now
+  prints reach in metres and the world draws the ring, which is the part of
+  "coverage" a player can act on.
+
+- **The coverage ring is code's, not design's.** Design's Structure frame gives
+  the upgrade paths pips, a price and a breakpoint recipe, and nothing on the
+  deck. Holding U now also draws the tower's reach as a ground ring, a dome
+  when it can shoot air, and a second brighter ring at where reach *would* be
+  after the next Range level. A multiplier never answers the only question
+  being asked at that moment — does this buy the corner I keep leaking from —
+  and the same rings were already the build wheel's answer to it at placement
+  time. If design wants different colours or a different read for the preview,
+  the source here is the place to change it. It is drawn by
+  `CoverageRings`, shared with the build ghost so preview and owned coverage
+  cannot drift apart, and the numbers come from `TowerMath`, shared with the
+  sim so the ring cannot disagree with what the tower shoots.
 - **Early-start scrap bonus** on the intermission panel. No such bonus exists.
 - **Platform prices are scrap, not credits.** The brief and design's armory
   frame price weapon platforms in money; they now cost personal scrap, because

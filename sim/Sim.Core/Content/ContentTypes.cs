@@ -47,11 +47,31 @@ public sealed record EnemyDef(
     float EnrageBelowHpFraction = 0f, // Ram: speeds up when hurt
     float EnrageSpeedFactor = 1f);
 
+/// <summary>One of a tower's upgrade paths, ten levels deep.
+///
+/// A tower is built at level 1 and bought up to 10, so LevelCosts holds the
+/// nine purchases between them, indexed by the level you are leaving. That is
+/// also exactly design's stage numbering — `tower_&lt;id&gt;_&lt;path&gt;_s1…s10`,
+/// where s1 is empty because the chassis *is* level 1 — so the level a player
+/// sees, the stage file that draws it, and the breakpoint keys below are all
+/// the same number.
+///
+/// BreakpointRecipes is keyed by that level: 4, 7 and 10 cost scrap from the
+/// team pool on top of the money, in rarer types the higher you go.</summary>
 public sealed record UpgradePathDef(
-    string Id,                    // "damage" | "range" | "rate"
+    string Id,
     float PerLevelFactor,         // multiplier applied per level to the governed stat
-    IReadOnlyList<int> LevelCosts, // money cost per level (index 0 = level 1)
-    IReadOnlyDictionary<ScrapType, int> BreakpointRecipe); // extra cost at L4
+    IReadOnlyList<int> LevelCosts,
+    IReadOnlyDictionary<int, IReadOnlyDictionary<ScrapType, int>> BreakpointRecipes)
+{
+    /// <summary>The highest level this path can reach: level 1 plus a purchase
+    /// for each cost. Ten, for every path design drew stages for.</summary>
+    public int MaxLevel => LevelCosts.Count + 1;
+
+    /// <summary>What arriving at a level costs in scrap, if anything.</summary>
+    public IReadOnlyDictionary<ScrapType, int>? RecipeFor(int level) =>
+        BreakpointRecipes.TryGetValue(level, out var recipe) ? recipe : null;
+}
 
 public enum TowerKind
 {

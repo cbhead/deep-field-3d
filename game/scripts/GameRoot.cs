@@ -95,6 +95,11 @@ public partial class GameRoot : Node3D
     private UpgradePanel _upgrade = null!;
     private ArmoryScreen _armory = null!;
     private BuildGhost _ghost = null!;
+    /// <summary>The coverage of the structure the upgrade panel is open on.
+    /// A price and a multiplier do not tell a player whether the next Range
+    /// level reaches the corner they keep leaking from; the ring on the deck
+    /// does.</summary>
+    private CoverageRings _upgradeRings = null!;
     private WorldMarkers _markers = null!;
     private LobbyScreen _lobby = null!;
     private CanvasLayer _overlay = null!;
@@ -431,6 +436,35 @@ public partial class GameRoot : Node3D
             return;
         }
 
+        // Stage review: one lance per breakpoint, lined up, so the ten levels
+        // design drew can be compared side by side. The usage audit proves the
+        // modules resolve; only a picture proves the tower keeps changing
+        // shape past the halfway point the sim used to stop at.
+        if (_shotView == "stages")
+        {
+            // The intermission briefing draws over the middle of the screen,
+            // which is exactly where a lineup goes.
+            if (_world is not null) Submit(new Command.StartWave(LocalPlayerId));
+            var origin = new Vector3(0f, 0.1f, -13f);
+            int slot = 0;
+            foreach (int level in new[] { 1, 4, 7, 10 })
+            {
+                var levels = new int[Towers.All["lance"].UpgradePaths.Count];
+                // Levels count purchases and the rig draws purchases + 1, so
+                // the module on screen is s{level} for the level asked for.
+                for (int i = 0; i < levels.Length; i++) levels[i] = level - 1;
+                var at = origin + new Vector3((slot - 1.5f) * 3.2f, 0f, 0f);
+                SpawnStructureView("lance", at, levels);   // parents itself
+                slot++;
+            }
+            if (_player is not null)
+                _player.AimFrom(origin + new Vector3(0f, 2.3f, 7.5f), origin + new Vector3(0f, 1.5f, 0f));
+            _shotView = "eye";
+            _shotPath = path;
+            _shotCountdown = 6;
+            return;
+        }
+
         // Scrap review: kill something at the player's feet so the floor has
         // drops on it, and photograph them before the magnet takes them.
         if (_shotView == "scrap" && _world is not null)
@@ -593,20 +627,35 @@ public partial class GameRoot : Node3D
                     // Levels and scrap, so the panel shows filled pips and a
                     // breakpoint recipe with have/need rather than a row of
                     // zeroes and a locked tier nobody can read.
+                    //
+                    // Damage goes all the way to L10 and Range stops partway:
+                    // the first proves the art keeps stepping past the halfway
+                    // point the sim used to stop at, and the second leaves a
+                    // purchase for the reach row and the preview ring to be
+                    // about.
                     if (_view.AtSocket(socket.Id) is { } placed)
                     {
-                        _world.Money += 600;
+                        _world.Money += 20000;
                         foreach (var type in System.Enum.GetValues<ScrapType>())
-                            _world.TeamScrap[type] = 30;
-                        for (int i = 0; i < 3; i++)
+                            _world.TeamScrap[type] = 200;
+                        for (int i = 0; i < 9; i++)
                             Submit(new Command.UpgradeTower(LocalPlayerId, placed.Id, 0));
+                        for (int i = 0; i < 3; i++)
+                            Submit(new Command.UpgradeTower(LocalPlayerId, placed.Id, 1));
                     }
                 });
                 Stage(6, () =>
                 {
-                    AimAt(socket.Pos, back: 6f, height: 2.5f);
+                    // Far enough back and high enough that the coverage ring
+                    // is inside the frame — a ring photographed from two paces
+                    // away is a picture of a tower.
+                    AimAt(socket.Pos, back: 12f, height: 6f);
                     if (_player is not null) _player.HoldingUpgrade = true;
                     OpenUpgradePanel(socket.Id);
+                    if (_view.AtSocket(socket.Id) is { } shown)
+                        GD.Print($"[upgrade] lance damage L{shown.PathLevels[0] + 1}, "
+                            + $"range L{shown.PathLevels[1] + 1}, reach "
+                            + $"{TowerMath.Range(Towers.All[shown.DefId], shown.PathLevels, _map, _view.Wave):0.0} m");
                 });
                 Stage(2, () => ShootSurface(path, "upgrade", _upgrade.IsOpen));
             }
@@ -989,6 +1038,7 @@ public partial class GameRoot : Node3D
         _hud.Refresh(_view, delta, Input.MouseMode == Input.MouseModeEnum.Captured, _hint);
         if (_wheel.IsOpen) _wheel.Refresh(_view);
         if (_upgrade.IsOpen) _upgrade.Refresh(_view);
+        UpdateUpgradeRings();
         if (_armory.IsOpen) _armory.Refresh(_view);
 
         // Intermission panel rides the phase, not an event, so a late joiner
@@ -2409,7 +2459,33 @@ public partial class GameRoot : Node3D
     {
         if (_player is null) return;
         var t = ToGd(target);
-        _player.AimFrom(t + new Vector3(back * 0.7f, height, back * 0.7f), t);
+        _player.AimFrom(t + ClearOffset(t, back, height), t);
+    }
+
+    /// <summary>Where to stand to actually see <paramref name="target"/>.
+    ///
+    /// Every review shot used to back off along the same fixed diagonal, which
+    /// works on open deck and fails silently everywhere else: on Foundry the
+    /// socket nearest the lane sits beside a raised walkway, so the "picture of
+    /// a maxed tower" was a picture of the walkway's underside. Nothing in the
+    /// log said so — the tower was built, the panel was open, the shot was
+    /// written. Only the image knew.
+    ///
+    /// So try twelve headings and take the first with an unobstructed line to
+    /// the subject, falling back to the old diagonal when the subject is boxed
+    /// in on every side.</summary>
+    private Vector3 ClearOffset(Vector3 target, float back, float height)
+    {
+        var space = GetWorld3D().DirectSpaceState;
+        var eye = target + new Vector3(0f, 1.2f, 0f);
+        for (int i = 0; i < 12; i++)
+        {
+            float angle = Mathf.Tau * i / 12f;
+            var offset = new Vector3(Mathf.Sin(angle) * back, height, Mathf.Cos(angle) * back);
+            var query = PhysicsRayQueryParameters3D.Create(target + offset, eye, collisionMask: 1);
+            if (space.IntersectRay(query).Count == 0) return offset;
+        }
+        return new Vector3(back * 0.7f, height, back * 0.7f);
     }
 
     /// <summary>The ground socket closest to a walked route — where a player
@@ -3698,6 +3774,10 @@ public partial class GameRoot : Node3D
 
         _ghost = new BuildGhost { Name = "BuildGhost" };
         AddChild(_ghost);
+
+        _upgradeRings = new CoverageRings { Name = "UpgradeRings" };
+        AddChild(_upgradeRings);
+        _upgradeRings.Hide3D();
     }
 
     // =====================================================================
@@ -3761,7 +3841,33 @@ public partial class GameRoot : Node3D
     public void OpenUpgradePanel(string socketId)
     {
         if (_view.AtSocket(socketId) is not { } structure) return;
-        _upgrade.Open(structure, _view);
+        _upgrade.Open(structure, _view, _map);
+        UpdateUpgradeRings();
+    }
+
+    /// <summary>Draws the open panel's structure coverage on the deck, and the
+    /// wider ring the next Range level would buy. Re-read every frame rather
+    /// than once on open, because an upgrade lands while the panel is up and a
+    /// ring that does not grow with the purchase is the one thing worse than
+    /// no ring at all. Weather is in the number too — fog shrinks what a tower
+    /// sees, and that is exactly the wave a player checks.</summary>
+    private void UpdateUpgradeRings()
+    {
+        if (!_upgrade.IsOpen || _upgrade.TargetId < 0) { _upgradeRings.Hide3D(); return; }
+
+        var structure = _view.Structures.FirstOrDefault(s => s.Id == _upgrade.TargetId);
+        if (structure is null || structure.IsTrap
+            || !Towers.All.TryGetValue(structure.DefId, out var def))
+        {
+            _upgradeRings.Hide3D();
+            return;
+        }
+
+        var socket = _map.Sockets.FirstOrDefault(s => s.Id == structure.SocketId);
+        if (socket is null) { _upgradeRings.Hide3D(); return; }
+
+        _upgradeRings.Position = ToGd(socket.Pos);
+        _upgradeRings.ShowForTower(def, structure.PathLevels, _map, _view.Wave);
     }
 
     public void UpgradeKey(int oneBased)
@@ -3786,10 +3892,15 @@ public partial class GameRoot : Node3D
             Submit(new Command.SellTower(LocalPlayerId, _upgrade.TargetId));
             _upgrade.ConsumeSell();
             _upgrade.Close();
+            _upgradeRings.Hide3D();
         }
     }
 
-    public void CloseUpgradePanel() => _upgrade.Close();
+    public void CloseUpgradePanel()
+    {
+        _upgrade.Close();
+        _upgradeRings.Hide3D();
+    }
 
     public void ToggleArmory()
     {

@@ -1,3 +1,4 @@
+using System.Linq;
 namespace DeepField.Sim.Content;
 
 public static class Towers
@@ -13,27 +14,66 @@ public static class Towers
     private static readonly IReadOnlyDictionary<ScrapType, int> NoRecipe =
         new Dictionary<ScrapType, int>();
 
+    /// <summary>Breakpoint recipes, keyed by the level they are charged at.
+    /// Rarer the higher you go, which is the plan's rule and the reason the
+    /// tenth level means something: Alloy is dropped by anything that walks,
+    /// Plating by armour, Flux by shields and flyers, and Gravium only by the
+    /// heavies — so a maxed path is a record of what the team actually fought.</summary>
+    private static IReadOnlyDictionary<int, IReadOnlyDictionary<ScrapType, int>> Breakpoints(
+        (ScrapType Type, int Amount)[] four,
+        (ScrapType Type, int Amount)[] seven,
+        (ScrapType Type, int Amount)[] ten)
+    {
+        static IReadOnlyDictionary<ScrapType, int> Recipe((ScrapType Type, int Amount)[] parts)
+            => parts.ToDictionary(p => p.Type, p => p.Amount);
+        return new Dictionary<int, IReadOnlyDictionary<ScrapType, int>>
+        {
+            [4] = Recipe(four),
+            [7] = Recipe(seven),
+            [10] = Recipe(ten),
+        };
+    }
+
     private static UpgradePathDef Damage(params int[] costs) => new(
         "damage", PerLevelFactor: 1.10f, LevelCosts: costs,
-        BreakpointRecipe: new Dictionary<ScrapType, int> { [ScrapType.Alloy] = 8, [ScrapType.Plating] = 2 });
+        BreakpointRecipes: Breakpoints(
+            new[] { (ScrapType.Alloy, 8), (ScrapType.Plating, 2) },
+            new[] { (ScrapType.Plating, 6), (ScrapType.Flux, 3) },
+            new[] { (ScrapType.Gravium, 4), (ScrapType.Plating, 6) }));
 
     private static UpgradePathDef Range(params int[] costs) => new(
         "range", PerLevelFactor: 1.12f, LevelCosts: costs,
-        BreakpointRecipe: new Dictionary<ScrapType, int> { [ScrapType.Alloy] = 8, [ScrapType.Flux] = 2 });
+        BreakpointRecipes: Breakpoints(
+            new[] { (ScrapType.Alloy, 8), (ScrapType.Flux, 2) },
+            new[] { (ScrapType.Flux, 7), (ScrapType.Alloy, 6) },
+            new[] { (ScrapType.Gravium, 4), (ScrapType.Flux, 6) }));
 
     private static UpgradePathDef Rate(params int[] costs) => new(
         "rate", PerLevelFactor: 1.10f, LevelCosts: costs,
-        BreakpointRecipe: new Dictionary<ScrapType, int> { [ScrapType.Flux] = 3 });
+        BreakpointRecipes: Breakpoints(
+            new[] { (ScrapType.Flux, 3), (ScrapType.Alloy, 4) },
+            new[] { (ScrapType.Flux, 8), (ScrapType.Plating, 3) },
+            new[] { (ScrapType.Gravium, 3), (ScrapType.Flux, 8) }));
 
     /// <summary>Named paths for the M3 towers. The ids match the stage-module
     /// filenames design delivered (tower_detector_field_s1…10 etc.), so wiring
     /// the tower is all it takes for its art to appear.</summary>
     private static UpgradePathDef Path(string id, float perLevel, params int[] costs) => new(
         id, PerLevelFactor: perLevel, LevelCosts: costs,
-        BreakpointRecipe: new Dictionary<ScrapType, int> { [ScrapType.Flux] = 4 });
+        BreakpointRecipes: Breakpoints(
+            new[] { (ScrapType.Flux, 4), (ScrapType.Alloy, 4) },
+            new[] { (ScrapType.Flux, 9), (ScrapType.Plating, 4) },
+            new[] { (ScrapType.Gravium, 4), (ScrapType.Flux, 8) }));
 
-    // M1 ships levels 1–5 (L4 is the breakpoint); costs grow ~×1.35 per level.
-    private static readonly int[] StdCosts = { 40, 54, 73, 98, 132 };
+    /// <summary>The nine purchases between level 1 and level 10 — design drew
+    /// ten stages per path and the sim only ever offered five of them, so a
+    /// tower stopped changing shape halfway up its own art.
+    ///
+    /// Costs grow about ×1.35 a level, which is what makes the top of a path a
+    /// real decision: the last four levels cost more than the first six
+    /// together, so a campaign run funds roughly one maxed path on one tower
+    /// and endless is where the whole grid opens.</summary>
+    private static readonly int[] StdCosts = { 40, 54, 73, 98, 132, 178, 240, 324, 438 };
 
     /// <summary>Railgun corridor tower (pierce arrives with the M2 projectile
     /// pipeline; M1 fires single-target bolts). Ground-only by sightline.</summary>
