@@ -207,6 +207,11 @@ public sealed class ScrapPickup
     public Vec3 Pos;
     /// <summary>Seconds before it banks to the team pool.</summary>
     public float Life;
+    /// <summary>Where it comes to rest. A Skiff dies fifteen metres up and its
+    /// scrap used to hang there, visible and unreachable — the one drop the
+    /// player who earned it could never collect. It falls to the walkable
+    /// surface under the kill instead.</summary>
+    public float GroundY;
     public bool Dead;
 }
 

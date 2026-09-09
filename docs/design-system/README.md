@@ -53,6 +53,16 @@ Known gaps of that kind:
   currency and the shared wallet is the towers'. Design's own card anticipated
   it — the buy state reads `Scrap N` — and the rail draws the have/need chips
   the recipe rows use. Melee platforms moved with them.
+- **The Spire's four west ladders go nowhere.** They are embedded in the west
+  facade: the wall occupies x −20.5…−19.5 and the west wing's plate starts at
+  x −19, so the half-metre between them is narrower than the player, and every
+  one of the four climbs stops against the underside of the floor it serves.
+  Foundry and Switchyard had the same defect and are fixed; the Spire's needs a
+  route that exists rather than a nudge, since the east side is already the
+  fire escape's. Reproduce with
+  `./play --headless --quit-after 6000 -- --shot spire /tmp/t.txt traversal`.
+  The lift, the teleport pads and the fire escape still work, so no tier is cut
+  off — the ladders are redundant as well as broken.
 - **Melee mastery is still bought with money.** Every other personal upgrade is
   scrap; this one was not converted with the platforms and is the last thing in
   the gunsmith drawing on the shared wallet.

@@ -100,6 +100,21 @@ jobs:
           tail -4 /tmp/siege.txt
           grep -q "^PASS" /tmp/siege.txt
 
+      # A ladder that stops against the underside of the deck it serves looks
+      # completely correct in the map file and from every angle in game, and
+      # takes a whole tier out of play — on Switchyard it took the air lane
+      # with it, because those four catwalk sockets are the only ones that
+      # cover the strand. Three maps had it; two are fixed. This climbs every
+      # ladder and checks the player is left standing at the top.
+      - name: Traversal probe (every climb lands on something)
+        run: |
+          for MAP in foundry switchyard; do
+            godot --headless --path game --quit-after 6000 -- \
+              --shot $MAP /tmp/trav-$MAP.txt traversal > trav-$MAP.log 2>&1 || true
+            cat /tmp/trav-$MAP.txt
+            grep -q "^PASS" /tmp/trav-$MAP.txt
+          done
+
       # The review shots for these three photographed the wrong screen for a
       # whole milestone: a fresh match sits in intermission and that panel draws
       # over everything, and both the wheel and the upgrade panel are

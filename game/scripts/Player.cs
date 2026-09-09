@@ -165,6 +165,19 @@ public partial class Player : CharacterBody3D
     /// key is held.</summary>
     public bool HoldingBuild { get; set; }
     public bool HoldingUpgrade { get; set; }
+    /// <summary>Set by the traversal probe so a headless run can climb without
+    /// a keyboard.</summary>
+    public bool ClimbHeld { get; set; }
+
+    /// <summary>World-space direction the probe wants walked, or zero. Applied
+    /// as movement input so it goes through the same collision the player
+    /// does — the point is to prove a deck can be walked onto, and teleporting
+    /// there would prove nothing.</summary>
+    public Vector3 WalkHeld { get; set; }
+
+    /// <summary>Standing on something, for the probe's "did they get up there
+    /// or are they stuck against the underside" question.</summary>
+    public bool Standing => IsOnFloor();
 
     /// <summary>Stand at <paramref name="from"/> and look at <paramref
     /// name="target"/>. Yaw lives on the body and pitch on the camera, which is
@@ -275,7 +288,7 @@ public partial class Player : CharacterBody3D
         if (_onLadder)
         {
             float climb = 0f;
-            if (Input.IsPhysicalKeyPressed(Key.W)) climb = ClimbSpeed;
+            if (Input.IsPhysicalKeyPressed(Key.W) || ClimbHeld) climb = ClimbSpeed;
             else if (Input.IsPhysicalKeyPressed(Key.S)) climb = -ClimbSpeed;
             velocity.Y = climb;
         }
@@ -305,6 +318,11 @@ public partial class Player : CharacterBody3D
 
         float speed = Input.IsPhysicalKeyPressed(Key.Shift) ? SprintSpeed : MoveSpeed;
         var direction = (Transform.Basis * new Vector3(input.X, 0, input.Y)).Normalized();
+        if (WalkHeld != Vector3.Zero)
+        {
+            direction = WalkHeld.Normalized();
+            input.X = 1;                        // so a walk off a ladder is allowed
+        }
         if (!_onLadder || input.X != 0)
         {
             velocity.X = direction.X * speed;
