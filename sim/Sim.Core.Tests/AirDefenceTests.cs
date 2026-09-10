@@ -116,6 +116,68 @@ public class AirDefenceTests
         }
     }
 
+    /// <summary>One Skiff, one tower on one real socket, the whole flight —
+    /// how much damage does it actually take?</summary>
+    private static float DamageOverAWholeFlight(MapDef map, SocketDef socket, string towerId)
+    {
+        var def = Towers.All[towerId];
+        int airRoute = map.Routes.ToList().FindIndex(r => r.Layer == EnemyLayer.Air);
+        var w = new World(1, map);
+        var skiff = new Enemy
+        {
+            Id = w.NextId(), DefId = "skiff", Hp = 100000f, MaxHp = 100000f,
+            Facing = new Vec3(1, 0, 0), RouteIndex = airRoute, Leg = 0, LegProgress = 0f,
+        };
+        w.Enemies.Add(skiff);
+        w.Towers.Add(new Tower
+        {
+            Id = w.NextId(), DefId = towerId, SocketId = socket.Id, Pos = socket.Pos,
+            PathLevels = new int[def.UpgradePaths.Count],
+        });
+
+        float before = skiff.Hp;
+        // Given enough health not to die, the flight ends when it leaks.
+        for (int i = 0; i < Balance.TickHz * 120 && w.Enemies.Contains(skiff); i++) Step.Advance(w);
+        return before - skiff.Hp;
+    }
+
+    [Fact]
+    public void OnADeckSocketFilamentIsAsGoodAnAirAnswerAsSkywatch()
+    {
+        // The other half of the finding, and the one worth protecting: from a
+        // deck, Filament is not a token air option — it is Skywatch's equal.
+        // A Skiff has 26 hp, so these are whole flights' worth of kills.
+        foreach (var map in Maps.All.Values)
+        {
+            if (!map.Routes.Any(r => r.Layer == EnemyLayer.Air)) continue;
+            var decks = map.Sockets.Where(s => s.Tag == SocketTag.Wall).ToList();
+            if (decks.Count == 0) continue;
+
+            float filament = decks.Max(d => DamageOverAWholeFlight(map, d, "filament"));
+            float skywatch = decks.Max(d => DamageOverAWholeFlight(map, d, "skywatch"));
+            float skiffHp = Enemies.All["skiff"].Hp;
+
+            Assert.True(filament > skiffHp * 3f,
+                $"{map.Id}: the best deck socket only got {filament:0} damage out of a Filament, "
+                + $"under three Skiffs' worth");
+            Assert.True(filament > skywatch * 0.7f,
+                $"{map.Id}: Filament {filament:0} is far behind Skywatch {skywatch:0} from a deck");
+        }
+    }
+
+    [Fact]
+    public void FromTheGroundArcIsNoAnswerAtAll()
+    {
+        // Switchyard is the map where this bites hardest: not one ground pad
+        // lands a single hit on a flyer with an Arc on it. If that ever stops
+        // being true the map has changed and this should be re-measured.
+        var map = Maps.All["switchyard"];
+        float best = map.Sockets
+            .Where(s => s.Tag == SocketTag.Ground)
+            .Max(s => DamageOverAWholeFlight(map, s, "arc"));
+        Assert.Equal(0f, best, 2);
+    }
+
     private static List<Vec3> AirSamples(RouteDef air)
     {
         var samples = new List<Vec3>();
