@@ -306,8 +306,15 @@ and each is a check that should run on the level file before anything is built.
 3. Every route of that chain is survivable — no drop the player cannot recover
    from without restarting the climb.
 
-**Coverage** — the ones that decide whether a map is *playable*, and which
-nothing currently checks
+**Coverage** — the ones that decide whether a map is *playable*
+
+These apply to the **lane, not the gate**: the first 8 m of a route is spawn
+apron and is exempt. An enemy standing on its spawn point has the whole walk
+still ahead of it and nothing is lost by not shooting it there, while demanding
+three pads within reach of the map edge would force every map to grow a cluster
+of build pads at the mouth — which pays players to turtle on the entrance and
+is worse design than the hole it closes.
+
 4. Every route segment is within reach of at least **three** ground sockets, so
    there is a choice rather than a forced build.
 5. Every **air** route segment is within reach of at least **three** sockets
@@ -459,6 +466,11 @@ checked:
 | §4.9 deck pads properly footed | 7 of 11 | 9 of 9 | **11 of 43** |
 | §4.8 lane blocked by solid geometry | 0 | 1 | **23** |
 | **Total violations** | **5** | **9** | **90** |
+
+Foundry and Switchyard are both at **0** now: three deck columns came out of
+Switchyard's lanes, four Foundry pads came back from a deck edge, and the thin
+stretches of both air lanes got the pads they needed. The Spire still has all
+of its, because they belong to the redesign in §7 rather than to patching.
 
 Read that Spire column against §7. Twenty-six sockets with no way to reach
 them, thirty-two deck pads with nothing under them, and an air lane that
