@@ -3455,11 +3455,18 @@ public partial class GameRoot : Node3D
         // a climb with nothing at the top of it.
         var midDeck = AddStaticBox(new Vector3(-7, 4.8f, -12), new Vector3(26, 0.4f, 8), new Color(0.45f, 0.48f, 0.55f), layer: 1);
         MapKit.MountRun(midDeck, "switchyard_middeck", 26f, 4f, alongX: true, MapKit.GroundLocal(midDeck));
-        foreach (float columnX in new[] { -17f, -7f, 3f })
-        {
-            var midColumn = AddStaticBox(new Vector3(columnX, 2.4f, -12), new Vector3(1.2f, 4.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
-            MapKit.Mount(midColumn, "switchyard_column", MapKit.GroundLocal(midColumn));
-        }
+        // Columns under the deck's two long edges, not down its centre line.
+        // The centre line is z −12, and the long route's southern leg runs
+        // along z −12 from x −5 to 15 — so three of these stood in the lane
+        // enemies walk. They are solid, so a player is stopped by them; the
+        // enemies, having no pathfinding, simply walked through. Edges are
+        // where a deck wants its columns anyway.
+        foreach (float columnX in new[] { -17f, -8f, 1f })
+            foreach (float columnZ in new[] { -15f, -9f })
+            {
+                var midColumn = AddStaticBox(new Vector3(columnX, 2.4f, columnZ), new Vector3(1.2f, 4.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
+                MapKit.Mount(midColumn, "switchyard_column", MapKit.GroundLocal(midColumn));
+            }
 
         // Upper catwalk (y=10) carrying w3/w4 over the air lane. Extended west
         // to x=-16 so its climb has somewhere to land clear of the lane.
@@ -3467,9 +3474,13 @@ public partial class GameRoot : Node3D
         // off the edge, so a tower built on either hung in space.
         var catwalk = AddStaticBox(new Vector3(-1, 9.8f, 3), new Vector3(30, 0.4f, 8), new Color(0.5f, 0.52f, 0.6f), layer: 1);
         MapKit.MountRun(catwalk, "switchyard_catwalk", 30f, 4f, alongX: true, MapKit.GroundLocal(catwalk));
-        foreach (float columnX in new[] { -14f, -6f, 12f })
+        // Two of these stood in a lane as well: the one at x −6 in the long
+        // route's north-south leg at x −5, and the one at x 12 in the freight
+        // cut's diagonal. Moved to where neither route passes — which is not a
+        // regular spacing, because the routes are not regularly spaced either.
+        foreach (var (columnX, columnZ) in new[] { (-14f, 3f), (-2f, 3f), (12f, 6f) })
         {
-            var column = AddStaticBox(new Vector3(columnX, 4.9f, 3), new Vector3(1.2f, 9.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
+            var column = AddStaticBox(new Vector3(columnX, 4.9f, columnZ), new Vector3(1.2f, 9.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
             MapKit.Mount(column, "switchyard_column", MapKit.GroundLocal(column));
         }
 
