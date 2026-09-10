@@ -318,7 +318,17 @@ is worse design than the hole it closes.
 4. Every route segment is within reach of at least **three** ground sockets, so
    there is a choice rather than a forced build.
 5. Every **air** route segment is within reach of at least **three** sockets
-   that can target air. Skywatch, Arc and Filament damage flyers; Detector and
+   that can target air.
+
+   Mind *which* sockets. Only three towers damage flyers — Skywatch (15 m), Arc
+   (11 m) and Filament (12 m) — and a tower on a ground pad stands at y 0, so
+   its whole range budget goes on climbing. A strand cruising at 13–15 m is
+   above what Arc and Filament can reach from the ground **on every map in the
+   campaign**; they are deck weapons against air, and nothing in the def table
+   says so. A strand answerable only from decks is a legitimate design — it is
+   what Switchyard's catwalk is *for* — but it has to be a decision, not an
+   accident, and §4.1 then carries the whole air layer on that climb being
+   reachable. The validator prints the ground/deck split per tower. Skywatch, Arc and Filament damage flyers; Detector and
    Singularity affect them without damage; Lance, Nova and Barricade cannot
    touch them.
 6. No socket covers nothing. A pad that reaches no route segment at any upgrade

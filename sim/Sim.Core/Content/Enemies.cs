@@ -37,8 +37,18 @@ public static class Enemies
         Shield: 0f, FlatArmor: 0f, Mass: 8f, Burrower: false, SplitInto: null, SplitCount: 0,
         ScrapYield: new Dictionary<ScrapType, int> { [ScrapType.Alloy] = 4, [ScrapType.Plating] = 2, [ScrapType.Gravium] = 1 });
 
-    /// <summary>Flyer on the air lane: did you buy vertical coverage? Ground
-    /// towers can't see it; Skywatch and hero fire can.</summary>
+    /// <summary>Flyer on the air lane: did you buy vertical coverage?
+    ///
+    /// Three towers list Air — Skywatch, Arc and Filament — and all three do
+    /// kill it, which AirDefenceTests pins down. But a tower on a ground pad
+    /// stands at y 0 and spends its whole range budget climbing, and the
+    /// strand cruises at 13 to 15 m: over Arc's 11 and Filament's 12. So from
+    /// the yard those two never fire a shot at one, and on Switchyard and the
+    /// Spire there is not a single ground pad Arc can answer the strand from.
+    /// They are deck weapons against air. Skywatch's 15 m is what makes it the
+    /// answer a player can buy without climbing — that, and hero fire.
+    ///
+    /// `--shot &lt;map&gt; &lt;txt&gt; validate` prints the split per map.</summary>
     public static readonly EnemyDef Skiff = new(
         Id: "skiff",
         Hp: 26f, SpeedMetersPerSec: 3.0f, Bounty: 10, LeakDamage: 1,

@@ -562,6 +562,7 @@ public partial class GameRoot : Node3D
             RuleFallbackIsCovered(samples, sockets, report, failures);
             RuleWallSocketsAreFooted(sockets, report, failures);
             RuleLanesAreClear(samples, report, failures);
+            ReportAirAnswers(samples, sockets, report);
 
             // The count is what CI ratchets on, so it goes in the file in a
             // form a script can read without parsing prose.
@@ -3940,6 +3941,52 @@ public partial class GameRoot : Node3D
                     + $"({span.From.X:0},{span.From.Y:0},{span.From.Z:0}) to "
                     + $"({span.To.X:0},{span.To.Y:0},{span.To.Z:0}) "
                     + $"— {span.Worst} pad(s) at its thinnest");
+        }
+    }
+
+    /// <summary>Which towers actually answer this map's flyers, and from
+    /// where.
+    ///
+    /// Reporting only, but it is the number that matters most and the one the
+    /// def table hides. Skywatch, Arc and Filament all list
+    /// <c>EnemyLayer.Air</c>, so reading the table says three towers answer
+    /// flyers. A tower on a ground pad stands at y 0 and spends its whole
+    /// range budget climbing, and the strand cruises at 13 to 15 metres — over
+    /// Arc's 11 and Filament's 12 — so from the yard those two never fire a
+    /// shot at one. They are deck weapons against air. Nothing anywhere says
+    /// so, which is why "which towers combat flyers" has one answer on paper
+    /// and a different one in a match.
+    ///
+    /// §4.5 stays a pass/fail on total coverage; this is the breakdown that
+    /// says whether a player who never climbs has an answer at all.</summary>
+    private void ReportAirAnswers(List<(RouteDef Route, Vector3 At)> samples,
+        List<(SocketDef Def, Vector3 At)> sockets, List<string> report)
+    {
+        var air = samples.Where(s => s.Route.Layer == EnemyLayer.Air).ToList();
+        if (air.Count == 0) return;
+
+        float peak = air.Max(s => s.At.Y);
+        report.Add($"air answers — strand peaks at {peak:0.0} m");
+
+        foreach (var def in Towers.All.Values)
+        {
+            if (def.Kind == TowerKind.Barricade || def.Damage <= 0f) continue;
+            if (!def.TargetLayers.Contains(EnemyLayer.Air)) continue;
+
+            int fromGround = 0, fromDeck = 0;
+            foreach (var (socket, at) in sockets)
+            {
+                bool reaches = air.Any(s => at.DistanceTo(s.At) <= def.RangeMeters
+                    && at.DistanceTo(s.At) >= def.MinRangeMeters);
+                if (!reaches) continue;
+                if (socket.Tag == SocketTag.Ground) fromGround++; else fromDeck++;
+            }
+            int covered = air.Count(s => sockets.Any(p =>
+                p.At.DistanceTo(s.At) <= def.RangeMeters && p.At.DistanceTo(s.At) >= def.MinRangeMeters));
+
+            report.Add($"  {def.Id} r{def.RangeMeters:0} — {fromGround} ground pad(s), "
+                + $"{fromDeck} deck pad(s), covers {covered}/{air.Count} of the strand"
+                + (def.RangeMeters < peak ? "  [cannot reach the peak from the ground at all]" : ""));
         }
     }
 
