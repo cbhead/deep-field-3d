@@ -123,6 +123,16 @@ public static class Maps
             // lane. The deck cannot grow north instead: its south ladder
             // stands at z −11.3, just clear of the face, and burying that
             // again is the "ladder to nowhere" this map has already had once.
+            // The air strand climbs from the west mouth to 13 m by x −14, and
+            // between x −33 and x −21 only two pads on the whole map could
+            // reach it — the deck is thirty metres east. This one sits between
+            // the two lanes: nine metres north of the ground route, so a Lance
+            // still answers that, and inside a Skywatch's reach of the strand
+            // overhead. A second pad at x −24 was tried and cut: it landed two
+            // metres from g9, and two pads close enough to overlap read as one
+            // blurry option.
+            new SocketDef("g23", new Vec3(-30f, 0f, -9f), SocketTag.Ground),
+
             new SocketDef("w4", new Vec3(-10f, 6f, -13.4f), SocketTag.Wall),
             new SocketDef("w5", new Vec3(-2f, 6f, -13.4f), SocketTag.Wall),
             new SocketDef("w6", new Vec3(6f, 6f, -13.4f), SocketTag.Wall),
@@ -216,6 +226,11 @@ public static class Maps
             new SocketDef("g9", new Vec3(-32f, 0f, 8f), SocketTag.Ground),
 
             // --- Ground, the long switchback.
+            // Under the strand's western climb, where a Skywatch can still
+            // reach 13 m of air. Four metres clear of the switchback's leg at
+            // x −25 and of the freight cut, which starts at x −18.
+            new SocketDef("g22", new Vec3(-21f, 0f, 2f), SocketTag.Ground),
+
             new SocketDef("g2", new Vec3(-18f, 0f, 8f), SocketTag.Ground),
             new SocketDef("g10", new Vec3(-20f, 0f, 16f), SocketTag.Ground),
             new SocketDef("g11", new Vec3(-10f, 0f, 16f), SocketTag.Ground),
@@ -254,6 +269,16 @@ public static class Maps
 
             // --- Upper catwalk (y=10) hangs over the air lane — the only
             // sockets that see the whole strand rather than its low dips.
+            // The catwalk is thirty metres long and carried its four sockets
+            // in the middle twenty of it, so both ends of the strand it exists
+            // to cover were out of reach: nothing on the map could reach the
+            // strand between x −27 and x −14 except a single pad, and the
+            // eastern run had two. These two stand at the catwalk's ends, a
+            // clear metre inside the edge, and they are the reason to walk to
+            // the end of it.
+            new SocketDef("w10", new Vec3(-14.5f, 10f, 6f), SocketTag.Wall),
+            new SocketDef("w11", new Vec3(12.5f, 10f, 4.5f), SocketTag.Wall),
+
             new SocketDef("w3", new Vec3(-4f, 10f, 6f), SocketTag.Wall),
             new SocketDef("w4", new Vec3(10f, 10f, 0f), SocketTag.Wall),
             new SocketDef("w8", new Vec3(-12f, 10f, 2f), SocketTag.Wall),

@@ -562,6 +562,7 @@ public partial class GameRoot : Node3D
             RuleFallbackIsCovered(samples, sockets, report, failures);
             RuleWallSocketsAreFooted(sockets, report, failures);
             RuleLanesAreClear(samples, report, failures);
+            ReportAirAnswers(samples, sockets, report);
 
             // The count is what CI ratchets on, so it goes in the file in a
             // form a script can read without parsing prose.
@@ -3472,7 +3473,12 @@ public partial class GameRoot : Node3D
         // to x=-16 so its climb has somewhere to land clear of the lane.
         // Depth 8 rather than 5: w3 (z=6) and w4 (z=0) were both half a metre
         // off the edge, so a tower built on either hung in space.
-        var catwalk = AddStaticBox(new Vector3(-1, 9.8f, 3), new Vector3(30, 0.4f, 8), new Color(0.5f, 0.52f, 0.6f), layer: 1);
+        // Ten metres deep rather than eight. The catwalk exists to cover the
+        // air strand and carried its sockets in the middle twenty metres of
+        // its thirty, so both ends of the strand were out of reach; the pads
+        // that fix that need a clear metre of deck on every side, and at eight
+        // deep the north row had nowhere to stand that was not the edge.
+        var catwalk = AddStaticBox(new Vector3(-1, 9.8f, 3), new Vector3(30, 0.4f, 10), new Color(0.5f, 0.52f, 0.6f), layer: 1);
         MapKit.MountRun(catwalk, "switchyard_catwalk", 30f, 4f, alongX: true, MapKit.GroundLocal(catwalk));
         // Two of these stood in a lane as well: the one at x −6 in the long
         // route's north-south leg at x −5, and the one at x 12 in the freight
@@ -3799,10 +3805,27 @@ public partial class GameRoot : Node3D
                 var a = ToGd(route.Waypoints[i]);
                 var b = ToGd(route.Waypoints[i + 1]);
                 int steps = Mathf.Max(1, Mathf.FloorToInt((b - a).Length() / 4f));
-                for (int k = 0; k <= steps; k++) samples.Add((route, a.Lerp(b, (float)k / steps)));
+                // Skip the shared corner on every segment but the first, or
+                // each interior waypoint is measured twice and a thin corner
+                // is reported as two thin points.
+                for (int k = i == 0 ? 0 : 1; k <= steps; k++)
+                    samples.Add((route, a.Lerp(b, (float)k / steps)));
             }
         return samples;
     }
+
+    /// <summary>How far into a route the spawn apron reaches.
+    ///
+    /// The coverage rules are about the lane, not the gate. An enemy standing
+    /// on its spawn point has the entire walk still ahead of it and nothing is
+    /// lost by not shooting it there — while demanding three pads within reach
+    /// of the map edge would force every map to grow a cluster of build pads
+    /// at the mouth, which is worse design than the hole it closes. It pays
+    /// players to turtle on the entrance.
+    ///
+    /// Eight metres, which is two lane modules: enough to cover the spawn
+    /// point itself and nothing more. Holes further in are holes.</summary>
+    private const float SpawnApron = 8f;
 
     /// <summary>Whether a tower built on this socket could shoot something at
     /// <paramref name="target"/>.
@@ -3886,21 +3909,84 @@ public partial class GameRoot : Node3D
             int worst = int.MaxValue;
             Vector3 worstAt = Vector3.Zero;
             int thin = 0, count = 0;
+            // Where the thin stretches actually are, as spans rather than a
+            // tally. A count says a lane is under-covered; a span says which
+            // twenty metres of it, which is the difference between knowing
+            // there is a problem and being able to place a socket.
+            var spans = new List<(Vector3 From, Vector3 To, int Worst)>();
+            (Vector3 From, Vector3 To, int Worst)? open = null;
+            var mouth = ToGd(route.Waypoints[0]);
             foreach (var (r, at) in samples)
             {
                 if (r.Id != route.Id) continue;
+                if (at.DistanceTo(mouth) < SpawnApron) continue;
                 count++;
                 int cover = sockets.Count(s => CanCover(s.At, at, layer));
                 if (cover < worst) { worst = cover; worstAt = at; }
-                if (cover < Want) thin++;
+                if (cover < Want)
+                {
+                    thin++;
+                    open = open is { } o ? (o.From, at, Mathf.Min(o.Worst, cover)) : (at, at, cover);
+                }
+                else if (open is { } done) { spans.Add(done); open = null; }
             }
+            if (open is { } last) spans.Add(last);
             if (count == 0) continue;
+
             string rule = layer == EnemyLayer.Air ? "§4.5" : "§4.4";
             report.Add($"{rule} route {route.Id} ({layer}) — thinnest point has {worst} pad(s), "
                 + $"{thin}/{count} sample(s) under {Want}");
-            if (thin > 0)
-                failures.Add($"{rule} route {route.Id} is under-covered at {thin} of {count} points "
-                    + $"— thinnest is {worst} pad(s) at ({worstAt.X:0},{worstAt.Y:0},{worstAt.Z:0})");
+            foreach (var span in spans)
+                failures.Add($"{rule} route {route.Id} under-covered from "
+                    + $"({span.From.X:0},{span.From.Y:0},{span.From.Z:0}) to "
+                    + $"({span.To.X:0},{span.To.Y:0},{span.To.Z:0}) "
+                    + $"— {span.Worst} pad(s) at its thinnest");
+        }
+    }
+
+    /// <summary>Which towers actually answer this map's flyers, and from
+    /// where.
+    ///
+    /// Reporting only, but it is the number that matters most and the one the
+    /// def table hides. Skywatch, Arc and Filament all list
+    /// <c>EnemyLayer.Air</c>, so reading the table says three towers answer
+    /// flyers. A tower on a ground pad stands at y 0 and spends its whole
+    /// range budget climbing, and the strand cruises at 13 to 15 metres — over
+    /// Arc's 11 and Filament's 12 — so from the yard those two never fire a
+    /// shot at one. They are deck weapons against air. Nothing anywhere says
+    /// so, which is why "which towers combat flyers" has one answer on paper
+    /// and a different one in a match.
+    ///
+    /// §4.5 stays a pass/fail on total coverage; this is the breakdown that
+    /// says whether a player who never climbs has an answer at all.</summary>
+    private void ReportAirAnswers(List<(RouteDef Route, Vector3 At)> samples,
+        List<(SocketDef Def, Vector3 At)> sockets, List<string> report)
+    {
+        var air = samples.Where(s => s.Route.Layer == EnemyLayer.Air).ToList();
+        if (air.Count == 0) return;
+
+        float peak = air.Max(s => s.At.Y);
+        report.Add($"air answers — strand peaks at {peak:0.0} m");
+
+        foreach (var def in Towers.All.Values)
+        {
+            if (def.Kind == TowerKind.Barricade || def.Damage <= 0f) continue;
+            if (!def.TargetLayers.Contains(EnemyLayer.Air)) continue;
+
+            int fromGround = 0, fromDeck = 0;
+            foreach (var (socket, at) in sockets)
+            {
+                bool reaches = air.Any(s => at.DistanceTo(s.At) <= def.RangeMeters
+                    && at.DistanceTo(s.At) >= def.MinRangeMeters);
+                if (!reaches) continue;
+                if (socket.Tag == SocketTag.Ground) fromGround++; else fromDeck++;
+            }
+            int covered = air.Count(s => sockets.Any(p =>
+                p.At.DistanceTo(s.At) <= def.RangeMeters && p.At.DistanceTo(s.At) >= def.MinRangeMeters));
+
+            report.Add($"  {def.Id} r{def.RangeMeters:0} — {fromGround} ground pad(s), "
+                + $"{fromDeck} deck pad(s), covers {covered}/{air.Count} of the strand"
+                + (def.RangeMeters < peak ? "  [cannot reach the peak from the ground at all]" : ""));
         }
     }
 
@@ -3939,9 +4025,11 @@ public partial class GameRoot : Node3D
                 continue;
             }
             int thin = 0, count = 0;
+            var mouth = ToGd(fallback.Waypoints[0]);
             foreach (var (r, at) in samples)
             {
                 if (r.Id != fallback.Id) continue;
+                if (at.DistanceTo(mouth) < SpawnApron) continue;
                 count++;
                 if (sockets.Count(s => CanCover(s.At, at, fallback.Layer)) < 3) thin++;
             }
