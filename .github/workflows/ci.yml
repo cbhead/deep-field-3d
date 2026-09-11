@@ -115,6 +115,27 @@ jobs:
             grep -q "^PASS" /tmp/trav-$MAP.txt
           done
 
+      # Elevation, which the aim probe above cannot see: it builds a Lance,
+      # which cannot target air at all, and flattens both vectors to the ground
+      # plane before taking the angle — so a barrel aimed level at a Skiff
+      # fifteen metres up scores a perfect zero.
+      #
+      # A ratchet, not a gate. Filament's manifest row caps its pitch at 48
+      # degrees and a Skiff passing near-overhead sits at 74, so it currently
+      # points 26 degrees below what it is beaming. That is design's number to
+      # change (docs/FORWARD-MANIFEST-reload.md, "Turret elevation"); until it
+      # does, this holds the line at 26 so nothing gets worse.
+      - name: Air tracking (turrets elevate onto what they shoot)
+        run: |
+          godot --headless --path game --quit-after 12000 -- \
+            --shot foundry /tmp/aimair.txt aimair > aimair.log 2>&1 || true
+          cat /tmp/aimair.txt | tail -4
+          WORST=$(grep -o 'worst elevation error once settled: [0-9.]*' /tmp/aimair.txt | grep -o '[0-9.]*$')
+          echo "worst elevation error: ${WORST:-none} (baseline 26)"
+          test -n "$WORST"
+          awk -v w="$WORST" 'BEGIN { exit (w <= 26.0) ? 0 : 1 }'
+          grep -q "worst yaw error once settled: 0" /tmp/aimair.txt
+
       # The rules in docs/MAP-AUTHORING.md §4, measured on the assembled map.
       # A ratchet rather than a gate: all three maps fail the rules today, each
       # carries a baseline, and this fails only when a map gets worse. The
