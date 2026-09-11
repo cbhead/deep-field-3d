@@ -305,7 +305,7 @@ public class LobbyAndEndlessTests
         // The same authored table, but heavier: hp compounds on the raw index
         // and the second lap adds bodies.
         int arc = Maps.TestLane.TotalWaves;
-        Assert.True(WavePlan.HpScale(arc + 1, 1) > WavePlan.HpScale(1, 1));
+        Assert.True(WavePlan.HpScale(Maps.TestLane, arc + 1, 1) > WavePlan.HpScale(Maps.TestLane, 1, 1));
         Assert.True(WavePlan.PlanWave(3, Maps.TestLane, arc + 1, 1).Count
                     >= WavePlan.PlanWave(3, Maps.TestLane, 1, 1).Count);
     }
@@ -715,5 +715,71 @@ public class TowerRangeTests
         // A silent zero-iteration pass would let the weather term be deleted
         // without a single test noticing.
         Assert.True(checkedOne, "no map schedules a range-shrinking condition");
+    }
+}
+
+/// <summary>The endless hp curve. Two curves meeting at the end of the
+/// authored arc, and the tests that keep them meeting.</summary>
+public class EndlessScalingTests
+{
+    [Fact]
+    public void TheAuthoredCampaignCurveIsUntouched()
+    {
+        // The sweep balanced the campaign against Balance.HpGrowth compounded
+        // on the wave index. Endless growing more slowly must not move a
+        // single authored wave, or every gate in the harness is measuring a
+        // different game than the one that was tuned.
+        foreach (var map in Maps.All.Values)
+        {
+            int authored = Waves.ByMap[map.Id].Count;
+            for (int wave = 0; wave < authored; wave++)
+                Assert.Equal(MathF.Pow(Balance.HpGrowth, wave),
+                    WavePlan.HpScale(map, wave, 1), 3);
+        }
+    }
+
+    [Fact]
+    public void TheCurveIsContinuousWhereTheTwoMeet()
+    {
+        // A step at the join would read as the game suddenly relenting the
+        // moment the campaign runs out, which is worse than either curve.
+        foreach (var map in Maps.All.Values)
+        {
+            int lastAuthored = Waves.ByMap[map.Id].Count - 1;
+            float atJoin = WavePlan.HpScale(map, lastAuthored, 1);
+            float justPast = WavePlan.HpScale(map, lastAuthored + 1, 1);
+            Assert.Equal(atJoin * Balance.EndlessHpGrowth, justPast, 3);
+        }
+    }
+
+    [Fact]
+    public void EndlessStillGetsHarderForever()
+    {
+        // Gentler is not flat. Every wave past the arc must outweigh the one
+        // before it, or endless stops being endless and becomes a plateau.
+        var map = Maps.All["foundry"];
+        for (int wave = 1; wave < 60; wave++)
+            Assert.True(WavePlan.HpScale(map, wave, 1) > WavePlan.HpScale(map, wave - 1, 1),
+                $"wave {wave} is no heavier than wave {wave - 1}");
+    }
+
+    [Fact]
+    public void PastTheArcItIsActuallyGentlerThanTheCampaignCurve()
+    {
+        // The change this file exists for: at wave 15 on Foundry the old curve
+        // was 19.7x hp, against a tower whose ceiling is 5.6x its starting dps.
+        var map = Maps.All["foundry"];
+        int lastAuthored = Waves.ByMap[map.Id].Count - 1;
+
+        foreach (int wave in new[] { 15, 20, 25, 30 })
+        {
+            float now = WavePlan.HpScale(map, wave, 1);
+            float unchanged = MathF.Pow(Balance.HpGrowth, wave);
+            Assert.True(now < unchanged * 0.75f,
+                $"wave {wave}: {now:0.0}x is not meaningfully under the old {unchanged:0.0}x");
+        }
+        // And the relief compounds, so the deep rounds are where it is felt.
+        Assert.True(WavePlan.HpScale(map, 30, 1) < MathF.Pow(Balance.HpGrowth, 30) * 0.35f);
+        Assert.True(lastAuthored > 0);
     }
 }

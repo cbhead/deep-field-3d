@@ -117,7 +117,7 @@ public sealed class GameView
         EnemiesRemaining = world.Enemies.Count + world.PendingSpawns.Count;
         Lobby = world.Lobby;
         Endless = world.Endless;
-        Threat = WavePlan.HpScale(System.Math.Max(0, world.WaveIndex), System.Math.Max(1, world.ConnectedPlayerCount));
+        Threat = WavePlan.HpScale(world.Map, System.Math.Max(0, world.WaveIndex), System.Math.Max(1, world.ConnectedPlayerCount));
 
         TeamScrap = new Dictionary<ScrapType, int>(world.TeamScrap);
 
