@@ -11,7 +11,7 @@ public static class Weapons
     /// <summary>The starter sidearm — never taken away, so nobody is ever a spectator.</summary>
     public static readonly WeaponDef Sidearm = new(
         Id: "sidearm", Recipe: Free,
-        Damage: 5f, ShotsPerSecond: 3f, RangeMeters: 60f,
+        Damage: 7f, ShotsPerSecond: 3f, RangeMeters: 60f,
         Applies: System.Array.Empty<string>(),
         MagazineSize: 12, ReloadSeconds: 1.3f, Automatic: false);
 
@@ -23,7 +23,7 @@ public static class Weapons
         // you cannot fund by farming a single lane.
         Id: "rifle", Recipe: new Dictionary<ScrapType, int>
             { [ScrapType.Alloy] = 8, [ScrapType.Flux] = 5, [ScrapType.Plating] = 2 },
-        Damage: 11f, ShotsPerSecond: 2.2f, RangeMeters: 80f,
+        Damage: 15f, ShotsPerSecond: 2.2f, RangeMeters: 80f,
         Applies: new[] { "mark" },
         MagazineSize: 24, ReloadSeconds: 1.9f, Automatic: true);
 
@@ -33,7 +33,7 @@ public static class Weapons
         // swarms and the armoured things you already stood next to.
         Id: "scattergun", Recipe: new Dictionary<ScrapType, int>
             { [ScrapType.Alloy] = 10, [ScrapType.Plating] = 3 },
-        Damage: 24f, ShotsPerSecond: 1.1f, RangeMeters: 14f,
+        Damage: 33f, ShotsPerSecond: 1.1f, RangeMeters: 14f,
         Applies: System.Array.Empty<string>(),
         MagazineSize: 6, ReloadSeconds: 2.4f, Automatic: false);
 
@@ -42,7 +42,7 @@ public static class Weapons
     public static readonly WeaponDef EmberPistol = new(
         Id: "emberPistol", Recipe: new Dictionary<ScrapType, int>
             { [ScrapType.Alloy] = 6, [ScrapType.Flux] = 4 },
-        Damage: 4f, ShotsPerSecond: 2.0f, RangeMeters: 40f,
+        Damage: 5.5f, ShotsPerSecond: 2.0f, RangeMeters: 40f,
         Applies: new[] { "burn" },
         MagazineSize: 10, ReloadSeconds: 1.5f, Automatic: false);
 
@@ -54,7 +54,7 @@ public static class Weapons
         // armour that stopped you, the same rule the AP round follows.
         Id: "poisonStream", Recipe: new Dictionary<ScrapType, int>
             { [ScrapType.Plating] = 6, [ScrapType.Flux] = 4 },
-        Damage: 2f, ShotsPerSecond: 6f, RangeMeters: 18f,
+        Damage: 2.8f, ShotsPerSecond: 6f, RangeMeters: 18f,
         Applies: new[] { "poison" },
         MagazineSize: 40, ReloadSeconds: 2.2f, Automatic: true);
 
@@ -64,7 +64,7 @@ public static class Weapons
     public static readonly WeaponDef CryoSprayer = new(
         Id: "cryoSprayer", Recipe: new Dictionary<ScrapType, int>
             { [ScrapType.Flux] = 8, [ScrapType.Alloy] = 4 },
-        Damage: 1.6f, ShotsPerSecond: 7f, RangeMeters: 14f,
+        Damage: 2.2f, ShotsPerSecond: 7f, RangeMeters: 14f,
         Applies: new[] { "chill" },
         MagazineSize: 45, ReloadSeconds: 2.1f, Automatic: true);
 
