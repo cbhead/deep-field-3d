@@ -70,6 +70,7 @@ public static class Step
                 case Command.Revive revive: ApplyRevive(w, revive); break;
                 case Command.CraftAttachment craft: ApplyCraftAttachment(w, craft); break;
                 case Command.SelectAmmo ammo: ApplySelectAmmo(w, ammo); break;
+                case Command.PackAPunch pack: ApplyPackAPunch(w, pack); break;
             }
         }
         w.PendingCommands.Clear();
@@ -617,6 +618,37 @@ public static class Step
 
         player.BuildFor(craft.WeaponId).Attachments[def.Slot] = def.Id;
         w.Emit(new SimEvent.AttachmentCrafted(craft.PlayerId, craft.WeaponId, def.Id));
+    }
+
+    /// <summary>Pack a Punch. No level cap: the cost curve is what limits it,
+    /// growing faster than the power does so each level buys less than the one
+    /// before. Paid in Alloy, from the player's own scrap — this is a bench
+    /// upgrade, not a team one.</summary>
+    private static void ApplyPackAPunch(World w, Command.PackAPunch pack)
+    {
+        if (!w.Players.TryGetValue(pack.PlayerId, out var player)) return;
+        if (!player.OwnedWeapons.Contains(pack.WeaponId))
+        {
+            w.Emit(new SimEvent.CraftRejected(pack.PlayerId, pack.WeaponId, "weaponNotOwned"));
+            return;
+        }
+        if (!Weapons.All.ContainsKey(pack.WeaponId))
+        {
+            w.Emit(new SimEvent.CraftRejected(pack.PlayerId, pack.WeaponId, "unknownWeapon"));
+            return;
+        }
+
+        var build = player.BuildFor(pack.WeaponId);
+        int cost = build.NextPackCost;
+        if (player.Scrap.GetValueOrDefault(ScrapType.Alloy) < cost)
+        {
+            w.Emit(new SimEvent.CraftRejected(pack.PlayerId, pack.WeaponId, "insufficientScrap"));
+            return;
+        }
+
+        player.Scrap[ScrapType.Alloy] = player.Scrap.GetValueOrDefault(ScrapType.Alloy) - cost;
+        build.PackLevel++;
+        w.Emit(new SimEvent.PackedAPunch(pack.PlayerId, pack.WeaponId, build.PackLevel, cost));
     }
 
     private static void ApplySelectAmmo(World w, Command.SelectAmmo select)
@@ -1734,8 +1766,14 @@ public static class Step
         if (def.ScrapYield.Count == 0) return;
 
         var parts = new List<string>();
-        foreach (var (type, baseAmount) in def.ScrapYield)
+        // Scaled by the wave the enemy belongs to, not the wave running now: a
+        // straggler killed after the next wave starts is still worth what its
+        // own wave was worth.
+        float waveScale = WavePlan.ScrapScale(enemy.WaveIndex);
+        foreach (var (type, defAmount) in def.ScrapYield)
         {
+            int baseAmount = Math.Max(1, (int)MathF.Round(defAmount * waveScale,
+                MidpointRounding.AwayFromZero));
             // Melee's entire economic identity: standing in contact range pays
             // better. Applied to the whole yield, team share included, so a
             // melee player funds the team's towers as well as their own bench.

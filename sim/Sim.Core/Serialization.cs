@@ -44,7 +44,10 @@ public static class Serialization
         // have had.
         string? MeleeId = null, List<string>? OwnedMelee = null,
         Dictionary<string, Dictionary<string, string>>? MeleeBuilds = null,
-        Dictionary<string, int>? MeleeMastery = null, float MeleeCooldown = 0f);
+        Dictionary<string, int>? MeleeMastery = null, float MeleeCooldown = 0f,
+        // Pack a Punch, same trailing-optional rule: a save written before it
+        // existed loads with every weapon at level 0, which is what it had.
+        Dictionary<string, int>? PackLevels = null);
 
     private sealed record WorldState(
         uint Seed, long Tick, string MapId, int Money, int Lives,
@@ -89,7 +92,8 @@ public static class Serialization
                 p.MeleeBuilds.ToDictionary(kv => kv.Key,
                     kv => kv.Value.Attachments.ToDictionary(a => a.Key.ToString(), a => a.Value)),
                 p.MeleeBuilds.ToDictionary(kv => kv.Key, kv => kv.Value.MasteryLevel),
-                p.MeleeCooldown)).ToList(),
+                p.MeleeCooldown,
+                p.Builds.ToDictionary(kv => kv.Key, kv => kv.Value.PackLevel))).ToList(),
             w.Traps.Select(t => new TrapState(t.Id, t.DefId, t.SocketId, t.ChargesLeft, t.RearmTimer)).ToList(),
             w.NextIdValue, w.Lobby, w.Endless,
             w.Pickups.Select(p => new PickupState(
@@ -210,6 +214,8 @@ public static class Serialization
                 var build = player.BuildFor(weaponId);
                 foreach (var (slotName, attachmentId) in slots)
                     build.Attachments[System.Enum.Parse<AttachmentSlot>(slotName)] = attachmentId;
+                if (p.PackLevels is { } packs && packs.TryGetValue(weaponId, out int packLevel))
+                    build.PackLevel = packLevel;
                 if (p.BuildAmmo is { } ammoMap && ammoMap.TryGetValue(weaponId, out var ammoId))
                     build.AmmoId = ammoId;
             }

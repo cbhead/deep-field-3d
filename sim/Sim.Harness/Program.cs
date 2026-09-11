@@ -496,6 +496,7 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
         new Command.BuyMelee(1, "maul"),
         new Command.CraftMeleeAttachment(1, "maul", "cryoCore"),
         new Command.UpgradeMelee(1, "maul"),
+        new Command.PackAPunch(1, "rifle"),
     };
 
     var broken = new List<string>();

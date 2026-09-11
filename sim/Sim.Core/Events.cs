@@ -156,6 +156,13 @@ public abstract record SimEvent
         public override string LogLine() => $"{Tick} attachmentCrafted {PlayerId} {WeaponId} {AttachmentId}";
     }
 
+    /// <summary>A weapon went through the Pack a Punch. <c>Level</c> is what it
+    /// is now, <c>Cost</c> what this one took.</summary>
+    public sealed record PackedAPunch(int PlayerId, string WeaponId, int Level, int Cost) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} packedAPunch {PlayerId} {WeaponId} {Level} {Cost}";
+    }
+
     public sealed record ReloadStarted(int PlayerId, string WeaponId, float Seconds) : SimEvent
     {
         public override string LogLine() => $"{Tick} reloadStarted {PlayerId} {WeaponId} {Seconds:0.##}";

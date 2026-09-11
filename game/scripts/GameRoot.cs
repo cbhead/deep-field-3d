@@ -527,6 +527,27 @@ public partial class GameRoot : Node3D
             return;
         }
 
+        // Pack a Punch review: stock the bench, buy three levels, and open the
+        // armory on the weapon so the card shows a level and a next price.
+        if (_shotView == "pap" && _world is not null)
+        {
+            if (_world.Players.TryGetValue(LocalPlayerId, out var me))
+            {
+                me.Scrap[ScrapType.Alloy] = 5000;
+                Submit(new Command.SelectWeapon(LocalPlayerId, "sidearm"));
+                for (int i = 0; i < 3; i++) Submit(new Command.PackAPunch(LocalPlayerId, "sidearm"));
+                Step.Advance(_world);
+                var build = me.BuildFor("sidearm");
+                GD.Print($"[pap] sidearm level {build.PackLevel}, next costs {build.NextPackCost}, "
+                    + $"damage x{build.DamageFactor(false):0.00}, rate x{build.RateFactor():0.00}, "
+                    + $"alloy left {me.Scrap[ScrapType.Alloy]}");
+                RebuildView();
+            }
+            _shotView = "armory";
+            _shotPath = path;
+            return;
+        }
+
         // Scrap review: kill something at the player's feet so the floor has
         // drops on it, and photograph them before the magnet takes them.
         if (_shotView == "scrap" && _world is not null)
@@ -1482,6 +1503,10 @@ public partial class GameRoot : Node3D
                     _armory.ShowNotice(Explain(rejected.Reason));
                     Post($"craft: {Explain(rejected.Reason)}", UiTheme.Danger);
                     break;
+                case SimEvent.PackedAPunch packed when packed.PlayerId == LocalPlayerId:
+                    Post($"{packed.WeaponId} packed to level {packed.Level}", UiTheme.Accent);
+                    break;
+
                 case SimEvent.ScrapCollected collected when collected.PlayerId == LocalPlayerId:
                     Post($"+{collected.Amount} {collected.ScrapType.ToLowerInvariant()}",
                         UiTheme.Scrap(System.Enum.Parse<ScrapType>(collected.ScrapType)));
@@ -1598,6 +1623,10 @@ public partial class GameRoot : Node3D
                 OnBreach(int.Parse(p[2]));
                 break;
             case "reaction": _reactionCount++; OnReaction(int.Parse(p[2]), p[3]); break;
+            case "packedAPunch" when int.Parse(p[2]) == LocalPlayerId:
+                Post($"{p[3]} packed to level {p[4]}", UiTheme.Accent);
+                break;
+
             case "scrapCollected" when int.Parse(p[3]) == LocalPlayerId:
                 Post($"+{p[5]} {p[4].ToLowerInvariant()}", UiTheme.Scrap(System.Enum.Parse<ScrapType>(p[4])));
                 break;

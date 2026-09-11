@@ -41,6 +41,48 @@ public static class Balance
     public const float BountyScale = 1.0f;
     public const float BountyGrowth = 1.15f;
 
+    /// <summary>What a kill yields in scrap, on the same curve as the credits
+    /// it yields.
+    ///
+    /// Scrap had the identical hole bounty did: a flat number off the enemy's
+    /// def, so a Drifter dropped the same alloy on wave 20 as on wave 1 while
+    /// everything it buys — attachments, ammo, breakpoint recipes and now Pack
+    /// a Punch — stayed priced for a whole campaign. Flat income against
+    /// compounding costs is a bench you stop being able to afford, and it is
+    /// what would have made an unlimited upgrade track unlimited only on
+    /// paper.
+    ///
+    /// Held level with <see cref="BountyGrowth"/> on purpose: the two
+    /// currencies come off the same corpse and there is no reason for one to
+    /// outrun the other.</summary>
+    public const float ScrapGrowth = 1.15f;
+
+    // ---- Pack a Punch: the upgrade track with no ceiling -------------------
+
+    /// <summary>What the first Pack a Punch costs, in Alloy, and what each one
+    /// after it multiplies that by.
+    ///
+    /// The track has no cap, so the cost curve is the only thing holding it:
+    /// power compounds at <see cref="PackDamagePerLevel"/> x
+    /// <see cref="PackRatePerLevel"/> = 1.40 a level, and cost compounds at
+    /// 1.50, so every level buys a little less than the one before and the
+    /// track asymptotes instead of running away. That is the whole design —
+    /// unlimited has to mean "you may always buy another", not "you may
+    /// eventually buy everything".
+    ///
+    /// 50, 75, 113, 169, 253, 380, 570... against a player who has roughly 150
+    /// Alloy banked by the end of Foundry's campaign and 270 by Switchyard's,
+    /// so the first two or three are a campaign-length goal and the rest are
+    /// what endless is for.</summary>
+    public const int PackFirstCost = 50;
+    public const float PackCostGrowth = 1.5f;
+
+    /// <summary>Per level. Deliberately lopsided toward damage: rate alone
+    /// makes a weapon louder, damage is what a player feels against an enemy
+    /// whose health compounds every wave.</summary>
+    public const float PackDamagePerLevel = 1.25f;
+    public const float PackRatePerLevel = 1.12f;
+
     public const float IntermissionSeconds = 8f;
     public const float ProjectileHitRadius = 0.4f;
 
