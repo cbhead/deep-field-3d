@@ -151,6 +151,39 @@ has to stretch rather than assume 1.6 s:
 Everything there is a transform on a named node or a swap of a whole model.
 Nothing needs a skin, an armature, or a clip.
 
+## 8b. Turret elevation — one number, and it is visible in play
+
+Not a reload ask, but it lives in the same file design already ships and it is
+measured now, so it belongs here.
+
+`game/assets/structures/manifest.json` carries a `rig.pitchLimits` per tower.
+Filament's is **[-12, 48]**. A Skiff on the air strand passing near-overhead sits
+at **74 degrees** from a pad beneath it, so the barrel parks at its 48 degree
+ceiling and beams a target it is visibly pointing 26 degrees below. The sim
+deals full damage throughout; only the model is wrong, which is exactly the kind
+of thing that reads as the game being broken.
+
+Measured by `--shot <map> <txt> aimair`, deterministic across runs:
+
+| tower | ceiling | wanted | reached | error |
+|---|---|---|---|---|
+| skywatch | 82 | 46.3 | 43.2 | **3.1** (slew lag, fine) |
+| filament | **48** | **74.0** | 48.0 | **26.0** |
+
+**Ask:** raise Filament's pitch ceiling to at least **78 degrees**. Skywatch's 82
+is the right shape for a tower that shoots upward and is the reason it measures
+clean.
+
+Two related notes:
+
+- **Arc, Detector and Singularity have no `rig` row at all.** Detector and
+  Singularity are auras with nothing to point and a Barricade has no weapon, so
+  only Arc matters — and Arc targets air. It was inheriting a 26 degree fallback
+  ceiling; the client now gives air-capable towers a usable fallback instead, so
+  this one is handled our side. A real row would still be better than a default.
+- Yaw is not the problem anywhere: every tower measured **0.0 degrees** of
+  heading error once settled.
+
 ## 9. Not being asked for
 
 - **Animation clips or skinned hands.** See §2.

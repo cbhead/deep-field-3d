@@ -51,6 +51,14 @@ public partial class GameRoot : Node3D
     private bool _dumpAssets;
     private bool _dumpHits;
     private List<string>? _aimReport;         // --shot aim: per-frame tracking samples
+    private float _aimWorstPitch;             // worst settled elevation error, degrees
+    /// <summary>Settled samples to gather before calling it. The elevation a
+    /// flyer demands changes all the way along its strand, so a verdict taken
+    /// after a couple of seconds is a verdict about whichever moment it caught:
+    /// the same Filament measured 3.6 degrees out at one point on the lane and
+    /// 12.5 at another, pinned against its ceiling. The air run samples the
+    /// whole pass and keeps the worst.</summary>
+    private int _aimSampleTarget = 200;
     private string _aimReportPath = "";
     private float _aimHeld;                   // seconds this turret has held a target
     private float _aimWorst;                  // worst |angle| between a turret and its target
@@ -380,6 +388,60 @@ public partial class GameRoot : Node3D
             // before it flushes, so the verdict goes to a file or it is lost.
             _aimReportPath = path;
             _aimReport = new List<string> { $"lance on {best}, {bestD:0.0} m from the route" };
+            _shotView = "eye";
+            return;
+        }
+
+        // Air tracking: the same question as "aim", asked about the axis that
+        // one could never see. That probe builds a Lance, which cannot target
+        // air at all, and flattened both vectors to the ground plane before
+        // taking the angle — so a barrel aimed level at a Skiff fifteen metres
+        // overhead scored a perfect zero. Elevation has never been measured on
+        // this project, and Arc has no rig row in the manifest at all, so it
+        // falls back to a 26 degree ceiling.
+        if (_shotView == "aimair" && _world is not null)
+        {
+            var routes = _map.Routes.ToArray();
+            int strandIndex = System.Array.FindIndex(routes, r => r.Layer == EnemyLayer.Air);
+            if (strandIndex >= 0)
+            {
+                var strand = routes[strandIndex];
+                // Partway along the first leg, where the strand has climbed but
+                // is still near the pads at the mouth.
+                var a = strand.Waypoints[0];
+                var b = strand.Waypoints[1];
+                var at = new Vec3(a.X + (b.X - a.X) * 0.5f, a.Y + (b.Y - a.Y) * 0.5f,
+                                  a.Z + (b.Z - a.Z) * 0.5f);
+
+                _world.Money = 1000000;
+                var taken = new HashSet<string>();
+                foreach (string defId in new[] { "skywatch", "arc", "filament" })
+                {
+                    var def = Towers.All[defId];
+                    var pad = _map.Sockets
+                        .Where(s => s.Tag is SocketTag.Ground or SocketTag.Wall)
+                        .Where(s => !taken.Contains(s.Id))
+                        .Where(s => s.Pos.DistanceTo(at) <= def.RangeMeters)
+                        .OrderBy(s => s.Pos.DistanceTo(at))
+                        .FirstOrDefault();
+                    if (pad is null) { GD.Print($"[aimair] no pad reaches the strand for {defId}"); continue; }
+                    taken.Add(pad.Id);
+                    // Submitted, not advanced by hand: advancing here consumes
+                    // the TowerPlaced event before the view layer sees it, and
+                    // the tower then exists with nothing to turn.
+                    Submit(new Command.PlaceTower(LocalPlayerId, defId, pad.Id));
+                }
+
+                _world.Enemies.Add(new Enemy
+                {
+                    Id = _world.NextId(), DefId = "skiff", Hp = 1000000f, MaxHp = 1000000f,
+                    RouteIndex = strandIndex, Leg = 0, LegProgress = 0.5f,
+                    Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1,
+                });
+            }
+            _aimReportPath = path;
+            _aimReport = new List<string> { $"air tracking on {_map.Id}" };
+            _aimSampleTarget = 4000;      // the whole flight, not a window of it
             _shotView = "eye";
             return;
         }
@@ -2390,21 +2452,37 @@ public partial class GameRoot : Node3D
 
             if (_aimReport is not null)
             {
-                var fwd = (rig.Articulated ? rig.Forward : -view.GlobalTransform.Basis.Z) with { Y = 0 };
-                var want = (ToGd(best.Pos) - ToGd(tower.Pos)) with { Y = 0 };
+                var bore = rig.Articulated ? rig.Forward : -view.GlobalTransform.Basis.Z;
+                var toTarget = ToGd(best.Pos) - ToGd(tower.Pos);
+                var fwd = bore with { Y = 0 };
+                var want = toTarget with { Y = 0 };
                 if (fwd.Length() > 0.01f && want.Length() > 0.01f)
                 {
                     float err = Mathf.Abs(Mathf.RadToDeg(
                         fwd.Normalized().SignedAngleTo(want.Normalized(), Vector3.Up)));
+
+                    // Yaw alone was the whole measurement for months, and it
+                    // cannot see the axis that matters against a flyer: both
+                    // vectors had their Y flattened before the angle was taken,
+                    // so a turret aimed flat at a target fifteen metres up
+                    // scored a perfect zero. Elevation is measured on its own.
+                    float haveEl = Mathf.RadToDeg(Mathf.Asin(
+                        Mathf.Clamp(bore.Normalized().Y, -1f, 1f)));
+                    float wantEl = Mathf.RadToDeg(Mathf.Asin(
+                        Mathf.Clamp(toTarget.Normalized().Y, -1f, 1f)));
+                    float pitchErr = Mathf.Abs(wantEl - haveEl);
+                    if (settled) _aimWorstPitch = Mathf.Max(_aimWorstPitch, pitchErr);
                     // A rigged turret slews at design's rate — a Lance needs two
                     // seconds for a half turn — so only frames where the rig is
                     // no longer rate-limited say whether it faces what it is
                     // shooting. Frames spent swinging are the design, not a miss.
                     _aimHeld += (float)delta;
-                    _aimReport.Add($"{_aimHeld:0.00}s {tower.DefId} -> {best.DefId} error={err:0.0} deg{(settled ? "" : " (slewing)")}");
+                    _aimReport.Add($"{_aimHeld:0.00}s {tower.DefId} -> {best.DefId} "
+                        + $"yaw={err:0.0} pitch={pitchErr:0.0} (want {wantEl:0.0} have {haveEl:0.0})"
+                        + $"{(settled ? "" : " (slewing)")}");
                     if (settled) { _aimWorst = Mathf.Max(_aimWorst, err); _aimSettled++; }
                 }
-                if (_aimSettled >= 200) { FinishAimProbe(); return; }
+                if (_aimSettled >= _aimSampleTarget) { FinishAimProbe(); return; }
             }
         }
     }
@@ -2427,12 +2505,18 @@ public partial class GameRoot : Node3D
     {
         var report = _aimReport!;
         _aimReport = null;
-        bool aimed = _aimSettled > 0 && _aimWorst < 5f;
-        report.Add($"worst error once settled: {_aimWorst:0.0} deg over {_aimSettled} samples");
+        // Ten degrees of elevation error on a target fifteen metres up is a
+        // barrel visibly pointing past it. Yaw is held tighter because nothing
+        // rate-limits it once settled.
+        bool aimed = _aimSettled > 0 && _aimWorst < 5f && _aimWorstPitch < 10f;
+        report.Add($"worst yaw error once settled: {_aimWorst:0.0} deg over {_aimSettled} samples");
+        report.Add($"worst elevation error once settled: {_aimWorstPitch:0.0} deg");
         WriteProbe(report, _aimReportPath, aimed, _aimSettled == 0
             ? "INCONCLUSIVE: no tower ever held a target long enough to measure"
-            : aimed ? "PASS: the turret faces what it is shooting"
-                    : "FAIL: the turret is tracking but pointed away");
+            : aimed ? "PASS: the turret faces what it is shooting, in both axes"
+            : _aimWorst >= 5f ? "FAIL: the turret is tracking but pointed away in yaw"
+                              : $"FAIL: the turret cannot elevate onto its target "
+                                + $"({_aimWorstPitch:0.0} deg short)");
     }
 
     private void SnapshotKills()

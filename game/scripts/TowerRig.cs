@@ -1,5 +1,7 @@
 using Godot;
 using System.Collections.Generic;
+using DeepField.Sim.Content;
+using System.Linq;
 
 namespace DeepField.Game;
 
@@ -25,6 +27,17 @@ public sealed class TowerRig
         /// <summary>Used when the manifest has no row: a full-circle mount at
         /// the Lance's rates, so a rigged model with no entry still tracks.</summary>
         public static readonly Spec Default = new(-180f, 180f, -8f, 26f, 90f, 60f);
+
+        /// <summary>The same fallback for anything that can shoot air, with a
+        /// ceiling it can actually use.
+        ///
+        /// Arc has no manifest row and targets air, so it inherited a 26 degree
+        /// ceiling — and a Skiff on the strand sits sixty degrees up from a pad
+        /// near it. The barrel would have parked at its limit, a third of the
+        /// way to the target, while the sim dealt full damage. Ground-only
+        /// towers keep the tighter ceiling because for them it is correct: a
+        /// Lance that cannot crank up to eighty degrees is a Lance, not a bug.</summary>
+        public static readonly Spec DefaultAir = new(-180f, 180f, -8f, 85f, 90f, 60f);
     }
 
     public Node3D? Yaw { get; private init; }
@@ -58,9 +71,18 @@ public sealed class TowerRig
             Pitch = view.FindChild($"{defId}_pitch", recursive: true, owned: false) as Node3D,
             Muzzle = view.FindChild($"{defId}_muzzle", recursive: true, owned: false) as Node3D,
             Spins = spins,
-            Limits = Manifest.TryGetValue(defId, out var spec) ? spec : Spec.Default,
+            Limits = Manifest.TryGetValue(defId, out var spec) ? spec : FallbackFor(defId),
         };
     }
+
+    /// <summary>Which fallback a tower with no manifest row gets. The only one
+    /// this actually changes today is Arc; Detector and Singularity are auras
+    /// with nothing to point, and a Barricade has no weapon at all.</summary>
+    private static Spec FallbackFor(string defId) =>
+        Towers.All.TryGetValue(defId, out var def)
+            && def.TargetLayers.Contains(EnemyLayer.Air)
+                ? Spec.DefaultAir
+                : Spec.Default;
 
     /// <summary>Cosmetic spin groups: design names them <c>_spin</c> and tags
     /// them <c>extras.role = cosmeticSpin</c> (Godot keeps glTF extras as the
