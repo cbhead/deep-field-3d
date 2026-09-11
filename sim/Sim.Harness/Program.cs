@@ -849,17 +849,51 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
 // proximity and does not care whether it can see what stepped on it. Both are
 // the design working; neither leaves room for a campaign-level control.
 {
-    var clear = Maps.Switchyard with { ConditionScheduleOrNull = new Dictionary<int, string>() };
-    var shipped = MatchRunner.Run(Seed, Maps.Switchyard, MidBot());
-    var unweathered = MatchRunner.Run(Seed, clear, MidBot());
+    // Measured across seeds, not one.
+    //
+    // This asked a single seed whether the weathered run finished with fewer
+    // lives than the clear one, which is a strict inequality on a number that
+    // moves by one. Three balance changes that each passed it alone — bounty
+    // scaling, gun damage, Skywatch damage — landed together and it read minus
+    // one: the weathered campaign finishing *ahead*. That is not weather
+    // ceasing to matter, it is a coin landing on its edge, and a gate that
+    // flips sign on the bot's build order will be switched off the third time
+    // it does it.
+    //
+    // Five seeds, and the comparison is on the total. Any one of them may still
+    // come out level or backwards; what must hold is that a campaign of night
+    // and fog costs the player something overall.
+    // On the Spire, which is the only map that schedules both — night on wave 7
+    // and fog on wave 11. This gate has been named "night+fog" since M3 and run
+    // against Switchyard, whose whole schedule is one night on wave 8. Fog was
+    // never in the measurement at all: dropping its range factor from 0.7 to
+    // 0.5 moved not one of the five seeds, because no wave it touches was ever
+    // played.
+    var weatheredMap = Maps.Spire;
+    var clear = weatheredMap with { ConditionScheduleOrNull = new Dictionary<int, string>() };
+    var seeds = new[] { Seed, Seed + 101u, Seed + 202u, Seed + 303u, Seed + 404u };
 
-    bool winnable = shipped.Victory;
-    bool felt = shipped.LivesLeft < unweathered.LivesLeft;
+    int weatheredLives = 0, clearLives = 0, wins = 0;
+    var perSeed = new List<string>();
+    foreach (uint seed in seeds)
+    {
+        // The bot is the same player in both; only the match seed moves, which
+        // is what varies the wave jitter and scatter the outcome swings on.
+        var shipped = MatchRunner.Run(seed, weatheredMap, MidBot());
+        var unweathered = MatchRunner.Run(seed, clear, MidBot());
+        weatheredLives += shipped.LivesLeft;
+        clearLives += unweathered.LivesLeft;
+        if (shipped.Victory) wins++;
+        perSeed.Add($"{unweathered.LivesLeft - shipped.LivesLeft:+0;-0;0}");
+    }
+
+    bool winnable = wins == seeds.Length;
+    bool felt = weatheredLives < clearLives;
 
     Gate("night+fog: the weathered campaign is winnable, and weather is felt",
         winnable && felt,
-        $"weathered {(shipped.Victory ? "clears" : "loses")} with {shipped.LivesLeft} lives | "
-        + $"clear skies {unweathered.LivesLeft} lives (cost: {unweathered.LivesLeft - shipped.LivesLeft})");
+        $"{wins}/{seeds.Length} weathered runs clear | lives {weatheredLives} vs {clearLives} clear "
+        + $"(cost {clearLives - weatheredLives} over {seeds.Length} seeds: {string.Join(",", perSeed)})");
 }
 
 // --- Gate 21 (M2): Switchyard clears for the mid-band bot; towers-only floor holds.
