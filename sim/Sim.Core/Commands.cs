@@ -73,6 +73,10 @@ public abstract record Command
     /// (replacing whatever occupied the slot; no refunds — scrap is spent).</summary>
     public sealed record CraftAttachment(int PlayerId, string WeaponId, string AttachmentId) : Command;
 
+    /// <summary>Pack a Punch: buy the next level of an uncapped damage-and-rate
+    /// track on one weapon, for Alloy.</summary>
+    public sealed record PackAPunch(int PlayerId, string WeaponId) : Command;
+
     /// <summary>Craft (once) and select an ammo type for a weapon.</summary>
     public sealed record SelectAmmo(int PlayerId, string WeaponId, string AmmoId) : Command;
 

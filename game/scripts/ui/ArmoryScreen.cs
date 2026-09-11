@@ -865,7 +865,14 @@ public partial class ArmoryScreen : Control
         if (!Weapons.All.TryGetValue(_weaponId, out var weapon)) return;
 
         var mounted = local.AttachmentsFor(_weaponId);
-        float damage = 1f, rate = 1f, range = 1f;
+        // Pack a Punch first, because it is the largest multiplier on this
+        // screen by a distance and a panel that showed only the attachments
+        // would tell a player at level 3 that their gun was 10% better when it
+        // is 95% better.
+        int packLevel = local.PackLevelFor(_weaponId);
+        float damage = Mathf.Pow(Balance.PackDamagePerLevel, packLevel);
+        float rate = Mathf.Pow(Balance.PackRatePerLevel, packLevel);
+        float range = 1f;
         var applies = new List<string>(weapon.Applies);
         foreach (var id in mounted.Values)
         {
@@ -934,6 +941,8 @@ public partial class ArmoryScreen : Control
         foreach (var child in _optionColumn.GetChildren()) child.QueueFree();
         _recipeTitle.Text = $"· {_slot.ToString().ToLowerInvariant()}";
 
+        BuildPackCard(local);
+
         var mounted = local.AttachmentsFor(_weaponId);
         mounted.TryGetValue(_slot, out string? fitted);
 
@@ -995,6 +1004,57 @@ public partial class ArmoryScreen : Control
             column.AddChild(recipe);
             _optionColumn.AddChild(card);
         }
+    }
+
+    /// <summary>Pack a Punch, at the head of every slot's list because it is
+    /// not a slot — it is the one thing on this screen you can always buy
+    /// again. Attachments are a build you finish; this never closes.</summary>
+    private void BuildPackCard(PlayerView local)
+    {
+        int level = local.PackLevelFor(_weaponId);
+        int cost = WeaponBuild.PackCostAt(level + 1);
+        int have = _view.PersonalScrapOf(ScrapType.Alloy);
+        bool affordable = have >= cost;
+
+        var card = Kit.Card(level > 0);
+        var column = Kit.Col(Tokens.Space3);
+        card.AddChild(column);
+
+        var head = Kit.Row(Tokens.Space4);
+        head.AddChild(Kit.Icon("scrap_alloy", Tokens.TextArcane, 20));
+        var name = Kit.Title("PACK A PUNCH", Tokens.SizeCaption);
+        name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        head.AddChild(name);
+        head.AddChild(Kit.Numeral(level > 0 ? $"LV {level}" : "—", Tokens.SizeCaption,
+            level > 0 ? Tokens.TextArcane : Tokens.TextMuted));
+        column.AddChild(head);
+
+        // What it is worth now and what the next one adds, because an uncapped
+        // track with no readout is a button you press hopefully.
+        column.AddChild(Kit.Body(
+            level > 0
+                ? $"×{Mathf.Pow(Balance.PackDamagePerLevel, level):0.00} damage, "
+                  + $"×{Mathf.Pow(Balance.PackRatePerLevel, level):0.00} fire rate  →  "
+                  + $"×{Mathf.Pow(Balance.PackDamagePerLevel, level + 1):0.00} / "
+                  + $"×{Mathf.Pow(Balance.PackRatePerLevel, level + 1):0.00}"
+                : $"×{Balance.PackDamagePerLevel:0.00} damage and "
+                  + $"×{Balance.PackRatePerLevel:0.00} fire rate, every level, forever",
+            Tokens.SizeMicro, Tokens.TextMuted));
+
+        var row = Kit.Row(Tokens.Space4);
+        row.AddChild(UiTheme.CountChip("scrap_alloy", have, UiTheme.Scrap(ScrapType.Alloy), cost));
+        row.AddChild(Kit.Spacer());
+        var buy = new KitButton($"Pack  {cost}",
+            affordable ? KitButton.Tone.Primary : KitButton.Tone.Secondary, Tokens.ControlSm);
+        buy.Disabled = !affordable;
+        buy.Pressed += () =>
+        {
+            Submit?.Invoke(new Command.PackAPunch(_view.LocalPlayerId, _weaponId));
+            _notice = "";
+        };
+        row.AddChild(buy);
+        column.AddChild(row);
+        _optionColumn.AddChild(card);
     }
 
     /// <summary>What recrafting a saved build would cost from here: the recipes

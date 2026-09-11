@@ -59,6 +59,12 @@ public static class WavePlan
     public static float BountyScale(int waveIndex) =>
         Balance.BountyScale * MathF.Pow(Balance.BountyGrowth, waveIndex);
 
+    /// <summary>What a kill on this wave yields in scrap, as a multiple of the
+    /// enemy's def yield. Same shape as <see cref="BountyScale"/>, and for the
+    /// same reason.</summary>
+    public static float ScrapScale(int waveIndex) =>
+        MathF.Pow(Balance.ScrapGrowth, waveIndex);
+
     /// <summary>The hp multiplier a wave spawns with, times the player-count
     /// factor. Exposed so the HUD's endless threat readout is the sim's
     /// number, not a copy.

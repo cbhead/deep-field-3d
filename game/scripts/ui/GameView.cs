@@ -33,6 +33,12 @@ public sealed class PlayerView
     public HashSet<string> OwnedWeapons = new() { "sidearm" };
     public HashSet<string> CraftedAmmo = new() { "standard" };
     public Dictionary<string, Dictionary<AttachmentSlot, string>> Attachments = new();
+
+    /// <summary>Pack a Punch level per weapon. Uncapped, so this is an int and
+    /// not a set of flags.</summary>
+    public Dictionary<string, int> PackLevels = new();
+
+    public int PackLevelFor(string weaponId) => PackLevels.GetValueOrDefault(weaponId, 0);
     public Dictionary<string, string> Ammo = new();
 
     public Dictionary<AttachmentSlot, string> AttachmentsFor(string weaponId) =>
@@ -149,6 +155,7 @@ public sealed class GameView
                 Attachments = p.Builds.ToDictionary(
                     kv => kv.Key,
                     kv => new Dictionary<AttachmentSlot, string>(kv.Value.Attachments)),
+                PackLevels = p.Builds.ToDictionary(kv => kv.Key, kv => kv.Value.PackLevel),
                 Ammo = p.Builds.ToDictionary(kv => kv.Key, kv => kv.Value.AmmoId),
             });
         }

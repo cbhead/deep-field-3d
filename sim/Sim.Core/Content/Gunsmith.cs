@@ -114,9 +114,26 @@ public sealed class WeaponBuild
     public Dictionary<AttachmentSlot, string> Attachments = new();
     public string AmmoId = Ammo.Standard.Id;
 
+    /// <summary>How many times this weapon has been through the Pack a Punch.
+    /// Uncapped by design — attachments are a build you finish, this is a sink
+    /// that never closes.</summary>
+    public int PackLevel;
+
+    /// <summary>What the next level costs, in Alloy. Level 1 is
+    /// <see cref="Balance.PackFirstCost"/> and each one after multiplies.</summary>
+    public int NextPackCost => PackCostAt(PackLevel + 1);
+
+    public static int PackCostAt(int level) => level < 1
+        ? Balance.PackFirstCost
+        : (int)MathF.Round(Balance.PackFirstCost
+            * MathF.Pow(Balance.PackCostGrowth, level - 1), MidpointRounding.AwayFromZero);
+
+    public float PackDamageFactor => MathF.Pow(Balance.PackDamagePerLevel, PackLevel);
+    public float PackRateFactor => MathF.Pow(Balance.PackRatePerLevel, PackLevel);
+
     public float DamageFactor(bool targetArmored)
     {
-        float f = 1f;
+        float f = PackDamageFactor;
         foreach (var id in Attachments.Values) f *= Content.Attachments.All[id].DamageFactor;
         var ammo = Content.Ammo.All[AmmoId];
         f *= ammo.DamageFactor;
@@ -126,7 +143,7 @@ public sealed class WeaponBuild
 
     public float RateFactor()
     {
-        float f = 1f;
+        float f = PackRateFactor;
         foreach (var id in Attachments.Values) f *= Content.Attachments.All[id].RateFactor;
         return f;
     }
