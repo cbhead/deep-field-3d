@@ -83,6 +83,20 @@ public static class Balance
     public const float PackDamagePerLevel = 1.25f;
     public const float PackRatePerLevel = 1.12f;
 
+    /// <summary>Every fifth level also wants Gravium, and more of it each time:
+    /// four at level 5, eight at 10, twelve at 15.
+    ///
+    /// Alloy alone made the largest sink in the game a one-currency sink, and
+    /// left the three rarer types with nothing to do in it. Gravium is the
+    /// scarcest thing on the floor — one from a Monolith, one from a Ram — and
+    /// a player has banked about six by the end of Foundry's campaign and
+    /// thirty by wave 20, against the three or four a tower's own level 10
+    /// breakpoint wants. So the milestone is a real decision between the bench
+    /// and the towers rather than a second price tag, which is the same shape
+    /// as the upgrade grid's own breakpoints.</summary>
+    public const int PackGraviumEvery = 5;
+    public const int PackGraviumPerStep = 4;
+
     public const float IntermissionSeconds = 8f;
     public const float ProjectileHitRadius = 0.4f;
 

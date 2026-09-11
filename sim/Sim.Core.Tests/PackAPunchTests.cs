@@ -64,6 +64,9 @@ public class PackAPunchTests
     {
         var (w, player) = Solo();
         player.Scrap[ScrapType.Alloy] = 1_000_000_000;
+        // Both currencies: past level 5 the milestones want Gravium as well,
+        // and a player with only Alloy stops at four.
+        player.Scrap[ScrapType.Gravium] = 1_000_000;
         for (int i = 0; i < 12; i++)
         {
             w.Enqueue(new Command.PackAPunch(1, "sidearm"));
@@ -114,6 +117,67 @@ public class PackAPunchTests
         Step.Advance(w);
         Assert.Equal(1, player.BuildFor("sidearm").PackLevel);
         Assert.Equal(0, player.BuildFor("rifle").PackLevel);
+    }
+
+    [Fact]
+    public void EveryFifthLevelWantsGraviumAndTheRestDoNot()
+    {
+        for (int level = 1; level <= 21; level++)
+        {
+            int gravium = WeaponBuild.PackGraviumAt(level);
+            if (level % Balance.PackGraviumEvery == 0)
+                Assert.Equal(Balance.PackGraviumPerStep * (level / Balance.PackGraviumEvery), gravium);
+            else
+                Assert.Equal(0, gravium);
+        }
+        // And the milestones get heavier, or the last one is the only one that
+        // ever mattered.
+        Assert.True(WeaponBuild.PackGraviumAt(10) > WeaponBuild.PackGraviumAt(5));
+        Assert.True(WeaponBuild.PackGraviumAt(15) > WeaponBuild.PackGraviumAt(10));
+    }
+
+    [Fact]
+    public void AMilestoneChargesGraviumAsWellAsAlloy()
+    {
+        var (w, player) = Solo();
+        player.Scrap[ScrapType.Alloy] = 100000;
+        player.Scrap[ScrapType.Gravium] = 10;
+
+        for (int i = 0; i < 4; i++)      // levels 1-4 take no Gravium
+        {
+            w.Enqueue(new Command.PackAPunch(1, "sidearm"));
+            Step.Advance(w);
+        }
+        Assert.Equal(4, player.BuildFor("sidearm").PackLevel);
+        Assert.Equal(10, player.Scrap[ScrapType.Gravium]);
+
+        w.Enqueue(new Command.PackAPunch(1, "sidearm"));   // level 5 does
+        Step.Advance(w);
+        Assert.Equal(5, player.BuildFor("sidearm").PackLevel);
+        Assert.Equal(10 - Balance.PackGraviumPerStep, player.Scrap[ScrapType.Gravium]);
+    }
+
+    [Fact]
+    public void AMilestoneIsRefusedOnGraviumEvenWithAlloyToSpare()
+    {
+        // The point of the milestone: Alloy alone does not carry you past it,
+        // and being refused must not quietly cost the Alloy either.
+        var (w, player) = Solo();
+        player.Scrap[ScrapType.Alloy] = 100000;
+        player.Scrap[ScrapType.Gravium] = 0;
+        for (int i = 0; i < 4; i++)
+        {
+            w.Enqueue(new Command.PackAPunch(1, "sidearm"));
+            Step.Advance(w);
+        }
+        int alloyBefore = player.Scrap[ScrapType.Alloy];
+
+        w.Enqueue(new Command.PackAPunch(1, "sidearm"));
+        Step.Advance(w);
+
+        Assert.Equal(4, player.BuildFor("sidearm").PackLevel);
+        Assert.Equal(alloyBefore, player.Scrap[ScrapType.Alloy]);
+        Assert.Contains(w.Events, e => e is SimEvent.CraftRejected { Reason: "insufficientScrap" });
     }
 
     [Fact]

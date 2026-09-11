@@ -128,6 +128,16 @@ public sealed class WeaponBuild
         : (int)MathF.Round(Balance.PackFirstCost
             * MathF.Pow(Balance.PackCostGrowth, level - 1), MidpointRounding.AwayFromZero);
 
+    /// <summary>Gravium the next level wants on top of its Alloy, or zero.</summary>
+    public int NextPackGravium => PackGraviumAt(PackLevel + 1);
+
+    /// <summary>Every <see cref="Balance.PackGraviumEvery"/>th level, growing
+    /// by a step each milestone: 4 at level 5, 8 at 10, 12 at 15.</summary>
+    public static int PackGraviumAt(int level) =>
+        level >= 1 && level % Balance.PackGraviumEvery == 0
+            ? Balance.PackGraviumPerStep * (level / Balance.PackGraviumEvery)
+            : 0;
+
     public float PackDamageFactor => MathF.Pow(Balance.PackDamagePerLevel, PackLevel);
     public float PackRateFactor => MathF.Pow(Balance.PackRatePerLevel, PackLevel);
 

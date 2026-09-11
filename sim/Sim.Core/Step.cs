@@ -640,13 +640,19 @@ public static class Step
 
         var build = player.BuildFor(pack.WeaponId);
         int cost = build.NextPackCost;
-        if (player.Scrap.GetValueOrDefault(ScrapType.Alloy) < cost)
+        // Every fifth level wants Gravium as well, and it is charged all or
+        // nothing with the Alloy — a player short on either pays neither.
+        int gravium = build.NextPackGravium;
+        if (player.Scrap.GetValueOrDefault(ScrapType.Alloy) < cost
+            || player.Scrap.GetValueOrDefault(ScrapType.Gravium) < gravium)
         {
             w.Emit(new SimEvent.CraftRejected(pack.PlayerId, pack.WeaponId, "insufficientScrap"));
             return;
         }
 
         player.Scrap[ScrapType.Alloy] = player.Scrap.GetValueOrDefault(ScrapType.Alloy) - cost;
+        if (gravium > 0)
+            player.Scrap[ScrapType.Gravium] = player.Scrap.GetValueOrDefault(ScrapType.Gravium) - gravium;
         build.PackLevel++;
         w.Emit(new SimEvent.PackedAPunch(pack.PlayerId, pack.WeaponId, build.PackLevel, cost));
     }
