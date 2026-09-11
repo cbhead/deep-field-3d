@@ -22,7 +22,7 @@ public static class WavePlan
 
         float countScale = (1f + Balance.CountScalePerExtraPlayer * (playerCount - 1))
                            * MathF.Pow(Balance.EndlessCountGrowthPerLap, lap);
-        float hpScale = HpScale(waveIndex, playerCount);
+        float hpScale = HpScale(map, waveIndex, playerCount);
 
         var entries = new List<SpawnEntry>();
         foreach (var group in groups)
@@ -52,11 +52,28 @@ public static class WavePlan
         return entries;
     }
 
-    /// <summary>The hp multiplier a wave spawns with: the campaign growth curve
-    /// compounded on the wave index, times the player-count factor. Exposed so
-    /// the HUD's endless threat readout is the sim's number, not a copy.</summary>
-    public static float HpScale(int waveIndex, int playerCount) =>
-        (1f + Balance.HpScalePerExtraPlayer * (playerCount - 1)) * MathF.Pow(Balance.HpGrowth, waveIndex);
+    /// <summary>The hp multiplier a wave spawns with, times the player-count
+    /// factor. Exposed so the HUD's endless threat readout is the sim's
+    /// number, not a copy.
+    ///
+    /// Two curves meeting at the end of the authored arc. Through the campaign
+    /// it is <see cref="Balance.HpGrowth"/> compounded on the wave index,
+    /// which is what the sweep balanced. Past the last authored wave it
+    /// carries on from that value at the gentler
+    /// <see cref="Balance.EndlessHpGrowth"/>, because the campaign curve was
+    /// tuned against ten waves of it and endless asks for forty.</summary>
+    public static float HpScale(MapDef map, int waveIndex, int playerCount)
+    {
+        float player = 1f + Balance.HpScalePerExtraPlayer * (playerCount - 1);
+        int lastAuthored = Waves.ByMap[map.Id].Count - 1;
+        if (waveIndex <= lastAuthored)
+            return player * MathF.Pow(Balance.HpGrowth, waveIndex);
+
+        // Continuous at the join: the last authored wave keeps its campaign
+        // value and endless grows from there.
+        return player * MathF.Pow(Balance.HpGrowth, lastAuthored)
+                      * MathF.Pow(Balance.EndlessHpGrowth, waveIndex - lastAuthored);
+    }
 
     /// <summary>Weather's contribution to a wave, appended after the authored
     /// groups are fully planned and drawn from the condition stream. Order

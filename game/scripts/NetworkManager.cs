@@ -297,7 +297,7 @@ public partial class NetworkManager : Node
             ["totalWaves"] = _world.Map.TotalWaves,
             ["lobby"] = _world.Lobby,
             ["endless"] = _world.Endless,
-            ["threat"] = WavePlan.HpScale(System.Math.Max(0, _world.WaveIndex), System.Math.Max(1, _world.ConnectedPlayerCount)),
+            ["threat"] = WavePlan.HpScale(_world.Map, System.Math.Max(0, _world.WaveIndex), System.Math.Max(1, _world.ConnectedPlayerCount)),
             ["enemies"] = _world.Enemies.Count + _world.PendingSpawns.Count,
             ["teamScrap"] = ScrapDict(_world.TeamScrap),
             ["players"] = players,

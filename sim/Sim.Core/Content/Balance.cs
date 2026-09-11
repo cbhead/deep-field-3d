@@ -99,6 +99,24 @@ public static class Balance
     /// so late waves are crowds rather than sponges.</summary>
     public const float EndlessCountGrowthPerLap = 1.15f;
 
+    /// <summary>Endless: the per-wave hp multiplier *past the authored arc*.
+    ///
+    /// The campaign curve is <see cref="HpGrowth"/> at 1.22, swept and gated
+    /// over ten to twelve waves, and it stays that. Endless used to keep
+    /// compounding the same 1.22 forever against a player whose ceiling is
+    /// fixed: a tower taken to level 10 on both its damage and rate paths is
+    /// 1.10^9 × 1.10^9, which is 5.6× the dps it started with, and there are
+    /// only so many sockets. At wave 15 the old curve was 19.7× hp with 1.15×
+    /// the bodies — 23× the threat against 5.6× the answer — and by wave 20 it
+    /// was 71×. Nobody was reaching the high rounds because the curve had
+    /// already decided they would not.
+    ///
+    /// 1.15 past the last authored wave, matching the count knob above, so the
+    /// two endless dials read the same. That is still exponential and endless
+    /// still ends; it ends later and for a reason the player can see coming.
+    /// Wave 15 goes 19.7× → 13.8×, wave 20 53.4× → 27.9×.</summary>
+    public const float EndlessHpGrowth = 1.15f;
+
     /// <summary>Scrap on the floor: how long the personal half of a drop waits
     /// to be collected before it banks to the team pool, how close you have to
     /// be for it to come to you, how fast it comes, and how close it has to get
