@@ -142,11 +142,18 @@ public class AirDefenceTests
     }
 
     [Fact]
-    public void OnADeckSocketFilamentIsAsGoodAnAirAnswerAsSkywatch()
+    public void FromADeckFilamentIsRealAntiAirAndSkywatchIsTheSpecialist()
     {
-        // The other half of the finding, and the one worth protecting: from a
-        // deck, Filament is not a token air option — it is Skywatch's equal.
-        // A Skiff has 26 hp, so these are whole flights' worth of kills.
+        // This test used to claim Filament was Skywatch's equal from a deck,
+        // and it was — 127 against 149 over a flight. Skywatch's base damage
+        // went from 5.5 to 8 deliberately, to make the one tower a player can
+        // build anywhere against flyers actually finish the job, and that
+        // relationship is now 216 against 127 by design.
+        //
+        // Both halves still matter. Filament must stay a real answer for
+        // anyone who has committed to the catwalk, and Skywatch must be the
+        // one that specialises. A Skiff has 26 hp, so these are flights' worth
+        // of kills.
         foreach (var map in Maps.All.Values)
         {
             if (!map.Routes.Any(r => r.Layer == EnemyLayer.Air)) continue;
@@ -159,12 +166,12 @@ public class AirDefenceTests
 
             Assert.True(filament > skiffHp * 3f,
                 $"{map.Id}: the best deck socket only got {filament:0} damage out of a Filament, "
-                + $"under three Skiffs' worth");
-            Assert.True(filament > skywatch * 0.7f,
-                $"{map.Id}: Filament {filament:0} is far behind Skywatch {skywatch:0} from a deck");
+                + "under three Skiffs' worth — it has stopped being an air option at all");
+            Assert.True(skywatch > filament,
+                $"{map.Id}: Skywatch {skywatch:0} no longer leads Filament {filament:0} from a deck, "
+                + "which is the whole reason it is air-only");
         }
     }
-
     [Fact]
     public void FromTheGroundArcIsNoAnswerAtAll()
     {
