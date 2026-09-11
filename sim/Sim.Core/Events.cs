@@ -122,6 +122,9 @@ public abstract record SimEvent
             $"{Tick} scrapSpawned {PickupId} {ScrapType} {Amount} {X:0.##} {Y:0.##} {Z:0.##}";
     }
 
+    /// <summary>A player gained scrap. <c>PickupId</c> 0 means it never hit the
+    /// floor — they killed the thing themselves and took the personal half on
+    /// the spot; any other id is a pickup they walked over.</summary>
     public sealed record ScrapCollected(int PickupId, int PlayerId, string ScrapType, int Amount) : SimEvent
     {
         public override string LogLine() => $"{Tick} scrapCollected {PickupId} {PlayerId} {ScrapType} {Amount}";

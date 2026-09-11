@@ -340,12 +340,48 @@ public class ScrapEconomyTests
         Facing = new Vec3(1, 0, 0), Bounty = 5, LeakDamage = 1,
     };
 
+    /// <summary>Kill something with a tower and leave the drop on the floor.
+    ///
+    /// It has to be a real tower landing real shots: setting Hp to 0 by hand
+    /// skips the death path entirely, so nothing is dropped, banked or
+    /// emitted, and the test passes by measuring nothing.</summary>
+    internal static ScrapPickup TowerKill(World w, PlayerState player)
+    {
+        // Out of the way, so the drop is not swept up by the magnet before the
+        // test has looked at it.
+        player.Pos = new Vec3(0, 0, -14);
+        w.Enqueue(new Command.PlayerSync(1, player.Pos));
+        w.Money = 1000;
+        w.Enqueue(new Command.PlaceTower(1, "lance", "s3"));
+        Step.Advance(w);
+        Assert.Single(w.Towers);
+
+        var enemy = Drifter(w, new Vec3(4, 0, 4));   // beside the Lance on s3
+        enemy.Hp = enemy.MaxHp = 30f;
+        w.Enemies.Add(enemy);
+        for (int i = 0; i < Balance.TickHz * 20 && w.Enemies.Contains(enemy); i++) Step.Advance(w);
+        Assert.DoesNotContain(enemy, w.Enemies);
+
+        // Checked here because Advance clears the event list every tick, and
+        // the tidying below costs one more tick.
+        Assert.Contains(w.Events, e => e is SimEvent.ScrapSpawned);
+
+        // Leave the field quiet. A Lance left standing keeps killing whatever
+        // the wave sends next, and a test that then waits three quarters of a
+        // minute finds five drops instead of the one it made.
+        w.Enqueue(new Command.SellTower(1, w.Towers[0].Id));
+        Step.Advance(w);
+        w.Enemies.Clear();
+
+        return Assert.Single(w.Pickups);
+    }
+
     [Fact]
-    public void APlayerKillDropsScrapOnTheFloorAndTheTeamHalfBanksAtOnce()
+    public void APlayerKillIsCollectedOnTheSpot()
     {
         var w = WithPlayer(out var player);
-        // Close enough to shoot (sidearm reaches 60 m), far enough that the
-        // magnet does not sweep the drop up on the tick it lands.
+        // Far enough away that the magnet could not have reached a drop, so a
+        // credit here can only have come from the kill itself.
         player.Pos = new Vec3(12, 0, 0);
         w.Enqueue(new Command.PlayerSync(1, player.Pos));
 
@@ -354,25 +390,21 @@ public class ScrapEconomyTests
         w.Enqueue(new Command.PlayerHit(1, enemy.Id, "sidearm"));
         Step.Advance(w);
 
-        Assert.NotEmpty(w.Pickups);
-        Assert.Contains(w.Events, e => e is SimEvent.ScrapSpawned);
-        // The team's half never hits the floor.
+        // Nothing to walk to: you shot it, it is yours.
+        Assert.Empty(w.Pickups);
+        Assert.DoesNotContain(w.Events, e => e is SimEvent.ScrapSpawned);
+        Assert.True(player.Scrap.GetValueOrDefault(ScrapType.Alloy) > 0);
+        // And the team's half still banks, as it does for every kill.
         Assert.True(w.TeamScrap.GetValueOrDefault(ScrapType.Alloy) > 0);
-        // The personal half is not credited until someone walks to it.
-        Assert.Equal(0, player.Scrap.GetValueOrDefault(ScrapType.Alloy));
+        // PickupId 0 marks scrap that never touched the floor.
+        Assert.Contains(w.Events, e => e is SimEvent.ScrapCollected { PickupId: 0, PlayerId: 1 });
     }
 
     [Fact]
     public void WalkingOverADropCollectsIt()
     {
         var w = WithPlayer(out var player);
-        player.Pos = new Vec3(12, 0, 0);
-        w.Enqueue(new Command.PlayerSync(1, player.Pos));
-        var enemy = Drifter(w, new Vec3(0, 0, 0));
-        w.Enemies.Add(enemy);
-        w.Enqueue(new Command.PlayerHit(1, enemy.Id, "sidearm"));
-        Step.Advance(w);
-        var pickup = Assert.Single(w.Pickups);
+        var pickup = TowerKill(w, player);
         int amount = pickup.Amount;
 
         w.Enqueue(new Command.PlayerSync(1, pickup.Pos));
@@ -387,12 +419,7 @@ public class ScrapEconomyTests
     public void UncollectedScrapBanksToTheTeamRatherThanVanishing()
     {
         var w = WithPlayer(out var player);
-        player.Pos = new Vec3(12, 0, 0);
-        w.Enqueue(new Command.PlayerSync(1, player.Pos));
-        var enemy = Drifter(w, new Vec3(0, 0, 0));
-        w.Enemies.Add(enemy);
-        w.Enqueue(new Command.PlayerHit(1, enemy.Id, "sidearm"));
-        Step.Advance(w);
+        TowerKill(w, player);
         // Out of magnet range for the rest of the run, so it times out.
         w.Enqueue(new Command.PlayerSync(1, new Vec3(200, 0, 200)));
         int team = w.TeamScrap.GetValueOrDefault(ScrapType.Alloy);
@@ -406,27 +433,18 @@ public class ScrapEconomyTests
     }
 
     [Fact]
-    public void ATowerKillHasNoPersonalHalfToDrop()
+    public void ATowerKillPutsThePersonalHalfOnTheFloor()
     {
         var w = WithPlayer(out var player);
-        // Standing on the far side of the map: whatever kills this, it is not
-        // the player, and there is nobody near the corpse either way.
-        player.Pos = new Vec3(0, 0, -14);
-        w.Enqueue(new Command.PlayerSync(1, player.Pos));
-        w.Money = 1000;
-        w.Enqueue(new Command.PlaceTower(1, "lance", "s3"));
-        Step.Advance(w);
-        Assert.Single(w.Towers);
+        var pickup = TowerKill(w, player);
 
-        var enemy = Drifter(w, new Vec3(4, 0, 4));   // beside the Lance on s3
-        enemy.Hp = enemy.MaxHp = 30f;
-        w.Enemies.Add(enemy);
-        for (int i = 0; i < Balance.TickHz * 20 && w.Enemies.Contains(enemy); i++) Step.Advance(w);
-
-        Assert.DoesNotContain(enemy, w.Enemies);
+        // The majority of kills in a match are a tower's. They used to bank the
+        // whole yield silently, so most of a match's income was something the
+        // player never saw happen.
+        Assert.True(pickup.Amount > 0);
         Assert.True(w.TeamScrap.GetValueOrDefault(ScrapType.Alloy) > 0,
-            "a tower kill still pays the team");
-        Assert.Empty(w.Pickups);
+            "a tower kill still pays the team its half");
+        // Not credited to anyone until somebody walks over it.
         Assert.Equal(0, player.Scrap.GetValueOrDefault(ScrapType.Alloy));
     }
 
@@ -455,12 +473,7 @@ public class ScrapEconomyTests
     public void PickupsSurviveSerialization()
     {
         var w = WithPlayer(out var player);
-        player.Pos = new Vec3(12, 0, 0);
-        w.Enqueue(new Command.PlayerSync(1, player.Pos));
-        var enemy = Drifter(w, new Vec3(0, 0, 0));
-        w.Enemies.Add(enemy);
-        w.Enqueue(new Command.PlayerHit(1, enemy.Id, "sidearm"));
-        Step.Advance(w);
+        TowerKill(w, player);
 
         var back = Serialization.Deserialize(Serialization.Serialize(w));
         Assert.Equal(w.Pickups.Count, back.Pickups.Count);
@@ -470,36 +483,94 @@ public class ScrapEconomyTests
 }
 
 /// <summary>Scrap from the air lane has to come down to where a player is.</summary>
+
+
 public class AirborneScrapTests
 {
-    [Fact]
-    public void ScrapFromAFlyerFallsToTheFloorAndIsCollectable()
+    private static (World World, PlayerState Player) Solo(MapDef map)
     {
-        var w = new World(21, Maps.Foundry);
+        var w = new World(21, map);
         w.Enqueue(new Command.Join(1, "solo", "ember"));
         Step.Advance(w);
-        var player = w.Players[1];
+        return (w, w.Players[1]);
+    }
 
-        // A Skiff dies on the air strand, well above the deck.
-        var air = Maps.Foundry.Routes.First(r => r.Layer == EnemyLayer.Air);
-        var high = air.Waypoints.OrderByDescending(p => p.Y).First();
-        Assert.True(high.Y > 5f, $"the air lane should be off the ground (was {high.Y})");
-
-        player.Pos = new Vec3(high.X + 14f, 0f, high.Z);
-        w.Enqueue(new Command.PlayerSync(1, player.Pos));
+    /// <summary>A Skiff actually flying the strand.
+    ///
+    /// Its position is its route progress, so handing one a Pos does not stick
+    /// — MoveEnemies puts it back on its lane before any tower or test looks at
+    /// it, and a Skiff given route 0 quietly ends up walking the ground route.
+    /// Spawn it on the air lane and let the sim place it.</summary>
+    private static Enemy SkiffOnTheStrand(World w, MapDef map, int leg, float progress)
+    {
+        int airRoute = map.Routes.ToList().FindIndex(r => r.Layer == EnemyLayer.Air);
         var skiff = new Enemy
         {
             Id = w.NextId(), DefId = "skiff", Hp = 1f, MaxHp = 40f,
-            RouteIndex = 0, Leg = 1, LegProgress = 1f, Pos = high,
+            RouteIndex = airRoute, Leg = leg, LegProgress = progress,
             Facing = new Vec3(1, 0, 0), Bounty = 8, LeakDamage = 1,
         };
         w.Enemies.Add(skiff);
+        Step.Advance(w);
+        return skiff;
+    }
+
+    /// <summary>Kill a flyer with a Skywatch built on the nearest pad that can
+    /// reach it, so the drop belongs to a tower and has to hit the floor.</summary>
+    private static void SkywatchKill(World w, MapDef map, Enemy flyer)
+    {
+        var pad = map.Sockets
+            .Where(s => s.Tag is SocketTag.Ground or SocketTag.Wall)
+            .Where(s => s.Pos.DistanceTo(flyer.Pos) <= Towers.Skywatch.RangeMeters)
+            .OrderBy(s => s.Pos.DistanceTo(flyer.Pos))
+            .FirstOrDefault();
+        Assert.True(pad is not null,
+            $"no pad on {map.Id} can reach a flyer at {flyer.Pos.X:0},{flyer.Pos.Y:0},{flyer.Pos.Z:0}");
+
+        w.Money = 10000;
+        w.Enqueue(new Command.PlaceTower(1, "skywatch", pad!.Id));
+        Step.Advance(w);
+        Assert.Single(w.Towers);
+        for (int i = 0; i < Balance.TickHz * 20 && w.Enemies.Contains(flyer); i++) Step.Advance(w);
+        Assert.DoesNotContain(flyer, w.Enemies);
+    }
+
+    [Fact]
+    public void ShootingAFlyerYourselfHandsYouTheScrapInsteadOfDroppingItOutOfReach()
+    {
+        // This is the whole reason a flyer's drop used to be a problem: it died
+        // fifteen metres up, its scrap fell wherever physics put it, and on a
+        // map with decks and lanes that was regularly somewhere nobody could
+        // stand. A player who lands the kill is simply paid.
+        var (w, player) = Solo(Maps.Foundry);
+        var skiff = SkiffOnTheStrand(w, Maps.Foundry, leg: 1, progress: 0.5f);
+        Assert.True(skiff.Pos.Y > 5f, $"the air lane should be off the ground (was {skiff.Pos.Y})");
+
+        // Standing well clear, and on the floor: if this scrap arrives it did
+        // not arrive by being walked over.
+        player.Pos = new Vec3(skiff.Pos.X + 14f, 0f, skiff.Pos.Z);
+        w.Enqueue(new Command.PlayerSync(1, player.Pos));
         w.Enqueue(new Command.PlayerHit(1, skiff.Id, "sidearm"));
         Step.Advance(w);
 
-        var drop = Assert.Single(w.Pickups);
-        Assert.True(drop.Pos.Y > 5f, "it starts where the flyer died");
+        Assert.Empty(w.Pickups);
+        Assert.True(player.Scrap.Values.Sum() > 0);
+    }
 
+    [Fact]
+    public void ScrapFromATowerKilledFlyerFallsToTheFloorAndIsCollectable()
+    {
+        // A tower's kill still has to put the drop somewhere a player can get
+        // to, which on an air lane means it has to come down.
+        var (w, player) = Solo(Maps.Foundry);
+        player.Pos = new Vec3(40f, 0f, 30f);            // nowhere near the corpse
+        w.Enqueue(new Command.PlayerSync(1, player.Pos));
+
+        var skiff = SkiffOnTheStrand(w, Maps.Foundry, leg: 1, progress: 0.5f);
+        Assert.True(skiff.Pos.Y > 5f, $"the strand should be off the ground (was {skiff.Pos.Y})");
+        SkywatchKill(w, Maps.Foundry, skiff);
+
+        var drop = Assert.Single(w.Pickups);
         // It comes down on its own.
         for (int i = 0; i < Balance.TickHz * 5; i++) Step.Advance(w);
         drop = Assert.Single(w.Pickups);
@@ -515,35 +586,27 @@ public class AirborneScrapTests
     [Fact]
     public void OnAClimbingMapScrapLandsOnTheTierBelowItNotTheStreet()
     {
-        var w = new World(21, Maps.Spire);
-        w.Enqueue(new Command.Join(1, "solo", "ember"));
-        Step.Advance(w);
-        var player = w.Players[1];
-
-        // Over the upper stair (y = 20), not over the street.
-        var over = new Vec3(14f, 34f, 0f);
-        player.Pos = new Vec3(over.X + 12f, 20f, over.Z);
+        var (w, player) = Solo(Maps.Spire);
+        player.Pos = new Vec3(40f, 0f, 30f);
         w.Enqueue(new Command.PlayerSync(1, player.Pos));
-        var skiff = new Enemy
-        {
-            Id = w.NextId(), DefId = "skiff", Hp = 1f, MaxHp = 40f,
-            RouteIndex = 0, Leg = 1, LegProgress = 1f, Pos = over,
-            Facing = new Vec3(1, 0, 0), Bounty = 8, LeakDamage = 1,
-        };
-        w.Enemies.Add(skiff);
-        w.Enqueue(new Command.PlayerHit(1, skiff.Id, "sidearm"));
-        Step.Advance(w);
-        for (int i = 0; i < Balance.TickHz * 6; i++) Step.Advance(w);
+
+        // High over the building rather than out over the street.
+        var skiff = SkiffOnTheStrand(w, Maps.Spire, leg: 2, progress: 0.5f);
+        Assert.True(skiff.Pos.Y > 20f, $"expected the strand high here (was {skiff.Pos.Y})");
+        SkywatchKill(w, Maps.Spire, skiff);
 
         var drop = Assert.Single(w.Pickups);
-        Assert.True(drop.Pos.Y > 1f,
-            $"a drop over the upper tiers must not fall to the street (rested at {drop.Pos.Y})");
-        Assert.True(drop.Pos.Y <= over.Y, "and it must not climb");
+        float tier = drop.GroundY;
+        for (int i = 0; i < Balance.TickHz * 10; i++) Step.Advance(w);
+        drop = Assert.Single(w.Pickups);
+
+        // It stops on the tier the sim found under it and goes no further.
+        Assert.Equal(tier, drop.Pos.Y, 2);
+        Assert.True(tier > 1f,
+            $"scrap high over a climbing map should rest on a tier, not the street (rested at {tier})");
     }
 }
 
-/// <summary>The ten-level grid: design drew ten stages per path and the sim
-/// used to offer five of them.</summary>
 public class UpgradeGridTests
 {
     [Fact]
@@ -720,6 +783,7 @@ public class TowerRangeTests
 
 /// <summary>The endless hp curve. Two curves meeting at the end of the
 /// authored arc, and the tests that keep them meeting.</summary>
+
 public class EndlessScalingTests
 {
     [Fact]

@@ -1710,10 +1710,22 @@ public static class Step
         }
     }
 
-    /// <summary>Scrap split: a team share funds tower upgrades; the personal
-    /// share funds the killer's gunsmith. M1 simplification: personal share goes
-    /// to the killing player only (participation tracking arrives at M2); tower
-    /// kills bank everything to the team.</summary>
+    /// <summary>Scrap split: a team share funds tower upgrades, a personal
+    /// share funds a gunsmith. The split is the same whatever did the killing;
+    /// what changes is where the personal half goes.
+    ///
+    /// <b>A player's kill is collected on the spot.</b> They shot it, the scrap
+    /// is theirs, and making them walk to it only ever took it away — a Skiff
+    /// dies over the air lane and its drop lands somewhere nobody can reach,
+    /// which is a tax on using the weapon the map asks you to use.
+    ///
+    /// <b>A tower's kill hits the floor.</b> It used to bank the whole yield
+    /// silently, so the majority of kills in a match produced income nobody
+    /// ever saw. Now the personal half is a thing on the ground that anyone can
+    /// walk over, and the choice of whether to go and get it is the player's:
+    /// take it for your bench, or leave it and let it bank to the team when it
+    /// times out. Nothing is lost either way, which is what keeps a defence
+    /// from being something you can lose by being busy.</summary>
     private static void DropScrap(World w, Enemy enemy, EnemyDef def, int? killerPlayerId,
         bool meleeKill = false)
     {
@@ -1728,9 +1740,10 @@ public static class Step
             int amount = meleeKill
                 ? (int)MathF.Round(baseAmount * Balance.MeleeScrapBonus, MidpointRounding.AwayFromZero)
                 : baseAmount;
-            int teamShare = killerPlayerId is null
-                ? amount
-                : (int)MathF.Round(amount * Balance.ScrapTeamShare, MidpointRounding.AwayFromZero);
+            // One split, every kill. A tower's kill used to hand the team the
+            // whole yield; it now keeps the same half everything else does.
+            int teamShare = (int)MathF.Round(amount * Balance.ScrapTeamShare,
+                MidpointRounding.AwayFromZero);
             int personal = amount - teamShare;
 
             // The team's half banks immediately: it pays for towers, which are
@@ -1739,9 +1752,21 @@ public static class Step
             if (teamShare > 0)
                 w.TeamScrap[type] = w.TeamScrap.GetValueOrDefault(type, 0) + teamShare;
 
-            // The personal half hits the floor. A tower kill has no personal
-            // half at all, which is why towers-only runs are unchanged.
-            if (personal > 0 && killerPlayerId is not null)
+            // Shot it yourself: it is already yours. PickupId 0 says this
+            // scrap never touched the floor — there is no pickup to correlate
+            // it with, and the client only ever wanted the "+2 alloy" out of
+            // this event.
+            if (personal > 0 && killerPlayerId is int killer
+                && w.Players.TryGetValue(killer, out var killerScrap))
+            {
+                killerScrap.Scrap[type] = killerScrap.Scrap.GetValueOrDefault(type, 0) + personal;
+                w.Emit(new SimEvent.ScrapCollected(0, killer, type.ToString(), personal));
+                parts.Add($"{type}:{amount}");
+                continue;
+            }
+
+            // Otherwise it hits the floor for whoever wants to walk over it.
+            if (personal > 0)
             {
                 // Spread by scrap type so a Monolith's three drops are three
                 // things rather than one pile. Deterministic: the offset comes
