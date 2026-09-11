@@ -323,11 +323,16 @@ public partial class HudRoot : CanvasLayer
         column.AddChild(_downedText);
     }
 
-    /// <summary>Bottom-right: what you are holding. Design's frame carries a
-    /// magazine and reserve count; the sim has neither — weapons fire on a
-    /// cooldown with no ammo pool — so this shows the weapon, its ammo type and
-    /// its build instead of inventing numbers. The mag readout arrives with the
-    /// ammo-quantity system.</summary>
+    /// <summary>Bottom-right: what you are holding — the weapon, its ammo type
+    /// and its build.
+    ///
+    /// This note used to say the sim had no ammo pool and that a magazine
+    /// readout was waiting on the ammo-quantity system. That system landed:
+    /// WeaponDef carries MagazineSize and ReloadSeconds, PlayerState tracks
+    /// rounds per weapon, firing is locked out while ReloadTimer runs, and the
+    /// sim emits ReloadStarted and Reloaded. The numbers are there to show; the
+    /// frame's magazine count and the reload animation are both simply unbuilt.
+    /// docs/FORWARD-MANIFEST-reload.md is the art side of that.</summary>
     private void BuildLoadout(Control root)
     {
         var card = Kit.Glass();

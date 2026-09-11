@@ -41,8 +41,14 @@ Known gaps of that kind:
   today only the Aegis has — and no code draws it. Recorded here rather than
   quietly shipped, because the lobby offers the faction and states the passive.
 
-- **Magazine / reserve counts** in the loadout cluster. The sim has no ammo
-  pool; weapons fire on a cooldown. Waiting on the ammo-quantity system.
+- **Magazine count and the reload animation** in the loadout cluster. This
+  entry used to say the sim had no ammo pool. It does: `MagazineSize`,
+  `ReloadSeconds`, rounds tracked per weapon, firing locked out while the
+  reload runs, and `ReloadStarted` / `Reloaded` emitted for a client to hang
+  art on. R is bound and works. Nothing is drawn when it happens — no counter,
+  no animation — and the art a reload needs is specced in
+  **[docs/FORWARD-MANIFEST-reload.md](../FORWARD-MANIFEST-reload.md)**. The
+  reserve stays unlimited by design, so there is no reserve count to show.
 - **Per-tower kills / uptime** in the upgrade panel. The sim tracks damage
   dealt but not the rest. Coverage is no longer on this list: the panel now
   prints reach in metres and the world draws the ring, which is the part of
@@ -52,6 +58,9 @@ Known gaps of that kind:
 > rules a map must satisfy, and where each of the three maps stands — is in
 > **[docs/MAP-AUTHORING.md](../MAP-AUTHORING.md)**. Read that first if the
 > question is about a map rather than a model.
+>
+> The art a **reload animation** needs — and the note that its backend already
+> exists — is in **[docs/FORWARD-MANIFEST-reload.md](../FORWARD-MANIFEST-reload.md)**.
 >
 > The Switchyard asks below are written up in full, with dimensions, the map's
 > geometry and the reasoning, in **[docs/FORWARD-MANIFEST-switchyard.md](../FORWARD-MANIFEST-switchyard.md)**.
