@@ -52,6 +52,13 @@ public static class WavePlan
         return entries;
     }
 
+    /// <summary>What a kill on this wave pays, as a multiple of the enemy's
+    /// def bounty. Compounded on the wave index for the same reason hp is: an
+    /// enemy that takes four times as long to kill should not pay the same as
+    /// the one on wave one.</summary>
+    public static float BountyScale(int waveIndex) =>
+        Balance.BountyScale * MathF.Pow(Balance.BountyGrowth, waveIndex);
+
     /// <summary>The hp multiplier a wave spawns with, times the player-count
     /// factor. Exposed so the HUD's endless threat readout is the sim's
     /// number, not a copy.

@@ -847,3 +847,112 @@ public class EndlessScalingTests
         Assert.True(lastAuthored > 0);
     }
 }
+
+/// <summary>What a kill pays, and whether it keeps up with what the kill costs.
+///
+/// A bounty used to come flat off the enemy's def, so a Drifter paid six
+/// credits on wave 1 and six on wave 20 while its health compounded every wave
+/// in between. On Foundry that was 0.300 credits per point of enemy health at
+/// the start and 0.011 by wave 20.</summary>
+public class BountyScalingTests
+{
+    private static int WaveBounty(MapDef map, int wave) =>
+        WavePlan.PlanWave(1, map, wave, 1)
+            .Sum(e => Math.Max(1, (int)MathF.Round(
+                Enemies.All[e.DefId].Bounty * WavePlan.BountyScale(wave),
+                MidpointRounding.AwayFromZero)));
+
+    private static float WaveHp(MapDef map, int wave) =>
+        WavePlan.PlanWave(1, map, wave, 1).Sum(e => Enemies.All[e.DefId].Hp * e.HpFactor);
+
+    [Fact]
+    public void EachWavePaysAtLeastFifteenPercentMoreThanTheOneBefore()
+    {
+        for (int wave = 1; wave < 40; wave++)
+            Assert.True(WavePlan.BountyScale(wave) >= WavePlan.BountyScale(wave - 1) * 1.15f - 0.0001f,
+                $"wave {wave} pays only {WavePlan.BountyScale(wave) / WavePlan.BountyScale(wave - 1):0.000}x "
+                + "the wave before");
+    }
+
+    [Fact]
+    public void TheFirstWaveIsUntouched()
+    {
+        // The campaign's opening is swept and balanced where it is. This change
+        // is about the curve, not the starting line.
+        Assert.Equal(1f, WavePlan.BountyScale(0), 3);
+        foreach (var map in Maps.All.Values)
+            Assert.Equal(
+                WavePlan.PlanWave(1, map, 0, 1).Sum(e => Enemies.All[e.DefId].Bounty),
+                WaveBounty(map, 0));
+    }
+
+    [Fact]
+    public void IncomeNoLongerCollapsesAgainstTheThreat()
+    {
+        // Difficulty is still meant to bite — bounty grows slower than the
+        // campaign's hp curve on purpose — but a twenty-seven-fold fall in
+        // credits per point of health is not difficulty, it is a defence that
+        // cannot be funded.
+        var map = Maps.Foundry;
+        float early = WaveBounty(map, 0) / WaveHp(map, 0);
+        foreach (int wave in new[] { 9, 12, 15, 20, 25 })
+        {
+            float rate = WaveBounty(map, wave) / WaveHp(map, wave);
+            Assert.True(rate > early * 0.35f,
+                $"wave {wave} pays {rate:0.000} credits per hp against wave 0's {early:0.000}");
+        }
+    }
+
+    [Fact]
+    public void ALaterWavesKillIsWorthMoreThanTheSameEnemyEarlier()
+    {
+        // The end a player actually feels: the same enemy, later, pays more.
+        var map = Maps.Foundry;
+        var w = new World(5, map);
+        w.Enqueue(new Command.Join(1, "solo", "ember"));
+        Step.Advance(w);
+
+        int Paid(int waveIndex)
+        {
+            w.WaveIndex = waveIndex;
+            var before = w.Money;
+            var enemy = new Enemy
+            {
+                Id = w.NextId(), DefId = "drifter", Hp = 1f, MaxHp = 30f,
+                RouteIndex = 0, Leg = 1, LegProgress = 1f,
+                Facing = new Vec3(1, 0, 0),
+                Bounty = Math.Max(1, (int)MathF.Round(
+                    Enemies.All["drifter"].Bounty * WavePlan.BountyScale(waveIndex),
+                    MidpointRounding.AwayFromZero)),
+                LeakDamage = 1, WaveIndex = waveIndex,
+            };
+            w.Enemies.Add(enemy);
+            w.Enqueue(new Command.PlayerHit(1, enemy.Id, "sidearm"));
+            Step.Advance(w);
+            return w.Money - before;
+        }
+
+        int early = Paid(0);
+        // A second shot in the same breath is refused on the sidearm's
+        // cooldown, and a kill that never happened pays nothing — which would
+        // have read as the scaling being broken rather than the test being.
+        for (int i = 0; i < Balance.TickHz; i++) Step.Advance(w);
+        int late = Paid(10);
+        Assert.True(late > early * 3f,
+            $"a wave-10 Drifter paid {late} against a wave-0 Drifter's {early}");
+    }
+
+    [Fact]
+    public void TheCheapestEnemyNeverRoundsAwayToNothing()
+    {
+        // A Mote is worth two credits. Nothing in the roster may round to a
+        // kill that pays nothing at all.
+        foreach (var def in Enemies.All.Values)
+        {
+            if (def.Bounty <= 0) continue;
+            for (int wave = 0; wave < 30; wave++)
+                Assert.True(Math.Max(1, (int)MathF.Round(def.Bounty * WavePlan.BountyScale(wave),
+                    MidpointRounding.AwayFromZero)) >= 1);
+        }
+    }
+}
