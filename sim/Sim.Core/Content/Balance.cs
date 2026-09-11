@@ -13,6 +13,34 @@ public static class Balance
     /// <summary>Per-wave enemy hp multiplier. Re-sweep after any roster change.</summary>
     public const float HpGrowth = 1.22f;
 
+    /// <summary>What a kill pays, and how that keeps up with what it takes to
+    /// make the kill.
+    ///
+    /// A bounty used to be a flat number off the enemy's def — a Drifter paid
+    /// six credits on wave 1 and six on wave 20, while its health compounded
+    /// every wave in between. Measured on Foundry, a wave paid 0.300 credits
+    /// per point of enemy health at the start and 0.011 by wave 20: the fight
+    /// got twenty-seven times more expensive per credit earned, which is a
+    /// defence that cannot be funded rather than one that is hard to fund.
+    ///
+    /// <see cref="BountyGrowth"/> compounds on the wave index the way hp does,
+    /// so a harder enemy is worth more: +15% a wave, which is +252% by wave 9
+    /// and more than fifteenfold by wave 20. It sits under the campaign's
+    /// <see cref="HpGrowth"/> on purpose — income is meant to fall behind the
+    /// threat a little, or difficulty stops meaning anything — and level with
+    /// <see cref="EndlessHpGrowth"/>, so endless settles instead of drifting
+    /// further out of reach every lap.
+    ///
+    /// <see cref="BountyScale"/> is a flat lift on top, and it is 1.0 because
+    /// the measurement said so rather than because nobody tried. At 1.15 the
+    /// weather gate stops passing: the mid-band bot can afford enough tower
+    /// that a night-and-fog campaign costs it no lives at all against a clear
+    /// one, and a condition that changes nothing is worse than a thin wave 1.
+    /// The dial is here, documented, for when wave 1 genuinely needs it — but
+    /// re-run the harness, because that gate is what it costs.</summary>
+    public const float BountyScale = 1.0f;
+    public const float BountyGrowth = 1.15f;
+
     public const float IntermissionSeconds = 8f;
     public const float ProjectileHitRadius = 0.4f;
 

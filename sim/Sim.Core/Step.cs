@@ -799,7 +799,7 @@ public static class Step
                 LateralOffset = entry.LateralOffset,
                 Pos = route.Waypoints[0],
                 Facing = (route.Waypoints[1] - route.Waypoints[0]).Normalized(),
-                Bounty = def.Bounty,
+                Bounty = ScaledBounty(def.Bounty, w.WaveIndex),
                 LeakDamage = def.LeakDamage,
                 WaveIndex = w.WaveIndex,
             };
@@ -1572,7 +1572,9 @@ public static class Step
                     LateralOffset = (rng.NextFloat() - 0.5f) * MathF.Max(childDef.ScatterWidth, 2f),
                     Pos = enemy.Pos,
                     Facing = enemy.Facing,
-                    Bounty = childDef.Bounty,
+                    // A split pays on the wave its parent came from, not on
+                    // whatever wave happens to be running when it dies.
+                    Bounty = ScaledBounty(childDef.Bounty, enemy.WaveIndex),
                     LeakDamage = childDef.LeakDamage,
                     WaveIndex = enemy.WaveIndex,
                 };
@@ -1880,6 +1882,12 @@ public static class Step
             }
         }
     }
+
+    /// <summary>A def's bounty as this wave pays it. Rounded away from zero so
+    /// the cheapest enemy on the roster never rounds down to nothing.</summary>
+    private static int ScaledBounty(int baseBounty, int waveIndex) =>
+        Math.Max(1, (int)MathF.Round(baseBounty * WavePlan.BountyScale(waveIndex),
+            MidpointRounding.AwayFromZero));
 
     private static int? SourcePlayerId(string source) =>
         source.StartsWith("player") && int.TryParse(source.AsSpan(6), out int id) ? id : null;
