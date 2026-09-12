@@ -117,6 +117,12 @@ public partial class GameRoot : Node3D
     public Vfx Vfx { get; private set; } = null!;
     private bool _shotFire;                   // --shot vm-<weapon>: fire one round before the capture
     private float _launchAfter = -1f;         // --launch-after: seconds until a hosted party launches itself
+    private List<string>? _reloadReport;      // --shot <map> <txt> reload
+    private string _reloadReportPath = "";
+    private float _reloadTimer;
+    private int _reloadIndex;
+    private int _reloadFailures;
+    private static readonly string[] ReloadProbeWeapons = { "sidearm", "rifle", "scattergun", "emberPistol" };
     private List<string>? _traversalReport;   // --shot <map> <txt> traversal
     private string _traversalReportPath = "";
     private int _traversalIndex = -1;
@@ -196,6 +202,7 @@ public partial class GameRoot : Node3D
         _warped.Clear();
         _padState.Clear();
         _footprints.Clear();
+        _warpMembranes.Clear();
         Surfaces.Clear();
         _avatarViews.Clear();
         _towerRigs.Clear();
@@ -607,7 +614,10 @@ public partial class GameRoot : Node3D
             if (_world.Players.TryGetValue(LocalPlayerId, out var me) && Weapons.All.ContainsKey(weapon))
             {
                 _world.Money = 1000;
-                me.Scrap[ScrapType.Alloy] = 40;
+                // Every scrap type, not just Alloy: the rifle's recipe wants
+                // more than one, and a buy the sim refuses leaves the shot
+                // photographing the sidearm under the rifle's name.
+                foreach (var type in System.Enum.GetValues<ScrapType>()) me.Scrap[type] = 200;
                 Submit(new Command.BuyWeapon(LocalPlayerId, weapon));
                 Submit(new Command.SelectWeapon(LocalPlayerId, weapon));
                 Submit(new Command.CraftAttachment(LocalPlayerId, weapon, "longBarrel"));
@@ -768,6 +778,28 @@ public partial class GameRoot : Node3D
             _traversalReport.Add($"{_climbs.Count} climb(s) found");
             _traversalIndex = 0;
             _traversalTimer = 0f;
+            return;
+        }
+
+        // Reload: the drop delivered magazines that exist off the gun and
+        // off-hand poses, and the animation over them is entirely code moving
+        // named nodes. A missing node skips its step silently by design, which
+        // is exactly the failure a screenshot cannot see: the reload "plays"
+        // and nothing on screen changes. This equips each platform, starts a
+        // reload at the sim's own duration, and checks the beats.
+        if (_shotView == "reload" && _world is not null)
+        {
+            _shotView = "eye";
+            _reloadReportPath = path;
+            _reloadReport = new List<string> { $"reload probe on {_map.Id}" };
+            if (_world.Players.TryGetValue(LocalPlayerId, out var reloader))
+            {
+                _world.Money = 5000;
+                foreach (var type in System.Enum.GetValues<ScrapType>()) reloader.Scrap[type] = 200;
+            }
+            _reloadIndex = -1;
+            _reloadTimer = 0f;
+            _reloadFailures = 0;
             return;
         }
 
@@ -1239,7 +1271,9 @@ public partial class GameRoot : Node3D
     {
         TickShotStages();
         TickIntermissionShot();
+        TickWarpGates(delta);
         if (_traversalReport is not null) TickTraversalProbe(delta);
+        if (_reloadReport is not null) TickReloadProbe(delta);
         if (_teleportReport is not null) TickTeleportProbe(delta);
         if (_vehicleReport is not null) TickVehicleProbe(delta);
         if (_shotPath is not null && _shotFire && _shotCountdown == 2 && _player is not null) { _player.FireForReview(); _shotFire = false; }
@@ -1571,6 +1605,16 @@ public partial class GameRoot : Node3D
                     Post($"{packed.WeaponId} packed to level {packed.Level}", UiTheme.Accent);
                     break;
 
+                // The reload is animated on the viewmodel from the sim's own
+                // clock: it starts when the sim says, runs the sim's seconds,
+                // and the sim's Reloaded is what ends it.
+                case SimEvent.ReloadStarted reload when reload.PlayerId == LocalPlayerId:
+                    _player?.OnReloadStarted(reload.WeaponId, reload.Seconds);
+                    break;
+                case SimEvent.Reloaded reloaded when reloaded.PlayerId == LocalPlayerId:
+                    _player?.OnReloaded();
+                    break;
+
                 case SimEvent.ScrapCollected collected when collected.PlayerId == LocalPlayerId:
                     Post($"+{collected.Amount} {collected.ScrapType.ToLowerInvariant()}",
                         UiTheme.Scrap(System.Enum.Parse<ScrapType>(collected.ScrapType)));
@@ -1692,6 +1736,12 @@ public partial class GameRoot : Node3D
             case "reaction": _reactionCount++; OnReaction(int.Parse(p[2]), p[3]); break;
             case "packedAPunch" when int.Parse(p[2]) == LocalPlayerId:
                 Post($"{p[3]} packed to level {p[4]}", UiTheme.Accent);
+                break;
+            case "reloadStarted" when int.Parse(p[2]) == LocalPlayerId:
+                _player?.OnReloadStarted(p[3], float.Parse(p[4], System.Globalization.CultureInfo.InvariantCulture));
+                break;
+            case "reloaded" when int.Parse(p[2]) == LocalPlayerId:
+                _player?.OnReloaded();
                 break;
 
             case "scrapCollected" when int.Parse(p[3]) == LocalPlayerId:
@@ -3203,6 +3253,91 @@ public partial class GameRoot : Node3D
                     : "FAIL: the cooldown does not hold");
     }
 
+    /// <summary>One platform at a time: equip, wait for the viewmodel, start
+    /// the reload, look at the magazine-in beat, then look again after it
+    /// ends. The beat is sampled at 45% of the sim's duration because that is
+    /// inside the window every path shows the fresh magazine in the off-hand
+    /// — the one frame where every delivered part is on screen at once.</summary>
+    private void TickReloadProbe(double delta)
+    {
+        if (_reloadReport is null || _player is null || _world is null) return;
+        float before = _reloadTimer;
+        _reloadTimer += (float)delta;
+
+        // Next platform.
+        if (_reloadIndex < 0 || _reloadTimer >= 6f)
+        {
+            _reloadIndex++;
+            if (_reloadIndex >= ReloadProbeWeapons.Length)
+            {
+                bool pass = _reloadFailures == 0;
+                WriteProbe(_reloadReport, _reloadReportPath, pass,
+                    pass ? "PASS: every platform reloads with its own parts"
+                         : $"FAIL: {_reloadFailures} platform(s) did not play their reload");
+                return;
+            }
+            string weapon = ReloadProbeWeapons[_reloadIndex];
+            Submit(new Command.BuyWeapon(LocalPlayerId, weapon));
+            Submit(new Command.SelectWeapon(LocalPlayerId, weapon));
+            Step.Advance(_world);
+            RebuildView();
+            _reloadTimer = 0f;
+            _reloadReport.Add($"--- {weapon}");
+            return;
+        }
+
+        string id = ReloadProbeWeapons[_reloadIndex];
+        float seconds = Weapons.All[id].ReloadSeconds;
+        // Half a second for RefreshViewModel to build the model, then begin.
+        if (before < 0.5f && _reloadTimer >= 0.5f)
+        {
+            if (!_player.HasWeaponModel)
+            {
+                _reloadReport.Add($"{id}: no weapon model resolved — nothing to animate (skipped)");
+                _reloadTimer = 6f;
+                return;
+            }
+            _player.BeginReloadForReview(seconds);
+            _reloadReport.Add($"{id}: reload started for {seconds:0.0}s, playing={_player.Reloading}");
+            if (!_player.Reloading) _reloadFailures++;
+            return;
+        }
+
+        float beat = 0.5f + seconds * 0.45f;
+        if (before < beat && _reloadTimer >= beat)
+        {
+            var snap = _player.ReloadSnapshot();
+            if (snap is not { } s)
+            {
+                _reloadReport.Add($"{id}: animation ended before the magazine-in beat");
+                _reloadFailures++;
+                return;
+            }
+            bool poseUp = s.Pose == "magin";
+            bool magOut = s.MagazineVisible is null or false;      // tube-fed has no magazine
+            bool handSwapped = s.HandVisible is null or false;
+            bool freshShown = s.FreshProp;
+            bool ok = poseUp && magOut && handSwapped && freshShown;
+            _reloadReport.Add($"{id} @45%: pose={s.Pose} magazine={(s.MagazineVisible is null ? "n/a" : s.MagazineVisible.Value ? "SHOWING" : "out")} "
+                + $"hand_l={(s.HandVisible is null ? "n/a" : s.HandVisible.Value ? "SHOWING" : "swapped")} fresh={(s.FreshProp ? "in hand" : "MISSING")} "
+                + $"spent={(s.SpentProp ? "falling" : (s.TubeFed ? "n/a" : "gone"))}");
+            if (!ok) _reloadFailures++;
+            return;
+        }
+
+        float done = 0.5f + seconds + 0.4f;
+        if (before < done && _reloadTimer >= done)
+        {
+            var snap = _player.ReloadSnapshot();
+            bool restored = !_player.Reloading && snap is null;
+            _reloadReport.Add(restored
+                ? $"{id}: finished and put everything back"
+                : $"{id}: still animating {_reloadTimer - 0.5f - seconds:0.0}s after the sim's duration");
+            if (!restored) _reloadFailures++;
+            _reloadTimer = 6f;
+        }
+    }
+
     private void TickTraversalProbe(double delta)
     {
         if (_traversalReport is null || _player is null) return;
@@ -3306,9 +3441,19 @@ public partial class GameRoot : Node3D
             // that tile needed doing to it per copy both survive: the sidings
             // come off the prototype before anything is measured, and the
             // half-turn that breaks the lattice is in the transform.
-            var tiles = new List<Transform3D>();
-            for (float x = -lastX; x <= lastX + 0.01f; x += 20f)
-                for (float z = -lastZ; z <= lastZ + 0.01f; z += 20f)
+            // A tile ships in four variants now (FORWARD-MANIFEST-switchyard
+            // ask A: the exporter called build() alone, so v0 was the only
+            // GLB and one tile laid twenty-four times put the same puddle on
+            // a lattice). They are cycled across the grid by the commission's
+            // own formula, (ix·7 + iz·3) mod 4; a kit that shipped only v0
+            // draws everything from v0, as before.
+            var tiles = new List<Transform3D>[4];
+            for (int v = 0; v < 4; v++) tiles[v] = new List<Transform3D>();
+            int ix = 0;
+            for (float x = -lastX; x <= lastX + 0.01f; x += 20f, ix++)
+            {
+                int iz = 0;
+                for (float z = -lastZ; z <= lastZ + 0.01f; z += 20f, iz++)
                 {
                     // One tile repeated puts its puddle, its weed tufts and its
                     // drain grates on a perfect lattice, which reads as
@@ -3321,9 +3466,12 @@ public partial class GameRoot : Node3D
                     var basis = turned
                         ? Basis.FromEuler(new Vector3(0, Mathf.Pi, 0))
                         : Basis.Identity;
-                    tiles.Add(new Transform3D(basis,
+                    int variant = ((ix * 7 + iz * 3) % 4 + 4) % 4;
+                    if (variant != 0 && !AssetLibrary.Has($"{map.Id}_terrain_v{variant}")) variant = 0;
+                    tiles[variant].Add(new Transform3D(basis,
                         new Vector3(x, MapKit.GroundLocal(ground), z)));
                 }
+            }
 
             // The tile bakes in two "disused sidings" at its local z +/-6.
             // Tiled six by four, that is eight full-width tracks laid straight
@@ -3338,12 +3486,43 @@ public partial class GameRoot : Node3D
                 ? new[] { "terrain_siding-6", "terrain_siding6" }
                 : System.Array.Empty<string>();
 
-            int drawn = MapKit.InstancedChunked(ground, $"{map.Id}_terrain", tiles, 80f,
-                castShadow: false, visibleFrom: 0f, visibleTo: 0f, hide: buried);
-            GD.Print($"[map] terrain: {tiles.Count} tiles in {drawn} multimesh(es)");
+            // Chunking exists so a multimesh can be culled; a yard is always
+            // wholly in view, so on a small field each variant is one draw
+            // per mesh and chunking only multiplies them. (Cycling four
+            // variants on Switchyard through 80 m cells made 312 multimeshes
+            // of a ground that was 60.) Four variants of a many-part tile
+            // still cost more draws than one did — that is the price of the
+            // ground not being wallpaper, and the Switchyard manifest asked
+            // for it by name.
+            bool chunk = Mathf.Max(map.FieldX, map.FieldZ) > 200f;
+            int drawn = 0, laid = 0, variants = 0;
+            for (int v = 0; v < 4; v++)
+            {
+                if (tiles[v].Count == 0) continue;
+                string asset = v == 0 ? $"{map.Id}_terrain" : $"{map.Id}_terrain_v{v}";
+                drawn += chunk
+                    ? MapKit.InstancedChunked(ground, asset, tiles[v], 80f,
+                        castShadow: false, visibleFrom: 0f, visibleTo: 0f, hide: buried)
+                    : MapKit.Instanced(ground, asset, tiles[v],
+                        castShadow: false, visibleFrom: 0f, visibleTo: 0f, hide: buried);
+                laid += tiles[v].Count;
+                variants++;
+            }
+            GD.Print($"[map] terrain: {laid} tiles in {drawn} multimesh(es) from {variants} variant(s)");
         }
 
-        // Lane surfaces.
+        // Lane surfaces. A map without a lane module of its own borrows its
+        // gravel road: on a farm the enemy lane is a worn track across the
+        // fields, and a track drawn as a dark slab reads as a graybox, which
+        // on this map it no longer is anywhere else.
+        string laneModule = AssetLibrary.Has($"{map.Id}_path_ground") ? $"{map.Id}_path_ground"
+            : AssetLibrary.Has($"{map.Id}_road_gravel") ? $"{map.Id}_road_gravel"
+            : $"{map.Id}_path_ground";
+        // A map's own lane module is mounted per segment so its once-in-five
+        // details can be thinned; a borrowed road module has none and is laid
+        // as one instanced draw — on the Toaster that is 250 pieces of track.
+        bool borrowed = laneModule != $"{map.Id}_path_ground";
+        var laneRuns = new List<Transform3D>();
         foreach (var route in map.Routes)
         {
             bool air = route.Layer == EnemyLayer.Air;
@@ -3366,9 +3545,18 @@ public partial class GameRoot : Node3D
                 // faint ribbon: pylons are placed separately, standing on the
                 // ground, because hanging them off a ribbon 9 m up put a row of
                 // masts in the sky.
-                if (!air)
+                if (!air && borrowed)
                 {
-                    MapKit.MountRun(box, $"{map.Id}_path_ground", (b - a).Length(), 4f,
+                    float span = (b - a).Length();
+                    int count = Mathf.Max(1, Mathf.RoundToInt(span / 4f));
+                    var basis = Basis.FromEuler(new Vector3(0, Mathf.Atan2(-horizontal.Z, horizontal.X), 0));
+                    for (int k = 0; k < count; k++)
+                        laneRuns.Add(new Transform3D(basis, a.Lerp(b, (k + 0.5f) / count)));
+                    MapKit.HideBox(box);
+                }
+                else if (!air)
+                {
+                    MapKit.MountRun(box, laneModule, (b - a).Length(), 4f,
                         alongX: true, MapKit.GroundLocal(box), 0f,
                         "lane_marker", "lane_marker_cap");
                     // Switchyard's lane module carries a rail down its centre,
@@ -3383,6 +3571,9 @@ public partial class GameRoot : Node3D
 
             if (air) BuildAirLaneSupports(route);
         }
+
+        if (laneRuns.Count > 0)
+            GD.Print($"[map] lanes: {laneRuns.Count} pieces of {laneModule} in {MapKit.Instanced(this, laneModule, laneRuns, castShadow: false)} multimesh(es)");
 
         BuildLaneMouths(map);
         BuildWarpGates(map);
@@ -3502,15 +3693,21 @@ public partial class GameRoot : Node3D
     /// wall leave them the same hole they leave a spawn gate.</summary>
     private void BuildWarpGates(MapDef map)
     {
-        string asset = AssetLibrary.Has("shared_warp_gate_idle")
+        // A pair under power is live at both ends: the arch is dark on idle
+        // and carries the membrane on active, and two states differing only
+        // by something appearing behind an unchanged frame read as decoration
+        // rather than as a gate switched on. Idle is the fallback, the spawn
+        // portal the fallback for that.
+        string idle = AssetLibrary.Has("shared_warp_gate_idle")
             ? "shared_warp_gate_idle" : "shared_spawn_portal";
+        string asset = AssetLibrary.Has("shared_warp_gate_active") ? "shared_warp_gate_active" : idle;
         var placed = new List<Vector3>();
 
         void Gate(Vector3 at, Vector3 facing)
         {
             if (placed.Any(p => p.DistanceTo(at) < 4f)) return;
             placed.Add(at);
-            MapKit.Prop(this, asset, at, MapKit.YawTowards(facing));
+            if (MapKit.Prop(this, asset, at, MapKit.YawTowards(facing)) is { } gate) ArmWarpMembrane(gate);
         }
 
         foreach (var route in map.Routes)
@@ -3528,6 +3725,58 @@ public partial class GameRoot : Node3D
 
         _laneMouths = _laneMouths.Concat(placed).ToList();
         if (placed.Count > 0) GD.Print($"[map] {placed.Count} warp gate(s) using {asset}");
+    }
+
+    private readonly List<(BaseMaterial3D Material, float Low, float High, float Hz)> _warpMembranes = new();
+    private double _warpClock;
+
+    /// <summary>The live gate's membrane pulses. Design put the range and the
+    /// rate in the file — <c>extras.pulse</c> on the model, naming the part —
+    /// and the emissive multiplier is the one dial that reads as power without
+    /// touching the frame. The material is duplicated first so the pulse never
+    /// bleeds into the import cache or another gate.</summary>
+    private void ArmWarpMembrane(Node3D gate)
+    {
+        if (gate.FindChild("warp_membrane", true, false) is not MeshInstance3D membrane) return;
+        if (membrane.GetActiveMaterial(0) is not BaseMaterial3D material) return;
+        var live = (BaseMaterial3D)material.Duplicate();
+        membrane.SetSurfaceOverrideMaterial(0, live);
+
+        float low = 0.4f, high = 2.4f, hz = 0.6f;
+        if (FindPulse(gate) is { } pulse)
+        {
+            if (pulse.TryGetValue("emissive", out var range) && range.VariantType == Variant.Type.Array
+                && range.AsGodotArray() is { Count: >= 2 } bounds)
+            {
+                low = (float)bounds[0].AsDouble();
+                high = (float)bounds[1].AsDouble();
+            }
+            if (pulse.TryGetValue("hz", out var rate)) hz = (float)rate.AsDouble();
+        }
+        _warpMembranes.Add((live, low, high, hz));
+    }
+
+    private static Godot.Collections.Dictionary? FindPulse(Node node)
+    {
+        if (node.HasMeta("extras") && node.GetMeta("extras") is { VariantType: Variant.Type.Dictionary } extras
+            && extras.AsGodotDictionary().TryGetValue("pulse", out var pulse)
+            && pulse.VariantType == Variant.Type.Dictionary)
+            return pulse.AsGodotDictionary();
+        foreach (var child in node.GetChildren())
+            if (FindPulse(child) is { } found) return found;
+        return null;
+    }
+
+    private void TickWarpGates(double delta)
+    {
+        if (_warpMembranes.Count == 0) return;
+        _warpClock += delta;
+        foreach (var (material, low, high, hz) in _warpMembranes)
+        {
+            if (!IsInstanceValid(material)) continue;
+            float k = 0.5f + 0.5f * Mathf.Sin((float)(_warpClock * Mathf.Tau * hz));
+            material.EmissionEnergyMultiplier = low + (high - low) * k;
+        }
     }
 
     /// <summary>One pad in the player's teleport network.
@@ -3604,7 +3853,7 @@ public partial class GameRoot : Node3D
     /// the lane, a socket, a lane mouth, or the places players stand. Scenery
     /// that ignores this is how a map ends up with a girder through the
     /// roadway, or a gantry planted in the spawn yard.</summary>
-    private bool Blocked(Vector3 at, float clearance)
+    private bool Blocked(Vector3 at, float clearance, bool outsideBuildings = true)
     {
         // Sockets get their own, tighter clearance. A build pad is 2.3 m across
         // and what matters is not burying it — a crate eight metres away is
@@ -3641,8 +3890,11 @@ public partial class GameRoot : Node3D
         // Buildings are registered as they are built; scenery and scatter stay
         // out of them, which Blocked could not know from routes and sockets
         // alone — nothing else on the map has an inside.
-        foreach (var footprint in _footprints)
-            if (footprint.HasPoint(new Vector2(at.X, at.Z))) return true;
+        // A woodpile or a propane tank is placed AGAINST a house on purpose;
+        // those ask to be tested against everything but the footprint margin.
+        if (outsideBuildings)
+            foreach (var footprint in _footprints)
+                if (footprint.HasPoint(new Vector2(at.X, at.Z))) return true;
         return false;
     }
 

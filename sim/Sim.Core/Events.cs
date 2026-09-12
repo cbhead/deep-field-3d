@@ -165,7 +165,7 @@ public abstract record SimEvent
 
     public sealed record ReloadStarted(int PlayerId, string WeaponId, float Seconds) : SimEvent
     {
-        public override string LogLine() => $"{Tick} reloadStarted {PlayerId} {WeaponId} {Seconds:0.##}";
+        public override string LogLine() => $"{Tick} reloadStarted {PlayerId} {WeaponId} {F(Seconds)}";
     }
 
     public sealed record Reloaded(int PlayerId, string WeaponId) : SimEvent

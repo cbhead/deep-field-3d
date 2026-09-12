@@ -183,15 +183,21 @@ public static class WeaponAssembly
             if (module is null) continue;          // model not delivered yet
             module.Name = $"attach_{slot.ToString().ToLowerInvariant()}";
 
-            string stock = slot switch
+            // The stock part a module replaces. A magazine slot hides the
+            // feed the gun came with, and on the Scattergun that is a tube
+            // under the barrel rather than a box: fitting a drum there left
+            // both showing, which design's own viewer fixed in the 2026-09-12
+            // drop and this mirrors.
+            string[] stock = slot switch
             {
-                AttachmentSlot.Barrel => $"{id}_barrel",
-                AttachmentSlot.Magazine => $"{id}_magazine",
-                AttachmentSlot.Stock => $"{id}_stock",
-                _ => "",
+                AttachmentSlot.Barrel => new[] { $"{id}_barrel" },
+                AttachmentSlot.Magazine => new[] { $"{id}_magazine", $"{id}_mag_tube" },
+                AttachmentSlot.Stock => new[] { $"{id}_stock" },
+                _ => System.Array.Empty<string>(),
             };
-            if (stock.Length > 0 && gun.FindChild(stock, true, false) is Node3D replaced)
-                replaced.Visible = false;
+            foreach (string part in stock)
+                if (gun.FindChild(part, true, false) is Node3D replaced)
+                    replaced.Visible = false;
 
             Node3D? mount = gun.FindChild($"{id}_mount_{slot.ToString().ToLowerInvariant()}", true, false) as Node3D;
             if (slot == AttachmentSlot.Muzzle && barrel?.FindChild("attach_mount_muzzle", true, false) is Node3D onBarrel)
