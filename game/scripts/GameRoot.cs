@@ -4864,7 +4864,26 @@ public partial class GameRoot : Node3D
 
     private void BuildEnvironment(MapDef map)
     {
-        var sun = new DirectionalLight3D { ShadowEnabled = true };
+        // Shadows, sized to the map rather than left at the default.
+        //
+        // Godot's default is four cascades out to a hundred metres, which is
+        // generous on a 110 x 80 yard and ruinous on a farm three hundred
+        // metres across: every cascade re-renders everything inside it, and
+        // this map has a treeline. Two splits, the near one sharp, and a
+        // distance that comes off the field — beyond which the ground is flat
+        // grass and a shadow on it says nothing.
+        float shadowRange = Mathf.Max(100f, Mathf.Max(map.FieldX, map.FieldZ) * 0.4f);
+        var sun = new DirectionalLight3D
+        {
+            ShadowEnabled = true,
+            DirectionalShadowMode = DirectionalLight3D.ShadowMode.Parallel2Splits,
+            DirectionalShadowMaxDistance = shadowRange,
+            DirectionalShadowSplit1 = 0.15f,
+            DirectionalShadowFadeStart = 0.85f,
+            DirectionalShadowBlendSplits = true,
+            ShadowBias = 0.04f,
+            ShadowNormalBias = 1.5f,
+        };
         sun.RotationDegrees = new Vector3(-55, -30, 0);
         AddChild(sun);
         AddChild(new WorldEnvironment

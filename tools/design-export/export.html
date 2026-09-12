@@ -45,6 +45,12 @@ import { makeHeroKit, HEROES } from './models/heroes.js';
 import { FOUNDRY, makeFoundryMats } from './models/foundry.js';
 import { SHARED, PICKUPS } from './models/shared.js';
 import { SWITCHYARD, makeSwitchyardMats } from './models/switchyard.js';
+// The Spire's kit has been written since M3 and never built: this page
+// imported three map modules and stopped, so every spire_ name in the game
+// resolves to nothing and that map is forty metres of untinted boxes.
+import { SPIRE, makeSpireMats } from './models/spire.js';
+import { TOASTER, makeToasterMats } from './models/toaster.js';
+import { VEHICLES, makeVehicleMats } from './models/vehicles.js';
 import { VFX, makeVfxMats } from './models/vfx.js';
 const MODS = ['lance', 'nova', 'singularity', 'skywatch', 'arc', 'barricade', 'filament', 'detector', 'overclock'];
 const ICONS = [
@@ -61,16 +67,16 @@ const ICONS = [
 const EXTRA = [
   { dir: 'enemies/', items: ENEMIES, kind: 'enemy' }, { dir: 'traps/', items: TRAPS, kind: 'trap' }, { dir: 'towers/', items: PROJECTILES, kind: 'projectile' },
   { dir: 'weapons/', items: WEAPONS, kind: 'weapon' }, { dir: 'weapons/', items: WEAPONS.filter((w) => w.worldFile).map((w) => ({ ...w, file: w.worldFile, id: w.id + '_world' })), kind: 'weapon_world' },
-  { dir: 'heroes/', items: HEROES, kind: 'hero' }, { dir: 'maps/foundry/', items: FOUNDRY, kind: 'map_foundry' }, { dir: 'maps/switchyard/', items: SWITCHYARD, kind: 'map_switchyard' }, { dir: 'shared/', items: SHARED, kind: 'shared' }, { dir: 'vfx/', items: VFX, kind: 'vfx' }, { dir: 'economy/', items: PICKUPS, kind: 'pickup' }, { dir: 'weapons/', items: ATTACHMENTS, kind: 'attachment' }, { dir: 'weapons/', items: AMMO, kind: 'ammo' }, { dir: 'weapons/', items: TRACERS, kind: 'tracer' }];
+  { dir: 'heroes/', items: HEROES, kind: 'hero' }, { dir: 'maps/foundry/', items: FOUNDRY, kind: 'map_foundry' }, { dir: 'maps/switchyard/', items: SWITCHYARD, kind: 'map_switchyard' }, { dir: 'maps/spire/', items: SPIRE, kind: 'map_spire' }, { dir: 'maps/toaster/', items: TOASTER, kind: 'map_toaster' }, { dir: 'vehicles/', items: VEHICLES, kind: 'vehicle' }, { dir: 'shared/', items: SHARED, kind: 'shared' }, { dir: 'vfx/', items: VFX, kind: 'vfx' }, { dir: 'economy/', items: PICKUPS, kind: 'pickup' }, { dir: 'weapons/', items: ATTACHMENTS, kind: 'attachment' }, { dir: 'weapons/', items: AMMO, kind: 'ammo' }, { dir: 'weapons/', items: TRACERS, kind: 'tracer' }];
 const EXTRA_COUNT = EXTRA.reduce((a, c) => a + c.items.length, 0);
-const ROUTES = [['enemy_', 'enemies'], ['boss_', 'enemies'], ['tower_', 'structures'], ['trap_', 'structures'], ['socket_', 'structures'], ['weapon_', 'weapons'], ['attach_', 'weapons'], ['ammo_', 'weapons'], ['hands_', 'weapons'], ['hero_', 'heroes'], ['proj_', 'vfx'], ['vfx_', 'vfx'], ['pickup_', 'economy'], ['foundry_', 'maps'], ['switchyard_', 'maps'], ['shared_', 'maps'], ['prop_', 'maps'], ['ui_', 'ui']];
+const ROUTES = [['enemy_', 'enemies'], ['boss_', 'enemies'], ['tower_', 'structures'], ['trap_', 'structures'], ['socket_', 'structures'], ['weapon_', 'weapons'], ['attach_', 'weapons'], ['ammo_', 'weapons'], ['hands_', 'weapons'], ['hero_', 'heroes'], ['proj_', 'vfx'], ['vfx_', 'vfx'], ['pickup_', 'economy'], ['foundry_', 'maps'], ['switchyard_', 'maps'], ['spire_', 'maps'], ['toaster_', 'maps'], ['vehicle_', 'vehicles'], ['shared_', 'maps'], ['prop_', 'maps'], ['ui_', 'ui']];
 const routeFor = (file) => 'game/assets/' + (ROUTES.find(([p]) => file.startsWith(p))?.[1] || 'misc') + '/' + file;
 const TOWERS = (await Promise.all(MODS.map((m) => import(`./models/${m}.js`)))).map((m) => m.TOWER);
 
 const stage = document.querySelector('three-d-stage');
 const { THREE } = await stage.ready;
 const kit = makeEnemyKit(THREE);
-Object.assign(kit.mats, makeWeaponKit(THREE).mats, makeHeroKit(THREE).mats); makeFoundryMats(THREE, kit.mats); makeSwitchyardMats(THREE, kit.mats); makeVfxMats(THREE, kit.mats); kit.mats.threat = kit.mats.weak;
+Object.assign(kit.mats, makeWeaponKit(THREE).mats, makeHeroKit(THREE).mats); makeFoundryMats(THREE, kit.mats); makeSwitchyardMats(THREE, kit.mats); makeSpireMats(THREE, kit.mats); makeToasterMats(THREE, kit.mats); makeVehicleMats(THREE, kit.mats); makeVfxMats(THREE, kit.mats); kit.mats.threat = kit.mats.weak;
 const { GLTFExporter } = await import('three/addons/exporters/GLTFExporter.js');
 const exporter = new GLTFExporter();
 

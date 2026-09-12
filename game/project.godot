@@ -23,3 +23,12 @@ window/size/viewport_height=810
 [rendering]
 
 textures/vram_compression/import_etc2_astc=true
+# A 4096 atlas split two ways is 2048 per cascade; the near one covers the
+# first fifteen per cent of the shadow range, which on any of these maps is
+# the ground the player is standing on.
+lights_and_shadows/directional_shadow/size=4096
+lights_and_shadows/directional_shadow/soft_shadow_filter_quality=2
+# Step the importer's generated mesh LODs a little earlier than the default:
+# on a map three hundred metres across, a building at two hundred metres is
+# forty pixels tall and has no business drawing its full mesh.
+mesh_lod/lod_change/threshold_pixels=2.0

@@ -45,6 +45,8 @@ the core does.
 | **Q** faction ability · **hold R** revive | |
 | **Tab** | armory + gunsmith · **F** start wave early · **Esc** menu |
 | E on a zipline, W on a ladder | traversal |
+| **E** at a vehicle · **hold E** to take the passenger seat | drive with WASD, **Space** handbrake, **E** to get out |
+| **hold E** on a teleport pad | pick a destination from the network; stand still for the charge |
 
 ## What's in it
 
