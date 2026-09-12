@@ -763,12 +763,16 @@ public static class Maps
         },
         FieldX: 320f,
         FieldZ: 160f,
-        // Parked outside the building each is named for, clear of every lane.
+        // Parked outside the building each is named for, clear of every lane,
+        // and — the part that is not obvious until someone gets in one —
+        // pointed at open ground. A vehicle nosed at the wall it is parked
+        // against is a vehicle whose first press of W is a crash, and all four
+        // of these were until the probe drove them.
         VehiclesOrNull: new[]
         {
-            new VehicleSpawnDef("buggy1", "buggy", new Vec3(-120f, 0f, -14f), 90f),
-            new VehicleSpawnDef("dagator1", "dagator", new Vec3(-110f, 0f, 40f), 180f),
-            new VehicleSpawnDef("grnmchn1", "grnmchn", new Vec3(76f, 0f, -30f), 0f),
+            new VehicleSpawnDef("buggy1", "buggy", new Vec3(-120f, 0f, -14f), -90f),
+            new VehicleSpawnDef("dagator1", "dagator", new Vec3(-110f, 0f, 40f), 0f),
+            new VehicleSpawnDef("grnmchn1", "grnmchn", new Vec3(76f, 0f, -30f), 180f),
             new VehicleSpawnDef("vehickle1", "vehickle", new Vec3(58f, 0f, 38f), -90f),
         });
 

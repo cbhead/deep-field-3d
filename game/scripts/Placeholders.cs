@@ -43,6 +43,63 @@ public static class Placeholders
         _ => 1f,
     };
 
+    /// <summary>A drivable graybox: the hull at the size the collision box is,
+    /// four wheels on its corners, and a wedge on the nose so it is obvious
+    /// which way it is pointing before you get in. The wheels carry the names
+    /// the controller looks for, so the spin and the steering visual are
+    /// exercised from the first day rather than the day the art lands.</summary>
+    public static Node3D Vehicle(VehicleHandling def)
+    {
+        var root = new Node3D();
+        var hue = def.Id switch
+        {
+            "buggy" => new Color(0.72f, 0.68f, 0.36f),
+            "dagator" => new Color(0.24f, 0.46f, 0.24f),
+            "grnmchn" => new Color(0.32f, 0.74f, 0.38f),
+            _ => new Color(0.78f, 0.32f, 0.22f),
+        };
+
+        root.AddChild(new MeshInstance3D
+        {
+            Name = "Hull",
+            Mesh = new BoxMesh { Size = def.BodySize * new Vector3(1f, 0.7f, 0.9f) },
+            Position = new Vector3(0, def.BodySize.Y * 0.55f, 0),
+            MaterialOverride = new StandardMaterial3D { AlbedoColor = hue },
+        });
+        // Which end is the front, from across a field.
+        root.AddChild(new MeshInstance3D
+        {
+            Name = "Nose",
+            Mesh = new PrismMesh { Size = new Vector3(def.BodySize.X * 0.7f, 0.3f, 0.6f) },
+            Position = new Vector3(0, def.BodySize.Y * 0.85f, -def.BodySize.Z * 0.42f),
+            MaterialOverride = new StandardMaterial3D { AlbedoColor = hue.Lightened(0.3f) },
+        });
+
+        float halfX = def.BodySize.X * 0.52f, halfZ = def.BodySize.Z * 0.36f;
+        var rubber = new StandardMaterial3D { AlbedoColor = new Color(0.12f, 0.12f, 0.13f) };
+        foreach (var (name, x, z) in new[]
+        {
+            ("wheel_fl", -halfX, -halfZ), ("wheel_fr", halfX, -halfZ),
+            ("wheel_rl", -halfX, halfZ), ("wheel_rr", halfX, halfZ),
+        })
+        {
+            // A pivot at the axle with the barrel turned onto it, so the
+            // controller's RotateX spins the wheel rather than swinging it.
+            var hub = new Node3D { Name = name, Position = new Vector3(x, def.WheelRadius, z) };
+            hub.AddChild(new MeshInstance3D
+            {
+                Mesh = new CylinderMesh
+                {
+                    TopRadius = def.WheelRadius, BottomRadius = def.WheelRadius, Height = 0.22f,
+                },
+                RotationDegrees = new Vector3(0, 0, 90),
+                MaterialOverride = rubber,
+            });
+            root.AddChild(hub);
+        }
+        return root;
+    }
+
     public static Node3D Enemy(string defId)
     {
         float scale = EnemyScale(defId);

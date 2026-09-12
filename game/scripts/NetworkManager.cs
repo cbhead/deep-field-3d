@@ -170,6 +170,27 @@ public partial class NetworkManager : Node
         _world.Enqueue(new Command.PlayerSync(seat, new Vec3(pos.X, pos.Y, pos.Z)));
     }
 
+    /// <summary>The vehicle a client is driving, on the same unreliable
+    /// channel as its avatar. A dropped one costs a frame of smoothing and the
+    /// next one corrects it, which is exactly what a position is worth.</summary>
+    public void SendVehicle(string vehicleId, Vector3 pos, float yaw)
+    {
+        if (IsServer) return;
+        RpcId(1, nameof(VehicleRpc), vehicleId, pos, yaw);
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
+    private void VehicleRpc(string vehicleId, Vector3 pos, float yaw)
+    {
+        if (!IsServer || _world is null) return;
+        long peerId = Multiplayer.GetRemoteSenderId();
+        if (!_seats.TryGetValue(peerId, out int seat)) return;
+        // The sim decides whether this seat is allowed to move that vehicle;
+        // a client claiming someone else's is dropped there, not here.
+        _world.Enqueue(new Command.VehicleSync(seat, vehicleId,
+            new Vec3(pos.X, pos.Y, pos.Z), Mathf.RadToDeg(yaw)));
+    }
+
     // ---------------------------------------------------------------------
     // Server broadcast loops (driven by GameRoot after each sim step batch)
     // ---------------------------------------------------------------------
@@ -287,6 +308,23 @@ public partial class NetworkManager : Node
             });
         }
 
+        // Vehicles ride the pulled channel for the same reason structure
+        // health does: where a vehicle is and who is in it are continuous
+        // state, and a client that missed a packet shows the right thing on
+        // the next one rather than an empty driver's seat forever.
+        var vehicles = new Godot.Collections.Array();
+        foreach (var vehicle in _world.Vehicles)
+        {
+            var seats = new Godot.Collections.Array();
+            foreach (int occupant in vehicle.Seats) seats.Add(occupant);
+            vehicles.Add(new Godot.Collections.Dictionary
+            {
+                ["id"] = vehicle.Id, ["def"] = vehicle.DefId,
+                ["x"] = vehicle.Pos.X, ["y"] = vehicle.Pos.Y, ["z"] = vehicle.Pos.Z,
+                ["yaw"] = vehicle.YawDegrees, ["seats"] = seats,
+            });
+        }
+
         return new Godot.Collections.Dictionary
         {
             ["money"] = _world.Money,
@@ -303,6 +341,7 @@ public partial class NetworkManager : Node
             ["players"] = players,
             ["structures"] = structures,
             ["pickups"] = pickups,
+            ["vehicles"] = vehicles,
         };
     }
 

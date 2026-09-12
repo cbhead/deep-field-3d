@@ -192,6 +192,7 @@ public partial class GameRoot : Node3D
         _towerViews.Clear();
         _enemyViews.Clear();
         _teleportPads.Clear();
+        _vehicleNodes.Clear();
         _warped.Clear();
         _padState.Clear();
         _footprints.Clear();
@@ -790,6 +791,32 @@ public partial class GameRoot : Node3D
             return;
         }
 
+        if (_shotView == "vehicle")
+        {
+            _shotView = "eye";
+            _vehicleReportPath = path;
+            _vehicleReport = new List<string>
+            {
+                $"vehicle probe on {_map.Id}",
+                $"{_map.Vehicles.Count} parked: "
+                    + string.Join(", ", _map.Vehicles.Select(v => $"{v.Id} ({v.DefId})")),
+                // Handling is read off authored road lines rather than from
+                // the meshes, so what the lines say is the only thing that
+                // makes a road a road.
+                SurfaceLine("the county road", new Vector3(-54, 0, 50), Surface.Asphalt),
+                SurfaceLine("the south road", new Vector3(0, 0, -66), Surface.Asphalt),
+                SurfaceLine("the barn drive", new Vector3(-75, 0, 47), Surface.Gravel),
+                SurfaceLine("the pond", new Vector3(19, 0, -36), Surface.Water),
+                SurfaceLine("the east field", new Vector3(120, 0, 0), Surface.Grass),
+            };
+            if (_map.Vehicles.Count == 0)
+                WriteProbe(_vehicleReport, _vehicleReportPath, false,
+                    "INCONCLUSIVE: this map parks no vehicles");
+            _vehicleIndex = 0;
+            _vehicleTimer = 0f;
+            return;
+        }
+
         if (_shotView is "armory" or "blueprints" or "wheel" or "upgrade")
         {
             string surface = _shotView;
@@ -1214,6 +1241,7 @@ public partial class GameRoot : Node3D
         TickIntermissionShot();
         if (_traversalReport is not null) TickTraversalProbe(delta);
         if (_teleportReport is not null) TickTeleportProbe(delta);
+        if (_vehicleReport is not null) TickVehicleProbe(delta);
         if (_shotPath is not null && _shotFire && _shotCountdown == 2 && _player is not null) { _player.FireForReview(); _shotFire = false; }
         if (_shotPath is not null && --_shotCountdown <= 0) CaptureShot();
         TickCoreFlash(delta);
@@ -1319,6 +1347,7 @@ public partial class GameRoot : Node3D
             {
                 var p = _player.GlobalPosition;
                 _world!.Enqueue(new Command.PlayerSync(LocalPlayerId, new Vec3(p.X, p.Y, p.Z)));
+                SendVehicleSync();
             }
             Step.Advance(_world!);
             foreach (var e in _world!.Events) _tickEvents.Add(e.LogLine());
@@ -1330,6 +1359,7 @@ public partial class GameRoot : Node3D
 
         if (Mode != RunMode.Dedicated)
         {
+            SyncVehicles();
             SyncEnemyViewsLocal(delta);
             AimTowers(delta);
             SyncProjectileViews();
@@ -1398,7 +1428,9 @@ public partial class GameRoot : Node3D
 
         var pos = _player.GlobalPosition;
         _net.SendAvatar(pos, _player.Rotation.Y);
+        SendVehicleSync();
 
+        SyncVehicles();
         SyncEnemyViewsRemote(delta);
         SyncAvatarsFromMeta();
     }
@@ -2898,6 +2930,180 @@ public partial class GameRoot : Node3D
     /// hold the climb for four seconds, and record where they ended up and
     /// whether they were standing on anything when they got there.</summary>
     // =====================================================================
+    // Vehicle probe
+    // =====================================================================
+
+    private List<string>? _vehicleReport;
+    private string _vehicleReportPath = "";
+    private int _vehicleIndex;
+    private float _vehicleTimer;
+    private readonly List<string> _undrivable = new();
+
+    /// <summary>Every vehicle on the map: get in, drive, turn, hit the edge of
+    /// the world, get out standing.
+    ///
+    /// Each of those is a separate thing that can be silently wrong and none
+    /// of them is visible in a screenshot. A seat the sim refuses looks like a
+    /// player standing next to a car. A vehicle that moves on the driver's
+    /// screen and nowhere else looks perfect until someone else is watching.
+    /// A containment wall that is decoration looks like a map right up to the
+    /// moment somebody drives off it at twenty metres a second.</summary>
+    private void TickVehicleProbe(double delta)
+    {
+        if (_vehicleReport is null || _player is null || _map.Vehicles.Count == 0) return;
+
+        if (_vehicleIndex >= _map.Vehicles.Count)
+        {
+            bool pass = _undrivable.Count == 0;
+            _vehicleReport.Add(pass
+                ? "every vehicle takes a driver, moves, turns, stops at the edge and lets them out"
+                : "undrivable: " + string.Join("; ", _undrivable));
+            WriteProbe(_vehicleReport, _vehicleReportPath, pass,
+                pass ? "PASS: every vehicle on this map can be driven"
+                     : "FAIL: a vehicle does not do what a vehicle has to do");
+            return;
+        }
+
+        var spawn = _map.Vehicles[_vehicleIndex];
+        var node = VehicleNode(spawn.Id);
+        if (node is null)
+        {
+            _undrivable.Add($"{spawn.Id} has no node at all");
+            _vehicleIndex++;
+            _vehicleTimer = 0f;
+            return;
+        }
+
+        float before = _vehicleTimer;
+        _vehicleTimer += (float)delta;
+
+        // Stand beside it. The sim measures the distance off the position the
+        // player last streamed, so the walk over has to happen a tick before
+        // the ask — which is exactly what a player pressing E has already done
+        // and a probe that teleports has not.
+        if (before <= 0f)
+        {
+            _player.GlobalPosition = node.GlobalPosition + Vector3.Up * 1f;
+            _vehicleStart = node.GlobalPosition;
+            _vehicleStartYaw = node.Rotation.Y;
+            return;
+        }
+        if (_vehicleTimer < 0.3f) return;
+        if (before < 0.3f)
+        {
+            Submit(new Command.EnterVehicle(LocalPlayerId, spawn.Id, 0));
+            return;
+        }
+        if (_vehicleTimer < 0.8f) return;
+        if (before < 0.8f)
+        {
+            if (_view.SeatOf(LocalPlayerId) is not { } seated || seated.Vehicle.Id != spawn.Id)
+            {
+                _undrivable.Add($"{spawn.Id} refused the driver's seat");
+                _vehicleIndex++;
+                _vehicleTimer = 0f;
+                return;
+            }
+            node.ThrottleHeld = 1f;
+            return;
+        }
+
+        // Three seconds flat out, then two turning.
+        if (_vehicleTimer < 3.8f) return;
+        if (before < 3.8f)
+        {
+            _vehicleMoved = _vehicleStart.DistanceTo(node.GlobalPosition);
+            // What the handling table says this thing should be doing on the
+            // ground it is on. Checked, because the surface multipliers are
+            // the whole difference between four vehicles and one vehicle with
+            // four models, and nothing else would notice them going missing.
+            _vehicleTopSpeed = node.Def.TopSpeed * node.Def.Surfaces[node.SurfaceUnder].TopSpeed;
+            _vehicleReached = node.Speed;
+            node.SteerHeld = 1f;
+            return;
+        }
+        if (_vehicleTimer < 5.8f) return;
+        if (before < 5.8f)
+        {
+            _vehicleTurned = Mathf.RadToDeg(Mathf.Abs(
+                Mathf.Wrap(node.Rotation.Y - _vehicleStartYaw, -Mathf.Pi, Mathf.Pi)));
+            // Aim at the nearest edge and hold the throttle down: the wall has
+            // to be the thing that stops it.
+            node.SteerHeld = 0f;
+            float toEast = _map.HalfX - node.GlobalPosition.X;
+            float toWest = _map.HalfX + node.GlobalPosition.X;
+            node.Rotation = new Vector3(0,
+                Mathf.Atan2(toEast < toWest ? -1f : 1f, 0f) + Mathf.Pi * 0.5f, 0);
+            return;
+        }
+        if (_vehicleTimer < 12f) return;
+        if (before < 12f)
+        {
+            // Out, and then a beat: the player is put back beside the vehicle
+            // on the frame the seat clears, and moving them to the next one in
+            // that same frame has them teleported away and dropped back.
+            Submit(new Command.ExitVehicle(LocalPlayerId));
+            node.ThrottleHeld = 0f;
+            node.SteerHeld = 0f;
+            return;
+        }
+        if (_vehicleTimer < 12.6f) return;
+
+        bool contained = Mathf.Abs(node.GlobalPosition.X) <= _map.HalfX
+            && Mathf.Abs(node.GlobalPosition.Z) <= _map.HalfZ
+            && node.GlobalPosition.Y > -2f;
+        bool gotOut = _view.SeatOf(LocalPlayerId) is null && _player.Standing;
+        if (!gotOut) _undrivable.Add($"{spawn.Id} did not let the driver out standing");
+
+        // The sim has to have been told where it went, or a passenger's client
+        // is watching a parked car while the driver is a field away.
+        float simOff = _world?.Vehicles.FirstOrDefault(v => v.Id == spawn.Id) is { } known
+            ? ToGd(known.Pos).DistanceTo(node.GlobalPosition) : 999f;
+
+        // Deliberately generous, because this is a correctness check and not
+        // a tuning one: it has to pass the worst-handling vehicle on the worst
+        // surface it can be parked on. The Buggy in a field does nine metres
+        // in three seconds and turns forty-four degrees in two, and that is
+        // the Buggy working — it is a road car with the handling of one.
+        // What is measured tightly instead is whether it got as fast as the
+        // table says it should on the ground it was on.
+        bool quick = _vehicleReached > _vehicleTopSpeed * 0.55f;
+        bool ok = _vehicleMoved > 6f && _vehicleTurned > 25f && quick
+            && contained && simOff < 3f && gotOut;
+        _vehicleReport.Add($"{spawn.Id} ({spawn.DefId}): drove {_vehicleMoved:0} m in 3 s on "
+            + $"{node.SurfaceUnder.ToString().ToLowerInvariant()}, reached {_vehicleReached:0.0} "
+            + $"of {_vehicleTopSpeed:0.0} m/s, turned {_vehicleTurned:0}° in 2 s, "
+            + (contained ? "held inside the field" : "LEFT THE FIELD")
+            + $", the sim has it {simOff:0.0} m from where it is");
+        if (!quick)
+            _undrivable.Add($"{spawn.Id} reached {_vehicleReached:0.0} m/s where its table "
+                + $"says {_vehicleTopSpeed:0.0} on {node.SurfaceUnder}");
+        if (!ok)
+            _undrivable.Add($"{spawn.Id} moved {_vehicleMoved:0} m in 3 s, turned {_vehicleTurned:0}°, "
+                + (contained ? "" : "escaped the field, ") + $"sim off by {simOff:0.0} m");
+
+        _vehicleIndex++;
+        _vehicleTimer = 0f;
+    }
+
+    /// <summary>A surface answer with the answer it should have given, so the
+    /// report says whether the road lines are where the map thinks they are
+    /// rather than leaving a reader to check four coordinates by hand.</summary>
+    private string SurfaceLine(string what, Vector3 at, Surface expected)
+    {
+        var got = Surfaces.At(at);
+        if (got != expected) _undrivable.Add($"{what} at ({at.X:0},{at.Z:0}) reads {got}, not {expected}");
+        return $"{what} at ({at.X:0},{at.Z:0}) is {got}" + (got == expected ? "" : $" — expected {expected}");
+    }
+
+    private Vector3 _vehicleStart;
+    private float _vehicleStartYaw;
+    private float _vehicleMoved;
+    private float _vehicleTurned;
+    private float _vehicleTopSpeed;
+    private float _vehicleReached;
+
+    // =====================================================================
     // Teleport probe
     // =====================================================================
 
@@ -3218,6 +3424,8 @@ public partial class GameRoot : Node3D
         if (map.Id == "switchyard") BuildSwitchyardStructures();
         if (map.Id == "spire") BuildSpireStructures();
         if (map.Id == "toaster") BuildToasterStructures(map);
+
+        BuildVehicles(map);
 
         // Armory station.
         var armory = AddStaticBox(ToGd(map.ArmoryPos) + new Vector3(0, 1.25f, 0),

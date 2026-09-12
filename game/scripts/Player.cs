@@ -128,6 +128,22 @@ public partial class Player : CharacterBody3D
     private bool _onLadder;
     private Vector3? _zipTarget;
 
+    // --- Vehicles ---------------------------------------------------------
+    /// <summary>Being in a seat is not remembered here, it is read from the
+    /// view every frame — the sim owns seats, so refusals and evictions cost
+    /// nothing: if it never seated you, you never sit, and if it throws you
+    /// out you are standing on the next frame.</summary>
+    private bool _seated;
+    private CollisionShape3D _hull = null!;
+    private float _seatYaw;
+    private const float SeatLookLimit = 2.4f;   // ±137°, so a passenger can shoot behind
+
+    /// <summary>The vehicle the crosshair is on, or empty.</summary>
+    private string _aimVehicleId = "";
+    private float _boardHold;
+    private bool _boardPressed;
+    private const float BoardHoldSeconds = 0.35f;
+
     // --- Teleport network -------------------------------------------------
     /// <summary>A teleport is a decision you have to stand still for. The
     /// charge is short enough not to be a chore and long enough that stepping
@@ -186,12 +202,15 @@ public partial class Player : CharacterBody3D
         _root = GetParent<GameRoot>();
 
         CollisionLayer = 1 << 4;
-        CollisionMask = 1;
-        AddChild(new CollisionShape3D
+        // Vehicles are solid to someone on foot, so a parked one is a thing
+        // you walk around rather than through.
+        CollisionMask = 1 | (1 << 6);
+        _hull = new CollisionShape3D
         {
             Shape = new CapsuleShape3D { Radius = 0.4f, Height = 1.8f },
             Position = new Vector3(0, 0.9f, 0),
-        });
+        };
+        AddChild(_hull);
 
         _sensor = new Area3D { CollisionLayer = 1 << 4, CollisionMask = 1 << 5 };
         _sensor.AddChild(new CollisionShape3D
@@ -258,7 +277,17 @@ public partial class Player : CharacterBody3D
                 // While a radial menu is open the same motion steers it.
                 if (_root.RadialOpen) { _root.SteerWheel(motion.Relative); break; }
                 if (Input.MouseMode != Input.MouseModeEnum.Captured) break;
-                RotateY(-motion.Relative.X * BaseMouseSensitivity * SensitivityScale);
+                // In a seat the body faces wherever the vehicle does, so
+                // looking is an offset from that rather than a heading of your
+                // own — clamped, because a rider who can face the boot is a
+                // rider whose gun points through the car.
+                if (_seated)
+                {
+                    _seatYaw = Mathf.Clamp(
+                        _seatYaw - motion.Relative.X * BaseMouseSensitivity * SensitivityScale,
+                        -SeatLookLimit, SeatLookLimit);
+                }
+                else RotateY(-motion.Relative.X * BaseMouseSensitivity * SensitivityScale);
                 _pitch = Mathf.Clamp(_pitch - motion.Relative.Y * BaseMouseSensitivity * SensitivityScale, -1.5f, 1.5f);
                 _camera.Rotation = new Vector3(_pitch, 0, 0);
                 break;
@@ -345,6 +374,41 @@ public partial class Player : CharacterBody3D
             _root.RefreshPadArt("", onCooldown: false);
         }
 
+        // Riding. Derived from the view rather than remembered, so a seat the
+        // sim refused or took away needs no handling here at all.
+        if (_root.View.SeatOf(_root.LocalPlayerId) is { } seated
+            && _root.VehicleNode(seated.Vehicle.Id) is { } ride)
+        {
+            if (!_seated) TakeSeat(ride);
+            var anchor = ride.Seats.Length > 0
+                ? ride.Seats[Mathf.Min(seated.Seat, ride.Seats.Length - 1)]
+                : ride;
+            // Carried, not driven into place: the vehicle's physics is the
+            // only physics in play, and a capsule trying to keep up with it
+            // would fight every wall the vehicle slides along.
+            GlobalPosition = anchor.GlobalPosition;
+            Rotation = new Vector3(0f, ride.Rotation.Y + _seatYaw, 0f);
+            Velocity = Vector3.Zero;
+
+            // The driver steers; a passenger is free to do the useful thing a
+            // passenger can do, which is shoot from a moving vehicle. The
+            // vehicle reads the keyboard itself when it is being driven
+            // locally, so there is nothing to forward — these are only here to
+            // make sure a seat change stops the last driver's input dead.
+            if (seated.Seat != 0 || _root.UiCapturesMouse)
+            {
+                ride.ThrottleHeld = 0f;
+                ride.SteerHeld = 0f;
+                ride.HandbrakeHeld = false;
+            }
+
+            RefreshViewModel(_root.CurrentWeaponId(), _root.LocalFactionId);
+            TickViewModel(delta);
+            TickWeapons(delta, uiOwnsInput: _root.UiCapturesMouse);
+            return;
+        }
+        if (_seated) LeaveSeat();
+
         // Zipline ride: kinematic slide to the end point, cancel on arrival.
         if (_zipTarget is { } zip)
         {
@@ -420,6 +484,18 @@ public partial class Player : CharacterBody3D
         RefreshViewModel(_root.CurrentWeaponId(), _root.LocalFactionId);
         TickViewModel(delta);
 
+        TickWeapons(delta, uiOwnsInput);
+
+        if (!uiOwnsInput && Input.IsPhysicalKeyPressed(Key.R))
+            TryRevive();
+    }
+
+
+    /// <summary>Trigger, swing and their cooldowns. Extracted because a
+    /// passenger in a moving vehicle is not walking but is very much still
+    /// shooting — that is the entire point of the second seat.</summary>
+    private void TickWeapons(double delta, bool uiOwnsInput)
+    {
         // Fire: blocked while a menu owns the mouse or a build surface is open.
         _fireCooldown -= delta;
         if (!uiOwnsInput && !_root.RadialOpen && !_root.UpgradeOpen && !Teleporting
@@ -460,9 +536,6 @@ public partial class Player : CharacterBody3D
             _root.Submit(new Command.PlayerMelee(_root.LocalPlayerId,
                 new Vec3(aim.X, aim.Y, aim.Z)));
         }
-
-        if (!uiOwnsInput && Input.IsPhysicalKeyPressed(Key.R))
-            TryRevive();
     }
 
     // =====================================================================
@@ -483,6 +556,11 @@ public partial class Player : CharacterBody3D
             && reach.Collider is StaticBody3D body && body.HasMeta("socket_id"))
             _aimSocketId = body.GetMeta("socket_id").AsString();
 
+        _aimVehicleId = "";
+        if (Raycast(InteractRange, worldMask: 1 | (1 << 6), areaMask: 0) is { } near
+            && near.Collider is Node vehicle && vehicle.HasMeta("vehicle_id"))
+            _aimVehicleId = vehicle.GetMeta("vehicle_id").AsString();
+
         _root.ReportAim(_aimEnemyId);
         _root.SetHint(BuildHint());
     }
@@ -492,6 +570,21 @@ public partial class Player : CharacterBody3D
         if (_root.PickerOpen) return "steer to a pad · release E to go · 1-6 to pick";
         if (_root.WheelOpen) return "steer to a wedge · release E to build · 1-6 to pick";
         if (_root.UpgradeOpen) return "1-3 upgrade a path · hold X to sell · release U to close";
+        if (_seated)
+        {
+            var seat = _root.View.SeatOf(_root.LocalPlayerId);
+            return seat is { Seat: 0 }
+                ? "[E] get out · WASD drive · Space handbrake"
+                : "[E] get out · you can still shoot from here";
+        }
+        if (_aimVehicleId.Length > 0 && _root.VehicleOffer(_aimVehicleId) is { } offer)
+        {
+            string what = offer.Label.ToLowerInvariant();
+            if (offer.Seat < 0) return $"the {what} is full";
+            return offer.Seat == 0
+                ? $"[E] drive the {what}   ·   [hold E] ride along"
+                : $"[E] ride in the {what}";
+        }
         if (Teleporting) return $"teleporting… {_teleportCharge:0.0}s · step off to cancel";
         if (PadHere().Length > 0)
             return _teleportCooldown > 0f
@@ -533,6 +626,42 @@ public partial class Player : CharacterBody3D
         bool buildHeld = HoldingBuild || Input.IsPhysicalKeyPressed(Key.E);
         bool upgradeHeld = HoldingUpgrade || Input.IsPhysicalKeyPressed(Key.U);
 
+        // In a seat, E is the way out and nothing else. Edge-triggered: held
+        // through a whole frame it would board and unboard forever.
+        if (_seated)
+        {
+            if (buildHeld && !_boardPressed)
+                _root.Submit(new Command.ExitVehicle(_root.LocalPlayerId));
+            _boardPressed = buildHeld;
+            return;
+        }
+
+        // Looking at a vehicle: tap E for the best free seat, hold it for the
+        // passenger side. Two players walking up to one buggy both want the
+        // wheel, and the sim refuses the second — so the hold exists to let
+        // the second one say what they actually meant.
+        if (_aimVehicleId.Length > 0 && _root.VehicleOffer(_aimVehicleId) is { } offer)
+        {
+            if (buildHeld) _boardHold += (float)delta;
+            bool released = !buildHeld && _boardPressed;
+            _boardPressed = buildHeld;
+            if (released && offer.Seat >= 0)
+            {
+                // Held long enough, and there is a passenger seat free: ride.
+                int seat = _boardHold >= BoardHoldSeconds && offer.Seat == 0
+                    && _root.View.VehicleById(offer.Id) is { } v && v.Seats.Length > 1 && v.SeatFree(1)
+                    ? 1 : offer.Seat;
+                _root.Submit(new Command.EnterVehicle(_root.LocalPlayerId, offer.Id, seat));
+            }
+            if (!buildHeld) _boardHold = 0f;
+            if (buildHeld || released) return;
+        }
+        else
+        {
+            _boardPressed = buildHeld;
+            _boardHold = 0f;
+        }
+
         // A pad under your feet outranks everything: you cannot build on one,
         // and a player holding E while standing on a teleporter means the
         // teleporter. Release commits, the same as the other two surfaces.
@@ -573,6 +702,40 @@ public partial class Player : CharacterBody3D
         if (_root.UpgradeOpen)
             _root.TickUpgradeSell(delta, Input.IsPhysicalKeyPressed(Key.X));
     }
+
+    /// <summary>Get in: the capsule stops colliding with anything (the
+    /// vehicle is what collides now) and the eye drops to the seat's height,
+    /// which on the trike is most of what makes it a trike.</summary>
+    private void TakeSeat(Vehicle ride)
+    {
+        _seated = true;
+        _lastRide = ride;
+        _seatYaw = 0f;
+        _hull.Disabled = true;
+        _camera.Position = new Vector3(0, ride.Def.SeatedEyeHeight, 0);
+        _zipTarget = null;
+        CancelTeleport();
+    }
+
+    /// <summary>Get out, beside it rather than inside it: a player left on the
+    /// vehicle's own origin is a player standing in its collision box.</summary>
+    private void LeaveSeat()
+    {
+        _seated = false;
+        _hull.Disabled = false;
+        _camera.Position = new Vector3(0, 1.6f, 0);
+        Rotation = new Vector3(0f, Rotation.Y + _seatYaw, 0f);
+        _seatYaw = 0f;
+        if (_lastRide is { } ride && GodotObject.IsInstanceValid(ride))
+        {
+            float side = ride.Def.BodySize.X * 0.5f + 0.9f;
+            GlobalPosition = ride.GlobalPosition
+                + ride.GlobalTransform.Basis.X * side + Vector3.Up * 0.4f;
+        }
+        _lastRide = null;
+    }
+
+    private Vehicle? _lastRide;
 
     private bool InArea(string kind) =>
         _sensor.GetOverlappingAreas().Any(a => (string)a.GetMeta("kind", "") == kind);
