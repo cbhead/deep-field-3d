@@ -47,6 +47,12 @@ public static class MatchRunner
     /// <summary>The switchyard floor policy with its Detector removed, for the
     /// conditions gate. Same list, same order, one tower missing — so any
     /// difference in outcome is attributable to that tower and nothing else.</summary>
+    /// <summary>The floor policy for a map, for gates that need to vary one
+    /// pick and hold the rest still. Read-only: the lists themselves are the
+    /// reference builds and a gate that edited one would change every other
+    /// gate's meaning.</summary>
+    public static IReadOnlyList<string> FloorPolicy(string mapId) => BuildOrders[mapId];
+
     public static string[] SwitchyardWithoutDetector =>
         BuildOrders["switchyard"].Where(e => !e.StartsWith("detector:")).ToArray();
 

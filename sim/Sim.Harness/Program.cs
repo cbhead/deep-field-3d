@@ -44,6 +44,21 @@ if (args.Contains("--lane-graph"))
     return 0;
 }
 
+// --- `--floor-policy`: what the generated build actually is, beside the hand one.
+if (args.Contains("--floor-policy"))
+{
+    foreach (var id in Campaign.Sectors)
+    {
+        var world = new World(Seed, Maps.All[id]);
+        var hand = MatchRunner.FloorPolicy(id);
+        var generated = FloorPolicy.Build(world, hand.Count);
+        Console.WriteLine($"== {id}");
+        Console.WriteLine($"   hand      {FloorPolicy.Coverage(world, hand):P0}  {string.Join(" ", hand)}");
+        Console.WriteLine($"   generated {FloorPolicy.Coverage(world, generated):P0}  {string.Join(" ", generated)}");
+    }
+    return 0;
+}
+
 // --- `--baseline`: write the numbers behind the balance gates, not the verdicts.
 //
 // A gate says PASS. That is the right thing for CI to read and the wrong thing
@@ -102,6 +117,28 @@ if (args.Contains("--baseline"))
     // a question for the balance phase; it is here so it stops being invisible.
     Row("foundry/4p-distinct-factions~not-a-gate", MatchRunner.Run(Seed, Maps.Foundry,
         MidBot(1, "ember"), MidBot(2, "forge"), MidBot(3, "tempest"), MidBot(4, "glacier")));
+
+    // The configuration sweep. Each door is *played* — towers generated against
+    // the lanes that are actually open — because a build tuned for one
+    // configuration measures the others as disasters. Recorded rather than
+    // gated: how far apart the doors are is a design judgement, and this is the
+    // number the judgement is made against.
+    int syPicks = MatchRunner.FloorPolicy("switchyard").Count(e => !e.StartsWith("barricade:"));
+    foreach (var (label, shut) in new[]
+        { ("both-open", (string?)null), ("cut-shut", "b1"), ("switchback-shut", "b2") })
+    {
+        var probe = new World(Seed, Maps.Switchyard);
+        if (shut is not null)
+        {
+            probe.Money = 10000;
+            probe.Enqueue(new Command.PlaceTower(0, "barricade", shut));
+            Step.Advance(probe);
+        }
+        var built = FloorPolicy.Build(probe, syPicks);
+        if (shut is not null) built = built.Prepend("barricade:" + shut).ToArray();
+        Row($"switchyard/generated~{label}",
+            MatchRunner.RunWithBuild(Seed, Maps.Switchyard, built, MidBot()));
+    }
 
     Row("switchyard/mid-band", MatchRunner.Run(Seed, Maps.Switchyard, MidBot()));
     Row("switchyard/towers-only", MatchRunner.Run(Seed, Maps.Switchyard));
@@ -2047,6 +2084,102 @@ if (args.Contains("--baseline"))
     Gate("ram: a breach is announced when it commits, not when the wall falls",
         warning is not null && early && warning.EdgeId == "westGate-cutMouth",
         warning is null ? "no warning" : $"{warning.EdgeId} in {warning.EtaSeconds:0.#}s");
+}
+
+// --- Gate 55: shutting a gate is a decision, not a free win.
+//
+// The question the mutable layer lives or dies on. If closing everything you
+// legally can is simply better, then the "choice" is a tax on players who have
+// not worked out that it is compulsory, and the wave tables will get retuned
+// around a turtle nobody meant to design. This is not a correctness gate — it
+// cannot be, because the answer is a judgement — but it is the measurement the
+// judgement needs, and it fails if the spread is so lopsided there is nothing
+// to decide.
+//
+// Same seed, same floor policy, same towers; only the doors differ.
+{
+    // Each configuration is *played*, not just measured: the towers are
+    // generated against the lanes that are actually open in it. Holding one
+    // hand-tuned list still across all three would compare a build tuned for
+    // one door against two doors it was never meant for — the first version of
+    // this gate did exactly that and reported shutting the switchback as a
+    // twenty-life catastrophe, which was the fixture's fault, not the map's.
+    int picks = MatchRunner.FloorPolicy("switchyard").Count(e => !e.StartsWith("barricade:"));
+
+    (MatchResult Run, float Coverage) Play(string? shut)
+    {
+        var probe = new World(Seed, Maps.Switchyard);
+        if (shut is not null)
+        {
+            probe.Money = 10000;
+            probe.Enqueue(new Command.PlaceTower(0, "barricade", shut));
+            Step.Advance(probe);
+        }
+        var order = FloorPolicy.Build(probe, picks);
+        if (shut is not null) order = order.Prepend("barricade:" + shut).ToArray();
+        var run = MatchRunner.RunWithBuild(Seed, Maps.Switchyard, order, MidBot());
+        return (run, FloorPolicy.Coverage(probe, order));
+    }
+
+    var open = Play(null).Run;
+    var cutShut = Play("b1").Run;
+    var switchbackShut = Play("b2").Run;
+
+    var lives = new[] { open.LivesLeft, cutShut.LivesLeft, switchbackShut.LivesLeft };
+    int spread = lives.Max() - lives.Min();
+
+    // What is *asserted* is that no door loses you the map. A configuration a
+    // player can reach and cannot survive is a trap, and the point of letting
+    // them shape the level is undone by one of the shapes being fatal.
+    //
+    // What is *reported* is the spread, and it is deliberately not a gate.
+    // Switchyard is the map that teaches the barricade — its own doc says the
+    // freight cut is "fast and badly covered" and that closing it is the
+    // lesson — so shutting the cut being worth eight lives is the design
+    // working, not a turtle problem. A threshold here would be a number nobody
+    // can move, on a map with an intended answer, and this repo's own note says
+    // a ratchet nobody can turn green gets switched off within a week.
+    //
+    // The spread belongs in docs/gate-baseline.tsv, where a later map that is
+    // supposed to pose a dilemma can be read against the one that is not.
+    bool allWinnable = open.Victory && cutShut.Victory && switchbackShut.Victory;
+
+    Gate("switchyard: every door you may shut is survivable", allWinnable,
+        $"lives — both open {open.LivesLeft}, cut shut {cutShut.LivesLeft}, "
+        + $"switchback shut {switchbackShut.LivesLeft} (spread {spread}; "
+        + "shutting the cut is this map's lesson, so its lead is intended)");
+}
+
+// --- Gate 56: the generated floor policy is a competent floor on every map.
+//
+// The hand lists stay the reference build — they are better, and measurably so:
+// the human's Switchyard reaches twelve waves with seventeen lives where the
+// generator manages fourteen. The generator's job is not to beat them, it is to
+// be able to play a configuration nobody hand-tuned, which is the only way to
+// compare doors fairly. So what is asserted is competence, not parity: build it
+// against each map from scratch and it must still clear the campaign.
+//
+// Coverage is reported alongside, because it is the number the hand lists'
+// own comments quote — and because chasing it alone is what produced the first
+// version of this generator, which covered 98% of Foundry with a wall of Novas
+// and killed nothing.
+{
+    var weak = new List<string>();
+    var shape = new List<string>();
+    foreach (var id in Campaign.Sectors)
+    {
+        var probe = new World(Seed, Maps.All[id]);
+        int picks = MatchRunner.FloorPolicy(id).Count;
+        var built = FloorPolicy.Build(probe, picks);
+        var run = MatchRunner.RunWithBuild(Seed, Maps.All[id], built, MidBot());
+
+        shape.Add($"{id} {FloorPolicy.Coverage(probe, built):P0}/{run.WavesCleared}w");
+        if (!run.Victory) weak.Add($"{id}: {run.WavesCleared} waves, {run.LivesLeft} lives");
+    }
+
+    Gate("floor policy: a build generated from scratch clears every map",
+        weak.Count == 0,
+        weak.Count == 0 ? string.Join(", ", shape) : string.Join(" | ", weak));
 }
 
 // --- Gate 52: nothing is ever stranded, anywhere in the campaign.

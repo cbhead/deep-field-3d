@@ -20,6 +20,9 @@ foundry/low-skill	win	10	13	127	7	97	23	15639	42789B525C182835
 foundry/high-skill	win	10	19	127	1	75	51	13047	06BD29DBF6A4CBDB
 foundry/4p	win	10	14	203	6	108	89	17810	CA8716F708B62E20
 foundry/4p-distinct-factions~not-a-gate	loss	9	0	356	20	164	166	20919	BC356DBDA0126C74
+switchyard/generated~both-open	win	12	6	179	14	128	37	16651	46896DE7A4025CB4
+switchyard/generated~cut-shut	win	12	14	179	6	117	56	21592	6CE5B9B0BC4977C6
+switchyard/generated~switchback-shut	win	12	4	174	16	123	35	17002	817EC5623DA993CA
 switchyard/mid-band	win	12	17	179	3	113	63	25187	FF3EE3C71AFB7821
 switchyard/towers-only	win	12	9	179	11	168	0	30238	92B0A54A0EDDFB62
 spire/mid-band	win	12	17	134	3	73	58	20561	56D5318AEB2EBC03
