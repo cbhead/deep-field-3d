@@ -41,6 +41,13 @@ public static class AssetLibrary
         ("pickup_", "economy"),
         ("foundry_", "maps"),
         ("switchyard_", "maps"),
+        // Both of these were missing, and a missing prefix is silent: the name
+        // resolves to res://assets/misc/ and the map draws grayboxes. The
+        // Spire's whole kit has been written since M3 and could not have
+        // loaded if it were delivered.
+        ("spire_", "maps"),
+        ("toaster_", "maps"),
+        ("vehicle_", "vehicles"),
         ("shared_", "maps"),
         ("prop_", "maps"),
         ("ui_", "ui"),

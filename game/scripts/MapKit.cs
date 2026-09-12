@@ -1,4 +1,5 @@
 using Godot;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace DeepField.Game;
@@ -121,6 +122,140 @@ public static class MapKit
         piece.Scale = new Vector3(1, 1, delta.Length());
         parent.AddChild(piece);
         return piece;
+    }
+
+    /// <summary>Draws one asset many times as a MultiMesh instead of as many
+    /// copies of its scene.
+    ///
+    /// Every placement in this client up to now has been a node subtree per
+    /// copy. Switchyard's ground is twenty-four copies of a two-hundred-part
+    /// tile: five thousand nodes and a draw call per part per copy per shadow
+    /// cascade, for one flat field. That was affordable on 110 by 80. The
+    /// Toaster is six times the area and wants fifteen hundred trees, and the
+    /// same mechanism would be twenty-eight thousand nodes before a single one
+    /// of them was drawn.
+    ///
+    /// Two things follow from how MultiMesh works, and both are why the asset
+    /// brief carries part budgets rather than a request to keep things light:
+    /// a MultiMeshInstance3D draws exactly one Mesh, so a file with N parts
+    /// costs N of them; and culling, visibility ranges and mesh LOD all act on
+    /// the instance's whole bounding box, so anything spread across a map has
+    /// to be chunked or it never culls. Use <see cref="InstancedChunked"/> for
+    /// those.
+    ///
+    /// Returns how many multimeshes it made, or 0 when the asset is missing —
+    /// in which case nothing is drawn, the same graceful nothing a missing prop
+    /// leaves behind.</summary>
+    public static int Instanced(Node parent, string asset, IReadOnlyList<Transform3D> at,
+        bool castShadow = true, float visibleFrom = 0f, float visibleTo = 0f,
+        params string[] hide)
+    {
+        if (at.Count == 0) return 0;
+        var prototype = AssetLibrary.TryInstantiate(asset);
+        if (prototype is null) return 0;
+
+        // Named parts come out on the prototype, before anything is measured,
+        // which is what lets a placement borrow a model and leave a piece of it
+        // behind — the yard's ground wants the ballast and not the two sidings
+        // baked into it. Hiding per copy is impossible once the copies are one
+        // multimesh, so it has to happen here or not at all.
+        foreach (string name in hide) HideNamed(prototype, name);
+
+        // Parented so the parts' global transforms resolve, then measured
+        // relative to the prototype's own origin and thrown away.
+        parent.AddChild(prototype);
+        var toLocal = prototype.GlobalTransform.AffineInverse();
+
+        var byMesh = new List<(Mesh Mesh, List<Transform3D> Offsets)>();
+        foreach (var node in prototype.FindChildren("*", nameof(MeshInstance3D), true, false))
+        {
+            if (node is not MeshInstance3D piece || piece.Mesh is null) continue;
+            if (!piece.IsVisibleInTree()) continue;
+
+            // A MultiMesh draws the Mesh and nothing else: a material the
+            // import hung on the MeshInstance as an override is not part of
+            // the Mesh, so it has to be baked into a copy or the instanced
+            // trees come out in the default grey. Only ArrayMesh can carry
+            // one; a primitive mesh already has its material on the resource.
+            var mesh = piece.Mesh;
+            if (mesh is ArrayMesh)
+            {
+                ArrayMesh? baked = null;
+                for (int surface = 0; surface < mesh.GetSurfaceCount(); surface++)
+                {
+                    if (piece.GetSurfaceOverrideMaterial(surface) is not { } material) continue;
+                    baked ??= (ArrayMesh)mesh.Duplicate();
+                    baked.SurfaceSetMaterial(surface, material);
+                }
+                if (baked is not null) mesh = baked;
+            }
+
+            var offset = toLocal * piece.GlobalTransform;
+            var slot = byMesh.FirstOrDefault(x => ReferenceEquals(x.Mesh, mesh));
+            if (slot.Mesh is null) byMesh.Add((mesh, new List<Transform3D> { offset }));
+            else slot.Offsets.Add(offset);
+        }
+
+        int made = 0;
+        foreach (var (mesh, offsets) in byMesh)
+        {
+            var multi = new MultiMesh
+            {
+                TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+                Mesh = mesh,
+                InstanceCount = at.Count * offsets.Count,
+            };
+            int i = 0;
+            foreach (var placement in at)
+                foreach (var offset in offsets)
+                    multi.SetInstanceTransform(i++, placement * offset);
+
+            var instance = new MultiMeshInstance3D
+            {
+                Multimesh = multi,
+                Name = $"{asset}_mm{made}",
+                CastShadow = castShadow
+                    ? GeometryInstance3D.ShadowCastingSetting.On
+                    : GeometryInstance3D.ShadowCastingSetting.Off,
+            };
+            if (visibleFrom > 0f) instance.VisibilityRangeBegin = visibleFrom;
+            if (visibleTo > 0f) instance.VisibilityRangeEnd = visibleTo;
+            if (visibleFrom > 0f || visibleTo > 0f)
+            {
+                // Dissolve rather than pop: a tree that swaps to its flat
+                // stand-in in one frame is the most visible thing on the map.
+                instance.VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Self;
+                instance.VisibilityRangeBeginMargin = visibleFrom > 0f ? 8f : 0f;
+                instance.VisibilityRangeEndMargin = visibleTo > 0f ? 8f : 0f;
+            }
+            parent.AddChild(instance);
+            made++;
+        }
+
+        prototype.QueueFree();
+        return made;
+    }
+
+    /// <summary>As above, split into square cells so each one culls, ranges and
+    /// picks its own level of detail. Anything spread across a whole map wants
+    /// this; a terrain grid that is always half on screen does not.</summary>
+    public static int InstancedChunked(Node parent, string asset, IReadOnlyList<Transform3D> at,
+        float cellSize, bool castShadow = true, float visibleFrom = 0f, float visibleTo = 0f,
+        params string[] hide)
+    {
+        var cells = new Dictionary<(int, int), List<Transform3D>>();
+        foreach (var placement in at)
+        {
+            var key = (Mathf.FloorToInt(placement.Origin.X / cellSize),
+                       Mathf.FloorToInt(placement.Origin.Z / cellSize));
+            if (!cells.TryGetValue(key, out var list)) cells[key] = list = new List<Transform3D>();
+            list.Add(placement);
+        }
+
+        int made = 0;
+        foreach (var cell in cells.Values)
+            made += Instanced(parent, asset, cell, castShadow, visibleFrom, visibleTo, hide);
+        return made;
     }
 
     /// <summary>Free-standing dressing: no collision, never on a sightline the

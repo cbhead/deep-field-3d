@@ -190,6 +190,9 @@ public partial class GameRoot : Node3D
         _projectileViews.Clear();
         _towerViews.Clear();
         _enemyViews.Clear();
+        _teleportPads.Clear();
+        _footprints.Clear();
+        Surfaces.Clear();
         _avatarViews.Clear();
         _towerRigs.Clear();
     }
@@ -874,9 +877,13 @@ public partial class GameRoot : Node3D
         {
             var (from, look) = _shotView switch
             {
-                "top" => (new Vector3(0, 95, 1), Vector3.Zero),
-                "iso" => (new Vector3(-52, 46, 52), new Vector3(0, 0, -2)),
-                "iso2" => (new Vector3(56, 40, -46), new Vector3(0, 0, -2)),
+                // Framed off the field rather than a literal: 95 m up sees a
+                // 110 x 80 yard whole and a third of a 320 x 160 farm.
+                "top" => (new Vector3(0, Mathf.Max(_map.FieldX, _map.FieldZ * 1.6f) * 0.87f, 1), Vector3.Zero),
+                "iso" => (new Vector3(-_map.HalfX * 0.95f, _map.HalfX * 0.84f, _map.HalfZ * 1.3f),
+                          new Vector3(0, 0, -2)),
+                "iso2" => (new Vector3(_map.HalfX * 1.02f, _map.HalfX * 0.73f, -_map.HalfZ * 1.15f),
+                           new Vector3(0, 0, -2)),
                 "lane" => (new Vector3(-46, 14, -26), new Vector3(0, 0, 4)),
                 // Fixture checks: the gate enemies walk out of, the yard the
                 // players spawn into, and the air strand over the map.
@@ -2892,6 +2899,7 @@ public partial class GameRoot : Node3D
 
     private void BuildLevel(MapDef map)
     {
+        int nodesBefore = GetTree().GetNodeCount();
         BuildEnvironment(map);
 
         // Ground slab — one collider, dressed with the 20 m terrain tiles.
@@ -2907,45 +2915,48 @@ public partial class GameRoot : Node3D
             // the three maps that were that size are laid exactly as before.
             float lastX = Mathf.Ceil(map.HalfX / 20f) * 20f - 10f;
             float lastZ = Mathf.Ceil(map.HalfZ / 20f) * 20f - 10f;
+            // One instanced draw per distinct mesh instead of a subtree per
+            // copy. Switchyard's tile is 221 parts, so twenty-four of them was
+            // five thousand nodes and five thousand draw calls for one flat
+            // field; the Toaster's field is six times the size. The two things
+            // that tile needed doing to it per copy both survive: the sidings
+            // come off the prototype before anything is measured, and the
+            // half-turn that breaks the lattice is in the transform.
+            var tiles = new List<Transform3D>();
             for (float x = -lastX; x <= lastX + 0.01f; x += 20f)
                 for (float z = -lastZ; z <= lastZ + 0.01f; z += 20f)
                 {
-                    var tile = MapKit.Prop(ground, $"{map.Id}_terrain", new Vector3(x, MapKit.GroundLocal(ground), z));
-                    // One variant of Switchyard's tile carries a switch stand —
-                    // the lever and target that work a turnout — and the tiles
-                    // are laid on a grid, so stands turned up in open ballast
-                    // with no points anywhere near them. A switch stand away
-                    // from a turnout is the clearest possible statement that
-                    // nobody looked at a railway. The turnouts are laid
-                    // deliberately in BuildSwitchyardRailway; until there is a
-                    // stand prop to put beside them, the scattered ones go.
-                    if (tile is not null && map.Id == "switchyard")
-                    {
-                        // The tile bakes in two "disused sidings" at its
-                        // local z ±6. Tiled six by four, that is eight
-                        // full-width tracks laid straight across the map on a
-                        // grid — through the lanes, through the sockets,
-                        // through the spawn, with no throat, no turnout and no
-                        // buffer at either end. They out-number and contradict
-                        // every metre of track laid deliberately, which is the
-                        // single biggest reason this map read as a railway
-                        // that makes no sense. The ballast bed is what the
-                        // tile is for; the track is laid in
-                        // BuildSwitchyardRailway or it does not exist.
-                        MapKit.HideNamed(tile, "terrain_siding-6");
-                        MapKit.HideNamed(tile, "terrain_siding6");
-
-                        // One tile repeated twenty-four times puts its puddle,
-                        // its weed tufts and its drain grates on a perfect
-                        // lattice, which reads as wallpaper rather than
-                        // ground. Turning alternate tiles about their centre
-                        // breaks the repeat; a half-turn keeps the drain and
-                        // the ballast grain running east-west with the yard,
-                        // which a quarter-turn would not.
-                        if (((int)(x / 20f) + (int)(z / 20f)) % 2 != 0)
-                            tile.RotationDegrees = new Vector3(0, 180f, 0);
-                    }
+                    // One tile repeated puts its puddle, its weed tufts and its
+                    // drain grates on a perfect lattice, which reads as
+                    // wallpaper rather than ground. A half-turn on alternate
+                    // tiles breaks the repeat and keeps the drain and the
+                    // ballast grain running east-west with the yard, which a
+                    // quarter-turn would not.
+                    bool turned = map.Id == "switchyard"
+                        && ((int)(x / 20f) + (int)(z / 20f)) % 2 != 0;
+                    var basis = turned
+                        ? Basis.FromEuler(new Vector3(0, Mathf.Pi, 0))
+                        : Basis.Identity;
+                    tiles.Add(new Transform3D(basis,
+                        new Vector3(x, MapKit.GroundLocal(ground), z)));
                 }
+
+            // The tile bakes in two "disused sidings" at its local z +/-6.
+            // Tiled six by four, that is eight full-width tracks laid straight
+            // across the map on a grid — through the lanes, through the
+            // sockets, through the spawn, with no throat, no turnout and no
+            // buffer at either end. They out-number and contradict every metre
+            // of track laid deliberately, which is the single biggest reason
+            // this map read as a railway that makes no sense. The ballast bed
+            // is what the tile is for; the track is laid in
+            // BuildSwitchyardRailway or it does not exist.
+            string[] buried = map.Id == "switchyard"
+                ? new[] { "terrain_siding-6", "terrain_siding6" }
+                : System.Array.Empty<string>();
+
+            int drawn = MapKit.InstancedChunked(ground, $"{map.Id}_terrain", tiles, 80f,
+                castShadow: false, visibleFrom: 0f, visibleTo: 0f, hide: buried);
+            GD.Print($"[map] terrain: {tiles.Count} tiles in {drawn} multimesh(es)");
         }
 
         // Lane surfaces.
@@ -2990,6 +3001,7 @@ public partial class GameRoot : Node3D
         }
 
         BuildLaneMouths(map);
+        BuildWarpGates(map);
 
         // Sockets.
         foreach (var socket in map.Sockets)
@@ -3027,6 +3039,7 @@ public partial class GameRoot : Node3D
         if (map.Id == "foundry") BuildFoundryStructures();
         if (map.Id == "switchyard") BuildSwitchyardStructures();
         if (map.Id == "spire") BuildSpireStructures();
+        if (map.Id == "toaster") BuildToasterStructures(map);
 
         // Armory station.
         var armory = AddStaticBox(ToGd(map.ArmoryPos) + new Vector3(0, 1.25f, 0),
@@ -3037,6 +3050,13 @@ public partial class GameRoot : Node3D
         // pivot offset and left the kiosk hanging in mid-air.
         MapKit.Mount(armory, "shared_armory_kiosk", MapKit.GroundLocal(armory),
             MapKit.YawTowards(ToGd(map.HeroSpawn) - ToGd(map.ArmoryPos)));
+
+        // What the map cost, in the currency that actually scales. Every
+        // placement in this client used to be a node subtree, so a field was
+        // thousands of them and nobody ever counted; a number in the log is
+        // the cheapest possible ratchet against a map that quietly doubles.
+        GD.Print($"[map] {map.Id} built {GetTree().GetNodeCount() - nodesBefore} nodes "
+            + $"on a {map.FieldX:0} x {map.FieldZ:0} m field");
     }
 
     /// <summary>The gate enemies come out of and the core they are walking at.
@@ -3078,6 +3098,89 @@ public partial class GameRoot : Node3D
             }
         }
         _laneMouths = gates.Concat(cores).ToList();
+    }
+
+    /// <summary>A gate at each end of every teleport leg.
+    ///
+    /// The sim moves an enemy from one pad to the other in a tick; without
+    /// something drawn there it reads as enemies vanishing in an empty field
+    /// and a different wave appearing in another one. The silhouette is
+    /// deliberately not the player's teleporter — that is a flat hex pad a
+    /// player has been taught to stand on and hold E, and a map must never put
+    /// a thing that means "stand here" where the answer is "do not". Until
+    /// design ships the arch, the spawn portal stands in: it already reads as
+    /// "enemies come out of here", which is exactly right at the far end and
+    /// forgivable at the near one.
+    ///
+    /// Both ends join the lane mouths, so scenery, scatter and the boundary
+    /// wall leave them the same hole they leave a spawn gate.</summary>
+    private void BuildWarpGates(MapDef map)
+    {
+        string asset = AssetLibrary.Has("shared_warp_gate_idle")
+            ? "shared_warp_gate_idle" : "shared_spawn_portal";
+        var placed = new List<Vector3>();
+
+        void Gate(Vector3 at, Vector3 facing)
+        {
+            if (placed.Any(p => p.DistanceTo(at) < 4f)) return;
+            placed.Add(at);
+            MapKit.Prop(this, asset, at, MapKit.YawTowards(facing));
+        }
+
+        foreach (var route in map.Routes)
+            for (int i = 0; i < route.Waypoints.Count - 1; i++)
+            {
+                if (!route.IsTeleportLeg(i)) continue;
+                // The departure gate faces the way the enemy was walking when
+                // it arrived; the arrival gate faces the way it leaves. Both
+                // legs exist, because a teleport leg is never first or last.
+                Gate(ToGd(route.Waypoints[i]),
+                    ToGd(route.Waypoints[i]) - ToGd(route.Waypoints[i - 1]));
+                Gate(ToGd(route.Waypoints[i + 1]),
+                    ToGd(route.Waypoints[i + 2]) - ToGd(route.Waypoints[i + 1]));
+            }
+
+        _laneMouths = _laneMouths.Concat(placed).ToList();
+        if (placed.Count > 0) GD.Print($"[map] {placed.Count} warp gate(s) using {asset}");
+    }
+
+    /// <summary>One pad in the player's teleport network.
+    ///
+    /// Three things were wrong with the Spire's version and all three were
+    /// invisible: the asset name had no state suffix so nothing ever resolved,
+    /// the pad_id went on the StaticBody while the player reads metadata off
+    /// the Area, and no code anywhere handled the "teleporter" kind. It has
+    /// been a coloured box you walk over since M3.</summary>
+    private void AddTeleportPad(string id, string label, Vector3 at)
+    {
+        var body = AddStaticBox(at + new Vector3(0, 0.1f, 0), new Vector3(3f, 0.2f, 3f),
+            new Color(0.35f, 0.7f, 0.85f), layer: 0);
+        var area = MakeArea("teleporter", new BoxShape3D { Size = new Vector3(3.2f, 2.5f, 3.2f) });
+        area.SetMeta("pad_id", id);
+        body.AddChild(area);
+        _teleportPads.Add(new TeleportPad(id, label, at, body));
+        SetPadArt(id, "idle");
+    }
+
+    /// <summary>Where the teleport network's pads are, in the order a picker
+    /// should list them.</summary>
+    public sealed record TeleportPad(string Id, string Label, Vector3 At, StaticBody3D Body);
+    private readonly List<TeleportPad> _teleportPads = new();
+    public IReadOnlyList<TeleportPad> TeleportPads => _teleportPads;
+
+    /// <summary>Swaps a pad between its three delivered states, the same way
+    /// RefreshSocketArt swaps a socket between empty and occupied.</summary>
+    public void SetPadArt(string id, string state)
+    {
+        var pad = _teleportPads.FirstOrDefault(p => p.Id == id);
+        if (pad is null || !IsInstanceValid(pad.Body)) return;
+        if (pad.Body.GetNodeOrNull<Node3D>("PadArt") is { } stale)
+        {
+            pad.Body.RemoveChild(stale);
+            stale.QueueFree();
+        }
+        if (!MapKit.Mount(pad.Body, $"shared_teleporter_pad_{state}", MapKit.GroundLocal(pad.Body))) return;
+        if (pad.Body.GetChild(pad.Body.GetChildCount() - 1) is Node3D art) art.Name = "PadArt";
     }
 
     /// <summary>Masts under the air lane, standing on the ground, spaced along
@@ -3568,18 +3671,8 @@ public partial class GameRoot : Node3D
 
         // Teleport pads: lobby to roof and back, for the rotation the lift is
         // too slow to serve. Paired, so using one is committing to the other end.
-        foreach (var (pos, id) in new[]
-        {
-            (new Vector3(-24f, 0.3f, -6f), "padGround"),
-            (new Vector3(-6f, 40.3f, 12f), "padRoof"),
-        })
-        {
-            var pad = AddStaticBox(pos, new Vector3(3f, 0.2f, 3f),
-                new Color(0.35f, 0.7f, 0.85f), layer: 0);
-            pad.AddChild(MakeArea("teleporter", new BoxShape3D { Size = new Vector3(3.2f, 2.5f, 3.2f) }));
-            pad.SetMeta("pad_id", id);
-            MapKit.Mount(pad, "shared_teleporter_pad", MapKit.GroundLocal(pad));
-        }
+        AddTeleportPad("padGround", "LOBBY", new Vector3(-24f, 0.2f, -6f));
+        AddTeleportPad("padRoof", "ROOF", new Vector3(-6f, 40.2f, 12f));
 
         // Sniper nests: reachable only by committing to the climb, and they see
         // the stair well the ground floor cannot. The plan's rule that every map
@@ -3612,8 +3705,12 @@ public partial class GameRoot : Node3D
         // spend the intermission walking.
         var anchor = AddStaticBox(new Vector3(6f, 40.5f, -14f), new Vector3(1f, 1.4f, 1f),
             new Color(0.55f, 0.5f, 0.35f), layer: 0);
-        anchor.AddChild(MakeArea("zipline", new BoxShape3D { Size = new Vector3(2.4f, 2.6f, 2.4f) }));
-        anchor.SetMeta("zip_to", new Vector3(-26f, 1f, -6f));
+        var spireZip = MakeArea("zipline", new BoxShape3D { Size = new Vector3(2.4f, 2.6f, 2.4f) });
+        // "zip_to" on the body, where nothing reads it. The player reads
+        // "zip_end" off the Area, so the one zipline down from a forty-metre
+        // roof has never carried anyone since the day it was written.
+        spireZip.SetMeta("zip_end", new Vector3(-26f, 1f, -6f));
+        anchor.AddChild(spireZip);
         MapKit.Mount(anchor, "shared_zipline_anchor", MapKit.GroundLocal(anchor));
     }
 
