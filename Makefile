@@ -1,7 +1,7 @@
 GODOT ?= $(HOME)/Applications/Godot_mono.app/Contents/MacOS/Godot
 export PATH := $(HOME)/.dotnet:$(PATH)
 
-.PHONY: sim test gates game run import check audit assets usage usage-list design-export map-validate
+.PHONY: sim test gates game run import check audit assets usage usage-list design-export map-validate gate-baseline
 
 ## Build the pure sim (standalone — enforces the no-Godot boundary).
 sim:
@@ -40,6 +40,12 @@ design-export:
 ## Every map against the rules in docs/MAP-AUTHORING.md §4.
 map-validate:
 	@./tools/map-validate.sh
+
+## The numbers behind the balance gates, not their verdicts -> docs/gate-baseline.tsv.
+## Commit the diff with the change that caused it, saying whether it is a
+## re-baseline (hashes and margins move, verdicts do not) or a regression.
+gate-baseline:
+	@dotnet run --project sim/Sim.Harness --configuration Release -- --baseline
 
 ## Which delivered assets does the game actually consume?
 usage:

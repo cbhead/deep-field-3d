@@ -18,6 +18,100 @@ const uint Seed = 20260906;
 PlayerBot MidBot(int id = 1, string faction = "ember") =>
     new(Seed + (uint)id) { PlayerId = id, FactionId = faction, Accuracy = 0.6f, Uptime = 0.8f };
 
+// --- `--baseline`: write the numbers behind the balance gates, not the verdicts.
+//
+// A gate says PASS. That is the right thing for CI to read and the wrong thing
+// for a person to review, because a change that takes Foundry's floor from
+// fourteen lives to one still says PASS — right up until the commit after it
+// says FAIL, by which point the cause is several commits back.
+//
+// M5 replaces the route model, and the plan for it turns on being able to tell a
+// *re-baseline* from a *regression*: a re-baseline moves hashes and margins and
+// must never move a verdict. That is only checkable against a recorded set of
+// margins, so this writes one — the same ratchet culture as
+// docs/map-validation-baseline.tsv, applied to balance.
+//
+// Regenerate with `make gate-baseline` and commit the diff in the same change
+// that caused it, with the reason in the message.
+if (args.Contains("--baseline"))
+{
+    var rows = new List<string>();
+    void Row(string scenario, MatchResult r) => rows.Add(string.Join('\t', new[]
+    {
+        scenario,
+        r.Victory ? "win" : "loss",
+        r.WavesCleared.ToString(),
+        r.LivesLeft.ToString(),
+        r.Spawned.ToString(),
+        r.Leaked.ToString(),
+        r.TowerKills.ToString(),
+        r.PlayerKills.ToString(),
+        r.Ticks.ToString(),
+        r.EventLogHash[..16],
+    }));
+
+    // Every scenario a balance gate actually measures, named for the gate that
+    // measures it. Bot-in-the-loop runs first, floor policies second.
+    Row("foundry/mid-band", MatchRunner.Run(Seed, Maps.Foundry, MidBot()));
+    Row("foundry/towers-only", MatchRunner.Run(Seed, Maps.Foundry));
+    Row("foundry/low-skill", MatchRunner.Run(Seed, Maps.Foundry,
+        new PlayerBot(Seed + 1) { PlayerId = 1, FactionId = "ember", Accuracy = 0.4f, Uptime = 0.6f }));
+    Row("foundry/high-skill", MatchRunner.Run(Seed, Maps.Foundry,
+        new PlayerBot(Seed + 1) { PlayerId = 1, FactionId = "ember", Accuracy = 0.8f, Uptime = 0.9f }));
+    // The exact party Gate 6 runs, factions included — players 3 and 4 take
+    // faction-taken rejections, and that is part of what the gate measures. A
+    // baseline row that quietly used four distinct factions would be recording
+    // a match no gate runs.
+    Row("foundry/4p", MatchRunner.Run(Seed, Maps.Foundry,
+        MidBot(1, "ember"), MidBot(2, "forge"),
+        new PlayerBot(Seed + 3) { PlayerId = 3, FactionId = "ember", Accuracy = 0.6f, Uptime = 0.8f },
+        new PlayerBot(Seed + 4) { PlayerId = 4, FactionId = "forge", Accuracy = 0.6f, Uptime = 0.8f }));
+    // Not a gate — recorded because measuring the one above turned it up. Gate
+    // 6 names itself "4p waves are bigger and clearable" and asserts only that
+    // 4p spawns more than solo; nothing checks clearable. Its party is
+    // ember/forge/ember/forge, so two players are refused their faction, and a
+    // party of four *distinct* factions is a materially different match: 356
+    // spawned against 203, and the floor loses it on wave 9 with no lives left.
+    // Whether that is a real co-op scaling problem or a floor-policy problem is
+    // a question for the balance phase; it is here so it stops being invisible.
+    Row("foundry/4p-distinct-factions (not a gate)", MatchRunner.Run(Seed, Maps.Foundry,
+        MidBot(1, "ember"), MidBot(2, "forge"), MidBot(3, "tempest"), MidBot(4, "glacier")));
+
+    Row("switchyard/mid-band", MatchRunner.Run(Seed, Maps.Switchyard, MidBot()));
+    Row("switchyard/towers-only", MatchRunner.Run(Seed, Maps.Switchyard));
+    Row("spire/mid-band", MatchRunner.Run(Seed, Maps.Spire, MidBot()));
+    Row("spire/towers-only", MatchRunner.Run(Seed, Maps.Spire));
+    Row("toaster/mid-band", MatchRunner.Run(Seed, Maps.Toaster, MidBot()));
+    Row("toaster/towers-only", MatchRunner.Run(Seed, Maps.Toaster));
+
+    var header = string.Join('\t', "scenario", "result", "waves", "lives", "spawned",
+        "leaked", "towerKills", "playerKills", "ticks", "logHash16");
+    var preamble = new[]
+    {
+        "# Balance baseline — the numbers behind the gates, not their verdicts.",
+        "#",
+        "# Regenerate with `make gate-baseline`. Commit the diff in the change that",
+        "# caused it, and say in the message which of the two it is:",
+        "#",
+        "#   a RE-BASELINE moves hashes and margins and moves no verdict;",
+        "#   a REGRESSION moves a verdict, or moves a margin without a reason.",
+        "#",
+        "# A gate that still says PASS on one life left is a gate about to fail for",
+        "# reasons several commits old. This file is how that is seen coming.",
+        "#",
+        "# Each row is a scenario some gate actually runs, party and factions",
+        "# included, except where the name says otherwise.",
+        "#",
+        $"# seed {Seed}",
+        header,
+    };
+    var outPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..",
+        "docs", "gate-baseline.tsv");
+    File.WriteAllLines(Path.GetFullPath(outPath), preamble.Concat(rows));
+    Console.WriteLine($"wrote {Path.GetFullPath(outPath)} — {rows.Count} scenarios");
+    return 0;
+}
+
 // --- Gate 1: determinism — same seed + same bots => byte-identical logs, twice.
 {
     var a = MatchRunner.Run(Seed, Maps.Foundry, MidBot());
