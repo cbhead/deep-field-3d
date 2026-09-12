@@ -1,7 +1,7 @@
 GODOT ?= $(HOME)/Applications/Godot_mono.app/Contents/MacOS/Godot
 export PATH := $(HOME)/.dotnet:$(PATH)
 
-.PHONY: sim test gates game run import check audit assets usage usage-list design-export map-validate
+.PHONY: sim test gates game run import check audit assets usage usage-list design-export map-validate model-validate
 
 ## Build the pure sim (standalone — enforces the no-Godot boundary).
 sim:
@@ -34,8 +34,20 @@ assets:
 ## Rebuild every model, icon and manifest from Claude Design's sources in
 ## docs/design/. Needs a browser (the skyboxes are shaders baked to a texture)
 ## and node; writes straight into game/assets/ and docs/.
+##   make design-export              # the whole drop
+##   make design-export ONLY=lance   # one tower — chassis and its 30 stages
+##   make design-export ONLY=drifter # one model, by item id or file stem
+##   make design-export ONLY=vfx     # a whole category
 design-export:
-	@./tools/design-export.sh
+	@./tools/design-export.sh $(if $(ONLY),--only "$(ONLY)")
+
+## Every delivered model against the contract in docs/ART-INTEGRATION.md.
+## No Godot, no browser, no dependencies — it reads the glTF directly.
+##   make model-validate            # the report
+##   ./tools/model-validate.py --list     # every violation
+##   ./tools/model-validate.py --refresh  # re-record the pivot ratchet
+model-validate:
+	@./tools/model-validate.py
 
 ## Every map against the rules in docs/MAP-AUTHORING.md §4.
 map-validate:
@@ -61,4 +73,4 @@ audit: game
 	@./tools/asset-report.sh --verify /tmp/deepfield-audit.log
 
 ## Everything CI runs: the pre-push check.
-check: sim test gates game audit
+check: sim test gates model-validate game audit

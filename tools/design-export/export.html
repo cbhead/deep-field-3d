@@ -71,7 +71,7 @@ const ICONS = [
   'icon_path_damage', 'icon_path_range', 'icon_path_rate'];
 const EXTRA = [
   { dir: 'enemies/', items: ENEMIES, kind: 'enemy' }, { dir: 'traps/', items: TRAPS, kind: 'trap' }, { dir: 'towers/', items: PROJECTILES, kind: 'projectile' },
-  { dir: 'weapons/', items: WEAPONS, kind: 'weapon' }, { dir: 'weapons/', items: WEAPONS.filter((w) => w.worldFile).map((w) => ({ ...w, file: w.worldFile, id: w.id + '_world' })), kind: 'weapon_world' },
+  { dir: 'weapons/', items: WEAPONS, kind: 'weapon' }, { dir: 'weapons/', items: WEAPONS.filter((w) => w.worldFile).map((w) => ({ ...w, file: w.worldFile, id: w.id + '_world', baseId: w.id })), kind: 'weapon_world' },
   { dir: 'heroes/', items: HEROES, kind: 'hero' }, { dir: 'maps/foundry/', items: FOUNDRY, kind: 'map_foundry' }, { dir: 'maps/switchyard/', items: SWITCHYARD, kind: 'map_switchyard' }, { dir: 'maps/spire/', items: SPIRE, kind: 'map_spire' }, { dir: 'maps/toaster/', items: TOASTER, kind: 'map_toaster' }, { dir: 'vehicles/', items: VEHICLES, kind: 'vehicle' }, { dir: 'shared/', items: SHARED, kind: 'shared' }, { dir: 'vfx/', items: VFX, kind: 'vfx' }, { dir: 'economy/', items: PICKUPS, kind: 'pickup' }, { dir: 'weapons/', items: ATTACHMENTS, kind: 'attachment' }, { dir: 'weapons/', items: AMMO, kind: 'ammo' }, { dir: 'weapons/', items: TRACERS, kind: 'tracer' }];
 /* Reload props (FORWARD-MANIFEST-reload Ask A). Not new geometry: the feed part
    already in each viewmodel, lifted out and exported on its own so a reload can
@@ -90,7 +90,6 @@ const RELOAD_PROPS = [
   ['scattergun', 'scattergun_shell', 'weapon_scattergun_magazine.glb', 'A loaded 12-gauge hull under the requested filename so nothing falls back to a placeholder. This gun has no detachable magazine; see `weapon_scattergun_shell.glb`, which is the same file under the name that tells the truth.'],
   ['scattergun', 'scattergun_shell', 'weapon_scattergun_shell.glb', 'Loaded 12-gauge hull: brass head with rim and extractor groove, full-length body, folded six-point crimp cut into the dome as ridges. Origin at the rim face so a reload pushes it in along +Z at `scattergun_mount_loadport`. Distinct from `scattergun_case`, which is fired — open mouth, no crimp.'],
 ];
-const EXTRA_COUNT = EXTRA.reduce((a, c) => a + c.items.reduce((n, it) => n + (it.buildVariant ? 4 : 1) + (it.poses ? it.poses.length - 1 : 0), 0), 0) + RELOAD_PROPS.length;
 const ROUTES = [['enemy_', 'enemies'], ['boss_', 'enemies'], ['tower_', 'structures'], ['trap_', 'structures'], ['socket_', 'structures'], ['weapon_', 'weapons'], ['attach_', 'weapons'], ['ammo_', 'weapons'], ['hands_', 'weapons'], ['hero_', 'heroes'], ['proj_', 'vfx'], ['vfx_', 'vfx'], ['pickup_', 'economy'], ['foundry_', 'maps'], ['switchyard_', 'maps'], ['spire_', 'maps'], ['toaster_', 'maps'], ['vehicle_', 'vehicles'], ['shared_', 'maps'], ['prop_', 'maps'], ['ui_', 'ui']];
 const routeFor = (file) => 'game/assets/' + (ROUTES.find(([p]) => file.startsWith(p))?.[1] || 'misc') + '/' + file;
 const TOWERS = (await Promise.all(MODS.map((m) => import(`./models/${m}.js`)))).map((m) => m.TOWER);
@@ -117,7 +116,13 @@ function visBox(root) {
   return b;
 }
 function pruneToPath(model, id, path) {
-  const re = new RegExp(`^${id}_up_${path}_l\\d+$`);
+  // The `$` used to close this pattern, which dropped every increment a tower
+  // names per part rather than as one group: the Singularity mirrors its
+  // per-arm copies onto <id>_up_<path>_l<N>_arm<i> (singularity.js cue()), so
+  // six of its twenty range/rate stages exported identical to the stage below
+  // them — an upgrade you bought and could not see. Match the level, then a
+  // boundary: a suffixed child belongs to the same increment.
+  const re = new RegExp(`^${id}_up_${path}_l\\d+(?:_|$)`);
   const keep = (o, under) => {
     if (!o.visible && o !== model) return false;
     const u = under || re.test(o.name);
@@ -136,16 +141,11 @@ function chassis(t, variant) {
   m.rotation.y = Math.PI;
   return m;
 }
-function fileList() {
-  const out = [];
-  for (const t of TOWERS) {
-    if (t.id === 'barricade') { out.push('tower_barricade.glb', 'tower_barricade_damaged.glb', 'tower_barricade_broken.glb'); continue; }
-    out.push(`tower_${t.id}_chassis.glb`);
-    for (const p of t.paths) for (let s = 1; s <= 10; s++) out.push(`tower_${t.id}_${p.id}_s${s}.glb`);
-  }
-  return out;
-}
-const FILES = fileList();
+/** What each contributes to the progress total: a tower is a chassis plus ten
+ *  stages per path (the barricade is three states); an item is its build, plus
+ *  three more if it has variants, plus one per extra pose. */
+const towerFileCount = (t) => (t.id === 'barricade' ? 3 : 1 + t.paths.length * 10);
+const itemFileCount = (it) => (it.buildVariant ? 4 : 1) + (it.poses ? it.poses.length - 1 : 0);
 stage.setObject(chassis(TOWERS[0]));
 
 const glb = async (obj) => new Uint8Array(await exporter.parseAsync(obj, { binary: true, trs: true, onlyVisible: true }));
@@ -182,13 +182,49 @@ async function bakeSkies(obj) {
 const tick = () => new Promise((r) => setTimeout(r, 0));
 const bounds = (o) => { const b = visBox(o); return b.isEmpty() ? null : { min: b.min.toArray().map((v) => +v.toFixed(3)), max: b.max.toArray().map((v) => +v.toFixed(3)) }; };
 const text = async (p) => { const r = await fetch(p); if (!r.ok) throw new Error(`fetch ${p}: ${r.status}`); return new Uint8Array(await r.arrayBuffer()); };
+const readJson = async (p) => { const r = await fetch(p); return r.ok ? r.json() : null; };
 const put = async (name, data) => {
   const r = await fetch('/out/' + name, { method: 'PUT', body: data });
   if (!r.ok) throw new Error(`PUT ${name}: ${r.status}`);
 };
 
-const TOTAL = FILES.length + EXTRA_COUNT;
-say(`Ready — ${TOTAL} GLB files; starting`);
+/* The delivery note is design's to rewrite, but the repo appends its own "Integration record"
+   section — what actually landed on the code side — and a full run used to overwrite the file and
+   delete it. It already ate the 2026-09-07 record once. Carry every record across onto the fresh
+   note instead. (A zip drop unpacked by hand still clobbers it; only this path can protect it.) */
+const putDeliveryNote = async (srcPath, destPath) => {
+  const fresh = new TextDecoder().decode(await text(srcPath)).replace(/\s*$/, '');
+  const res = await fetch('/out/' + destPath);
+  const prev = res.ok ? await res.text() : '';
+  const at = prev.search(/^## Integration record/m);
+  const keep = at < 0 || /^## Integration record/m.test(fresh) ? '' : prev.slice(at).replace(/\s*$/, '');
+  const out = keep ? `${fresh}\n\n---\n\n${keep}\n` : `${fresh}\n`;
+  await put(destPath, new TextEncoder().encode(out));
+};
+
+/* `?only=<sel>[,<sel>…]` rebuilds part of the drop instead of all of it, so a tweak to one model
+   costs one export rather than five hundred. A selector is a tower id (`lance` — its chassis and
+   thirty stage modules), a category (`vfx`, `enemy`, `map_toaster`, `vehicle` — everything one
+   source module builds), or an item id or file stem (`drifter`, `enemy_drifter`, `rifle` for the
+   viewmodel and the world gun alike, `hands` for a hand set and every pose it ships).
+   A selector matching nothing is an error: a silent empty run looks just like a successful one. */
+const ONLY = (new URLSearchParams(location.search).get('only') || '').split(',').map((s) => s.trim()).filter(Boolean);
+const PARTIAL = ONLY.length > 0;
+const stemOf = (file) => file.split('/').pop().replace(/\.glb$/, '');
+const matchedSel = new Set();
+const wanted = (...keys) => {
+  if (!PARTIAL) return true;
+  let hit = false;
+  for (const s of ONLY) if (keys.includes(s)) { matchedSel.add(s); hit = true; }
+  return hit;
+};
+const TOWERS_SEL = TOWERS.filter((t) => wanted(t.id, `tower_${t.id}`));
+const EXTRA_SEL = EXTRA.map((c) => ({ ...c, items: c.items.filter((it) => wanted(c.kind, it.id, it.baseId, stemOf(it.file))) })).filter((c) => c.items.length);
+const RELOAD_SEL = RELOAD_PROPS.filter(([wid, , file]) => wanted('weapon_reload', wid, stemOf(file)));
+const TOTAL = TOWERS_SEL.reduce((a, t) => a + towerFileCount(t), 0)
+  + EXTRA_SEL.reduce((a, c) => a + c.items.reduce((n, it) => n + itemFileCount(it), 0), 0)
+  + RELOAD_SEL.length;
+say(`Ready — ${TOTAL} GLB file${TOTAL === 1 ? '' : 's'}${PARTIAL ? ` (only: ${ONLY.join(', ')})` : ''}; starting`);
 const manifest = { version: '1.0', generated: new Date().toISOString(), units: 'metres', up: '+Y', forward: '-Z', files: [] };
 let done = 0;
 const add = async (name, obj, meta) => {
@@ -202,7 +238,9 @@ const add = async (name, obj, meta) => {
   await tick();
 };
 try {
-  for (const t of TOWERS) {
+  const unmatched = ONLY.filter((s) => !matchedSel.has(s));
+  if (unmatched.length) throw new Error(`--only matched nothing: ${unmatched.join(', ')}`);
+  for (const t of TOWERS_SEL) {
     const rigMeta = t.rig ? { rig: { yaw: t.id + '_yaw', pitch: t.id + '_pitch', muzzle: t.id + '_muzzle', yawLimits: t.rig.yaw, pitchLimits: t.rig.pitch, traverseDegPerSec: t.rig.traverse, elevateDegPerSec: t.rig.elevate, pitchSign: -1 } } : { spin: t.id + '_spin' };
     if (t.id === 'barricade') {
       for (const [file, v] of [['tower_barricade.glb', null], ['tower_barricade_damaged.glb', 'damaged'], ['tower_barricade_broken.glb', 'broken']])
@@ -219,7 +257,7 @@ try {
       await add(`tower_${t.id}_${p.id}_s${s}.glb`, staged, { tower: t.id, kind: 'module', path: p.id, stage: s, breakpoint: [4, 7, 10].includes(s), adds: p.steps[s] || null, increments: Array.from({ length: s - 1 }, (_, i) => `${t.id}_up_${p.id}_l${i + 2}`) });
     }
   }
-  for (const c of EXTRA) for (const it of c.items) {
+  for (const c of EXTRA_SEL) for (const it of c.items) {
     const m = it.build(kit);
     /* Linear modules carry their run axis, repeat length and width
        (FORWARD-MANIFEST-switchyard, "Conventions we need stated on
@@ -258,7 +296,7 @@ try {
       await add(it.file.replace(/\.glb$/, `_${p}.glb`), pm, { kind: c.kind, id: `${it.id}_${p}`, pose: p, offhandOnly: ['magout', 'magin', 'charge'].includes(p) || undefined, note: it.note });
     }
   }
-  for (const [wid, node, file, note] of RELOAD_PROPS) {
+  for (const [wid, node, file, note] of RELOAD_SEL) {
     const src = WEAPONS.find((x) => x.id === wid).build(kit);
     const n = src.getObjectByName(node);
     if (!n) { say(`WARN reload prop node missing: ${node}`); continue; }
@@ -267,19 +305,35 @@ try {
     n.traverse((o) => { o.visible = true; });
     await add(file, n, { kind: 'weapon_reload', id: file.replace(/\.glb$/, ''), weapon: wid, source: node, note });
   }
-  say('Bundling palette, icons, manifest, design system…');
+  /* A filtered run rewrites only the rows it rebuilt, in place. Replacing the file outright would
+     strip every row for a model this run did not build — including the rig limits and slew rates
+     TowerRig reads back for each chassis, which would quietly reset every tower to its defaults.
+     Existing order is kept so the diff shows what changed rather than the whole file. */
+  if (PARTIAL) {
+    const prev = await readJson('/out/game/assets/structures/manifest.json');
+    if (prev?.files?.length) {
+      const mine = new Map(manifest.files.map((f) => [f.file, f]));
+      const had = new Set(prev.files.map((f) => f.file));
+      manifest.files = [...prev.files.map((f) => mine.get(f.file) ?? f), ...manifest.files.filter((f) => !had.has(f.file))];
+    }
+  }
+  say('Writing manifest…');
   await put('game/assets/structures/manifest.json', new TextEncoder().encode(JSON.stringify(manifest, null, 2)));
+
+  if (!PARTIAL) {
+  say('Bundling palette, icons, design system…');
   await put('docs/forward-manifest.json', await text('game/assets/forward-manifest.json'));
   await put('game/assets/brand/README.md', await text('game/assets/brand/README.md'));
   for (const n of ['logo_mark.svg', 'logo_mark_mono.svg', 'logo_horizontal.svg', 'logo_horizontal_onbrass.svg', 'logo_stacked.svg']) await put('game/assets/brand/' + n, await text('game/assets/brand/' + n));
   for (const s of [16, 32, 48, 64, 128, 256, 512, 1024]) await put(`game/assets/brand/appicon_${s}.png`, await text(`game/assets/brand/appicon_${s}.png`));
   for (const [p, n] of [['game/assets/palette.json', 'docs/palette.json'], ['game/assets/palette.md', 'docs/PALETTE.md'], ['game/assets/towers/README.md', 'game/assets/structures/README-towers.md'], ['docs/ASSET-DELIVERY.md', 'docs/ASSET-DELIVERY.md']])
-    await put(n, await text(p));
+    await (n === 'docs/ASSET-DELIVERY.md' ? putDeliveryNote(p, n) : put(n, await text(p)));
   for (const i of ICONS) await put(`game/assets/ui/${i}.svg`, await text(`game/assets/ui/${i}.svg`));
   for (const t of ['base', 'colors', 'effects', 'fonts', 'spacing', 'typography']) await put(`docs/design-system/${t}.css`, await text(`ds/tokens/${t}.css`));
   // ui-screens.html imports ui-screens-v2.js since the 2026-09-12 drop; a viewer copied without it is a blank page.
   for (const f of ['ui-kit.css', 'ui-screens.js', 'ui-screens-v2.js', 'ui-branding.js', 'ui-weapon-view.js']) await put('docs/design-system/' + f, await text(f));
   await put('docs/design-system/ui-screens.html', new TextEncoder().encode((await (await fetch('Deep Field 3D - UI Screens.html')).text()).replaceAll('ds/tokens/', '')));
+  }
   say(`DONE — ${done} GLB files exported`);
 } catch (err) {
   say('ERROR export failed: ' + (err.stack || err.message));

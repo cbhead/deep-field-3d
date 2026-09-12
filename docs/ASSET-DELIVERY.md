@@ -206,3 +206,122 @@ report — listed so lookups can be written against them):
 | `hands_mount_magazine` | `hands_<set>_magout`, `hands_<set>_magin` | where the magazine prop rides in the off-hand |
 | `scattergun_shell` | `scattergun` viewmodel | hidden loaded-hull template, cloned per shell fed |
 | `emberpistol_mag_release`, `emberpistol_mag_release_boss` | `emberpistol` | the canister latch the reload presses |
+
+---
+
+## Integration record — 2026-09-07 (code side)
+
+What actually landed when this drop was generated from the project sources
+(`make design-export`), against the note above:
+
+- **427 GLB names, not 380.** The sources had moved past this note: 47 names are
+  new — the M4/M5 enemies and their states (Broodmother, Carapace + plate,
+  Leaper + windup/airborne, Ram + enraged, Shade + shimmer, Mender), the Glacier
+  and Specter heroes with downed/revive poses and hands, the scrap pickups, the
+  Filament beam, Detector pulse, Overclock link and lane-wash VFX, poison /
+  reveal / stun status VFX, and the M3–M4 map elements (teleporter pad states,
+  elevator + shaft, sniper nest, crusher, floodgate, operated gate, destructible
+  wall states, caches, physics props). Fifteen of those are not in the brief;
+  they are listed at the end of `docs/asset-manifest.tsv`.
+- **Requested-and-missing is shorter than the note says.** `hero_glacier`,
+  `hero_specter` (+ `_downed`) shipped. Still missing: the Spire kit
+  (`spire_floor`, `spire_facade`, `spire_roof`, `spire_fireescape`,
+  `spire_path_ground`, `spire_skybox`) and `icon_cond_fog` / `icon_cond_night`,
+  plus the fourteen M3 icons listed in `docs/design-system/README.md`.
+- **The `wired` column was refreshed** from a measured run (`make usage`)
+  rather than flipped by hand; 57 rows changed.
+- **Turrets now run on the rig** (`game/scripts/TowerRig.cs`): yaw/pitch/spin
+  nodes, limits and slew rates from `manifest.json`. The muzzle node is found
+  but not yet used as the projectile origin.
+- **Barricade states are wired** to structure health (damaged below ⅔,
+  broken below ⅓).
+- **Camera far planes** on the review-shot cameras were raised past the 700 m
+  dome. The player camera already used Godot's default.
+
+---
+
+## Integration record — 2026-09-12 (code side)
+
+**Six Singularity upgrades were invisible.** `pruneToPath` in the export page
+matched `^<id>_up_<path>_l\d+$`, and the Singularity is the only tower that
+names increments per part rather than as one group — `perArm` builds
+`singularity_up_<path>_l<N>_arm<i>` and `cue()` mirrors the proxy's visibility
+onto each copy (`models/singularity.js`). The `$` dropped every arm copy, so
+range s2, s3, s6, s8, s10 and rate s9 exported identical to the stage below
+them: an upgrade you paid for and could not see. The pattern now matches the
+level and then a boundary, `l\d+(?:_|$)`, so a suffixed child counts as part of
+its increment. Range went from `[0, 0, 0, 3624, 4544, 4544, 6836, 6836, 14068,
+14068]` triangles to a ladder that climbs at every rung. Eleven files changed;
+no other tower uses `perArm`.
+
+⚠ **The same fix is needed upstream.** It is applied here to
+`tools/design-export/export.html` (which a drop does not overwrite) and to the
+vendored `docs/design/Deep Field 3D - Asset Export.html` (which a drop *does*
+overwrite). A zip built on design's side still carries the old pattern, so the
+six stages come back unless design takes the change. `make model-validate`
+fails if they do.
+
+**A gate for all of it.** `make model-validate` (`tools/model-validate.py`)
+reads every delivered `.glb` and checks what the client actually consumes: the
+rig chain `TowerRig` resolves, the empties `MergeRig` merges onto, the mount
+nodes `WeaponAssembly` hangs modules from, manifest against disk, and the rule
+that caught this — a stage the manifest says *adds* something must add
+triangles. No Godot, no browser, no dependencies, about two seconds for the
+whole drop, so it runs in CI's fast lane and in `make check`. Everything is
+ratcheted against `docs/model-validation-baseline.tsv`, the way `map-validate.sh`
+works, because some of today's exceptions are correct as they stand — and a
+contract row there means a defect somebody chose to carry, restated on every run
+rather than passing quietly. Pointed at the pre-fix drop it reports all six
+invisible upgrades and the twelve missing manifest rows; pointed at this one it
+reports `toaster_skybox`.
+
+**Partial rebuilds.** `make design-export ONLY=<sel>` rebuilds one tower, one
+model, or one category instead of the whole drop — see
+[ART-INTEGRATION.md](ART-INTEGRATION.md). A filtered run merges its rows into
+`game/assets/structures/manifest.json` rather than replacing it; replacing it
+would drop the `rig` blocks `TowerRig` reads and silently reset every tower to
+default limits.
+
+⚠ **`toaster_skybox` in this drop disagrees with its own manifest row**, and the
+gate above is what found it: the row says 0 triangles and 0 parts, the file has
+2208 and 1. `triCount` / `countMeshes` skip any mesh flagged `userData.gizmo`,
+and `bakeSkies()` only clears that flag on a sky it re-bakes. The other three
+skyboxes are shader skies, so they get baked, cleared and counted. The toaster's
+ships a pre-baked `MeshBasicMaterial`, never goes through `bakeSkies`, keeps the
+flag — and the exporter writes the mesh anyway. Carried in the baseline with a
+note rather than fixed here, because it is this drop's to fix: clear the flag on
+the toaster sky, or stop skipping a mesh that is actually exported.
+
+**Other things this pass found and fixed:**
+
+- A full export overwrote this file with design's copy and deleted the
+  integration record above. It now carries every `## Integration record`
+  section onto the fresh note. A zip drop unpacked by hand still clobbers it —
+  re-append by hand after one.
+- The 12 `hands_<faction>_pistol` / `_tool` files had no manifest rows: the
+  pose re-export skipped the manifest entirely. This drop replaced that
+  mechanism with a per-item `poses` list, which writes rows for every pose, so
+  the gap is closed on both paths.
+- Nineteen GLBs re-exported with identical geometry — same triangle count, part
+  count and bounds — but a few bytes' difference from what was committed. Sixteen
+  were a one-time convergence onto the pinned toolchain (glTF float formatting);
+  those bytes are committed and a full run no longer touches them. The other
+  three — `foundry_terrain`, `switchyard_terrain`, `foundry_wall_boundary` — are
+  the canvas-drawn floor textures from `models/floor-textures.js`, and they
+  alternate between two variants of *identical size* with identical geometry:
+  the browser's 2D rasteriser anti-aliases the grain rects a little differently
+  between runs. Harmless, and below the level this repo can reach — so expect a
+  full `make design-export` to leave up to three textured map files dirty with no
+  real change, and `git checkout` them. `make model-validate` compares geometry,
+  not bytes, so it is unaffected.
+- `head_height` (overhead bars) was `1.9 × EnemyScale`, calibrated against the
+  graybox. It now reads the delivered model's own height from the manifest, so
+  a Ram's bar stops sitting inside its head and a Monolith's stops floating.
+- **Left alone on purpose:** the rig muzzle nodes sit at 1.52 m (Lance), 1.62 m
+  (Nova), 1.86 m (Skywatch) and 2.03 m (Filament), while the sim spawns every
+  round at a flat 1.5 m (`sim/Sim.Core/Step.cs`). Flashes already come from the
+  node (`GameRoot.OnTowerFired`); it is the round itself that starts below the
+  barrel, by half a metre on a Filament. Closing it means either moving the sim's
+  origin — which changes ballistics, hit timing and the gates that measure them —
+  or a view-side offset that decays over the first frames. Both are calls to
+  make deliberately, not defects to quietly patch.
