@@ -110,6 +110,30 @@ public partial class Vfx : Node3D
     }
 
     // ---------------------------------------------------------------------
+    // Going somewhere else
+    // ---------------------------------------------------------------------
+
+    /// <summary>A player arriving or leaving on the pad network. Teal, and the
+    /// same column at both ends, because what the effect has to say is "that
+    /// person is now over there" — two different effects would read as two
+    /// different things happening.</summary>
+    public void Teleport(Vector3 at) => Warp(at, UiTheme.Status("chill"));
+
+    /// <summary>An enemy crossing a warp gate. The same shape in the colour
+    /// everything hostile is drawn in: a player has to be able to tell, from
+    /// the far side of a field, which of the two just happened.</summary>
+    public void EnemyWarp(Vector3 at) => Warp(at, new Color("e9614c"));
+
+    private void Warp(Vector3 at, Color hue)
+    {
+        // Design's teleport burst if it has landed; the flat impact ring is
+        // the stand-in, which is authored lying on the ground and is the
+        // closest thing in the delivered set to a column of light.
+        string asset = AssetLibrary.Has("vfx_teleport_burst") ? "vfx_teleport_burst" : "vfx_impact_nova";
+        Spawn(asset, at + Vector3.Up * 0.2f, Vector3.Up, life: 0.45f, from: 0.3f, to: 1.6f, tint: hue);
+    }
+
+    // ---------------------------------------------------------------------
 
     private Burst? Spawn(string asset, Vector3 at, Vector3 forward, float life, float from, float to, Color? tint = null)
     {

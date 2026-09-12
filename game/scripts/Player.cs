@@ -128,6 +128,55 @@ public partial class Player : CharacterBody3D
     private bool _onLadder;
     private Vector3? _zipTarget;
 
+    // --- Teleport network -------------------------------------------------
+    /// <summary>A teleport is a decision you have to stand still for. The
+    /// charge is short enough not to be a chore and long enough that stepping
+    /// onto a pad mid-fight is a bet, and leaving the pad cancels it — which
+    /// is what stops it being an escape button.</summary>
+    private const float TeleportChargeSeconds = 1.5f;
+    /// <summary>Personal, and long: the network is a way to be where the wave
+    /// is, not a way to be everywhere. Three hundred and twenty metres is the
+    /// point of the map, and a pad you can use every few seconds deletes it.</summary>
+    private const float TeleportCooldownSeconds = 20f;
+
+    private float _teleportCharge = -1f;
+    private string _teleportFromPad = "";
+    private Vector3 _teleportDestination;
+    private float _teleportCooldown;
+
+    public bool Teleporting => _teleportCharge >= 0f;
+    public float TeleportCooldown => _teleportCooldown;
+
+    /// <summary>The pad under the player's feet, or empty.</summary>
+    private string PadHere()
+    {
+        foreach (var area in _sensor.GetOverlappingAreas())
+            if ((string)area.GetMeta("kind", "") == "teleporter")
+                return (string)area.GetMeta("pad_id", "");
+        return "";
+    }
+
+    /// <summary>Start charging toward a pad. Called by the picker on release;
+    /// the move itself happens when the charge runs out, on the pad.</summary>
+    public void BeginTeleport(string toPadId, Vector3 destination)
+    {
+        if (_teleportCooldown > 0f) return;
+        _teleportFromPad = PadHere();
+        if (_teleportFromPad.Length == 0) return;
+        _teleportDestination = destination;
+        _teleportCharge = TeleportChargeSeconds;
+        _root.RefreshPadArt(_teleportFromPad, onCooldown: false);
+        GD.Print($"[teleport] {_teleportFromPad} -> {toPadId}");
+    }
+
+    private void CancelTeleport()
+    {
+        if (!Teleporting) return;
+        _teleportCharge = -1f;
+        _teleportFromPad = "";
+        _root.RefreshPadArt("", _teleportCooldown > 0f);
+    }
+
     // What the player is currently looking at (refreshed each physics frame).
     private string _aimSocketId = "";
     private int _aimEnemyId = -1;
@@ -207,7 +256,7 @@ public partial class Player : CharacterBody3D
         {
             case InputEventMouseMotion motion:
                 // While a radial menu is open the same motion steers it.
-                if (_root.WheelOpen) { _root.SteerWheel(motion.Relative); break; }
+                if (_root.RadialOpen) { _root.SteerWheel(motion.Relative); break; }
                 if (Input.MouseMode != Input.MouseModeEnum.Captured) break;
                 RotateY(-motion.Relative.X * BaseMouseSensitivity * SensitivityScale);
                 _pitch = Mathf.Clamp(_pitch - motion.Relative.Y * BaseMouseSensitivity * SensitivityScale, -1.5f, 1.5f);
@@ -255,7 +304,7 @@ public partial class Player : CharacterBody3D
 
     private void NumberKey(int oneBased)
     {
-        if (_root.WheelOpen) _root.WheelSelect(oneBased - 1);
+        if (_root.RadialOpen) _root.WheelSelect(oneBased - 1);
         else if (_root.UpgradeOpen) _root.UpgradeKey(oneBased);
     }
 
@@ -263,6 +312,38 @@ public partial class Player : CharacterBody3D
     {
         UpdateAim();
         UpdateBuildSurfaces(delta);
+
+        _teleportCooldown = Mathf.Max(0f, _teleportCooldown - (float)delta);
+
+        // Charging: rooted to the pad, and stepping off it cancels. The
+        // position is set rather than travelled to, so the network is not a
+        // zipline with a longer cable — it is somewhere else on the map, and
+        // the standing still is the whole price.
+        if (Teleporting)
+        {
+            if (PadHere() != _teleportFromPad) CancelTeleport();
+            else
+            {
+                Velocity = Vector3.Zero;
+                MoveAndSlide();
+                _teleportCharge -= (float)delta;
+                if (_teleportCharge <= 0f)
+                {
+                    _root.Vfx.Teleport(GlobalPosition);
+                    GlobalPosition = _teleportDestination + Vector3.Up * 0.3f;
+                    _root.Vfx.Teleport(GlobalPosition);
+                    _teleportCharge = -1f;
+                    _teleportFromPad = "";
+                    _teleportCooldown = TeleportCooldownSeconds;
+                    _root.RefreshPadArt("", onCooldown: true);
+                }
+                return;
+            }
+        }
+        else if (_teleportCooldown <= 0f)
+        {
+            _root.RefreshPadArt("", onCooldown: false);
+        }
 
         // Zipline ride: kinematic slide to the end point, cancel on arrival.
         if (_zipTarget is { } zip)
@@ -341,7 +422,7 @@ public partial class Player : CharacterBody3D
 
         // Fire: blocked while a menu owns the mouse or a build surface is open.
         _fireCooldown -= delta;
-        if (!uiOwnsInput && !_root.WheelOpen && !_root.UpgradeOpen
+        if (!uiOwnsInput && !_root.RadialOpen && !_root.UpgradeOpen && !Teleporting
             && Input.MouseMode == Input.MouseModeEnum.Captured
             && _fireCooldown <= 0)
         {
@@ -368,7 +449,7 @@ public partial class Player : CharacterBody3D
         // point, so the client sends where you are looking and nothing else —
         // no target list, no raycast, nothing to disagree about.
         _meleeCooldown -= delta;
-        if (!uiOwnsInput && !_root.WheelOpen && !_root.UpgradeOpen
+        if (!uiOwnsInput && !_root.RadialOpen && !_root.UpgradeOpen
             && Input.MouseMode == Input.MouseModeEnum.Captured
             && Input.IsMouseButtonPressed(MouseButton.Right)
             && _meleeCooldown <= 0)
@@ -408,8 +489,14 @@ public partial class Player : CharacterBody3D
 
     private string BuildHint()
     {
+        if (_root.PickerOpen) return "steer to a pad · release E to go · 1-6 to pick";
         if (_root.WheelOpen) return "steer to a wedge · release E to build · 1-6 to pick";
         if (_root.UpgradeOpen) return "1-3 upgrade a path · hold X to sell · release U to close";
+        if (Teleporting) return $"teleporting… {_teleportCharge:0.0}s · step off to cancel";
+        if (PadHere().Length > 0)
+            return _teleportCooldown > 0f
+                ? $"teleporter recharging · {_teleportCooldown:0}s"
+                : "[hold E] choose a destination";
         if (InArea("armory")) return "[Tab] armory   ·   [5] recraft blueprint";
         if (InArea("zipline")) return "[E] ride the zipline";
         if (InArea("ladder")) return "[W] climb";
@@ -432,6 +519,7 @@ public partial class Player : CharacterBody3D
         if (_root.UiCapturesMouse)
         {
             if (_root.WheelOpen) _root.CancelBuildWheel();
+            if (_root.PickerOpen) _root.CancelTeleportPicker();
             if (_root.UpgradeOpen) _root.CloseUpgradePanel();
             return;
         }
@@ -444,6 +532,21 @@ public partial class Player : CharacterBody3D
         // instead of working around the controller.
         bool buildHeld = HoldingBuild || Input.IsPhysicalKeyPressed(Key.E);
         bool upgradeHeld = HoldingUpgrade || Input.IsPhysicalKeyPressed(Key.U);
+
+        // A pad under your feet outranks everything: you cannot build on one,
+        // and a player holding E while standing on a teleporter means the
+        // teleporter. Release commits, the same as the other two surfaces.
+        if (buildHeld && !_root.RadialOpen && !Teleporting
+            && _teleportCooldown <= 0f && PadHere().Length > 0)
+        {
+            _root.OpenTeleportPicker(PadHere());
+            return;
+        }
+        if (!buildHeld && _root.PickerOpen)
+        {
+            _root.ConfirmTeleportPicker();
+            return;
+        }
 
         // E in a zipline volume rides instead of building — traversal wins,
         // since you can't build on a zipline anyway.

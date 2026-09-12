@@ -100,6 +100,7 @@ public partial class GameRoot : Node3D
     private HudRoot _hud = null!;
     private MatchScreens _screens = null!;
     private BuildWheel _wheel = null!;
+    private TeleportPicker _picker = null!;
     private UpgradePanel _upgrade = null!;
     private ArmoryScreen _armory = null!;
     private BuildGhost _ghost = null!;
@@ -191,6 +192,8 @@ public partial class GameRoot : Node3D
         _towerViews.Clear();
         _enemyViews.Clear();
         _teleportPads.Clear();
+        _warped.Clear();
+        _padState.Clear();
         _footprints.Clear();
         Surfaces.Clear();
         _avatarViews.Clear();
@@ -767,6 +770,26 @@ public partial class GameRoot : Node3D
             return;
         }
 
+        if (_shotView == "teleport")
+        {
+            _shotView = "eye";
+            _teleportReportPath = path;
+            _teleportReport = new List<string>
+            {
+                $"teleport probe on {_map.Id}",
+                $"{_teleportPads.Count} pad(s): "
+                    + string.Join(", ", _teleportPads.Select(x => $"{x.Id} at ({x.At.X:0},{x.At.Z:0})")),
+            };
+            if (_teleportPads.Count < 2)
+            {
+                WriteProbe(_teleportReport, _teleportReportPath, false,
+                    "INCONCLUSIVE: a network needs two pads and this map has "
+                    + $"{_teleportPads.Count}");
+            }
+            _teleportTimer = 0f;
+            return;
+        }
+
         if (_shotView is "armory" or "blueprints" or "wheel" or "upgrade")
         {
             string surface = _shotView;
@@ -1190,6 +1213,7 @@ public partial class GameRoot : Node3D
         TickShotStages();
         TickIntermissionShot();
         if (_traversalReport is not null) TickTraversalProbe(delta);
+        if (_teleportReport is not null) TickTeleportProbe(delta);
         if (_shotPath is not null && _shotFire && _shotCountdown == 2 && _player is not null) { _player.FireForReview(); _shotFire = false; }
         if (_shotPath is not null && --_shotCountdown <= 0) CaptureShot();
         TickCoreFlash(delta);
@@ -1550,6 +1574,9 @@ public partial class GameRoot : Node3D
                     FlashCore();
                     OnBreach(leaked.EnemyId);
                     break;
+                case SimEvent.EnemyTeleported warp:
+                    OnEnemyTeleported(warp.EnemyId, new Vector3(warp.X, warp.Y, warp.Z));
+                    break;
 
                 case SimEvent.ReactionTriggered reaction:
                     _reactionCount++;
@@ -1669,10 +1696,36 @@ public partial class GameRoot : Node3D
                     System.Globalization.CultureInfo.InvariantCulture), p[4]);
                 break;
             case "enemyDied": OnEnemyDied(int.Parse(p[2]), int.Parse(p[4]), p[5]); break;
+            case "enemyTeleported":
+                OnEnemyTeleported(int.Parse(p[2]), new Vector3(
+                    float.Parse(p[5], System.Globalization.CultureInfo.InvariantCulture),
+                    float.Parse(p[6], System.Globalization.CultureInfo.InvariantCulture),
+                    float.Parse(p[7], System.Globalization.CultureInfo.InvariantCulture)));
+                break;
         }
     }
 
     // ---- Shared event reactions (identical in every mode) -----------------
+
+    /// <summary>An enemy just crossed a warp gate.
+    ///
+    /// A burst at each end, and a note that this one's view must not be
+    /// interpolated on the next sync — otherwise a network client watches it
+    /// glide two hundred metres across the fields at walking speed, through
+    /// the buildings, which is both wrong and the most conspicuous thing on
+    /// the map. The distance rule in the sync does most of the work; this is
+    /// the belt to its braces, and it is the half that survives the event
+    /// arriving before the snapshot.</summary>
+    private void OnEnemyTeleported(int enemyId, Vector3 to)
+    {
+        if (_enemyViews.TryGetValue(enemyId, out var view) && IsInstanceValid(view))
+            Vfx.EnemyWarp(view.GlobalPosition);
+        Vfx.EnemyWarp(to);
+        _warped.Add(enemyId);
+    }
+
+    /// <summary>Enemies that warped since their view was last placed.</summary>
+    private readonly HashSet<int> _warped = new();
 
     /// <summary>Design's flash at the rig's muzzle, facing where the barrel
     /// points. Only the host sees these: TowerFired is not relayed, and a
@@ -1954,7 +2007,12 @@ public partial class GameRoot : Node3D
             // Forward is whatever the current leg points at, so a walker turns
             // through a corner instead of sliding round it sideways. The sim
             // already keeps Facing per leg; nothing was reading it.
-            FaceAlong(view, enemy.Facing, delta);
+            //
+            // Except out of a warp gate, where the new leg can point anywhere:
+            // easing into it would have the thing pirouette on the pad for
+            // half a second before walking off.
+            if (_warped.Remove(enemy.Id)) FaceAlongInstantly(view, enemy.Facing);
+            else FaceAlong(view, enemy.Facing, delta);
             byte bits = Protocol.PackStatusBits(enemy);
             TintEnemy(view, enemy.Hp / enemy.MaxHp, bits);
 
@@ -2221,13 +2279,22 @@ public partial class GameRoot : Node3D
                 view = SpawnEnemyView(snap.Id, snap.DefId);
                 _enemyViews[snap.Id] = view;
             }
-            var target = prevById.TryGetValue(snap.Id, out var prev)
+            // Nothing in this game moves more than a metre between two
+            // snapshots, so a jump of twenty is a warp gate and not a walk.
+            // Measured rather than trusted to the event alone: the event line
+            // and the snapshot arrive on different channels, and whichever
+            // lands first, the enemy must not be seen gliding across the map.
+            bool jumped = _warped.Remove(snap.Id)
+                || (prevById.TryGetValue(snap.Id, out var before)
+                    && before.Pos.DistanceTo(snap.Pos) > 20f);
+            var target = !jumped && prevById.TryGetValue(snap.Id, out var prev)
                 ? Vec3.Lerp(prev.Pos, snap.Pos, t)
                 : snap.Pos;
             view.Position = ToGd(target);
             // Snapshots carry the yaw the server computed, so a client sees the
             // same turn rather than a differently-oriented crowd.
-            TurnTowards(view, GodotYaw(snap.Yaw), delta);
+            if (jumped) view.Rotation = new Vector3(view.Rotation.X, GodotYaw(snap.Yaw), view.Rotation.Z);
+            else TurnTowards(view, GodotYaw(snap.Yaw), delta);
             TintEnemy(view, snap.HpFraction, snap.StatusBits);
 
             // Snapshots carry no shield channel of their own; a Warden that
@@ -2316,7 +2383,9 @@ public partial class GameRoot : Node3D
             _avatarViews[playerId] = view;
         }
         // Smooth the 8 Hz meta rate.
-        view.Position = view.Position.Lerp(pos, 0.35f);
+        // A teammate who used a pad is somewhere else entirely; easing them
+        // there walks their avatar through four buildings on the way.
+        view.Position = view.Position.DistanceTo(pos) > 20f ? pos : view.Position.Lerp(pos, 0.35f);
 
         var upright = view.GetNode<Node3D>("Body");
         if (view.GetNodeOrNull<Node3D>("Downed") is { } pose)
@@ -2378,6 +2447,15 @@ public partial class GameRoot : Node3D
     {
         if (facing.X * facing.X + facing.Z * facing.Z < 1e-4f) return;
         TurnTowards(view, GodotYaw(Mathf.Atan2(facing.X, facing.Z)), delta);
+    }
+
+    /// <summary>Set a heading outright. For arrivals: a view that was just
+    /// put somewhere else has no previous heading worth easing from.</summary>
+    private static void FaceAlongInstantly(Node3D view, Vec3 facing)
+    {
+        if (facing.X * facing.X + facing.Z * facing.Z < 1e-4f) return;
+        view.Rotation = new Vector3(view.Rotation.X,
+            GodotYaw(Mathf.Atan2(facing.X, facing.Z)), view.Rotation.Z);
     }
 
     private static void TurnTowards(Node3D view, float yaw, double delta)
@@ -2819,6 +2897,106 @@ public partial class GameRoot : Node3D
     /// <summary>Drives the probe: put the player at the foot of each climb,
     /// hold the climb for four seconds, and record where they ended up and
     /// whether they were standing on anything when they got there.</summary>
+    // =====================================================================
+    // Teleport probe
+    // =====================================================================
+
+    private List<string>? _teleportReport;
+    private string _teleportReportPath = "";
+    private float _teleportTimer;
+
+    /// <summary>Does the pad network actually move a player, and does it then
+    /// refuse to do it again?
+    ///
+    /// Both halves have to be measured, and neither is visible in a
+    /// screenshot. The Spire has shipped teleport pads since M3 that were
+    /// coloured boxes: the asset name never resolved, the pad id was on the
+    /// wrong node, and no code handled the area kind at all. Every review shot
+    /// of that map contained two pads and none of them were pads.</summary>
+    private void TickTeleportProbe(double delta)
+    {
+        if (_teleportReport is null || _player is null || _teleportPads.Count < 2) return;
+        float before = _teleportTimer;
+        _teleportTimer += (float)delta;
+
+        var from = _teleportPads[0];
+        var to = _teleportPads[1];
+
+        // Stand on the first pad and hold E: the picker has to open, which is
+        // what proves the area, its pad_id and the hold both work.
+        if (before <= 0f)
+        {
+            _player.GlobalPosition = from.At + Vector3.Up * 0.6f;
+            _player.HoldingBuild = false;
+            return;
+        }
+        if (_teleportTimer < 0.6f) return;
+        if (before < 0.6f)
+        {
+            _player.HoldingBuild = true;
+            return;
+        }
+        if (_teleportTimer < 1.0f) return;
+        if (before < 1.0f)
+        {
+            if (!PickerOpen)
+            {
+                _teleportReport.Add($"holding E on {from.Id} did not open the picker");
+                WriteProbe(_teleportReport, _teleportReportPath, false,
+                    "FAIL: a pad underfoot offered nothing");
+                return;
+            }
+            // Pick the pad we mean rather than whatever is nearest, so the
+            // arrival can be checked against a known destination.
+            int index = 0;
+            for (int i = 1; i < _teleportPads.Count; i++)
+                if (_teleportPads[i].Id == to.Id) index = i - 1;
+            WheelSelect(index);
+            _player.HoldingBuild = false;       // release commits
+            _teleportReport.Add($"picker opened on {from.Id}, chose {to.Id}");
+            return;
+        }
+
+        // The charge is a second and a half of standing still; give it three.
+        if (_teleportTimer < 3.2f) return;
+        if (before < 3.2f)
+        {
+            float off = _player.GlobalPosition.DistanceTo(to.At);
+            bool arrived = off < 2.5f && _player.Standing;
+            _teleportReport.Add($"{from.Id} -> {to.Id}: arrived {off:0.0} m off, "
+                + (_player.Standing ? "standing" : "NOT STANDING")
+                + $", cooldown {_player.TeleportCooldown:0.0}s");
+            // The sim has to agree: a player who moved and never told it is a
+            // player taking contact damage where they used to be.
+            if (_world is not null && _world.Players.TryGetValue(LocalPlayerId, out var seen))
+            {
+                float simOff = ToGd(seen.Pos).DistanceTo(to.At);
+                _teleportReport.Add($"the sim has them {simOff:0.0} m from {to.Id}");
+                if (simOff > 4f) arrived = false;
+            }
+            if (!arrived)
+            {
+                WriteProbe(_teleportReport, _teleportReportPath, false,
+                    "FAIL: the network did not put the player where it said");
+                return;
+            }
+            // And now it must refuse: the cooldown is the only thing stopping
+            // a pad network from deleting the distance the map is made of.
+            _player.HoldingBuild = true;
+            return;
+        }
+
+        if (_teleportTimer < 3.8f) return;
+        bool refused = !PickerOpen;
+        _player.HoldingBuild = false;
+        _teleportReport.Add(refused
+            ? $"holding E again was refused, {_player.TeleportCooldown:0}s left on the cooldown"
+            : "the picker opened again while the cooldown was still running");
+        WriteProbe(_teleportReport, _teleportReportPath, refused,
+            refused ? "PASS: the network moves you once and then makes you wait"
+                    : "FAIL: the cooldown does not hold");
+    }
+
     private void TickTraversalProbe(double delta)
     {
         if (_traversalReport is null || _player is null) return;
@@ -4655,6 +4833,8 @@ public partial class GameRoot : Node3D
 
         _wheel = new BuildWheel { Name = "BuildWheel" };
         _overlay.AddChild(_wheel);
+        _picker = new TeleportPicker { Name = "TeleportPicker" };
+        _overlay.AddChild(_picker);
 
         _upgrade = new UpgradePanel { Name = "UpgradePanel" };
         _overlay.AddChild(_upgrade);
@@ -4703,6 +4883,56 @@ public partial class GameRoot : Node3D
     public bool WheelOpen => _wheel.IsOpen;
     public bool UpgradeOpen => _upgrade.IsOpen;
 
+    /// <summary>Any radial is up, so mouse motion steers it instead of the
+    /// camera and a number key picks a wedge instead of doing nothing. Two of
+    /// these exist now; everything that used to ask about the build wheel
+    /// specifically meant this.</summary>
+    public bool RadialOpen => _wheel.IsOpen || _picker.IsOpen;
+    public bool PickerOpen => _picker.IsOpen;
+
+    /// <summary>Every pad but the one you are standing on, nearest first.</summary>
+    public void OpenTeleportPicker(string fromPadId)
+    {
+        var from = _teleportPads.FirstOrDefault(p => p.Id == fromPadId);
+        if (from is null) return;
+        _picker.Open(from.Label, _teleportPads
+            .Where(p => p.Id != fromPadId)
+            .Select(p => new TeleportPicker.Destination(p.Id, p.Label, from.At.DistanceTo(p.At)))
+            .OrderBy(d => d.Metres));
+    }
+
+    /// <summary>Release: start the charge toward the highlighted pad. The
+    /// player is not moved here — standing still on the pad for the charge is
+    /// the cost, and leaving it cancels.</summary>
+    public void ConfirmTeleportPicker()
+    {
+        var pick = _picker.Selection;
+        _picker.Close();
+        if (pick is null) return;
+        var destination = _teleportPads.FirstOrDefault(p => p.Id == pick.Id);
+        if (destination is null) return;
+        _player?.BeginTeleport(destination.Id, destination.At);
+    }
+
+    public void CancelTeleportPicker() => _picker.Close();
+
+    /// <summary>Every pad shows the cooldown, not just the one you used: the
+    /// cooldown is personal, so what the player needs to know is whether the
+    /// network is available at all, and four pads disagreeing about that is a
+    /// worse lie than all four being pessimistic.</summary>
+    public void RefreshPadArt(string chargingPadId, bool onCooldown)
+    {
+        foreach (var pad in _teleportPads)
+        {
+            string state = pad.Id == chargingPadId ? "charged" : onCooldown ? "cooldown" : "idle";
+            if (_padState.TryGetValue(pad.Id, out string? shown) && shown == state) continue;
+            _padState[pad.Id] = state;
+            SetPadArt(pad.Id, state);
+        }
+    }
+
+    private readonly Dictionary<string, string> _padState = new();
+
     public void OpenBuildWheel(string socketId)
     {
         var socket = _map.Sockets.FirstOrDefault(s => s.Id == socketId);
@@ -4712,12 +4942,14 @@ public partial class GameRoot : Node3D
 
     public void SteerWheel(Vector2 relative)
     {
+        if (_picker.IsOpen) { _picker.Steer(relative); return; }
         _wheel.Steer(relative);
         UpdateGhost();
     }
 
     public void WheelSelect(int index)
     {
+        if (_picker.IsOpen) { _picker.SelectIndex(index); return; }
         _wheel.SelectIndex(index);
         UpdateGhost();
     }

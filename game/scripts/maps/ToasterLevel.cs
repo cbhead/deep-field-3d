@@ -26,32 +26,38 @@ public partial class GameRoot
 
         // Centre, footprint, eaves, doors, and which wall carries the ladder to
         // the roof. Each is named for the vehicle parked outside it.
+        //
+        // The ladder goes on whichever wall its roof socket is nearest, which
+        // is not decoration: a climb that tops out a building's width away
+        // from the pad it serves leaves the player standing on rungs with
+        // nothing to step onto, and that is the mistake this project has now
+        // made on three maps. The traversal probe measures it.
         BuildHouse("barn", new Vector3(-108, 0, 54), 30f, 21f, 6.0f, new[]
         {
             // Wide and tall enough to drive the Gator through, which is the
             // whole reason a barn has a door that size.
             new Door(Side.South, 0f, 5f, 4f),
             new Door(Side.North, -8f),
-        }, Side.East, 4f, "toaster_barn_shell", "toaster_barn_roof");
+        }, Side.East, -8.5f, "toaster_barn_shell", "toaster_barn_roof");
 
         BuildHouse("buggy", new Vector3(-134, 0, -7), 19f, 28f, 3.4f, new[]
         {
             new Door(Side.East, 6f),
             new Door(Side.West, -8f),
-        }, Side.North, 5f, "toaster_house_buggy_shell", "toaster_house_buggy_roof");
+        }, Side.West, 12f, "toaster_house_buggy_shell", "toaster_house_buggy_roof");
 
         BuildHouse("vehickle", new Vector3(30, 0, 31), 34f, 26f, 3.4f, new[]
         {
             new Door(Side.North, -10f),      // onto the drive
             new Door(Side.South, 12f),
             new Door(Side.West, 0f, 4.5f, 2.8f),
-        }, Side.East, 8f, "toaster_house_vehickle_shell", "toaster_house_vehickle_roof");
+        }, Side.East, -11f, "toaster_house_vehickle_shell", "toaster_house_vehickle_roof");
 
         BuildHouse("grnmchn", new Vector3(90, 0, -50), 24f, 30f, 3.4f, new[]
         {
             new Door(Side.West, 0f),         // toward the pond
             new Door(Side.East, 8f),
-        }, Side.South, 6f, "toaster_house_grnmchn_shell", "toaster_house_grnmchn_roof");
+        }, Side.West, 13f, "toaster_house_grnmchn_shell", "toaster_house_grnmchn_roof");
 
         foreach (var (id, label, at) in ToasterLayout.Pads) AddTeleportPad(id, label, at);
 
