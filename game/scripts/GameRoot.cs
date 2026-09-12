@@ -534,11 +534,15 @@ public partial class GameRoot : Node3D
             if (_world.Players.TryGetValue(LocalPlayerId, out var me))
             {
                 me.Scrap[ScrapType.Alloy] = 5000;
+                me.Scrap[ScrapType.Gravium] = 12;
                 Submit(new Command.SelectWeapon(LocalPlayerId, "sidearm"));
-                for (int i = 0; i < 3; i++) Submit(new Command.PackAPunch(LocalPlayerId, "sidearm"));
+                // Four, so the card is sitting on the level-5 milestone and
+                // shows its gravium price rather than the plain one.
+                for (int i = 0; i < 4; i++) Submit(new Command.PackAPunch(LocalPlayerId, "sidearm"));
                 Step.Advance(_world);
                 var build = me.BuildFor("sidearm");
-                GD.Print($"[pap] sidearm level {build.PackLevel}, next costs {build.NextPackCost}, "
+                GD.Print($"[pap] sidearm level {build.PackLevel}, next costs {build.NextPackCost} "
+                    + $"+ {build.NextPackGravium} gravium, "
                     + $"damage x{build.DamageFactor(false):0.00}, rate x{build.RateFactor():0.00}, "
                     + $"alloy left {me.Scrap[ScrapType.Alloy]}");
                 RebuildView();

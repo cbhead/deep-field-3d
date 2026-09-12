@@ -1013,8 +1013,10 @@ public partial class ArmoryScreen : Control
     {
         int level = local.PackLevelFor(_weaponId);
         int cost = WeaponBuild.PackCostAt(level + 1);
+        int gravium = WeaponBuild.PackGraviumAt(level + 1);
         int have = _view.PersonalScrapOf(ScrapType.Alloy);
-        bool affordable = have >= cost;
+        int haveGravium = _view.PersonalScrapOf(ScrapType.Gravium);
+        bool affordable = have >= cost && haveGravium >= gravium;
 
         var card = Kit.Card(level > 0);
         var column = Kit.Col(Tokens.Space3);
@@ -1041,8 +1043,20 @@ public partial class ArmoryScreen : Control
                   + $"×{Balance.PackRatePerLevel:0.00} fire rate, every level, forever",
             Tokens.SizeMicro, Tokens.TextMuted));
 
+        // Where the next milestone is, so a player saving for level 5 knows the
+        // Gravium is coming before they are two levels away and short.
+        int toMilestone = Balance.PackGraviumEvery - (level % Balance.PackGraviumEvery);
+        column.AddChild(Kit.Body(
+            gravium > 0
+                ? $"milestone level — costs {gravium} gravium as well"
+                : $"gravium again in {toMilestone} level{(toMilestone == 1 ? "" : "s")}",
+            Tokens.SizeMicro, gravium > 0 ? Tokens.TextArcane : Tokens.TextDisabled));
+
         var row = Kit.Row(Tokens.Space4);
         row.AddChild(UiTheme.CountChip("scrap_alloy", have, UiTheme.Scrap(ScrapType.Alloy), cost));
+        if (gravium > 0)
+            row.AddChild(UiTheme.CountChip("scrap_gravium", haveGravium,
+                UiTheme.Scrap(ScrapType.Gravium), gravium));
         row.AddChild(Kit.Spacer());
         var buy = new KitButton($"Pack  {cost}",
             affordable ? KitButton.Tone.Primary : KitButton.Tone.Secondary, Tokens.ControlSm);
