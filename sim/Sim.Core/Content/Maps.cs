@@ -500,10 +500,11 @@ public static class Maps
     /// parked here for.
     ///
     /// There is no high ground. A farm is flat, so the air strand flies low —
-    /// 9 m, over the drive — and is answered from the lane pads rather than
-    /// from a deck. That is a decision, not an oversight: the four roofs are
-    /// the only tier this map has, one per building, and they exist to reach
-    /// what the ground beside them cannot.</summary>
+    /// 9 m, and down the line the walkers take — and is answered from the same
+    /// lane pads rather than from a deck. That is a decision, not an oversight:
+    /// on a map with no tier to put anti-air on, a strand anywhere else is a
+    /// lane no tower in the game can reach. The four roofs are the only height
+    /// this map has, one per building, and they are there for the player.</summary>
     public static readonly MapDef Toaster = new(
         Id: "toaster",
         Routes: new[]
@@ -586,19 +587,29 @@ public static class Maps
                 new Vec3(-57f, 0f, -10f),
             }, TeleportLegs: new[] { 11 }),
 
-            // The strand crosses the property a few metres north of the drive
-            // at 9 m — high enough that it is its own line and low enough that
-            // a Skywatch standing in a field answers it. On a map with no decks
-            // the alternative was an air lane nothing in the game can reach.
+            // The drive again, nine metres up: flyers take the same line the
+            // walkers take, and the same pads answer both.
+            //
+            // On every map before this one the strand was its own route at its
+            // own height, and the point of that was to make the deck matter —
+            // a lane the ground could not reach. A farm has no deck. Given
+            // that, an air lane somewhere else is not a second front, it is a
+            // second front nothing in the game can shoot at, which is the
+            // failure MAP-AUTHORING §4.5 exists to catch. So the flyers follow
+            // the road at a height a Skywatch in the field can hold, and what
+            // a mixed wave costs you here is volume rather than position: the
+            // pads that cover the drive are already the right pads, and the
+            // question is whether you bought enough of the right towers.
             new RouteDef("air", EnemyLayer.Air, new[]
             {
                 new Vec3(72f, 9f, 24f),
-                new Vec3(58f, 9f, 23f),
-                new Vec3(40f, 9f, 16f),
-                new Vec3(12f, 9f, 14f),
-                new Vec3(-8f, 9f, 1f),
-                new Vec3(-28f, 9f, -6f),
-                new Vec3(-45f, 9f, -8f),
+                new Vec3(56f, 9f, 19f),
+                new Vec3(53f, 9f, 13f),
+                new Vec3(39f, 9f, 12f),
+                new Vec3(10f, 9f, 10f),
+                new Vec3(-7f, 9f, -3f),
+                new Vec3(-25f, 9f, -10f),
+                new Vec3(-45f, 9f, -10f),
                 new Vec3(-57f, 9f, -10f),
             }),
         },
@@ -708,6 +719,13 @@ public static class Maps
             // --- west leg 15
             new SocketDef("g63", new Vec3(-70.9f, 0f, -3.8f), SocketTag.Ground),
             new SocketDef("g64", new Vec3(-65.2f, 0f, -4.3f), SocketTag.Ground),
+
+            // The drive's south flank, added when the strand moved onto the
+            // road: everything else here covers the lane from one side or the
+            // other, and this stretch had both its neighbours on the north.
+            // Level with the walkers that is a choice; nine metres up it was a
+            // twenty-metre window with two pads in reach instead of three.
+            new SocketDef("g65", new Vec3(31.0f, 0f, 6.0f), SocketTag.Ground),
 
             new SocketDef("w_barn", new Vec3(-95.0f, 6.4f, 45.5f), SocketTag.Wall),
             new SocketDef("w_buggy", new Vec3(-141.5f, 3.8f, 5.0f), SocketTag.Wall),

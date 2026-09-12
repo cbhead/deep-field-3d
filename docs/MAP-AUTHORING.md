@@ -332,7 +332,7 @@ modules tiled along a run; a spanned piece between two points (ziplines); a
 |---|---|
 | Field | per map; 110 × 80 m unless the level file says otherwise, y 0 at grade |
 | Ground lane width | 3.4 m |
-| Air lane ribbon | 1.2 m, typically y 8–15 |
+| Air lane ribbon | 1.2 m; y 8–15 over a map with decks, y 9 over one without |
 | Linear module repeat | 4 m |
 | Socket pad | 1.1 m radius visual, 1.2 m collision |
 | Tower range at L1 | 9–16 m depending on the tower |
@@ -376,7 +376,16 @@ is worse design than the hole it closes.
    says so. A strand answerable only from decks is a legitimate design — it is
    what Switchyard's catwalk is *for* — but it has to be a decision, not an
    accident, and §4.1 then carries the whole air layer on that climb being
-   reachable. The validator prints the ground/deck split per tower. Skywatch, Arc and Filament damage flyers; Detector and
+   reachable. The validator prints the ground/deck split per tower.
+
+   A map with no deck has to make the opposite decision, and the Toaster does:
+   its strand flies at 9 m, down the same line the walkers take, so the pads
+   that cover the road cover it too. That is a real cost — a mixed wave there
+   is a question of volume rather than of position, and the towers-only floor
+   holds two waves longer than it did when the strand had a line of its own —
+   and it is the right cost, because the alternative on flat ground is a lane
+   nothing in the game can shoot at. Height is how an air lane asks for a
+   second position; where there is no second position to ask for, do not ask. Skywatch, Arc and Filament damage flyers; Detector and
    Singularity affect them without damage; Lance, Nova and Barricade cannot
    touch them.
 6. No socket covers nothing. A pad that reaches no route segment at any upgrade
