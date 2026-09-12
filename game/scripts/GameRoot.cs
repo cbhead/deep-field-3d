@@ -1668,6 +1668,18 @@ public partial class GameRoot : Node3D
         }
     }
 
+    /// <summary>An edge id read back as something a player can look for. Edge
+    /// ids are "from-to" by construction, so "westGate-cutMouth" becomes "the
+    /// cut mouth" — the far end, which is the bit of map the announcement is
+    /// about.</summary>
+    private static string LaneName(string edgeId)
+    {
+        int dash = edgeId.LastIndexOf('-');
+        string tail = dash >= 0 ? edgeId[(dash + 1)..] : edgeId;
+        var spaced = System.Text.RegularExpressions.Regex.Replace(tail, "([a-z])([A-Z])", "$1 $2");
+        return spaced.ToLowerInvariant();
+    }
+
     private void HandleEventLine(string line)
     {
         var p = line.Split(' ');
@@ -1731,6 +1743,23 @@ public partial class GameRoot : Node3D
                 Post(int.Parse(p[2]) == LocalPlayerId
                     ? "DOWNED — hold on, a teammate can revive you"
                     : $"{NameOf(int.Parse(p[2]))} is down", UiTheme.Danger);
+                break;
+            // The mutable map's two announcements. A breach the player does not
+            // see coming reads as the map malfunctioning, and a lane opening
+            // somewhere they were not looking is worse — so both are said out
+            // loud, and the breach is said the moment the Ram commits rather
+            // than when the wall falls.
+            case "breachTargeted":
+                Post($"BREACH — {LaneName(p[3])}, {float.Parse(p[4],
+                    System.Globalization.CultureInfo.InvariantCulture):0}s", UiTheme.Danger);
+                break;
+            case "laneOpened":
+                Post($"{LaneName(p[2])} is open — {p[3]}", UiTheme.Danger);
+                break;
+            case "enemyStranded":
+                // Should be impossible: the sim refuses any closure that would
+                // strand anything. If it ever shows, it is a bug worth seeing.
+                Post($"enemy stranded at {p[3]}", UiTheme.Warn);
                 break;
             case "playerRevived": Post($"{NameOf(int.Parse(p[2]))} revived", UiTheme.Good); break;
             case "matchEnded": OnMatchEnded(p[2] == "victory"); break;
