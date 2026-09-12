@@ -3298,8 +3298,24 @@ public partial class GameRoot : Node3D
                 return;
             }
             _player.BeginReloadForReview(seconds);
+            // Walk through the whole reload: the trail bug only showed when
+            // the player moved, because a magazine dropped per tick from a
+            // standing player lands in one pile and reads as one magazine.
+            _player.WalkHeld = Vector3.Right;
             _reloadReport.Add($"{id}: reload started for {seconds:0.0}s, playing={_player.Reloading}");
             if (!_player.Reloading) _reloadFailures++;
+            return;
+        }
+
+        // Inside the last quarter: the magazine is back, and no second drop.
+        float late = 0.5f + seconds * 0.85f;
+        if (before < late && _reloadTimer >= late)
+        {
+            var snap = _player.ReloadSnapshot();
+            int strays = ReloadAnimation.StrayProps(this);
+            bool ok = snap is { } s2 && (s2.MagazineVisible is null or true) && strays <= 1;
+            _reloadReport.Add($"{id} @85%: magazine={(snap?.MagazineVisible is null ? "n/a" : snap!.Value.MagazineVisible!.Value ? "back" : "STILL OUT")} dropped props in the world={strays}");
+            if (!ok) _reloadFailures++;
             return;
         }
 
@@ -3328,12 +3344,26 @@ public partial class GameRoot : Node3D
         float done = 0.5f + seconds + 0.4f;
         if (before < done && _reloadTimer >= done)
         {
+            _player.WalkHeld = Vector3.Zero;
             var snap = _player.ReloadSnapshot();
             bool restored = !_player.Reloading && snap is null;
             _reloadReport.Add(restored
                 ? $"{id}: finished and put everything back"
                 : $"{id}: still animating {_reloadTimer - 0.5f - seconds:0.0}s after the sim's duration");
             if (!restored) _reloadFailures++;
+            return;
+        }
+
+        // A second and a half after the end, the dropped magazine has freed
+        // itself; anything still in the world is the trail.
+        float swept = done + 1.5f;
+        if (before < swept && _reloadTimer >= swept)
+        {
+            int strays = ReloadAnimation.StrayProps(this);
+            _reloadReport.Add(strays == 0
+                ? $"{id}: nothing left on the floor"
+                : $"{id}: {strays} dropped prop(s) never freed");
+            if (strays != 0) _reloadFailures++;
             _reloadTimer = 6f;
         }
     }
