@@ -17,7 +17,7 @@ public static class Serialization
     private sealed record EnemyState(
         int Id, string DefId, float Hp, float MaxHp,
         int ItineraryIndex, int EdgeIndex, int PrevEdgeIndex, int Segment,
-        float SegmentProgress, int ViaCursor, int LegCounter,
+        float SegmentProgress, int ViaCursor, int LegCounter, int BreachTargetIndex,
         float TotalTraveled, float LateralOffset, float FacingX, float FacingY, float FacingZ,
         int Bounty, int LeakDamage, int WaveIndex, List<StatusState> Statuses,
         float Shield, float ShieldTimer, float CcResist, bool Burrowed);
@@ -79,7 +79,7 @@ public static class Serialization
             w.Enemies.Select(e => new EnemyState(
                 e.Id, e.DefId, e.Hp, e.MaxHp,
                 e.ItineraryIndex, e.EdgeIndex, e.PrevEdgeIndex, e.Segment,
-                e.SegmentProgress, e.ViaCursor, e.LegCounter,
+                e.SegmentProgress, e.ViaCursor, e.LegCounter, e.BreachTargetIndex,
                 e.TotalTraveled, e.LateralOffset, e.Facing.X, e.Facing.Y, e.Facing.Z,
                 e.Bounty, e.LeakDamage, e.WaveIndex, ActiveStatuses(e),
                 e.Shield, e.ShieldTimer, e.CcResist, e.Burrowed)).ToList(),
@@ -146,7 +146,7 @@ public static class Serialization
                 ItineraryIndex = e.ItineraryIndex, EdgeIndex = e.EdgeIndex,
                 PrevEdgeIndex = e.PrevEdgeIndex, Segment = e.Segment,
                 SegmentProgress = e.SegmentProgress, ViaCursor = e.ViaCursor,
-                LegCounter = e.LegCounter,
+                LegCounter = e.LegCounter, BreachTargetIndex = e.BreachTargetIndex,
                 TotalTraveled = e.TotalTraveled, LateralOffset = e.LateralOffset,
                 Facing = new Vec3(e.FacingX, e.FacingY, e.FacingZ),
                 Bounty = e.Bounty, LeakDamage = e.LeakDamage, WaveIndex = e.WaveIndex,

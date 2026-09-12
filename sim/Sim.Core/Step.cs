@@ -378,7 +378,7 @@ public static class Step
         int refund = tower.Spent * Balance.SellRefundPercent / 100;
         w.Money += refund;
         w.Towers.Remove(tower);
-        if (Towers.All[tower.DefId].Kind == TowerKind.Barricade) w.RefreshEdgeState();
+        if (Towers.All[tower.DefId].Kind == TowerKind.Barricade) w.RefreshEdgeState("sold");
         w.Emit(new SimEvent.TowerSold(tower.Id, refund));
     }
 
@@ -934,6 +934,7 @@ public static class Step
             // route that is already blocked at the gate is handled by the same
             // code as one blocked halfway down.
             enemy.EdgeIndex = NextEdge(w, enemy, w.Graph.Itineraries[routeIndex].Via[0]);
+            AnnounceBreach(w, enemy, enemy.EdgeIndex);
             w.Enemies.Add(enemy);
             w.Emit(new SimEvent.EnemySpawned(enemy.Id, def.Id, w.WaveIndex));
             w.PendingSpawns.RemoveAt(i);
@@ -1138,29 +1139,61 @@ public static class Step
 
         int best = -1;
         float bestCost = float.MaxValue;
-        // Siege enemies are not turned away by a barricade — they walk at it.
-        // Without this a Ram can never reach the one thing it exists to break:
-        // the closed edge reroutes it, so it takes the long way round and
-        // arrives as an expensive walker. The block is what makes it choose the
-        // shortcut, not what stops it.
-        bool ignoresGates = Enemies.All[enemy.DefId].StructureDps > 0f;
+        // A siege enemy is not turned away by a barricade — it can choose to go
+        // through. But "always ignore walls" is not a decision, it is a
+        // hard-coded preference, so the wall is *priced* instead: chewing
+        // through costs hp / StructureDps seconds, which at this enemy's speed
+        // is that many metres it could have walked instead. Add it to the edge
+        // and run the same shortest path everything else runs.
+        //
+        // Three things fall out of that and none of them are special cases. The
+        // Ram breaches when breaking is cheaper than walking round, so a wall
+        // in front of a short detour is worth going around and one in front of
+        // a long detour is not. The player's own barricade is what makes the
+        // detour long, so shutting a gate is what sends the Ram at your wall —
+        // a chain the player can read. And the whole thing tunes on one dial:
+        // raise a barricade's StructureHp and it stops being worth breaking.
+        var selfDef = Enemies.All[enemy.DefId];
+        bool sieges = selfDef.StructureDps > 0f;
 
         for (int e = 0; e < w.Graph.Edges.Count; e++)
         {
-            if (!w.EdgeOpen[e] && !ignoresGates) continue;
+            if (!w.EdgeOpen[e] && !sieges) continue;
             var edge = w.Graph.Edges[e];
             if (edge.From != atNode) continue;
             if (edge.Layer != itinerary.Layer) continue;
 
             float ahead = target >= 0
-                ? (ignoresGates ? w.DistToNodeOpen[target] : w.DistToNode[target])[w.Graph.NodeIndex[edge.To]]
-                : (ignoresGates ? w.DistToCoreOpen : w.DistToCore)[w.Graph.NodeIndex[edge.To]];
+                ? (sieges ? w.DistToNodeOpen[target] : w.DistToNode[target])[w.Graph.NodeIndex[edge.To]]
+                : (sieges ? w.DistToCoreOpen : w.DistToCore)[w.Graph.NodeIndex[edge.To]];
             if (float.IsPositiveInfinity(ahead)) continue;
 
-            float cost = edge.WalkedLength * edge.CostFactor + ahead;
+            // What the wall in front of this edge costs, in metres-not-walked.
+            float breach = 0f;
+            if (sieges && !w.EdgeOpen[e])
+                breach = w.BlockingHp(e) / selfDef.StructureDps * selfDef.SpeedMetersPerSec
+                       * Balance.SiegeBreachBias;
+
+            float cost = edge.WalkedLength * edge.CostFactor + breach + ahead;
             if (cost < bestCost) { bestCost = cost; best = e; }
         }
         return best;
+    }
+
+    /// <summary>Say so, once, when a siege enemy takes a blocked edge. The
+    /// player gets the enemy, the wall and a countdown — long before the lane
+    /// opens somewhere they were not looking.</summary>
+    private static void AnnounceBreach(World w, Enemy enemy, int edgeIndex)
+    {
+        if (edgeIndex < 0 || w.EdgeOpen[edgeIndex]) { enemy.BreachTargetIndex = -1; return; }
+        if (enemy.BreachTargetIndex == edgeIndex) return;
+
+        var def = Enemies.All[enemy.DefId];
+        if (def.StructureDps <= 0f) return;
+
+        enemy.BreachTargetIndex = edgeIndex;
+        w.Emit(new SimEvent.BreachTargeted(enemy.Id, w.Graph.Edges[edgeIndex].Id,
+            w.BlockingHp(edgeIndex) / def.StructureDps));
     }
 
     private static int LegOf(World w, Enemy enemy) => enemy.LegCounter;
@@ -1230,6 +1263,7 @@ public static class Step
                     enemy.EdgeIndex = NextEdge(w, enemy, edge.To);
                     enemy.Segment = 0;
                     enemy.SegmentProgress = 0f;
+                    AnnounceBreach(w, enemy, enemy.EdgeIndex);
                     continue;
                 }
                 if (remaining <= 0f) break;
@@ -1278,6 +1312,7 @@ public static class Step
                         enemy.PrevEdgeIndex = enemy.EdgeIndex;
                         enemy.EdgeIndex = next;
                         enemy.Segment = 0;
+                        AnnounceBreach(w, enemy, next);
                     }
                 }
             }
@@ -1735,7 +1770,7 @@ public static class Step
             w.Towers.Remove(tower);
             // A Ram breaking a barricade reopens the lane it shut, which is the
             // whole point of sending one at it.
-            if (Towers.All[tower.DefId].Kind == TowerKind.Barricade) w.RefreshEdgeState();
+            if (Towers.All[tower.DefId].Kind == TowerKind.Barricade) w.RefreshEdgeState("breached");
             w.Emit(new SimEvent.StructureDestroyed(tower.Id, tower.DefId, tower.SocketId));
         }
     }

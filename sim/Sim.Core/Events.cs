@@ -68,6 +68,25 @@ public abstract record SimEvent
         public override string LogLine() => $"{Tick} enemyStranded {EnemyId} {AtNode}";
     }
 
+    /// <summary>A siege enemy has committed to breaking through, and how long
+    /// it will take.
+    ///
+    /// Twenty seconds of warning is the difference between a threat and a bug.
+    /// Without it the first a player knows of a breach is a lane opening
+    /// somewhere they were not looking, which reads as the map malfunctioning
+    /// rather than as something coming.</summary>
+    public sealed record BreachTargeted(int EnemyId, string EdgeId, float EtaSeconds) : SimEvent
+    {
+        public override string LogLine() =>
+            $"{Tick} breachTargeted {EnemyId} {EdgeId} {F(EtaSeconds)}";
+    }
+
+    /// <summary>A blocked lane is open again, and what opened it.</summary>
+    public sealed record LaneOpened(string EdgeId, string Cause) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} laneOpened {EdgeId} {Cause}";
+    }
+
     public sealed record TowerPlaced(int TowerId, string DefId, string SocketId, int PlayerId) : SimEvent
     {
         public override string LogLine() => $"{Tick} towerPlaced {TowerId} {DefId} {SocketId} {PlayerId}";

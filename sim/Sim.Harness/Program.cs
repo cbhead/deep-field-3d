@@ -1964,6 +1964,82 @@ if (args.Contains("--baseline"))
             : string.Join(" | ", problems.Take(6)));
 }
 
+// --- Gate 53: the Ram prices the wall; it does not simply ignore it.
+//
+// The difference between a decision and a hard-coded preference. A siege enemy
+// pays hp / StructureDps seconds to chew through, which at its own speed is
+// that many metres it could have walked instead — so a wall in front of a
+// short detour is worth going round, and the same wall in front of a long one
+// is worth breaking. Both directions are checked here, by moving the one dial
+// the design says tunes it: the barricade's health.
+{
+    static (bool Breaches, float Detour) RamFacing(uint seed, float barricadeHp)
+    {
+        var world = new World(seed, Maps.Switchyard);
+        world.Money = 1000;
+        world.Enqueue(new Command.PlaceTower(0, "barricade", "b1"));
+        Step.Advance(world);
+        foreach (var t in world.Towers) t.Hp = barricadeHp;
+        world.RefreshEdgeState();
+
+        // Spawned through the real path rather than hand-placed, because the
+        // decision being measured is the one a spawn makes at the gate — and a
+        // hand-placed enemy is already on an edge somebody else chose.
+        world.Enqueue(new Command.StartWave(0));
+        Step.Advance(world);
+        world.PendingSpawns.Clear();
+        world.PendingSpawns.Add(new SpawnEntry("ram", 0, 1f, RouteIndex: 1, LateralOffset: 0f));
+        while (world.Enemies.All(e => e.DefId != "ram")) Step.Advance(world);
+        var ram = world.Enemies.First(e => e.DefId == "ram");
+
+        int cut = world.Graph.EdgeIndexOf("westGate-cutMouth");
+        float detour = world.Graph.Edge("westGate-switchbackNorth").WalkedLength
+                     - world.Graph.Edge("westGate-cutMouth").WalkedLength;
+        return (ram.EdgeIndex == cut, detour);
+    }
+
+    // The shipped barricade: 300 hp, and it must be worth breaking, because the
+    // map's lesson is that the wall turns everything except the thing sent to
+    // open it. This is the case the design cares about and the one that a pure
+    // time comparison got wrong by two per cent — see Balance.SiegeBreachBias.
+    var shipped = RamFacing(Seed, Towers.Barricade.StructureHp);
+    // And it stays a comparison: thick enough and the detour is the bargain.
+    var dear = RamFacing(Seed, 3000f);
+
+    Gate("ram: it breaks the barricade it is sent at, and walks round a thicker one",
+        shipped.Breaches && !dear.Breaches,
+        $"detour {shipped.Detour:0.#} m · shipped {Towers.Barricade.StructureHp:0} hp"
+        + $" breached: {shipped.Breaches} · 3000 hp breached: {dear.Breaches}");
+}
+
+// --- Gate 54: the Ram announces itself before it breaks anything.
+//
+// A breach the player does not see coming reads as the map malfunctioning. The
+// telegraph fires when the Ram commits, not when the wall falls, so the warning
+// is worth the seconds it names.
+{
+    var world = new World(Seed, Maps.Switchyard);
+    world.Money = 1000;
+    world.Enqueue(new Command.PlaceTower(0, "barricade", "b1"));
+    world.Enqueue(new Command.StartWave(0));
+    Step.Advance(world);
+    world.PendingSpawns.Clear();
+    world.PendingSpawns.Add(new SpawnEntry("ram", 0, 1f, RouteIndex: 1, LateralOffset: 0f));
+
+    SimEvent.BreachTargeted? warning = null;
+    for (int i = 0; i < 200 && warning is null; i++)
+    {
+        Step.Advance(world);
+        warning = world.Events.OfType<SimEvent.BreachTargeted>().FirstOrDefault();
+    }
+    // Announced long before it lands: 300 hp at 14 dps is about 21 seconds.
+    bool early = warning is not null && warning.EtaSeconds > 15f;
+
+    Gate("ram: a breach is announced when it commits, not when the wall falls",
+        warning is not null && early && warning.EdgeId == "westGate-cutMouth",
+        warning is null ? "no warning" : $"{warning.EdgeId} in {warning.EtaSeconds:0.#}s");
+}
+
 // --- Gate 52: nothing is ever stranded, anywhere in the campaign.
 //
 // The runtime counterpart to the landlock refusal. WouldSeal stops a player

@@ -50,6 +50,13 @@ public sealed class Enemy
     /// fact about what happened, not about the itinerary.</summary>
     public int PrevEdgeIndex = -1;
 
+    /// <summary>The edge this enemy has committed to breaking through, or -1.
+    /// Intent, as opposed to <see cref="Sieging"/>, which is a fact about this
+    /// tick recomputed from what happens to be in reach. Serialized, because a
+    /// resumed Ram that has forgotten what it was walking at is a Ram that
+    /// turns round.</summary>
+    public int BreachTargetIndex = -1;
+
     /// <summary>Legs consumed since spawning. Only the wire wants it — the
     /// teleport event carries a leg index and is in the hashed log — and it is
     /// counted rather than derived because once an enemy can deviate from its
@@ -471,16 +478,36 @@ public sealed class World
     /// <summary>Open or close every gated edge from what is standing on its
     /// socket, then rebuild the routing tables. Called after anything that can
     /// put a barricade up or take one down.</summary>
-    public void RefreshEdgeState()
+    public void RefreshEdgeState(string cause = "")
     {
         foreach (var gate in Map.LaneGates)
         {
             int e = Graph.EdgeIndexOf(gate.EdgeId);
             if (e < 0) continue;
-            EdgeOpen[e] = !Towers.Any(t => t.SocketId == gate.SocketId
+            bool open = !Towers.Any(t => t.SocketId == gate.SocketId
                 && Content.Towers.All[t.DefId].Kind == TowerKind.Barricade);
+            if (open && !EdgeOpen[e] && cause.Length > 0)
+                Emit(new SimEvent.LaneOpened(gate.EdgeId, cause));
+            EdgeOpen[e] = open;
         }
         RefreshRouting();
+    }
+
+    /// <summary>Structure health standing in the way of this edge — the wall a
+    /// siege enemy would have to chew through to use it.</summary>
+    public float BlockingHp(int edgeIndex)
+    {
+        float hp = 0f;
+        string edgeId = Graph.Edges[edgeIndex].Id;
+        foreach (var gate in Map.LaneGates)
+        {
+            if (gate.EdgeId != edgeId) continue;
+            foreach (var tower in Towers)
+                if (tower.SocketId == gate.SocketId
+                    && Content.Towers.All[tower.DefId].Kind == TowerKind.Barricade)
+                    hp += tower.Hp;
+        }
+        return hp;
     }
 
     /// <summary>Whether closing this edge would leave some spawn unable to reach
