@@ -24,7 +24,12 @@ nav.screens button:hover{background:var(--obsidian-600);color:var(--text-primary
 nav.screens button[aria-pressed="true"]{background:var(--obsidian-500);color:var(--text-accent);border-color:var(--border-accent)}
 nav.screens button small{margin-left:auto;font:var(--weight-regular) var(--size-micro)/1 var(--font-mono);color:var(--text-muted)}
 .stagewrap{position:relative;min-width:0;min-height:0;display:grid;grid-template-rows:1fr auto;background:var(--obsidian-900);background-image:var(--tex-grid);overflow:hidden}
-.stagearea{position:relative;min-height:0}
+.stagearea{position:relative;min-height:420px;container-type:size}
+.caption{max-height:26vh;overflow:auto}
+/* scale() needs a unitless number and CSS cannot divide a length by a length, so the
+   ratio arrives as a custom property: the declaration below is always valid at parse
+   time and JS only supplies the number. */
+.stage{transform:translate(-50%,-50%) scale(var(--stage-k,1))}
 .stage{width:1920px;height:1080px;position:absolute;left:50%;top:50%;overflow:hidden;transform-origin:center;box-shadow:var(--shadow-overlay);background:var(--obsidian-800)}
 .caption{margin:0 var(--space-6) var(--space-6);background:var(--surface-glass);border:var(--stroke-panel) solid var(--border-panel);clip-path:var(--clip-chamfer);padding:var(--space-4) var(--space-6);font-size:var(--size-caption);color:var(--text-secondary);line-height:var(--leading-normal)}
 .caption b{font:var(--text-label);letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--text-accent);display:block;margin-bottom:var(--space-2)}

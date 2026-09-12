@@ -6,21 +6,63 @@
 export const SHARED = [];
 const P = (o) => { SHARED.push({ ...o, file: o.file || o.id + '.glb', swatch: o.swatch || '#8d99ad', dir: 'shared/' }); };
 
-/* Ladder: 6 m tall, two stringers, rungs every 30 cm, cage hoops above 2 m, top hand-hooks. */
-P({ id: 'shared_ladder', label: 'Ladder (6 m)', size: '6 m', stats: { Rungs: '30 cm', Cage: 'from 2 m', Area: '1.6×6.4×1.4' },
-  note: 'Fixed-height 6 m ladder (Switchyard\'s 5 m / 5.4 m ladders scale Y). Bolted wall flanges every 1.5 m so it reads as attached, not leaning.',
-  build(K) {
-    const { part, grp, box, cyl, mats, THREE } = K, g = grp('shared_ladder');
-    for (const s of [-1, 1]) g.add(part(`ladder_stringer${s}`, box(.06, 6, .08), mats.steel_hull, [s * .5, 3, 0]));
-    for (let i = 0; i < 20; i++) g.add(part('ladder_rung' + i, cyl(.02, .02, 1, 8), mats.chrome, [0, .3 + i * .3, 0], [0, 0, Math.PI / 2]));
-    for (let i = 0; i < 4; i++) g.add(part('ladder_flange' + i, box(1.3, .1, .12), mats.steel_plate, [0, .8 + i * 1.5, .12]));
-    for (let i = 0; i < 4; i++) g.add(K.boltRing('ladder_flange_bolts' + i, .5, 2, .8 + i * 1.5).translateZ(.18).rotateX(Math.PI / 2));
-    for (let i = 0; i < 4; i++) g.add(part('ladder_hoop' + i, new THREE.TorusGeometry(.7, .025, 6, 16, Math.PI), mats.trim, [0, 2.4 + i * .9, .0], [0, 0, 0]));
-    for (const s of [-1, 1]) g.add(part(`ladder_hoop_rail${s}`, box(.03, 3.6, .03), mats.trim, [s * .68, 4.2, 0]));
-    for (const s of [-1, 1]) g.add(part(`ladder_hook${s}`, new THREE.TorusGeometry(.3, .03, 6, 12, Math.PI), mats.brass, [s * .5, 6.3, .15], [0, Math.PI / 2, 0]));
-    g.add(K.hazardStripes('ladder_foot_hazard', 1.2, .06, [0, .05, .08], [0, 0, 0], 6));
-    return g;
-  } });
+/* Ladder: one rig builder, discrete height variants. Rung pitch is a fixed 30 cm at
+   every height — the old single 6 m asset was Y-scaled to 5 m / 5.4 m in levels.js,
+   which compressed the pitch to 25 cm and squashed the cage hoops. Heights are
+   exported separately instead, so nothing scales. Adding a height is one row below. */
+function ladderRig(K, id, h, o = {}) {
+  const { part, grp, box, cyl, mats, THREE } = K, g = grp(id);
+  for (const s of [-1, 1]) g.add(part(`ladder_stringer${s}`, box(.06, h, .08), mats.steel_hull, [s * .5, h / 2, 0]));
+  const rungs = Math.floor(h / .3);
+  for (let i = 0; i < rungs; i++) g.add(part('ladder_rung' + i, cyl(.02, .02, 1, 8), mats.chrome, [0, .3 + i * .3, 0], [0, 0, Math.PI / 2]));
+  // Bolted wall flanges every 1.5 m so it reads as attached, not leaning.
+  for (let i = 0, y = .8; y <= h - .3; i++, y = .8 + i * 1.5) {
+    g.add(part('ladder_flange' + i, box(1.3, .1, .12), mats.steel_plate, [0, y, .12]));
+    g.add(K.boltRing('ladder_flange_bolts' + i, .5, 2, y).translateZ(.18).rotateX(Math.PI / 2));
+  }
+  // Fall cage starts at 2.4 m — below that the climb is short enough not to need one.
+  const hoops = [];
+  for (let y = 2.4; y <= h - .6; y += .9) hoops.push(y);
+  hoops.forEach((y, i) => g.add(part('ladder_hoop' + i, new THREE.TorusGeometry(.7, .025, 6, 16, Math.PI), mats.trim, [0, y, 0], [0, 0, 0])));
+  if (hoops.length) {
+    const len = h - hoops[0];
+    for (const s of [-1, 1]) g.add(part(`ladder_hoop_rail${s}`, box(.03, len, .03), mats.trim, [s * .68, hoops[0] + len / 2, 0]));
+  }
+  // Intermediate rest landing: fixed-ladder practice breaks any run over ~9 m.
+  // Cantilevers out on −Z, the climb side — +Z is the mounting face (flanges sit at
+  // z .06–.18), so a landing there would bury itself in the wall it bolts to.
+  // Offset a half pitch off centre so the slab lands between rungs, not through one.
+  if (o.landing) {
+    const y = Math.round(h / 2 / .3) * .3 + .15;
+    g.add(part('ladder_landing', box(1.5, .06, 1.0), mats.steel_plate, [0, y, -.54]));
+    for (const s of [-1, 1]) g.add(part(`ladder_landing_rail${s}`, cyl(.03, .03, 1.0, 8), mats.rail_steel || mats.trim, [s * .74, y + 1.05, -.54], [Math.PI / 2, 0, 0]));
+    for (const s of [-1, 1]) g.add(part(`ladder_landing_post${s}`, box(.06, 1.05, .06), mats.trim, [s * .74, y + .53, -1.0]));
+    g.add(part('ladder_landing_kick', box(1.5, .1, .04), mats.trim, [0, y + .08, -1.02]));
+    g.add(K.hazardStripes('ladder_landing_hazard', 1.4, .05, [0, y + .04, -.04], [0, 0, 0], 7));
+  }
+  for (const s of [-1, 1]) g.add(part(`ladder_hook${s}`, new THREE.TorusGeometry(.3, .03, 6, 12, Math.PI), mats.brass, [s * .5, h + .3, .15], [0, Math.PI / 2, 0]));
+  g.add(K.hazardStripes('ladder_foot_hazard', 1.2, .06, [0, .05, .08], [0, 0, 0], 6));
+  return g;
+}
+
+/* Heights the maps actually need: [id suffix, metres, label context, options].
+   `shared_ladder` keeps the bare id at 6 m so existing placements stay valid. */
+[
+  ['', 6, 'Foundry yard → upper deck (y 6)'],
+  ['_250', 2.5, 'railcar roofs, kerb-wall hops — under the cage threshold, so no hoops'],
+  ['_500', 5, 'Switchyard yard → mid deck (y 5)'],
+  ['_540', 5.4, 'Switchyard mid deck (y 4.8) → catwalk (y 10.2)'],
+  ['_1000', 10, 'ground → catwalk in one run', { landing: true }],
+].forEach(([sfx, h, use, o]) => {
+  const id = 'shared_ladder' + sfx, hoops = h >= 3;
+  P({ id, label: `Ladder (${h} m)`, size: `${h} m`,
+    stats: { Rungs: '30 cm', Cage: hoops ? 'from 2.4 m' : 'none', Area: `1.6×${(h + .4).toFixed(1)}×1.4` },
+    note: `Fixed ${h} m ladder — ${use}. Rungs are a true 30 cm pitch at every height in the set, so no placement should ever scale one: pick the height instead.`
+      + (hoops ? ' Cage hoops from 2.4 m with side rails to the top.' : '')
+      + (o?.landing ? ' Breaks at half height for an intermediate rest landing with a guard rail, per fixed-ladder practice for runs over 9 m.' : '')
+      + ' Bolted wall flanges every 1.5 m so it reads as attached, not leaning.',
+    build(K) { return ladderRig(K, id, h, o || {}); } });
+});
 
 /* Zipline anchor: 1.2 m post on a base plate, sheave wheel, tension turnbuckle, interact lamp. */
 P({ id: 'shared_zipline_anchor', label: 'Zipline anchor', size: '1.8 m', stats: { Interact: 'E', Cable: 'from sheave' },

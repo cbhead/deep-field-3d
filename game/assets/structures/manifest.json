@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generated": "2026-09-12T15:52:08.804Z",
+  "generated": "2026-09-12T21:00:13.318Z",
   "units": "metres",
   "up": "+Y",
   "forward": "-Z",
@@ -1889,10 +1889,21 @@
     },
     {
       "file": "tower_singularity_range_s2.glb",
-      "bytes": 236,
-      "tris": 0,
-      "parts": 0,
-      "bounds": null,
+      "bytes": 24704,
+      "tris": 468,
+      "parts": 15,
+      "bounds": {
+        "min": [
+          -0.777,
+          0.813,
+          -0.763
+        ],
+        "max": [
+          0.544,
+          0.882,
+          0.763
+        ]
+      },
       "tower": "singularity",
       "kind": "module",
       "path": "range",
@@ -1905,10 +1916,21 @@
     },
     {
       "file": "tower_singularity_range_s3.glb",
-      "bytes": 236,
-      "tris": 0,
-      "parts": 0,
-      "bounds": null,
+      "bytes": 109848,
+      "tris": 3924,
+      "parts": 18,
+      "bounds": {
+        "min": [
+          -0.777,
+          0.813,
+          -0.763
+        ],
+        "max": [
+          0.544,
+          2.707,
+          0.763
+        ]
+      },
       "tower": "singularity",
       "kind": "module",
       "path": "range",
@@ -1922,9 +1944,9 @@
     },
     {
       "file": "tower_singularity_range_s4.glb",
-      "bytes": 130292,
-      "tris": 3624,
-      "parts": 13,
+      "bytes": 239712,
+      "tris": 7548,
+      "parts": 31,
       "bounds": {
         "min": [
           -1.096,
@@ -1933,7 +1955,7 @@
         ],
         "max": [
           1.096,
-          0.14,
+          2.707,
           1.096
         ]
       },
@@ -1951,9 +1973,9 @@
     },
     {
       "file": "tower_singularity_range_s5.glb",
-      "bytes": 157356,
-      "tris": 4544,
-      "parts": 16,
+      "bytes": 266776,
+      "tris": 8468,
+      "parts": 34,
       "bounds": {
         "min": [
           -1.111,
@@ -1962,7 +1984,7 @@
         ],
         "max": [
           1.111,
-          0.281,
+          2.707,
           1.111
         ]
       },
@@ -1981,9 +2003,9 @@
     },
     {
       "file": "tower_singularity_range_s6.glb",
-      "bytes": 157356,
-      "tris": 4544,
-      "parts": 16,
+      "bytes": 314952,
+      "tris": 9608,
+      "parts": 40,
       "bounds": {
         "min": [
           -1.146,
@@ -1992,7 +2014,7 @@
         ],
         "max": [
           1.146,
-          0.281,
+          2.945,
           1.146
         ]
       },
@@ -2012,9 +2034,9 @@
     },
     {
       "file": "tower_singularity_range_s7.glb",
-      "bytes": 234184,
-      "tris": 6836,
-      "parts": 23,
+      "bytes": 391832,
+      "tris": 11900,
+      "parts": 47,
       "bounds": {
         "min": [
           -1.182,
@@ -2023,7 +2045,7 @@
         ],
         "max": [
           1.182,
-          1.459,
+          2.945,
           1.182
         ]
       },
@@ -2044,9 +2066,9 @@
     },
     {
       "file": "tower_singularity_range_s8.glb",
-      "bytes": 234212,
-      "tris": 6836,
-      "parts": 23,
+      "bytes": 489072,
+      "tris": 14420,
+      "parts": 56,
       "bounds": {
         "min": [
           -1.217,
@@ -2055,7 +2077,7 @@
         ],
         "max": [
           1.217,
-          1.459,
+          2.945,
           1.217
         ]
       },
@@ -2077,9 +2099,9 @@
     },
     {
       "file": "tower_singularity_range_s9.glb",
-      "bytes": 414168,
-      "tris": 14068,
-      "parts": 30,
+      "bytes": 669040,
+      "tris": 21652,
+      "parts": 63,
       "bounds": {
         "min": [
           -1.252,
@@ -2088,7 +2110,7 @@
         ],
         "max": [
           1.252,
-          2.51,
+          2.945,
           1.252
         ]
       },
@@ -2111,9 +2133,9 @@
     },
     {
       "file": "tower_singularity_range_s10.glb",
-      "bytes": 414140,
-      "tris": 14068,
-      "parts": 30,
+      "bytes": 717356,
+      "tris": 22792,
+      "parts": 69,
       "bounds": {
         "min": [
           -1.287,
@@ -2122,7 +2144,7 @@
         ],
         "max": [
           1.287,
-          2.51,
+          2.945,
           1.287
         ]
       },
@@ -2370,19 +2392,19 @@
     },
     {
       "file": "tower_singularity_rate_s9.glb",
-      "bytes": 612884,
-      "tris": 21780,
-      "parts": 38,
+      "bytes": 653692,
+      "tris": 22140,
+      "parts": 44,
       "bounds": {
         "min": [
-          -0.589,
+          -0.783,
           0.286,
-          -0.585
+          -0.654
         ],
         "max": [
           0.632,
           2.792,
-          0.585
+          0.774
         ]
       },
       "tower": "singularity",
@@ -2404,19 +2426,19 @@
     },
     {
       "file": "tower_singularity_rate_s10.glb",
-      "bytes": 723456,
-      "tris": 24564,
-      "parts": 48,
+      "bytes": 764264,
+      "tris": 24924,
+      "parts": 54,
       "bounds": {
         "min": [
-          -0.755,
+          -0.783,
           0.286,
           -0.755
         ],
         "max": [
           0.755,
           2.792,
-          0.755
+          0.774
         ]
       },
       "tower": "singularity",
@@ -4356,7 +4378,7 @@
         ],
         "pitchLimits": [
           -12,
-          48
+          78
         ],
         "traverseDegPerSec": 220,
         "elevateDegPerSec": 160,
@@ -7776,87 +7798,87 @@
     },
     {
       "file": "weapon_sidearm_vm.glb",
-      "bytes": 2426780,
-      "tris": 68232,
-      "parts": 175,
+      "bytes": 14412540,
+      "tris": 143106,
+      "parts": 337,
       "bounds": {
         "min": [
-          -0.019,
-          -0.123,
-          -0.16
+          -0.017,
+          -0.061,
+          -0.124
         ],
         "max": [
-          0.019,
-          0.08,
-          0.069
+          0.015,
+          0.071,
+          0.047
         ]
       },
       "kind": "weapon",
       "id": "sidearm",
-      "note": "The starter, never taken away. Striker-fired micro-compact after the reference: tall flat-sided slide with a chamfered top rib, wide angled cocking serrations front and rear, twin slanted lightening ports ahead of the ejection port with the barrel visible through them, loaded-chamber window, blacked-out high-profile sights. One-piece polymer frame with a deep beavertail, squared undercut trigger guard with a forward hook, flat-faced trigger with a blade safety, slide stop and takedown levers, an accessory rail, stippled grip panels with a raised palm swell and a forward-lipped baseplate. Seven mounts, so even the free gun is a build."
+      "note": "The starter, never taken away — and the hero asset the rest of the armoury is being rebuilt against. Striker-fired micro-compact, DLC-black slide over a graphite polymer frame: two blacks separated by surface, not colour. Every surface is a swept compound section rather than a constant extrusion, so the slide crowns, tapers at the nose and carries crisp machined chamfers with smooth faces between them. Detail is cut IN, not stacked on: forward-raked cocking serrations milled into both flats, a milled ejection pocket with the barrel hood and breech face standing inside it, a hooked extractor and firing-pin hole, an optic cut under its cover plate, five witness holes down the 15-round magazine. Roll-marked BODIED GUARD 3.0 on the left flat, 9×19MM on the right. Tritium night sights, three vials. Surface is procedural PBR at 2K — draw-polish on the DLC, glass-filler mottle in the polymer, a pebble stipple field with the palm patch rubbed smooth — and honest wear rides in vertex colour, so the serration lands, muzzle crown and control faces burnish themselves. Seven mounts, so even the free gun is a build."
     },
     {
       "file": "weapon_rifle_vm.glb",
-      "bytes": 2163232,
-      "tris": 37196,
-      "parts": 197,
+      "bytes": 16852800,
+      "tris": 197896,
+      "parts": 121,
       "bounds": {
         "min": [
-          -0.026,
-          -0.192,
-          -0.572
+          -0.027,
+          -0.154,
+          -0.598
         ],
         "max": [
           0.027,
-          0.098,
-          0.284
+          0.103,
+          0.214
         ]
       },
       "kind": "weapon",
       "id": "rifle",
-      "note": "Hitscan priority tool, after the reference: a bronze-anodised AR-pattern carbine. Flat-top upper with a continuous top rail and brass deflector, forward assist and dust cover; matching lower with a flared magwell, bilateral selector, bolt catch and an oversized trigger guard. Long slim octagonal free-float handguard with M-LOK slots on every face and a vented cap, three anti-rotation screws at the root, a birdcage flash hider on the bare barrel. Ribbed 30-round polymer magazine with a floorplate, skeletonised collapsible stock with a sling loop and rubber pad. Designator lamp above the port telegraphs the mark alt-fire."
+      "note": "Hitscan priority tool, rebuilt to the hero standard and measured against a real 14.5\" carbine rather than eyeballed: 25.4 mm receiver, 368 mm barrel, 10.2 mm Picatinny slot pitch, 36 mm M-LOK pitch, STANAG magazine section, 89 mm carrier travel. Every detail that used to be a box glued to a slab is now cut in — Picatinny cross-slots milled through the rail rib for its full length, M-LOK cut clean through four faces of the free-float handguard, the ejection port a real pocket with the bolt carrier standing inside it, the brass deflector and forward-assist boss swelled out of the receiver wall instead of stuck onto it, A2 birdcage ports cut through the flash hider, magwell flare and stock lightening pockets as displacement. Bronze anodising keeps the weapon's identity; only the quality level rises. The carrier group reciprocates on its declared axis and throws a 5.56 case from the port."
     },
     {
       "file": "weapon_scattergun_vm.glb",
-      "bytes": 1237088,
-      "tris": 20132,
-      "parts": 109,
+      "bytes": 18863508,
+      "tris": 153872,
+      "parts": 115,
       "bounds": {
         "min": [
-          -0.024,
-          -0.116,
-          -0.538
+          -0.021,
+          -0.069,
+          -0.593
         ],
         "max": [
-          0.042,
-          0.116,
-          0.296
+          0.038,
+          0.104,
+          0.216
         ]
       },
       "kind": "weapon",
       "id": "scattergun",
-      "note": "Panic weapon for the perch, after the reference: a semi-auto tactical shotgun. Tall boxed receiver with a short top rail and a ghost-ring rear sight, bolt handle and carrier proud of the ejection port, cross-bolt safety in the guard, shell lifter under the loading port. The `_magazine` group is the long tube under the barrel with its knurled cap, barrel clamp and the ribbed cylindrical forend (a drum replaces all of it and hangs from the port). The `_barrel` group carries the barrel, its front-sight tower with a fibre bead and the muzzle mount. Pistol grip into a solid fixed stock with a sling slot and a thick pad."
+      "note": "Panic weapon for the perch, rebuilt to the hero standard and measured against a real semi-auto tactical 12-gauge: 18.5 mm bore, 18\" barrel, 41 × 45 mm boxed alloy receiver, 808 mm overall. The hull sizes the gun — barrel, magazine tube, loading port and ejection port all derive from it. Ejection port cut into the right wall only; loading port cut up into the belly between the side walls; one polymer handguard over barrel AND tube, vented on both flanks. Parkerised phosphate throughout: a crystalline conversion coating, not dark steel with the roughness turned up. Ghost-ring rear on a short rail, hooded tritium front post. The bolt assembly reciprocates 62 mm and throws fired hulls — brass head, dyed plastic body, blown-out crimp."
     },
     {
       "file": "weapon_emberpistol_vm.glb",
-      "bytes": 1113468,
-      "tris": 20532,
-      "parts": 72,
+      "bytes": 12092536,
+      "tris": 62948,
+      "parts": 93,
       "bounds": {
         "min": [
-          -0.024,
-          -0.123,
-          -0.221
+          -0.023,
+          -0.065,
+          -0.205
         ],
         "max": [
-          0.037,
-          0.092,
+          0.023,
+          0.102,
           0.106
         ]
       },
       "kind": "weapon",
       "id": "emberpistol",
-      "note": "The shooter's half of Thermal Shock. A fuel-fed hand cannon: brushed-steel ember canister behind the frame with a glowing sight-glass ring and hazard bands, top valve wheel, braided hose into the frame, turned shroud with hex heat fins, pilot flame under the muzzle, thermal readout on the right of the upper."
+      "note": "The shooter's half of Thermal Shock, rebuilt to the hero standard. No real-world twin, so every part is grounded in a real MACHINE instead: signal-pistol proportions (150 mm barrel, 288 mm overall, 18 mm bore), a canister built as an actual pressure vessel with torispherical ends and a rolled seam, a turned brass handwheel on a brazed boss, and a braided hose that lands in swaged ferrules at BOTH ends rather than floating. Cooling fins are steps cut into the barrel’s turned profile, not discs threaded onto a tube. Fuel-fed, so it ejects nothing — what it has is a breech block that kicks 8.5 mm on discharge."
     },
     {
       "file": "weapon_wrench_vm.glb",
@@ -7901,88 +7923,201 @@
       "note": "Base gloved forearms, posed per platform (weapon.handsPose). Fingers are capsule bone chains that actually wrap the grip — three fingers closed on the front strap, index on the trigger, thumb over the backstrap — with knuckle plates, wrist cuffs and rolled sleeves. Rifle: support hand C-clamps the handguard. Pistol: support hand cups the firing hand. Tool: right hand on the handle, left on the foregrip. Faction variants swap the plates."
     },
     {
-      "file": "weapon_sidearm_world.glb",
-      "bytes": 2426784,
-      "tris": 68232,
-      "parts": 175,
+      "file": "hands_firstperson_pistol.glb",
+      "bytes": 6585884,
+      "tris": 60632,
+      "parts": 22,
       "bounds": {
         "min": [
-          -0.019,
-          -0.123,
-          -0.16
+          -0.118,
+          -0.182,
+          -0.048
         ],
         "max": [
-          0.019,
-          0.08,
-          0.069
+          0.1,
+          0.035,
+          0.311
+        ]
+      },
+      "kind": "weapon",
+      "id": "hands_pistol",
+      "pose": "pistol",
+      "note": "Base gloved forearms, posed per platform (weapon.handsPose). Fingers are capsule bone chains that actually wrap the grip — three fingers closed on the front strap, index on the trigger, thumb over the backstrap — with knuckle plates, wrist cuffs and rolled sleeves. Rifle: support hand C-clamps the handguard. Pistol: support hand cups the firing hand. Tool: right hand on the handle, left on the foregrip. Faction variants swap the plates."
+    },
+    {
+      "file": "hands_firstperson_tool.glb",
+      "bytes": 1085400,
+      "tris": 26880,
+      "parts": 64,
+      "bounds": {
+        "min": [
+          -0.132,
+          -0.208,
+          -0.191
+        ],
+        "max": [
+          0.102,
+          0.144,
+          0.365
+        ]
+      },
+      "kind": "weapon",
+      "id": "hands_tool",
+      "pose": "tool",
+      "note": "Base gloved forearms, posed per platform (weapon.handsPose). Fingers are capsule bone chains that actually wrap the grip — three fingers closed on the front strap, index on the trigger, thumb over the backstrap — with knuckle plates, wrist cuffs and rolled sleeves. Rifle: support hand C-clamps the handguard. Pistol: support hand cups the firing hand. Tool: right hand on the handle, left on the foregrip. Faction variants swap the plates."
+    },
+    {
+      "file": "hands_firstperson_magout.glb",
+      "bytes": 5719168,
+      "tris": 30316,
+      "parts": 11,
+      "bounds": {
+        "min": [
+          -0.238,
+          -0.355,
+          0.074
+        ],
+        "max": [
+          0.014,
+          -0.048,
+          0.375
+        ]
+      },
+      "kind": "weapon",
+      "id": "hands_magout",
+      "pose": "magout",
+      "offhandOnly": true,
+      "note": "Base gloved forearms, posed per platform (weapon.handsPose). Fingers are capsule bone chains that actually wrap the grip — three fingers closed on the front strap, index on the trigger, thumb over the backstrap — with knuckle plates, wrist cuffs and rolled sleeves. Rifle: support hand C-clamps the handguard. Pistol: support hand cups the firing hand. Tool: right hand on the handle, left on the foregrip. Faction variants swap the plates."
+    },
+    {
+      "file": "hands_firstperson_magin.glb",
+      "bytes": 5719192,
+      "tris": 30316,
+      "parts": 11,
+      "bounds": {
+        "min": [
+          -0.118,
+          -0.209,
+          -0.051
+        ],
+        "max": [
+          0.034,
+          0.022,
+          0.279
+        ]
+      },
+      "kind": "weapon",
+      "id": "hands_magin",
+      "pose": "magin",
+      "offhandOnly": true,
+      "note": "Base gloved forearms, posed per platform (weapon.handsPose). Fingers are capsule bone chains that actually wrap the grip — three fingers closed on the front strap, index on the trigger, thumb over the backstrap — with knuckle plates, wrist cuffs and rolled sleeves. Rifle: support hand C-clamps the handguard. Pistol: support hand cups the firing hand. Tool: right hand on the handle, left on the foregrip. Faction variants swap the plates."
+    },
+    {
+      "file": "hands_firstperson_charge.glb",
+      "bytes": 5719064,
+      "tris": 30316,
+      "parts": 11,
+      "bounds": {
+        "min": [
+          -0.097,
+          -0.046,
+          -0.04
+        ],
+        "max": [
+          0.105,
+          0.199,
+          0.348
+        ]
+      },
+      "kind": "weapon",
+      "id": "hands_charge",
+      "pose": "charge",
+      "offhandOnly": true,
+      "note": "Base gloved forearms, posed per platform (weapon.handsPose). Fingers are capsule bone chains that actually wrap the grip — three fingers closed on the front strap, index on the trigger, thumb over the backstrap — with knuckle plates, wrist cuffs and rolled sleeves. Rifle: support hand C-clamps the handguard. Pistol: support hand cups the firing hand. Tool: right hand on the handle, left on the foregrip. Faction variants swap the plates."
+    },
+    {
+      "file": "weapon_sidearm_world.glb",
+      "bytes": 14412544,
+      "tris": 143106,
+      "parts": 337,
+      "bounds": {
+        "min": [
+          -0.017,
+          -0.061,
+          -0.124
+        ],
+        "max": [
+          0.015,
+          0.071,
+          0.047
         ]
       },
       "kind": "weapon_world",
       "id": "sidearm_world",
-      "note": "The starter, never taken away. Striker-fired micro-compact after the reference: tall flat-sided slide with a chamfered top rib, wide angled cocking serrations front and rear, twin slanted lightening ports ahead of the ejection port with the barrel visible through them, loaded-chamber window, blacked-out high-profile sights. One-piece polymer frame with a deep beavertail, squared undercut trigger guard with a forward hook, flat-faced trigger with a blade safety, slide stop and takedown levers, an accessory rail, stippled grip panels with a raised palm swell and a forward-lipped baseplate. Seven mounts, so even the free gun is a build."
+      "note": "The starter, never taken away — and the hero asset the rest of the armoury is being rebuilt against. Striker-fired micro-compact, DLC-black slide over a graphite polymer frame: two blacks separated by surface, not colour. Every surface is a swept compound section rather than a constant extrusion, so the slide crowns, tapers at the nose and carries crisp machined chamfers with smooth faces between them. Detail is cut IN, not stacked on: forward-raked cocking serrations milled into both flats, a milled ejection pocket with the barrel hood and breech face standing inside it, a hooked extractor and firing-pin hole, an optic cut under its cover plate, five witness holes down the 15-round magazine. Roll-marked BODIED GUARD 3.0 on the left flat, 9×19MM on the right. Tritium night sights, three vials. Surface is procedural PBR at 2K — draw-polish on the DLC, glass-filler mottle in the polymer, a pebble stipple field with the palm patch rubbed smooth — and honest wear rides in vertex colour, so the serration lands, muzzle crown and control faces burnish themselves. Seven mounts, so even the free gun is a build."
     },
     {
       "file": "weapon_rifle_world.glb",
-      "bytes": 2163236,
-      "tris": 37196,
-      "parts": 197,
+      "bytes": 16852804,
+      "tris": 197896,
+      "parts": 121,
       "bounds": {
         "min": [
-          -0.026,
-          -0.192,
-          -0.572
+          -0.027,
+          -0.154,
+          -0.598
         ],
         "max": [
           0.027,
-          0.098,
-          0.284
+          0.103,
+          0.214
         ]
       },
       "kind": "weapon_world",
       "id": "rifle_world",
-      "note": "Hitscan priority tool, after the reference: a bronze-anodised AR-pattern carbine. Flat-top upper with a continuous top rail and brass deflector, forward assist and dust cover; matching lower with a flared magwell, bilateral selector, bolt catch and an oversized trigger guard. Long slim octagonal free-float handguard with M-LOK slots on every face and a vented cap, three anti-rotation screws at the root, a birdcage flash hider on the bare barrel. Ribbed 30-round polymer magazine with a floorplate, skeletonised collapsible stock with a sling loop and rubber pad. Designator lamp above the port telegraphs the mark alt-fire."
+      "note": "Hitscan priority tool, rebuilt to the hero standard and measured against a real 14.5\" carbine rather than eyeballed: 25.4 mm receiver, 368 mm barrel, 10.2 mm Picatinny slot pitch, 36 mm M-LOK pitch, STANAG magazine section, 89 mm carrier travel. Every detail that used to be a box glued to a slab is now cut in — Picatinny cross-slots milled through the rail rib for its full length, M-LOK cut clean through four faces of the free-float handguard, the ejection port a real pocket with the bolt carrier standing inside it, the brass deflector and forward-assist boss swelled out of the receiver wall instead of stuck onto it, A2 birdcage ports cut through the flash hider, magwell flare and stock lightening pockets as displacement. Bronze anodising keeps the weapon's identity; only the quality level rises. The carrier group reciprocates on its declared axis and throws a 5.56 case from the port."
     },
     {
       "file": "weapon_scattergun_world.glb",
-      "bytes": 1237088,
-      "tris": 20132,
-      "parts": 109,
+      "bytes": 18863512,
+      "tris": 153872,
+      "parts": 115,
       "bounds": {
         "min": [
-          -0.024,
-          -0.116,
-          -0.538
+          -0.021,
+          -0.069,
+          -0.593
         ],
         "max": [
-          0.042,
-          0.116,
-          0.296
+          0.038,
+          0.104,
+          0.216
         ]
       },
       "kind": "weapon_world",
       "id": "scattergun_world",
-      "note": "Panic weapon for the perch, after the reference: a semi-auto tactical shotgun. Tall boxed receiver with a short top rail and a ghost-ring rear sight, bolt handle and carrier proud of the ejection port, cross-bolt safety in the guard, shell lifter under the loading port. The `_magazine` group is the long tube under the barrel with its knurled cap, barrel clamp and the ribbed cylindrical forend (a drum replaces all of it and hangs from the port). The `_barrel` group carries the barrel, its front-sight tower with a fibre bead and the muzzle mount. Pistol grip into a solid fixed stock with a sling slot and a thick pad."
+      "note": "Panic weapon for the perch, rebuilt to the hero standard and measured against a real semi-auto tactical 12-gauge: 18.5 mm bore, 18\" barrel, 41 × 45 mm boxed alloy receiver, 808 mm overall. The hull sizes the gun — barrel, magazine tube, loading port and ejection port all derive from it. Ejection port cut into the right wall only; loading port cut up into the belly between the side walls; one polymer handguard over barrel AND tube, vented on both flanks. Parkerised phosphate throughout: a crystalline conversion coating, not dark steel with the roughness turned up. Ghost-ring rear on a short rail, hooded tritium front post. The bolt assembly reciprocates 62 mm and throws fired hulls — brass head, dyed plastic body, blown-out crimp."
     },
     {
       "file": "weapon_emberpistol_world.glb",
-      "bytes": 1113472,
-      "tris": 20532,
-      "parts": 72,
+      "bytes": 12092540,
+      "tris": 62948,
+      "parts": 93,
       "bounds": {
         "min": [
-          -0.024,
-          -0.123,
-          -0.221
+          -0.023,
+          -0.065,
+          -0.205
         ],
         "max": [
-          0.037,
-          0.092,
+          0.023,
+          0.102,
           0.106
         ]
       },
       "kind": "weapon_world",
       "id": "emberpistol_world",
-      "note": "The shooter's half of Thermal Shock. A fuel-fed hand cannon: brushed-steel ember canister behind the frame with a glowing sight-glass ring and hazard bands, top valve wheel, braided hose into the frame, turned shroud with hex heat fins, pilot flame under the muzzle, thermal readout on the right of the upper."
+      "note": "The shooter's half of Thermal Shock, rebuilt to the hero standard. No real-world twin, so every part is grounded in a real MACHINE instead: signal-pistol proportions (150 mm barrel, 288 mm overall, 18 mm bore), a canister built as an actual pressure vessel with torispherical ends and a rolled seam, a turned brass handwheel on a brazed boss, and a braided hose that lands in swaged ferrules at BOTH ends rather than floating. Cooling fins are steps cut into the barrel’s turned profile, not discs threaded onto a tube. Fuel-fed, so it ejects nothing — what it has is a breech block that kicks 8.5 mm on discharge."
     },
     {
       "file": "hero_forge.glb",
@@ -8321,6 +8456,119 @@
       "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, tool loop and brass bolts on the left cuff."
     },
     {
+      "file": "hands_forge_pistol.glb",
+      "bytes": 6644256,
+      "tris": 62120,
+      "parts": 31,
+      "bounds": {
+        "min": [
+          -0.118,
+          -0.182,
+          -0.048
+        ],
+        "max": [
+          0.1,
+          0.053,
+          0.311
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_forge_pistol",
+      "pose": "pistol",
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, tool loop and brass bolts on the left cuff."
+    },
+    {
+      "file": "hands_forge_tool.glb",
+      "bytes": 1143620,
+      "tris": 28368,
+      "parts": 73,
+      "bounds": {
+        "min": [
+          -0.132,
+          -0.208,
+          -0.191
+        ],
+        "max": [
+          0.102,
+          0.144,
+          0.365
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_forge_tool",
+      "pose": "tool",
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, tool loop and brass bolts on the left cuff."
+    },
+    {
+      "file": "hands_forge_magout.glb",
+      "bytes": 5764204,
+      "tris": 31684,
+      "parts": 18,
+      "bounds": {
+        "min": [
+          -0.238,
+          -0.355,
+          0.074
+        ],
+        "max": [
+          0.014,
+          -0.001,
+          0.375
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_forge_magout",
+      "pose": "magout",
+      "offhandOnly": true,
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, tool loop and brass bolts on the left cuff."
+    },
+    {
+      "file": "hands_forge_magin.glb",
+      "bytes": 5764228,
+      "tris": 31684,
+      "parts": 18,
+      "bounds": {
+        "min": [
+          -0.118,
+          -0.209,
+          -0.051
+        ],
+        "max": [
+          0.085,
+          0.065,
+          0.279
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_forge_magin",
+      "pose": "magin",
+      "offhandOnly": true,
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, tool loop and brass bolts on the left cuff."
+    },
+    {
+      "file": "hands_forge_charge.glb",
+      "bytes": 5764100,
+      "tris": 31684,
+      "parts": 18,
+      "bounds": {
+        "min": [
+          -0.097,
+          -0.046,
+          -0.05
+        ],
+        "max": [
+          0.141,
+          0.209,
+          0.348
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_forge_charge",
+      "pose": "charge",
+      "offhandOnly": true,
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, tool loop and brass bolts on the left cuff."
+    },
+    {
       "file": "hands_ember.glb",
       "bytes": 1037412,
       "tris": 26196,
@@ -8339,6 +8587,119 @@
       },
       "kind": "hero",
       "id": "hands_ember",
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, braided fuel hose along the right forearm."
+    },
+    {
+      "file": "hands_ember_pistol.glb",
+      "bytes": 6621276,
+      "tris": 61152,
+      "parts": 27,
+      "bounds": {
+        "min": [
+          -0.118,
+          -0.182,
+          -0.048
+        ],
+        "max": [
+          0.1,
+          0.043,
+          0.311
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_ember_pistol",
+      "pose": "pistol",
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, braided fuel hose along the right forearm."
+    },
+    {
+      "file": "hands_ember_tool.glb",
+      "bytes": 1120640,
+      "tris": 27400,
+      "parts": 69,
+      "bounds": {
+        "min": [
+          -0.132,
+          -0.208,
+          -0.191
+        ],
+        "max": [
+          0.104,
+          0.144,
+          0.393
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_ember_tool",
+      "pose": "tool",
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, braided fuel hose along the right forearm."
+    },
+    {
+      "file": "hands_ember_magout.glb",
+      "bytes": 5732976,
+      "tris": 30436,
+      "parts": 13,
+      "bounds": {
+        "min": [
+          -0.238,
+          -0.355,
+          0.074
+        ],
+        "max": [
+          0.014,
+          -0.037,
+          0.375
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_ember_magout",
+      "pose": "magout",
+      "offhandOnly": true,
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, braided fuel hose along the right forearm."
+    },
+    {
+      "file": "hands_ember_magin.glb",
+      "bytes": 5733000,
+      "tris": 30436,
+      "parts": 13,
+      "bounds": {
+        "min": [
+          -0.118,
+          -0.209,
+          -0.051
+        ],
+        "max": [
+          0.04,
+          0.044,
+          0.279
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_ember_magin",
+      "pose": "magin",
+      "offhandOnly": true,
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, braided fuel hose along the right forearm."
+    },
+    {
+      "file": "hands_ember_charge.glb",
+      "bytes": 5732868,
+      "tris": 30436,
+      "parts": 13,
+      "bounds": {
+        "min": [
+          -0.097,
+          -0.046,
+          -0.04
+        ],
+        "max": [
+          0.11,
+          0.209,
+          0.348
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_ember_charge",
+      "pose": "charge",
+      "offhandOnly": true,
       "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, braided fuel hose along the right forearm."
     },
     {
@@ -8363,6 +8724,119 @@
       "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, capacitor ring and arc electrodes on the right cuff."
     },
     {
+      "file": "hands_tempest_pistol.glb",
+      "bytes": 6647944,
+      "tris": 62072,
+      "parts": 29,
+      "bounds": {
+        "min": [
+          -0.118,
+          -0.182,
+          -0.048
+        ],
+        "max": [
+          0.1,
+          0.043,
+          0.311
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_tempest_pistol",
+      "pose": "pistol",
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, capacitor ring and arc electrodes on the right cuff."
+    },
+    {
+      "file": "hands_tempest_tool.glb",
+      "bytes": 1147308,
+      "tris": 28320,
+      "parts": 71,
+      "bounds": {
+        "min": [
+          -0.132,
+          -0.208,
+          -0.191
+        ],
+        "max": [
+          0.102,
+          0.144,
+          0.365
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_tempest_tool",
+      "pose": "tool",
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, capacitor ring and arc electrodes on the right cuff."
+    },
+    {
+      "file": "hands_tempest_magout.glb",
+      "bytes": 5732980,
+      "tris": 30436,
+      "parts": 13,
+      "bounds": {
+        "min": [
+          -0.238,
+          -0.355,
+          0.074
+        ],
+        "max": [
+          0.014,
+          -0.037,
+          0.375
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_tempest_magout",
+      "pose": "magout",
+      "offhandOnly": true,
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, capacitor ring and arc electrodes on the right cuff."
+    },
+    {
+      "file": "hands_tempest_magin.glb",
+      "bytes": 5733000,
+      "tris": 30436,
+      "parts": 13,
+      "bounds": {
+        "min": [
+          -0.118,
+          -0.209,
+          -0.051
+        ],
+        "max": [
+          0.04,
+          0.044,
+          0.279
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_tempest_magin",
+      "pose": "magin",
+      "offhandOnly": true,
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, capacitor ring and arc electrodes on the right cuff."
+    },
+    {
+      "file": "hands_tempest_charge.glb",
+      "bytes": 5732872,
+      "tris": 30436,
+      "parts": 13,
+      "bounds": {
+        "min": [
+          -0.097,
+          -0.046,
+          -0.04
+        ],
+        "max": [
+          0.11,
+          0.209,
+          0.348
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_tempest_charge",
+      "pose": "charge",
+      "offhandOnly": true,
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, capacitor ring and arc electrodes on the right cuff."
+    },
+    {
       "file": "hands_glacier.glb",
       "bytes": 1113980,
       "tris": 29372,
@@ -8384,6 +8858,119 @@
       "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, frosted coolant coil around the right cuff."
     },
     {
+      "file": "hands_glacier_pistol.glb",
+      "bytes": 6697844,
+      "tris": 64328,
+      "parts": 29,
+      "bounds": {
+        "min": [
+          -0.118,
+          -0.182,
+          -0.048
+        ],
+        "max": [
+          0.1,
+          0.043,
+          0.311
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_glacier_pistol",
+      "pose": "pistol",
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, frosted coolant coil around the right cuff."
+    },
+    {
+      "file": "hands_glacier_tool.glb",
+      "bytes": 1197204,
+      "tris": 30576,
+      "parts": 71,
+      "bounds": {
+        "min": [
+          -0.132,
+          -0.208,
+          -0.191
+        ],
+        "max": [
+          0.102,
+          0.144,
+          0.365
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_glacier_tool",
+      "pose": "tool",
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, frosted coolant coil around the right cuff."
+    },
+    {
+      "file": "hands_glacier_magout.glb",
+      "bytes": 5732976,
+      "tris": 30436,
+      "parts": 13,
+      "bounds": {
+        "min": [
+          -0.238,
+          -0.355,
+          0.074
+        ],
+        "max": [
+          0.014,
+          -0.037,
+          0.375
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_glacier_magout",
+      "pose": "magout",
+      "offhandOnly": true,
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, frosted coolant coil around the right cuff."
+    },
+    {
+      "file": "hands_glacier_magin.glb",
+      "bytes": 5732996,
+      "tris": 30436,
+      "parts": 13,
+      "bounds": {
+        "min": [
+          -0.118,
+          -0.209,
+          -0.051
+        ],
+        "max": [
+          0.04,
+          0.044,
+          0.279
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_glacier_magin",
+      "pose": "magin",
+      "offhandOnly": true,
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, frosted coolant coil around the right cuff."
+    },
+    {
+      "file": "hands_glacier_charge.glb",
+      "bytes": 5732868,
+      "tris": 30436,
+      "parts": 13,
+      "bounds": {
+        "min": [
+          -0.097,
+          -0.046,
+          -0.04
+        ],
+        "max": [
+          0.11,
+          0.209,
+          0.348
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_glacier_charge",
+      "pose": "charge",
+      "offhandOnly": true,
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, frosted coolant coil around the right cuff."
+    },
+    {
       "file": "hands_specter.glb",
       "bytes": 1042484,
       "tris": 26036,
@@ -8402,6 +8989,119 @@
       },
       "kind": "hero",
       "id": "hands_specter",
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, wrist scanner screen on the left cuff."
+    },
+    {
+      "file": "hands_specter_pistol.glb",
+      "bytes": 6626376,
+      "tris": 60992,
+      "parts": 28,
+      "bounds": {
+        "min": [
+          -0.118,
+          -0.182,
+          -0.048
+        ],
+        "max": [
+          0.1,
+          0.043,
+          0.311
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_specter_pistol",
+      "pose": "pistol",
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, wrist scanner screen on the left cuff."
+    },
+    {
+      "file": "hands_specter_tool.glb",
+      "bytes": 1125720,
+      "tris": 27240,
+      "parts": 70,
+      "bounds": {
+        "min": [
+          -0.132,
+          -0.208,
+          -0.191
+        ],
+        "max": [
+          0.102,
+          0.144,
+          0.365
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_specter_tool",
+      "pose": "tool",
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, wrist scanner screen on the left cuff."
+    },
+    {
+      "file": "hands_specter_magout.glb",
+      "bytes": 5746332,
+      "tris": 30556,
+      "parts": 15,
+      "bounds": {
+        "min": [
+          -0.238,
+          -0.355,
+          0.074
+        ],
+        "max": [
+          0.014,
+          -0.037,
+          0.375
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_specter_magout",
+      "pose": "magout",
+      "offhandOnly": true,
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, wrist scanner screen on the left cuff."
+    },
+    {
+      "file": "hands_specter_magin.glb",
+      "bytes": 5746352,
+      "tris": 30556,
+      "parts": 15,
+      "bounds": {
+        "min": [
+          -0.118,
+          -0.209,
+          -0.051
+        ],
+        "max": [
+          0.04,
+          0.044,
+          0.279
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_specter_magin",
+      "pose": "magin",
+      "offhandOnly": true,
+      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, wrist scanner screen on the left cuff."
+    },
+    {
+      "file": "hands_specter_charge.glb",
+      "bytes": 5746224,
+      "tris": 30556,
+      "parts": 15,
+      "bounds": {
+        "min": [
+          -0.097,
+          -0.046,
+          -0.04
+        ],
+        "max": [
+          0.11,
+          0.209,
+          0.348
+        ]
+      },
+      "kind": "hero",
+      "id": "hands_specter_charge",
+      "pose": "charge",
+      "offhandOnly": true,
       "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, wrist scanner screen on the left cuff."
     },
     {
@@ -8427,171 +9127,258 @@
     },
     {
       "file": "foundry_terrain.glb",
-      "bytes": 3063744,
-      "tris": 3774,
-      "parts": 26,
+      "bytes": 7100624,
+      "tris": 3486,
+      "parts": 12,
       "bounds": {
         "min": [
           -10,
-          -0.113,
+          -0.46,
           -10
         ],
         "max": [
           10,
-          0.27,
+          0.113,
           10
         ]
       },
       "kind": "map_foundry",
       "id": "foundry_terrain",
-      "note": "Tileable cast-iron floor: 8×8 riveted plates baked into a 1024² albedo/roughness/normal set (soot, rust bleed, scorch rings, tread ridges, stencilled bay numbers) with an emissive map for the seams still running molten. Four variants (rotation + a different set of physical details: drain grates, access hatch, conduit, cooled slag pool) so the 24-tile grid never repeats visibly. Flat edges so tiles seam."
+      "note": "Tileable cast-iron floor: 8×8 riveted plates baked into a 1024² albedo/roughness/normal set (soot, rust bleed, scorch rings, tread ridges, stencilled bay numbers) with an emissive map for the seams still running molten. Four variants — rotation plus a different set of real details: a gully with a cast angle frame and 41/100 grating over a tapered sump, a bolted access cover with a keyway and a bent lifting bar, a conduit on saddle clamps with swaged couplings, and a cooled slag pool with a crust rim. Flat edges so tiles seam; nothing stands above 0.16 m."
+    },
+    {
+      "file": "foundry_terrain_v1.glb",
+      "bytes": 8327624,
+      "tris": 3330,
+      "parts": 15,
+      "bounds": {
+        "min": [
+          -10,
+          -0.878,
+          -10
+        ],
+        "max": [
+          10,
+          0.922,
+          10
+        ]
+      },
+      "kind": "map_foundry",
+      "id": "foundry_terrain_v1",
+      "variant": 1,
+      "note": "Tileable cast-iron floor: 8×8 riveted plates baked into a 1024² albedo/roughness/normal set (soot, rust bleed, scorch rings, tread ridges, stencilled bay numbers) with an emissive map for the seams still running molten. Four variants — rotation plus a different set of real details: a gully with a cast angle frame and 41/100 grating over a tapered sump, a bolted access cover with a keyway and a bent lifting bar, a conduit on saddle clamps with swaged couplings, and a cooled slag pool with a crust rim. Flat edges so tiles seam; nothing stands above 0.16 m."
+    },
+    {
+      "file": "foundry_terrain_v2.glb",
+      "bytes": 7180016,
+      "tris": 4268,
+      "parts": 19,
+      "bounds": {
+        "min": [
+          -10,
+          -0.46,
+          -10
+        ],
+        "max": [
+          10,
+          0.11,
+          10
+        ]
+      },
+      "kind": "map_foundry",
+      "id": "foundry_terrain_v2",
+      "variant": 2,
+      "note": "Tileable cast-iron floor: 8×8 riveted plates baked into a 1024² albedo/roughness/normal set (soot, rust bleed, scorch rings, tread ridges, stencilled bay numbers) with an emissive map for the seams still running molten. Four variants — rotation plus a different set of real details: a gully with a cast angle frame and 41/100 grating over a tapered sump, a bolted access cover with a keyway and a bent lifting bar, a conduit on saddle clamps with swaged couplings, and a cooled slag pool with a crust rim. Flat edges so tiles seam; nothing stands above 0.16 m."
+    },
+    {
+      "file": "foundry_terrain_v3.glb",
+      "bytes": 5823640,
+      "tris": 2548,
+      "parts": 8,
+      "bounds": {
+        "min": [
+          -10,
+          -1.178,
+          -10
+        ],
+        "max": [
+          10,
+          1.222,
+          10
+        ]
+      },
+      "kind": "map_foundry",
+      "id": "foundry_terrain_v3",
+      "variant": 3,
+      "note": "Tileable cast-iron floor: 8×8 riveted plates baked into a 1024² albedo/roughness/normal set (soot, rust bleed, scorch rings, tread ridges, stencilled bay numbers) with an emissive map for the seams still running molten. Four variants — rotation plus a different set of real details: a gully with a cast angle frame and 41/100 grating over a tapered sump, a bolted access cover with a keyway and a bent lifting bar, a conduit on saddle clamps with swaged couplings, and a cooled slag pool with a crust rim. Flat edges so tiles seam; nothing stands above 0.16 m."
     },
     {
       "file": "foundry_terrain_scatter.glb",
-      "bytes": 36460,
-      "tris": 300,
-      "parts": 7,
+      "bytes": 2380876,
+      "tris": 1624,
+      "parts": 9,
       "bounds": {
         "min": [
-          -2.561,
-          -0.69,
-          -2.793
+          -2.563,
+          -0.601,
+          -2.806
         ],
         "max": [
-          2.847,
-          1.365,
-          2.354
+          2.853,
+          1.564,
+          2.369
         ]
       },
       "kind": "map_foundry",
       "id": "foundry_terrain_scatter",
-      "note": "Slag boulder cluster with a cooled-lava crack seam. Scatter these by hand in levels.js, never within 2.5 m of a route, socket or placed piece."
+      "note": "Slag boulder cluster and a cooled-lava seam. The boulders are noise-displaced solids rather than regular polyhedra — a dodecahedron reads as a dice at any distance — and the crack is a lofted fissure that narrows and shallows along its length with clinker lips and a molten core set down inside it, not an emissive plate lying on the floor. Scatter by hand in levels.js, never within 2.5 m of a route, socket or placed piece."
     },
     {
       "file": "foundry_path_ground.glb",
-      "bytes": 134488,
-      "tris": 1236,
-      "parts": 33,
+      "bytes": 3777224,
+      "tris": 3894,
+      "parts": 10,
       "bounds": {
         "min": [
-          -2.029,
-          -0.032,
-          -1.875
+          -2,
+          0,
+          -1.864
         ],
         "max": [
-          2.029,
-          0.209,
-          1.86
+          2,
+          0.19,
+          1.864
         ]
       },
       "kind": "map_foundry",
       "id": "foundry_path_ground",
-      "note": "One 4 m run of the 3.4 m-wide ground lane: two cast-iron plates, riveted, with a centre drain seam and worn tread ridges; a kerb lip both sides so the lane reads as a channel from the deck."
+      "note": "One 4 m run of the 3.4 m ground lane, built as a real cast bay: 25 mm plate with a 1.3 % crossfall falling to a centre drain channel (a foundry bay drains to the middle, so the camber runs inward, not outward), a slot grating over the channel, and battered kerbs both sides with a hazard band on the outer face. The teardrop tread is a 35 mm-pitch pattern in the height map, worn flat down the middle of the run where traffic goes — 40 000 proud teardrops per bay is not a model. Bays lap at a bolted joint strap so consecutive runs interlock instead of butting."
     },
     {
       "file": "foundry_deck.glb",
-      "bytes": 178596,
-      "tris": 2136,
-      "parts": 27,
+      "bytes": 5293952,
+      "tris": 21592,
+      "parts": 32,
       "bounds": {
         "min": [
-          -2.036,
-          5.33,
-          -5
+          -2.034,
+          5.507,
+          -5.045
         ],
         "max": [
-          2.036,
-          6.04,
-          5.27
+          2.023,
+          6.007,
+          5.089
         ]
       },
       "kind": "map_foundry",
       "id": "foundry_deck",
-      "note": "One 4 m bay of the 28×10 m upper deck at y 5.8–6.0: grating panels between I-beam joists, rivet rows on the flanges, a service lamp under the edge. Instance 7 along X at x −12…12 (centre x 2, z −17)."
+      "note": "One 4 m bay of the 28×10 m upper deck, walking surface at y 6.00. Two UB 305×165 primaries span the 10 m along Z, precambered 6 mm UP so live load cannot eat the headroom below; eleven UB 152×89 joists cross them at 1 m centres on bolted cleat angles; 41/100 open grating spans the 1 m bays, so you see the lane through the deck and the light falls through in stripes. Fascia plate and hazard band on the free edges, riveted flange rows, and a caged lamp on a bracket under the edge. Structural depth is 0.49 m, so the soffit sits at 5.51 — ten millimetres over the §4.10 minimum, which is margin, not a crossing: the gantry bridge stays its own 0.34 m walkway. Instance 7 along X at x −12…12 (centre x 2, z −17)."
     },
     {
       "file": "foundry_deck_rail.glb",
-      "bytes": 55568,
-      "tris": 1036,
-      "parts": 15,
+      "bytes": 2047852,
+      "tris": 996,
+      "parts": 9,
       "bounds": {
         "min": [
-          -2.027,
-          -0.018,
-          -0.12
+          -2.06,
+          0,
+          -0.219
         ],
         "max": [
-          2.027,
-          1.118,
-          0.12
+          2.06,
+          1.124,
+          0.06
         ]
       },
       "kind": "map_foundry",
       "id": "foundry_deck_rail",
-      "note": "One 4 m run of deck rail: two posts, top rail, mid rail, kick plate and a hazard band. Sits on the deck's +Z edge at z −12.2. Open bays where the ladder and zipline anchor land."
+      "note": "One 4 m run of deck rail to real handrail geometry: capped 48.3 OD tube posts at 1.27 m centres on bolted base plates, a 48.3 top rail at 1100 and a 42.4 mid rail at 550, and a 100 mm toe board with a hazard band. The old run put an 80 mm rail on 100 mm square posts over a 150 mm plate, which is what made the deck read a size too small for the player. Sits on the deck’s +Z edge at z −11.2; leave bays open where the ladder and zipline anchor land."
+    },
+    {
+      "file": "foundry_gantry_walk.glb",
+      "bytes": 2756688,
+      "tris": 9088,
+      "parts": 27,
+      "bounds": {
+        "min": [
+          -2.06,
+          -0.335,
+          -2.01
+        ],
+        "max": [
+          2.06,
+          1.124,
+          2.01
+        ]
+      },
+      "kind": "map_foundry",
+      "id": "foundry_gantry_walk",
+      "note": "The bridge that crosses the lane, authored with its walking surface AT the mount point so it sits at the height the pads are on. Two PFC 200×75 channel stringers with toes inward carry 41/100 grating; PFC 100 transoms under them at 1 m bring the total to 0.34 m from walking surface to underside — a deck bay is 0.69 m of real section and could not both sit flush at y 6 and leave the lane its 5.5 m of headroom, which is why this is a separate light walkway. Handrail with weldmesh infill on both long edges, hazard nosing angles at both ends. Square, so it tiles either way."
     },
     {
       "file": "foundry_pillar.glb",
-      "bytes": 84924,
-      "tris": 1096,
-      "parts": 23,
+      "bytes": 4629312,
+      "tris": 7930,
+      "parts": 28,
       "bounds": {
         "min": [
-          -0.954,
-          -0.054,
-          -0.9
+          -0.975,
+          0,
+          -0.975
         ],
         "max": [
-          0.954,
-          5.854,
-          0.9
+          0.975,
+          5.507,
+          0.975
         ]
       },
       "kind": "map_foundry",
       "id": "foundry_pillar",
-      "note": "Riveted box-section column with a flared cap plate and base plinth, rust streaks as dark bands, a conduit run up one face."
+      "note": "A built-up riveted box column the way they were actually made: four L150×150×15 corner angles with 12 mm web plates between them, cover-plate laps stepping the section at 1.3 m intervals, and riveted rows up every corner. Cap plate on four gusset brackets, base plate with holding-down bolts on a grout plinth, and a conduit run on saddle clamps up one face into a junction box with a lit lens. The old column was a plain box with three bands glued round it. The head lands at 5.51, which is the deck soffit; the two instances under the gantry walkway (soffit 5.67) take a 160 mm bearing packer."
     },
     {
       "file": "foundry_vent_tunnel.glb",
-      "bytes": 247604,
-      "tris": 3120,
-      "parts": 55,
+      "bytes": 5311264,
+      "tris": 17272,
+      "parts": 48,
       "bounds": {
         "min": [
-          -1.97,
-          -0.045,
-          -7.005
+          -1.903,
+          0,
+          -7.064
         ],
         "max": [
-          1.97,
-          1.69,
-          7.005
+          1.903,
+          1.624,
+          7.064
         ]
       },
       "kind": "map_foundry",
       "id": "foundry_vent_tunnel",
-      "note": "The hero-only shortcut under the deck: corrugated duct walls, roof ribs, grated floor strip, warm lamps every 3.5 m, hazard lips at both mouths. Mount `shared_vent_grate` at each end."
+      "note": "The hero-only shortcut under the deck. The duct walls are genuinely fluted — the corrugation is the lofted cross-section at the real 76 mm pitch × 19 mm depth, not a flat box with ribs glued on — with L75 angle ring frames every 1.8 m, seven 2 m grating panels down the middle so the floor has real joints, a caged lamp every 3.5 m, a pipe run on saddle clamps along one wall, and hazard nosing angles at both mouths. Mount `shared_vent_grate` at each end."
     },
     {
       "file": "foundry_wall_boundary.glb",
-      "bytes": 1889768,
-      "tris": 4368,
+      "bytes": 9563976,
+      "tris": 5060,
       "parts": 52,
       "bounds": {
         "min": [
-          -6.018,
-          -0.09,
+          -5.55,
+          0,
           -0.8
         ],
         "max": [
-          6.018,
-          6.63,
-          1.968
+          5.55,
+          6.612,
+          1.56
         ]
       },
       "kind": "map_foundry",
       "id": "foundry_wall_boundary",
-      "note": "Refractory brick wall on a baked 2.5 m brick set (stretcher courses, glazed and soot-blackened bricks, crazing, salt bloom, mortar joints in the normal map) with real geometry breaking the face: a stepped stone plinth, three battered buttresses with chamfered caps, a corbelled cornice under the steel cap rail, iron tie plates with bolt heads, spalled bricks standing proud, weep pipes, a slag-chute stain and one furnace window glowing molten. Repeat around the 110×80 m playfield."
+      "note": "Refractory brick wall on a baked 2.5 m brick set (stretcher courses, glazed and soot-blackened bricks, crazing, salt bloom, mortar joints in the normal map). Real geometry breaks the face: a stepped stone plinth, three BATTERED buttresses — lofted so they genuinely narrow with height, which a box cannot do — a corbelled cornice under a coping with a drip throat cut into its underside, iron pattress plates with dome bolts, spalled bricks standing proud, weep pipes, a slag-chute flow lofted down the face with a crust lip where it spilled over the plinth, and a furnace window with a splayed reveal, a segmental arch of thirteen voussoirs and a cast frame, with the molten set back so it lights the reveal instead of glowing flat. Repeat around the 110×80 m playfield."
     },
     {
       "file": "foundry_skybox.glb",
@@ -8616,129 +9403,195 @@
     },
     {
       "file": "foundry_dress_crucible.glb",
-      "bytes": 680500,
-      "tris": 15512,
-      "parts": 83,
+      "bytes": 8311016,
+      "tris": 11932,
+      "parts": 57,
       "bounds": {
         "min": [
-          -3.106,
-          -0.525,
-          -9.599
+          -3.061,
+          -0.233,
+          -9.651
         ],
         "max": [
-          3.178,
-          4.713,
-          2.092
+          3.135,
+          4.676,
+          2.137
         ]
       },
       "kind": "map_foundry",
       "id": "foundry_dress_crucible",
-      "note": "Tilting crucible on a trunnion frame, caught mid-pour: a molten stream arcs from the lip into a channel of cooling slag and spreads into a puddle field — a hot core, orange skin, dark crust rims and cracked black slag at the edges — running 6 m out along −Z. The map's biggest light source; place with the pour side away from route sightlines."
+      "note": "A 20 t lip-pour ladle caught mid-tip, rebuilt as turned parts: a rolled-rim shell on a real taper, a 150 mm refractory lining with the top course showing and burnt darker than the rest, a trunnion ring at the balance line with cast bosses and pins, a spout trough rooted INSIDE the shell rim, and a tilting gear rim with merged teeth. The pour stream narrows as it accelerates — a falling stream necks down, and modelling it as a constant tube is the single tell that gives away a fake pour — into a splash crown, a slag-banked channel and a puddle field of revolved pools with crust rims, hot cores and cold cousins. The map’s biggest light source; place the pour side away from route sightlines."
     },
     {
       "file": "foundry_dress_pipes.glb",
-      "bytes": 331172,
-      "tris": 10464,
-      "parts": 32,
+      "bytes": 4421032,
+      "tris": 8768,
+      "parts": 37,
       "bounds": {
         "min": [
           -4,
-          -0.036,
-          -1.1
+          0,
+          -1.13
         ],
         "max": [
           4,
-          4.7,
+          5.424,
           1.1
         ]
       },
       "kind": "map_foundry",
       "id": "foundry_dress_pipes",
-      "note": "Overhead pipe rack: three lines of differing gauge on two goalpost supports, flanges, a bypass elbow, two wheel valves and a pressure gauge. Runs along X."
+      "note": "Overhead pipe rack: three lines of differing gauge on two goalpost frames of real I-section, each with weld-neck flanges — a hub taper out to a raised face, not a disc — and proud butt-weld beads between them. The bypass is a 1.5D long-radius elbow swept along its centreline, and the valves are turned bodies with a bonnet, gland nut and a real handwheel rim on merged spokes. Runs along X."
     },
     {
       "file": "foundry_dress_gantry.glb",
-      "bytes": 251268,
-      "tris": 3968,
-      "parts": 38,
+      "bytes": 4417820,
+      "tris": 11626,
+      "parts": 28,
       "bounds": {
         "min": [
-          -6.662,
-          -0.098,
+          -6.6,
+          0,
           -1.6
         ],
         "max": [
-          6.662,
-          10.208,
+          6.6,
+          9.948,
           1.8
         ]
       },
       "kind": "map_foundry",
       "id": "foundry_dress_gantry",
-      "note": "Overhead travelling crane: two lattice legs, a box girder, trolley with a chain block and hook, hazard-striped end stops, cab with a lit window. Spans the yard at 9 m — clear of the 8 m air lane only where placed off-route."
+      "note": "Overhead travelling crane: lattice legs of real angle bracing between angle chords, a 900 mm box girder with diaphragm stiffeners stepping its section, and a rail on top the trolley wheels actually sit on. The trolley carries a rope drum with the helical groove cut in, a sheave block, and a forged hook swept along its own curve with a section that thickens at the bend and tapers to the point — a hook is the one part on a crane everybody recognises, so it cannot be a torus. Wire rope is swept with a visible lay. Hazard-striped end stops and a cab with a lit window. Spans the yard at 9 m; clear of the 8 m air lane only where placed off-route."
     },
     {
       "file": "foundry_dress_lightrig.glb",
-      "bytes": 182240,
-      "tris": 2692,
-      "parts": 36,
+      "bytes": 3926296,
+      "tris": 8296,
+      "parts": 42,
       "bounds": {
         "min": [
-          -1.627,
-          -0.054,
+          -1.6,
+          0,
           -0.6
         ],
         "max": [
-          1.627,
-          7.15,
+          1.6,
+          7.14,
           0.6
         ]
       },
       "kind": "map_foundry",
       "id": "foundry_dress_lightrig",
-      "note": "Yard floodlight mast: lattice pole, cross-arm with four hooded flood heads, junction box, ladder rungs and a hazard collar. Point heads down-route to justify the level lighting."
+      "note": "Yard floodlight mast: three tube chords with zigzag bracing, tapering toward the top, on a bolted base. The cross-arm is real channel, and each head is a revolved paraboloid reflector — a floodlight hood is a dish, and modelling it as a box is why the old heads read as crates — with a lens, a hinged visor, a wire guard and a knuckle mount that shows how it aims. Ladder rungs, hazard collar, junction box and a beacon. Point heads down-route to justify the level lighting."
     },
     {
       "file": "foundry_dress_steamvent.glb",
-      "bytes": 333644,
-      "tris": 5732,
-      "parts": 37,
+      "bytes": 3977888,
+      "tris": 4580,
+      "parts": 22,
       "bounds": {
         "min": [
-          -1.3,
+          -1.34,
           0,
-          -2.294
+          -2.077
         ],
         "max": [
-          2.219,
-          5.52,
-          1.3
+          2.043,
+          4.779,
+          1.34
         ]
       },
       "kind": "map_foundry",
       "id": "foundry_dress_steamvent",
-      "note": "Floor vent: recessed grate in a riveted collar, a stub stack with a flap lid propped open, a layered steam plume (nine translucent puffs widening and thinning as they rise, sheared downwind, with a hot core at the mouth — the client swaps in particles), scorch ring. Safe filler along the lane edges — solid parts never rise above 1.5 m."
+      "note": "Floor vent: a turned collar with a seating rebate and a bolt ring, 41/100 grating dropped into it, and a stub stack with a swaged joint and a flap lid propped open on a real barrel hinge. The plume is nine translucent puffs widening, thinning and shearing downwind with a hot core at the mouth, rising to 4.8 m — a stand-in the client swaps for particles. Safe filler along the lane edges: the solid envelope tops out at 1.47 m, propped lid included, so it clears under anything."
     },
     {
       "file": "switchyard_terrain.glb",
-      "bytes": 6416724,
-      "tris": 13960,
-      "parts": 221,
+      "bytes": 5043812,
+      "tris": 1600,
+      "parts": 15,
       "bounds": {
         "min": [
-          -10.013,
+          -10.011,
           -0.094,
           -10
         ],
         "max": [
-          10.013,
+          10.011,
           0.356,
           10
         ]
       },
       "kind": "map_switchyard",
       "id": "switchyard_terrain",
-      "note": "Tileable ballast bed baked into a 1024² albedo/roughness/normal set (30k pebbles, oil, rust dust along the sidings, puddles with silt rims, faded yard markings, weeds at the margins) plus two disused sidings and a drain with grates. Four variants add standing water, weed tufts, a switch stand, a cable trough or dropped sleepers. The \"three tiers\" are the yard (0 m), mid deck (5 m) and catwalk (10 m) structures placed on top."
+      "note": "Tileable ballast bed baked into a 1024² albedo/roughness/normal set (30k pebbles, oil, rust dust along the old siding lines, puddles with silt rims, faded yard markings, weeds at the margins) plus a drain with grates. No track: the terrain is bare ballast so the lane module (switchyard_path_ground) owns every rail in the yard and nothing double-lays under the route. Sleeper impressions in the bake keep the lifted-siding read. Four variants add standing water, weed tufts, a switch stand, a cable trough or dropped sleepers. The \"three tiers\" are the yard (0 m), mid deck (5 m) and catwalk (10 m) structures placed on top."
+    },
+    {
+      "file": "switchyard_terrain_v1.glb",
+      "bytes": 5091052,
+      "tris": 2810,
+      "parts": 19,
+      "bounds": {
+        "min": [
+          -10.011,
+          -0.094,
+          -10
+        ],
+        "max": [
+          10.011,
+          1.49,
+          10
+        ]
+      },
+      "kind": "map_switchyard",
+      "id": "switchyard_terrain_v1",
+      "variant": 1,
+      "note": "Tileable ballast bed baked into a 1024² albedo/roughness/normal set (30k pebbles, oil, rust dust along the old siding lines, puddles with silt rims, faded yard markings, weeds at the margins) plus a drain with grates. No track: the terrain is bare ballast so the lane module (switchyard_path_ground) owns every rail in the yard and nothing double-lays under the route. Sleeper impressions in the bake keep the lifted-siding read. Four variants add standing water, weed tufts, a switch stand, a cable trough or dropped sleepers. The \"three tiers\" are the yard (0 m), mid deck (5 m) and catwalk (10 m) structures placed on top."
+    },
+    {
+      "file": "switchyard_terrain_v2.glb",
+      "bytes": 5134576,
+      "tris": 2426,
+      "parts": 27,
+      "bounds": {
+        "min": [
+          -10.011,
+          -0.094,
+          -10
+        ],
+        "max": [
+          10.011,
+          0.356,
+          10
+        ]
+      },
+      "kind": "map_switchyard",
+      "id": "switchyard_terrain_v2",
+      "variant": 2,
+      "note": "Tileable ballast bed baked into a 1024² albedo/roughness/normal set (30k pebbles, oil, rust dust along the old siding lines, puddles with silt rims, faded yard markings, weeds at the margins) plus a drain with grates. No track: the terrain is bare ballast so the lane module (switchyard_path_ground) owns every rail in the yard and nothing double-lays under the route. Sleeper impressions in the bake keep the lifted-siding read. Four variants add standing water, weed tufts, a switch stand, a cable trough or dropped sleepers. The \"three tiers\" are the yard (0 m), mid deck (5 m) and catwalk (10 m) structures placed on top."
+    },
+    {
+      "file": "switchyard_terrain_v3.glb",
+      "bytes": 5062160,
+      "tris": 1770,
+      "parts": 17,
+      "bounds": {
+        "min": [
+          -10.011,
+          -0.095,
+          -10
+        ],
+        "max": [
+          10.011,
+          0.356,
+          10
+        ]
+      },
+      "kind": "map_switchyard",
+      "id": "switchyard_terrain_v3",
+      "variant": 3,
+      "note": "Tileable ballast bed baked into a 1024² albedo/roughness/normal set (30k pebbles, oil, rust dust along the old siding lines, puddles with silt rims, faded yard markings, weeds at the margins) plus a drain with grates. No track: the terrain is bare ballast so the lane module (switchyard_path_ground) owns every rail in the yard and nothing double-lays under the route. Sleeper impressions in the bake keep the lifted-siding read. Four variants add standing water, weed tufts, a switch stand, a cable trough or dropped sleepers. The \"three tiers\" are the yard (0 m), mid deck (5 m) and catwalk (10 m) structures placed on top."
     },
     {
       "file": "switchyard_terrain_scatter.glb",
@@ -8994,7 +9847,7 @@
     },
     {
       "file": "spire_terrain.glb",
-      "bytes": 31392,
+      "bytes": 1914832,
       "tris": 924,
       "parts": 12,
       "bounds": {
@@ -9011,6 +9864,72 @@
       },
       "kind": "map_spire",
       "id": "spire_terrain",
+      "note": "Tileable plaza: 2 m concrete pavers baked into a 1024² albedo/roughness/normal set (expansion joints, grime along the joints, tyre scuff, chewing-gum specks, a faded yellow keep-clear box, wet patches) with an emissive map for the recessed uplights. Variants add a drain gully, a manhole with a cable cover, a planter kerb, or a bike-rack row. Flat edges so tiles seam."
+    },
+    {
+      "file": "spire_terrain_v1.glb",
+      "bytes": 2025140,
+      "tris": 1292,
+      "parts": 21,
+      "bounds": {
+        "min": [
+          -10,
+          -0.09,
+          -10
+        ],
+        "max": [
+          10,
+          1.27,
+          10
+        ]
+      },
+      "kind": "map_spire",
+      "id": "spire_terrain_v1",
+      "variant": 1,
+      "note": "Tileable plaza: 2 m concrete pavers baked into a 1024² albedo/roughness/normal set (expansion joints, grime along the joints, tyre scuff, chewing-gum specks, a faded yellow keep-clear box, wet patches) with an emissive map for the recessed uplights. Variants add a drain gully, a manhole with a cable cover, a planter kerb, or a bike-rack row. Flat edges so tiles seam."
+    },
+    {
+      "file": "spire_terrain_v2.glb",
+      "bytes": 2038244,
+      "tris": 5000,
+      "parts": 10,
+      "bounds": {
+        "min": [
+          -10,
+          -0.09,
+          -10
+        ],
+        "max": [
+          10,
+          1.27,
+          10
+        ]
+      },
+      "kind": "map_spire",
+      "id": "spire_terrain_v2",
+      "variant": 2,
+      "note": "Tileable plaza: 2 m concrete pavers baked into a 1024² albedo/roughness/normal set (expansion joints, grime along the joints, tyre scuff, chewing-gum specks, a faded yellow keep-clear box, wet patches) with an emissive map for the recessed uplights. Variants add a drain gully, a manhole with a cable cover, a planter kerb, or a bike-rack row. Flat edges so tiles seam."
+    },
+    {
+      "file": "spire_terrain_v3.glb",
+      "bytes": 2014880,
+      "tris": 1824,
+      "parts": 27,
+      "bounds": {
+        "min": [
+          -10,
+          -0.009,
+          -10
+        ],
+        "max": [
+          10,
+          0.096,
+          10
+        ]
+      },
+      "kind": "map_spire",
+      "id": "spire_terrain_v3",
+      "variant": 3,
       "note": "Tileable plaza: 2 m concrete pavers baked into a 1024² albedo/roughness/normal set (expansion joints, grime along the joints, tyre scuff, chewing-gum specks, a faded yellow keep-clear box, wet patches) with an emissive map for the recessed uplights. Variants add a drain gully, a manhole with a cable cover, a planter kerb, or a bike-rack row. Flat edges so tiles seam."
     },
     {
@@ -9054,6 +9973,114 @@
       "kind": "map_spire",
       "id": "spire_path_ground",
       "note": "One 4 m run of the 3.4 m ground lane at street level: asphalt with white edge lines, a centre dash and granite kerbs. Inside the building the same lane reads as a taped-off corridor. Flat legs only — the climbs are the stair and fire-escape flights."
+    },
+    {
+      "file": "spire_wall_boundary.glb",
+      "bytes": 456816,
+      "tris": 4340,
+      "parts": 68,
+      "bounds": {
+        "min": [
+          -5.252,
+          -0.252,
+          -1.45
+        ],
+        "max": [
+          5.252,
+          13.494,
+          6.1
+        ]
+      },
+      "kind": "map_spire",
+      "id": "spire_wall_boundary",
+      "note": "The far side of the street, tiled around the 110×80 m field to enclose the plaza in a city block: carriageway, gutter, double yellows, kerb and flagged pavement in front of a three-storey block — plinth, ground-floor units, two floors of windows lit and dark, cornice, parapet, downpipe, wall lamp. Four ground floors (trading shopfronts, an office lobby, a blank gable with a fire escape and billboard, shuttered units) so the street does not repeat on a lattice. Authored facing +Z: the detailed face is the one that looks in at the Spire."
+    },
+    {
+      "file": "spire_wall_boundary_v1.glb",
+      "bytes": 411724,
+      "tris": 4640,
+      "parts": 60,
+      "bounds": {
+        "min": [
+          -5.252,
+          -0.252,
+          -1.45
+        ],
+        "max": [
+          5.252,
+          13.494,
+          6.1
+        ]
+      },
+      "kind": "map_spire",
+      "id": "spire_wall_boundary_v1",
+      "variant": 1,
+      "note": "The far side of the street, tiled around the 110×80 m field to enclose the plaza in a city block: carriageway, gutter, double yellows, kerb and flagged pavement in front of a three-storey block — plinth, ground-floor units, two floors of windows lit and dark, cornice, parapet, downpipe, wall lamp. Four ground floors (trading shopfronts, an office lobby, a blank gable with a fire escape and billboard, shuttered units) so the street does not repeat on a lattice. Authored facing +Z: the detailed face is the one that looks in at the Spire."
+    },
+    {
+      "file": "spire_wall_boundary_v2.glb",
+      "bytes": 421680,
+      "tris": 3956,
+      "parts": 70,
+      "bounds": {
+        "min": [
+          -5.252,
+          -0.252,
+          -1.45
+        ],
+        "max": [
+          5.252,
+          13.494,
+          6.1
+        ]
+      },
+      "kind": "map_spire",
+      "id": "spire_wall_boundary_v2",
+      "variant": 2,
+      "note": "The far side of the street, tiled around the 110×80 m field to enclose the plaza in a city block: carriageway, gutter, double yellows, kerb and flagged pavement in front of a three-storey block — plinth, ground-floor units, two floors of windows lit and dark, cornice, parapet, downpipe, wall lamp. Four ground floors (trading shopfronts, an office lobby, a blank gable with a fire escape and billboard, shuttered units) so the street does not repeat on a lattice. Authored facing +Z: the detailed face is the one that looks in at the Spire."
+    },
+    {
+      "file": "spire_wall_boundary_v3.glb",
+      "bytes": 516396,
+      "tris": 4880,
+      "parts": 77,
+      "bounds": {
+        "min": [
+          -5.252,
+          -0.252,
+          -1.45
+        ],
+        "max": [
+          5.252,
+          13.494,
+          6.1
+        ]
+      },
+      "kind": "map_spire",
+      "id": "spire_wall_boundary_v3",
+      "variant": 3,
+      "note": "The far side of the street, tiled around the 110×80 m field to enclose the plaza in a city block: carriageway, gutter, double yellows, kerb and flagged pavement in front of a three-storey block — plinth, ground-floor units, two floors of windows lit and dark, cornice, parapet, downpipe, wall lamp. Four ground floors (trading shopfronts, an office lobby, a blank gable with a fire escape and billboard, shuttered units) so the street does not repeat on a lattice. Authored facing +Z: the detailed face is the one that looks in at the Spire."
+    },
+    {
+      "file": "spire_path_interior.glb",
+      "bytes": 78132,
+      "tris": 1640,
+      "parts": 10,
+      "bounds": {
+        "min": [
+          -2.003,
+          0.007,
+          -1.7
+        ],
+        "max": [
+          2.003,
+          0.034,
+          1.7
+        ]
+      },
+      "kind": "map_spire",
+      "id": "spire_path_interior",
+      "note": "One 4 m run of the route where it crosses a floor plate: a dark traffic band worn through the screed, hazard-yellow edge lines flush with the band, one direction arrow and four recessed floor studs. Every mark is symmetric about the lane centre and tiles on the 4 m repeat, with the studs 2 m apart in pairs. No centre line — that would imply two-way traffic on a one-way enemy lane. The arrow (1.4 m shaft, barbs swept back from the tip) points local −X because the layer rotates each module by atan2(d.x,d.z)+90°, which maps local +X against the direction of travel. The band is what makes the lane read at a distance — white paint alone disappears on pale concrete. Three centimetres tall so it lays straight onto a slab; lay it along the flat legs at every level, the way `spire_path_ground` handles the street."
     },
     {
       "file": "spire_floor.glb",
@@ -9120,6 +10147,27 @@
     },
     {
       "file": "spire_roof.glb",
+      "bytes": 91280,
+      "tris": 1760,
+      "parts": 12,
+      "bounds": {
+        "min": [
+          -4.072,
+          39.528,
+          -20.05
+        ],
+        "max": [
+          4.072,
+          41.188,
+          20.05
+        ]
+      },
+      "kind": "map_spire",
+      "id": "spire_roof",
+      "note": "One 8 m bay of the roof at 40 m: felt slab with gravel strips, a parapet on the two Z edges, a roof drain and a service walkway. The X-end parapets are `spire_roof_parapet`. Variant 1 adds the atrium skylight — place it on ONE bay only: the skylight is a feature of the atrium, not of the module, and five bays laid end to end turned it into a 40 m glazed strip standing 0.5 m proud across the whole roof, which is the repeat-distance mistake MAP-AUTHORING §5 describes. The core stands at the centre; the fight ends here."
+    },
+    {
+      "file": "spire_roof_v1.glb",
       "bytes": 104900,
       "tris": 1880,
       "parts": 14,
@@ -9136,8 +10184,53 @@
         ]
       },
       "kind": "map_spire",
-      "id": "spire_roof",
-      "note": "One 8 m bay of the roof at 40 m: felt slab with gravel strips, a parapet on the two Z edges, a roof drain, a skylight strip over the atrium centre and a service walkway. The X-end parapets are `spire_roof_parapet`. The core stands at the centre; the fight ends here."
+      "id": "spire_roof_v1",
+      "variant": 1,
+      "note": "One 8 m bay of the roof at 40 m: felt slab with gravel strips, a parapet on the two Z edges, a roof drain and a service walkway. The X-end parapets are `spire_roof_parapet`. Variant 1 adds the atrium skylight — place it on ONE bay only: the skylight is a feature of the atrium, not of the module, and five bays laid end to end turned it into a 40 m glazed strip standing 0.5 m proud across the whole roof, which is the repeat-distance mistake MAP-AUTHORING §5 describes. The core stands at the centre; the fight ends here."
+    },
+    {
+      "file": "spire_roof_v2.glb",
+      "bytes": 91284,
+      "tris": 1760,
+      "parts": 12,
+      "bounds": {
+        "min": [
+          -4.072,
+          39.528,
+          -20.05
+        ],
+        "max": [
+          4.072,
+          41.188,
+          20.05
+        ]
+      },
+      "kind": "map_spire",
+      "id": "spire_roof_v2",
+      "variant": 2,
+      "note": "One 8 m bay of the roof at 40 m: felt slab with gravel strips, a parapet on the two Z edges, a roof drain and a service walkway. The X-end parapets are `spire_roof_parapet`. Variant 1 adds the atrium skylight — place it on ONE bay only: the skylight is a feature of the atrium, not of the module, and five bays laid end to end turned it into a 40 m glazed strip standing 0.5 m proud across the whole roof, which is the repeat-distance mistake MAP-AUTHORING §5 describes. The core stands at the centre; the fight ends here."
+    },
+    {
+      "file": "spire_roof_v3.glb",
+      "bytes": 91284,
+      "tris": 1760,
+      "parts": 12,
+      "bounds": {
+        "min": [
+          -4.072,
+          39.528,
+          -20.05
+        ],
+        "max": [
+          4.072,
+          41.188,
+          20.05
+        ]
+      },
+      "kind": "map_spire",
+      "id": "spire_roof_v3",
+      "variant": 3,
+      "note": "One 8 m bay of the roof at 40 m: felt slab with gravel strips, a parapet on the two Z edges, a roof drain and a service walkway. The X-end parapets are `spire_roof_parapet`. Variant 1 adds the atrium skylight — place it on ONE bay only: the skylight is a feature of the atrium, not of the module, and five bays laid end to end turned it into a 40 m glazed strip standing 0.5 m proud across the whole roof, which is the repeat-distance mistake MAP-AUTHORING §5 describes. The core stands at the centre; the fight ends here."
     },
     {
       "file": "spire_roof_parapet.glb",
@@ -9287,6 +10380,93 @@
       "note": "Riveted cylindrical tank on four braced legs with a conical lid, level gauge, ladder and an overflow pipe down one leg. Blocks sight — park it at a roof corner."
     },
     {
+      "file": "spire_dress_car.glb",
+      "bytes": 249444,
+      "tris": 4120,
+      "parts": 34,
+      "bounds": {
+        "min": [
+          -2.507,
+          0,
+          -1.18
+        ],
+        "max": [
+          2.444,
+          1.93,
+          1.18
+        ]
+      },
+      "kind": "map_spire",
+      "id": "spire_dress_car",
+      "note": "Kerbside traffic for the perimeter street: saloon, hatchback, panel van and taxi, each on four wheels with glazing, lamps, mirrors, a plate and a number-plate light. Authored along local +X (bonnet toward +X) so a row parks with one rotation. Dressing only — no collision, and never within 3 m of a route, socket or station."
+    },
+    {
+      "file": "spire_dress_car_v1.glb",
+      "bytes": 249608,
+      "tris": 4120,
+      "parts": 34,
+      "bounds": {
+        "min": [
+          -2.257,
+          0,
+          -1.18
+        ],
+        "max": [
+          2.194,
+          1.93,
+          1.18
+        ]
+      },
+      "kind": "map_spire",
+      "id": "spire_dress_car_v1",
+      "variant": 1,
+      "note": "Kerbside traffic for the perimeter street: saloon, hatchback, panel van and taxi, each on four wheels with glazing, lamps, mirrors, a plate and a number-plate light. Authored along local +X (bonnet toward +X) so a row parks with one rotation. Dressing only — no collision, and never within 3 m of a route, socket or station."
+    },
+    {
+      "file": "spire_dress_car_v2.glb",
+      "bytes": 222972,
+      "tris": 3880,
+      "parts": 30,
+      "bounds": {
+        "min": [
+          -2.907,
+          0,
+          -1.18
+        ],
+        "max": [
+          2.844,
+          2.87,
+          1.18
+        ]
+      },
+      "kind": "map_spire",
+      "id": "spire_dress_car_v2",
+      "variant": 2,
+      "note": "Kerbside traffic for the perimeter street: saloon, hatchback, panel van and taxi, each on four wheels with glazing, lamps, mirrors, a plate and a number-plate light. Authored along local +X (bonnet toward +X) so a row parks with one rotation. Dressing only — no collision, and never within 3 m of a route, socket or station."
+    },
+    {
+      "file": "spire_dress_car_v3.glb",
+      "bytes": 269816,
+      "tris": 4300,
+      "parts": 37,
+      "bounds": {
+        "min": [
+          -2.507,
+          0,
+          -1.18
+        ],
+        "max": [
+          2.444,
+          2.127,
+          1.18
+        ]
+      },
+      "kind": "map_spire",
+      "id": "spire_dress_car_v3",
+      "variant": 3,
+      "note": "Kerbside traffic for the perimeter street: saloon, hatchback, panel van and taxi, each on four wheels with glazing, lamps, mirrors, a plate and a number-plate light. Authored along local +X (bonnet toward +X) so a row parks with one rotation. Dressing only — no collision, and never within 3 m of a route, socket or station."
+    },
+    {
       "file": "spire_antenna.glb",
       "bytes": 386156,
       "tris": 14832,
@@ -9308,8 +10488,1200 @@
       "note": "Lattice broadcast mast on a plinth: three chords with zigzag lacing, two microwave dishes, a whip aerial and an aviation beacon. Top at 52 m, under the 44 m air lane only if placed at a corner."
     },
     {
+      "file": "toaster_terrain.glb",
+      "bytes": 4060304,
+      "tris": 392,
+      "parts": 1,
+      "bounds": {
+        "min": [
+          -10,
+          -0.145,
+          -10
+        ],
+        "max": [
+          10,
+          0.086,
+          10
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_terrain",
+      "note": "Dry autumn grass, 20 m, in four variants off one shared albedo/roughness/normal set. Relief is ≤0.15 m and damped to EXACTLY zero from 8 m out so tiles seam and roads lie flat. 128 instanced placements, so the tile carries no road, no fence and no grass tuft — a tuft a metre is fifty thousand parts, and tufts are `toaster_terrain_scatter`. v0 plain; v1 a mown strip and a bare scrape; v2 a leaf drift and a fallen branch (the only furniture true at a 20 m repeat); v3 tyre ruts along +X. Variation that can ride in vertex colour does, because it is free and because a hundred and twenty-eight copies of one tile is wallpaper at any rotation.",
+      "budgetTris": 900,
+      "budgetParts": 4,
+      "instanced": true
+    },
+    {
+      "file": "toaster_terrain_v1.glb",
+      "bytes": 4060396,
+      "tris": 392,
+      "parts": 1,
+      "bounds": {
+        "min": [
+          -10,
+          -0.11,
+          -10
+        ],
+        "max": [
+          10,
+          0.017,
+          10
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_terrain_v1",
+      "variant": 1,
+      "note": "Dry autumn grass, 20 m, in four variants off one shared albedo/roughness/normal set. Relief is ≤0.15 m and damped to EXACTLY zero from 8 m out so tiles seam and roads lie flat. 128 instanced placements, so the tile carries no road, no fence and no grass tuft — a tuft a metre is fifty thousand parts, and tufts are `toaster_terrain_scatter`. v0 plain; v1 a mown strip and a bare scrape; v2 a leaf drift and a fallen branch (the only furniture true at a 20 m repeat); v3 tyre ruts along +X. Variation that can ride in vertex colour does, because it is free and because a hundred and twenty-eight copies of one tile is wallpaper at any rotation.",
+      "budgetTris": 900,
+      "budgetParts": 4,
+      "instanced": true
+    },
+    {
+      "file": "toaster_terrain_v2.glb",
+      "bytes": 4205984,
+      "tris": 452,
+      "parts": 2,
+      "bounds": {
+        "min": [
+          -10,
+          -0.212,
+          -10
+        ],
+        "max": [
+          10,
+          0.476,
+          10
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_terrain_v2",
+      "variant": 2,
+      "note": "Dry autumn grass, 20 m, in four variants off one shared albedo/roughness/normal set. Relief is ≤0.15 m and damped to EXACTLY zero from 8 m out so tiles seam and roads lie flat. 128 instanced placements, so the tile carries no road, no fence and no grass tuft — a tuft a metre is fifty thousand parts, and tufts are `toaster_terrain_scatter`. v0 plain; v1 a mown strip and a bare scrape; v2 a leaf drift and a fallen branch (the only furniture true at a 20 m repeat); v3 tyre ruts along +X. Variation that can ride in vertex colour does, because it is free and because a hundred and twenty-eight copies of one tile is wallpaper at any rotation.",
+      "budgetTris": 900,
+      "budgetParts": 4,
+      "instanced": true
+    },
+    {
+      "file": "toaster_terrain_v3.glb",
+      "bytes": 4060360,
+      "tris": 392,
+      "parts": 1,
+      "bounds": {
+        "min": [
+          -10,
+          -0.165,
+          -10
+        ],
+        "max": [
+          10,
+          0.111,
+          10
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_terrain_v3",
+      "variant": 3,
+      "note": "Dry autumn grass, 20 m, in four variants off one shared albedo/roughness/normal set. Relief is ≤0.15 m and damped to EXACTLY zero from 8 m out so tiles seam and roads lie flat. 128 instanced placements, so the tile carries no road, no fence and no grass tuft — a tuft a metre is fifty thousand parts, and tufts are `toaster_terrain_scatter`. v0 plain; v1 a mown strip and a bare scrape; v2 a leaf drift and a fallen branch (the only furniture true at a 20 m repeat); v3 tyre ruts along +X. Variation that can ride in vertex colour does, because it is free and because a hundred and twenty-eight copies of one tile is wallpaper at any rotation.",
+      "budgetTris": 900,
+      "budgetParts": 4,
+      "instanced": true
+    },
+    {
+      "file": "toaster_road_asphalt.glb",
+      "bytes": 3240504,
+      "tris": 64,
+      "parts": 1,
+      "bounds": {
+        "min": [
+          -2,
+          -0.044,
+          -2.956
+        ],
+        "max": [
+          2,
+          0.05,
+          2.967
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_road_asphalt",
+      "note": "Two-lane country asphalt, 4 m of it. Crowned 1.5% to each edge and broken away at the margin — no kerb. Top surface at y 0.05, a centimetre proud of the gravel so their junction is a crossing rather than a z-fight. No posts, drains, mailboxes or potholes: all of them would repeat every four metres. Vehicle handling is read off the road CENTRE LINES rather than off this mesh, so the art has to sit on the line, not beside it.",
+      "run": "+X",
+      "repeat": 4,
+      "width": 6,
+      "budgetTris": 200,
+      "budgetParts": 2,
+      "instanced": true
+    },
+    {
+      "file": "toaster_road_gravel.glb",
+      "bytes": 4161216,
+      "tris": 36,
+      "parts": 1,
+      "bounds": {
+        "min": [
+          -2,
+          0.01,
+          -2
+        ],
+        "max": [
+          2,
+          0.044,
+          2
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_road_gravel",
+      "note": "Gravel drive, 4 m, up to the barn. Same contract as the asphalt at 4 m wide and y 0.04 — a centimetre lower, so the asphalt crosses it cleanly. Flatter section than the road (a drive is graded, not crowned) with the ruts and the weedy centre crown in the texture. Seven placements.",
+      "run": "+X",
+      "repeat": 4,
+      "width": 4,
+      "budgetTris": 150,
+      "budgetParts": 1,
+      "instanced": true
+    },
+    {
+      "file": "toaster_road_arc.glb",
+      "bytes": 3240540,
+      "tris": 64,
+      "parts": 1,
+      "bounds": {
+        "min": [
+          7.725,
+          -0.044,
+          0
+        ],
+        "max": [
+          15.053,
+          0.05,
+          7.551
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_road_arc",
+      "note": "A 30° arc of 6 m asphalt on a 12 m centreline radius; twelve make the circular drive. ORIGIN AT THE CENTRE OF CURVATURE, arc starting on +X and sweeping toward +Z — none of which is recoverable from the file, which is why `arcDeg`, `radius` and `width` ship in the manifest. Same crown and broken edge as the straight module. Without it the drive is laid from twelve straight modules and reads as a dodecagon.",
+      "arcDeg": 30,
+      "radius": 12,
+      "width": 6,
+      "budgetTris": 200,
+      "budgetParts": 1,
+      "instanced": true
+    },
+    {
+      "file": "toaster_tree_oak.glb",
+      "bytes": 586964,
+      "tris": 296,
+      "parts": 2,
+      "bounds": {
+        "min": [
+          -4.682,
+          0,
+          -5.3
+        ],
+        "max": [
+          5.5,
+          14.001,
+          4.437
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_tree_oak",
+      "note": "Autumn oak, root collar on grade, trunk up +Y. EXACTLY two parts — `toaster_tree_oak_trunk` and `toaster_tree_oak_canopy` — because culling, visibility ranges and mesh LOD all act on a multimesh's whole bounding box, the belt is cut into 40 m cells, and every part multiplies the number of them. Canopy is MASK leaf cards off the shared 1024² atlas: blended leaves sort badly per instance and cost a transparent pass on the most-instanced thing in the game. Limbs leave the bole below the canopy — a crown floating over a pole is what gives a billboard away when you walk up to it.",
+      "budgetTris": 600,
+      "budgetParts": 2,
+      "instanced": true,
+      "lod1": "toaster_tree_oak_lod1",
+      "lodSwitch": 90
+    },
+    {
+      "file": "toaster_tree_oak_lod1.glb",
+      "bytes": 419860,
+      "tris": 4,
+      "parts": 1,
+      "bounds": {
+        "min": [
+          -4.682,
+          0,
+          -5.522
+        ],
+        "max": [
+          5.5,
+          14.001,
+          4.659
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_tree_oak_lod1",
+      "note": "Distance stand-in for `toaster_tree_oak`: a billboard cross carrying the same silhouette, drawn from the same atlas so the 90 m swap does not change the outline or the colour. Casts no shadow. Without it the full tree draws at every distance — still instanced, so it runs; it just costs.",
+      "budgetTris": 40,
+      "budgetParts": 1,
+      "instanced": true
+    },
+    {
+      "file": "toaster_tree_maple.glb",
+      "bytes": 584052,
+      "tris": 264,
+      "parts": 2,
+      "bounds": {
+        "min": [
+          -4.171,
+          0,
+          -4.5
+        ],
+        "max": [
+          4.494,
+          12,
+          3.844
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_tree_maple",
+      "note": "Autumn maple, root collar on grade, trunk up +Y. EXACTLY two parts — `toaster_tree_maple_trunk` and `toaster_tree_maple_canopy` — because culling, visibility ranges and mesh LOD all act on a multimesh's whole bounding box, the belt is cut into 40 m cells, and every part multiplies the number of them. Canopy is MASK leaf cards off the shared 1024² atlas: blended leaves sort badly per instance and cost a transparent pass on the most-instanced thing in the game. Limbs leave the bole below the canopy — a crown floating over a pole is what gives a billboard away when you walk up to it.",
+      "budgetTris": 600,
+      "budgetParts": 2,
+      "instanced": true,
+      "lod1": "toaster_tree_maple_lod1",
+      "lodSwitch": 90
+    },
+    {
+      "file": "toaster_tree_maple_lod1.glb",
+      "bytes": 419896,
+      "tris": 4,
+      "parts": 1,
+      "bounds": {
+        "min": [
+          -4.171,
+          0,
+          -4.661
+        ],
+        "max": [
+          4.494,
+          12,
+          4.004
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_tree_maple_lod1",
+      "note": "Distance stand-in for `toaster_tree_maple`: a billboard cross carrying the same silhouette, drawn from the same atlas so the 90 m swap does not change the outline or the colour. Casts no shadow. Without it the full tree draws at every distance — still instanced, so it runs; it just costs.",
+      "budgetTris": 40,
+      "budgetParts": 1,
+      "instanced": true
+    },
+    {
+      "file": "toaster_tree_pine.glb",
+      "bytes": 591260,
+      "tris": 344,
+      "parts": 2,
+      "bounds": {
+        "min": [
+          -2.557,
+          0,
+          -2.829
+        ],
+        "max": [
+          3,
+          16,
+          2.871
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_tree_pine",
+      "note": "Autumn pine, root collar on grade, trunk up +Y. EXACTLY two parts — `toaster_tree_pine_trunk` and `toaster_tree_pine_canopy` — because culling, visibility ranges and mesh LOD all act on a multimesh's whole bounding box, the belt is cut into 40 m cells, and every part multiplies the number of them. Canopy is MASK leaf cards off the shared 1024² atlas: blended leaves sort badly per instance and cost a transparent pass on the most-instanced thing in the game. Limbs leave the bole below the canopy — a crown floating over a pole is what gives a billboard away when you walk up to it.",
+      "budgetTris": 600,
+      "budgetParts": 2,
+      "instanced": true,
+      "lod1": "toaster_tree_pine_lod1",
+      "lodSwitch": 90
+    },
+    {
+      "file": "toaster_tree_pine_lod1.glb",
+      "bytes": 419896,
+      "tris": 4,
+      "parts": 1,
+      "bounds": {
+        "min": [
+          -2.629,
+          0,
+          -2.829
+        ],
+        "max": [
+          3.072,
+          16,
+          2.871
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_tree_pine_lod1",
+      "note": "Distance stand-in for `toaster_tree_pine`: a billboard cross carrying the same silhouette, drawn from the same atlas so the 90 m swap does not change the outline or the colour. Casts no shadow. Without it the full tree draws at every distance — still instanced, so it runs; it just costs.",
+      "budgetTris": 40,
+      "budgetParts": 1,
+      "instanced": true
+    },
+    {
+      "file": "toaster_understory.glb",
+      "bytes": 426496,
+      "tris": 68,
+      "parts": 1,
+      "bounds": {
+        "min": [
+          -2.174,
+          0.002,
+          -2.259
+        ],
+        "max": [
+          2.208,
+          1.589,
+          2.341
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_understory",
+      "note": "Shrubs and bracken for the inner edge of the tree belt, so the wood has a floor and the trunks do not stand in mown grass. One merged part of MASK cards off the shared leaf atlas, origin at ground centre. Optional — without it the belt is bare underneath.",
+      "budgetTris": 300,
+      "budgetParts": 1,
+      "instanced": true
+    },
+    {
+      "file": "toaster_barn_shell.glb",
+      "bytes": 1056492,
+      "tris": 588,
+      "parts": 6,
+      "bounds": {
+        "min": [
+          -15.1,
+          0,
+          -10.6
+        ],
+        "max": [
+          15.1,
+          6,
+          10.6
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_barn_shell",
+      "note": "The equipment shed, 30 × 21, eaves 6.0 and roof surface 6.3 — red-brown brick under a shallow metal gable, not a board pole barn: this building is masonry on the ground, and the brick is what makes it read as the shed on this property. Two vehicle bays across the +Z elevation, the left one open at 5 × 4 because the Gator is driven through it (2.9 long, 1.5 wide, 1.85 tall) and the right one a closed white overhead leaf; the person door is on −Z, 8 m left of centre. NO WINDOWS — the real building is a blank brick rectangle, and the kit’s automatic domestic band (1 m sill, panes every 4.2 m) put seventeen lit house windows on it. The one building with no teleport pad: it is the vehicle shed. Ladder to the roof goes on the +X wall, 8.5 m toward −Z (`shared_ladder`, placed by the level file). Walls 0.3 m thick as solid boxes so the shell reads from inside as well as out, interior floor top at y 0.15, clear height over 3 m everywhere a player walks. DOOR OPENINGS ONLY, no doors — a door that closes is a wall, and the sim cannot model one that opens. Windows are opaque faintly-emissive panels in the wall face, not glass: no transparency anywhere in this kit.",
+      "budgetTris": 6000,
+      "budgetParts": 12
+    },
+    {
+      "file": "toaster_barn_roof.glb",
+      "bytes": 567600,
+      "tris": 136,
+      "parts": 3,
+      "bounds": {
+        "min": [
+          -15.5,
+          5.78,
+          -11
+        ],
+        "max": [
+          15.5,
+          7.577,
+          11
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_barn_roof",
+      "note": "Separate file because the roof is a surface players stand on and the code puts a collider under it. The contract asks for ONE flat area of at least 4 × 4 m at 6.3 m — not a flat roof — and allows pitched slopes elsewhere up to 30°. So the flat is 6 × 6 m placed at the ladder head (local 12, -7.5), which on all four buildings is a corner, and it reads as the lower roof of an attached bay; the rest is a single gable at 6° ridging at 7.6 m over 6 m eaves. The plan is split into bays across X so no one span has to carry an absurd ridge. Built as a heightfield whose x samples include every bay boundary, every ridge line and both deck edges, so each crease is exact and the whole roof is about a hundred cells.",
+      "budgetTris": 1500,
+      "budgetParts": 3
+    },
+    {
+      "file": "toaster_house_buggy_shell.glb",
+      "bytes": 1130996,
+      "tris": 1308,
+      "parts": 8,
+      "bounds": {
+        "min": [
+          -10.6,
+          0,
+          -14.575
+        ],
+        "max": [
+          11.54,
+          4.118,
+          14.575
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_house_buggy_shell",
+      "note": "Single-storey brick ranch, 19 × 28, eaves 3.4, roof surface 3.7 — long and low, with a gabled entry bay projecting 2 m off the +X elevation and a second cross gable down the run. The front door sits IN that entry bay under a brick arch, 6 m toward +Z; back door on −X, 8 m toward −Z. Teleport pad inside at local (0, 0, −5) — placed by the level file, not baked in, so the room arranges around the pad. Ladder on the −X wall, 12 m toward +Z. Walls 0.3 m thick as solid boxes so the shell reads from inside as well as out, interior floor top at y 0.15, clear height over 3 m everywhere a player walks. DOOR OPENINGS ONLY, no doors — a door that closes is a wall, and the sim cannot model one that opens. Windows are opaque faintly-emissive panels in the wall face, not glass: no transparency anywhere in this kit.",
+      "budgetTris": 6000,
+      "budgetParts": 12
+    },
+    {
+      "file": "toaster_house_buggy_roof.glb",
+      "bytes": 579644,
+      "tris": 258,
+      "parts": 3,
+      "bounds": {
+        "min": [
+          -11.05,
+          2.13,
+          -14.5
+        ],
+        "max": [
+          11.95,
+          5.926,
+          14.5
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_house_buggy_roof",
+      "note": "Separate file because the roof is a surface players stand on and the code puts a collider under it. The contract asks for ONE flat area of at least 4 × 4 m at 3.7 m — not a flat roof — and allows pitched slopes elsewhere up to 30°. So the flat is 6 × 6 m placed at the ladder head (local -6.5, 11), which on all four buildings is a corner, and it reads as the lower roof of an attached bay; the rest is 2 parallel gables at 28° ridging at 5.9 m over 3.4 m eaves. The plan is split into bays across X so no one span has to carry an absurd ridge. Built as a heightfield whose x samples include every bay boundary, every ridge line and both deck edges, so each crease is exact and the whole roof is about a hundred cells.",
+      "budgetTris": 1500,
+      "budgetParts": 3
+    },
+    {
+      "file": "toaster_house_vehickle_shell.glb",
+      "bytes": 1191048,
+      "tris": 1908,
+      "parts": 8,
+      "bounds": {
+        "min": [
+          -18.2,
+          0,
+          -14.84
+        ],
+        "max": [
+          17.1,
+          4.322,
+          14.3
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_house_vehickle_shell",
+      "note": "The large main house, 34 × 26, with the circular drive to its north. Red-brown brick to the eaves with stucco gable fields above — the two-tone that gives this house its roofline. The −Z elevation is three stepped cross gables: a tall arched entry bay projecting 1.8 m at 10 m toward −X, a broad gable beside it, and a smaller one at the east end. Back door on +Z 12 m toward +X, and a 4.5 × 2.8 garage opening on −X centred — the quad lives in it. One storey deliberately: a second floor needs a climb, and a climb the sim cannot see is a tier the coverage rules cannot reason about. Pad at local (−7, 0, 0); ladder on +X, 11 m toward −Z. Walls 0.3 m thick as solid boxes so the shell reads from inside as well as out, interior floor top at y 0.15, clear height over 3 m everywhere a player walks. DOOR OPENINGS ONLY, no doors — a door that closes is a wall, and the sim cannot model one that opens. Windows are opaque faintly-emissive panels in the wall face, not glass: no transparency anywhere in this kit.",
+      "budgetTris": 6000,
+      "budgetParts": 12
+    },
+    {
+      "file": "toaster_house_vehickle_roof.glb",
+      "bytes": 588188,
+      "tris": 346,
+      "parts": 3,
+      "bounds": {
+        "min": [
+          -18.65,
+          1.93,
+          -15.25
+        ],
+        "max": [
+          17.5,
+          6.413,
+          14.75
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_house_vehickle_roof",
+      "note": "Separate file because the roof is a surface players stand on and the code puts a collider under it. The contract asks for ONE flat area of at least 4 × 4 m at 3.7 m — not a flat roof — and allows pitched slopes elsewhere up to 30°. So the flat is 6 × 6 m placed at the ladder head (local 14, -10), which on all four buildings is a corner, and it reads as the lower roof of an attached bay; the rest is 3 parallel gables at 28° ridging at 6.4 m over 3.4 m eaves. The plan is split into bays across X so no one span has to carry an absurd ridge. Built as a heightfield whose x samples include every bay boundary, every ridge line and both deck edges, so each crease is exact and the whole roof is about a hundred cells.",
+      "budgetTris": 1500,
+      "budgetParts": 3
+    },
+    {
+      "file": "toaster_house_grnmchn_shell.glb",
+      "bytes": 1156220,
+      "tris": 1560,
+      "parts": 8,
+      "bounds": {
+        "min": [
+          -12.94,
+          0,
+          -16.1
+        ],
+        "max": [
+          12.1,
+          4.195,
+          16.4
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_house_grnmchn_shell",
+      "note": "The second house, south-east, facing the pond across an arched entry bay on its −X elevation; back door on +X 8 m toward +Z. Pale buff brick with stucco gables, 24 × 30, eaves 3.4, roof surface 3.7, cross gables on three elevations so it reads as a plan rather than a block from every approach. Pad at local (−4, 0, 2); ladder on the −X wall, 13 m toward +Z. Walls 0.3 m thick as solid boxes so the shell reads from inside as well as out, interior floor top at y 0.15, clear height over 3 m everywhere a player walks. DOOR OPENINGS ONLY, no doors — a door that closes is a wall, and the sim cannot model one that opens. Windows are opaque faintly-emissive panels in the wall face, not glass: no transparency anywhere in this kit.",
+      "budgetTris": 6000,
+      "budgetParts": 12
+    },
+    {
+      "file": "toaster_house_grnmchn_roof.glb",
+      "bytes": 580908,
+      "tris": 270,
+      "parts": 3,
+      "bounds": {
+        "min": [
+          -13.35,
+          2.08,
+          -16.55
+        ],
+        "max": [
+          12.5,
+          6.59,
+          16.85
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_house_grnmchn_roof",
+      "note": "Separate file because the roof is a surface players stand on and the code puts a collider under it. The contract asks for ONE flat area of at least 4 × 4 m at 3.7 m — not a flat roof — and allows pitched slopes elsewhere up to 30°. So the flat is 6 × 6 m placed at the ladder head (local -9, 12), which on all four buildings is a corner, and it reads as the lower roof of an attached bay; the rest is 2 parallel gables at 28° ridging at 6.6 m over 3.4 m eaves. The plan is split into bays across X so no one span has to carry an absurd ridge. Built as a heightfield whose x samples include every bay boundary, every ridge line and both deck edges, so each crease is exact and the whole roof is about a hundred cells.",
+      "budgetTris": 1500,
+      "budgetParts": 3
+    },
+    {
+      "file": "toaster_dress_workbench.glb",
+      "bytes": 575352,
+      "tris": 200,
+      "parts": 4,
+      "bounds": {
+        "min": [
+          -1.5,
+          0,
+          -0.5
+        ],
+        "max": [
+          1.5,
+          1.19,
+          0.5
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_dress_workbench",
+      "note": "Timber workbench with a tool wall, a vice and clutter — the barn and the Vehickle house garage. Origin at footprint centre on the floor, so it drops onto the shell’s interior slab at y 0.15.",
+      "budgetTris": 1500,
+      "budgetParts": 8
+    },
+    {
+      "file": "toaster_dress_shelving.glb",
+      "bytes": 583620,
+      "tris": 288,
+      "parts": 3,
+      "bounds": {
+        "min": [
+          -2,
+          0,
+          -0.25
+        ],
+        "max": [
+          2,
+          2.441,
+          0.262
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_dress_shelving",
+      "note": "A 4 m run of open shelving, 2.2 m high, stocked with boxes, tins and paint. Stands against a wall; origin at footprint centre on the floor.",
+      "budgetTris": 1500,
+      "budgetParts": 8
+    },
+    {
+      "file": "toaster_dress_furniture_living.glb",
+      "bytes": 575952,
+      "tris": 212,
+      "parts": 4,
+      "bounds": {
+        "min": [
+          -1.85,
+          0,
+          -1.35
+        ],
+        "max": [
+          1.428,
+          1.77,
+          0.55
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_dress_furniture_living",
+      "note": "Sofa, low table and a standard lamp as one 4 × 3 m cluster — the houses are walked into, and an empty room with a teleport pad in it reads as a graybox that got a texture.",
+      "budgetTris": 1500,
+      "budgetParts": 8
+    },
+    {
+      "file": "toaster_dress_furniture_kitchen.glb",
+      "bytes": 575220,
+      "tris": 168,
+      "parts": 6,
+      "bounds": {
+        "min": [
+          -2.03,
+          0,
+          -0.35
+        ],
+        "max": [
+          2.03,
+          2.07,
+          0.33
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_dress_furniture_kitchen",
+      "note": "A 4 m counter run with cabinets over and under, a sink and a splashback. Stands against a wall; origin at footprint centre on the floor.",
+      "budgetTris": 1500,
+      "budgetParts": 8
+    },
+    {
+      "file": "toaster_terrain_scatter.glb",
+      "bytes": 984480,
+      "tris": 102,
+      "parts": 4,
+      "bounds": {
+        "min": [
+          -1.513,
+          -0.06,
+          -1.824
+        ],
+        "max": [
+          1.863,
+          0.806,
+          1.869
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_terrain_scatter",
+      "note": "A 4 m cluster of grass tufts, a rock, a rotted fence post and a thistle — the detail the terrain tile is forbidden from carrying, delivered where it can be placed 140 times instead of 128 × 400. Same contract as `switchyard_terrain_scatter`; instanced now, so the placement cap rose from 22 to 140.",
+      "budgetTris": 400,
+      "budgetParts": 4,
+      "instanced": true
+    },
+    {
+      "file": "shared_warp_gate_idle.glb",
+      "bytes": 75232,
+      "tris": 1880,
+      "parts": 5,
+      "bounds": {
+        "min": [
+          -2.9,
+          0,
+          -2.879
+        ],
+        "max": [
+          2.9,
+          4.5,
+          2.879
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "shared_warp_gate_idle",
+      "note": "A NEW SILHOUETTE, and specifically not a flat pad. The sim moves an enemy from one gate to the other in a single tick; the player has been taught on this same map that a flat 3 m hex means stand-here-and-hold-E, so a flat enemy gate would say that and mean the opposite — §4.12 forbids decoration that reads as a control. So it is vertical: a 4.5 m squared-section arch on a 0.3 m splayed plinth, 3 m clear opening facing ±Z (the code yaws it along the route), guyed because a 4.5 m arch 340 mm thick would be. Dark — no membrane, no bead, nothing emissive. Six placements: three gates, two ends each. Degradation today is `shared_spawn_portal`, which reads as three extra spawn points, which is the reason for the ask.",
+      "budgetTris": 2500,
+      "budgetParts": 12
+    },
+    {
+      "file": "shared_warp_gate_active.glb",
+      "bytes": 468908,
+      "tris": 2320,
+      "parts": 7,
+      "bounds": {
+        "min": [
+          -2.9,
+          0,
+          -2.879
+        ],
+        "max": [
+          2.9,
+          4.5,
+          2.879
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "shared_warp_gate_active",
+      "note": "A NEW SILHOUETTE, and specifically not a flat pad. The sim moves an enemy from one gate to the other in a single tick; the player has been taught on this same map that a flat 3 m hex means stand-here-and-hold-E, so a flat enemy gate would say that and mean the opposite — §4.12 forbids decoration that reads as a control. So it is vertical: a 4.5 m squared-section arch on a 0.3 m splayed plinth, 3 m clear opening facing ±Z (the code yaws it along the route), guyed because a 4.5 m arch 340 mm thick would be. Carries the emissive membrane the code pulses, named exactly `warp_membrane`, plus a soffit bead — the one FRAME part that exists only when the gate is live, because the brief says the ring is dark on idle and two states differing only by something appearing behind an unchanged frame read as decoration rather than as a gate under power. The membrane is cut to the TRUE aperture (a stadium: straight legs to the springing, then the semicircular head) by marching each vertex’s own ray out to the boundary, so it meets the soffit exactly whatever the arch numbers become, and it is dished 120 mm rather than flat, because a plane at this scale flips between fully lit and fully dark as the camera passes it. MASK with a real alpha map of filaments and voids — alphaTest against no map tests a constant 1 and masks nothing, which is why the first pass was a hard flat silhouette. Six placements: three gates, two ends each. Degradation today is `shared_spawn_portal`, which reads as three extra spawn points, which is the reason for the ask.",
+      "budgetTris": 2500,
+      "budgetParts": 12
+    },
+    {
+      "file": "toaster_pond.glb",
+      "bytes": 38672,
+      "tris": 1008,
+      "parts": 3,
+      "bounds": {
+        "min": [
+          -15.787,
+          -1.197,
+          -17.927
+        ],
+        "max": [
+          15.79,
+          1.591,
+          18
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_pond",
+      "note": "Drawn upward, not dug: the ground is one flat slab and always will be. An elliptical basin rather than a disc — the pond on this property is a long oval lying roughly north-east, with a broad earth rim, a BIG bare island filling most of the middle and only a ring of open water round it. That is the shape in the aerial, and it is why the view across it from the lane reads as a green hollow rather than as a lake. Riprap bank r 15 → 18 rising to 0.5 m (the hidden collider the code rings it with sits at r 17), an OPAQUE dark water ring at y 0.15 inside it — roughness ~0.1, no transparency, no refraction. Three parts named `pond_bank`, `pond_water`, `pond_island`. No collision: the code rings it with a hidden bank collider, which is what stops a quad doing twenty across the surface of the water.",
+      "budgetTris": 2500,
+      "budgetParts": 3
+    },
+    {
+      "file": "toaster_dock.glb",
+      "bytes": 580980,
+      "tris": 288,
+      "parts": 2,
+      "bounds": {
+        "min": [
+          -0.95,
+          -0.064,
+          -5.55
+        ],
+        "max": [
+          0.95,
+          0.746,
+          -0.05
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_dock",
+      "note": "A plank jetty out over the pond. Origin at the LANDWARD end, so it is placed by pushing it off the bank rather than by solving for its centre. Optional.",
+      "budgetTris": 300,
+      "budgetParts": 2
+    },
+    {
+      "file": "toaster_skybox.glb",
+      "bytes": 1884836,
+      "tris": 0,
+      "parts": 0,
+      "bounds": {
+        "min": [
+          -700,
+          -700,
+          -700
+        ],
+        "max": [
+          700,
+          700,
+          700
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_skybox",
+      "note": "Overcast late-autumn afternoon: low warm sun in the south-west at 24° elevation, grey-gold cloud deck, and a treeline silhouette baked into the horizon band so the belt meets the sky rather than stopping. Baked at 2048 × 1024 — the existing two skies are 4096 × 2048 and 9 MB each, and an overcast sky does not need it.",
+      "budgetTris": 4000,
+      "budgetParts": 1
+    },
+    {
+      "file": "toaster_fence_wood.glb",
+      "bytes": 557000,
+      "tris": 48,
+      "parts": 1,
+      "bounds": {
+        "min": [
+          -2.06,
+          0,
+          -0.06
+        ],
+        "max": [
+          2.06,
+          1.2,
+          0.06
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_fence_wood",
+      "note": "Post-and-rail run, 4 m, 1.2 m high, along the drive and the field edges. One merged part and 4 m of repeat, so the post lands on the module edge and two runs meet at a shared post rather than doubling it.",
+      "run": "+X",
+      "repeat": 4,
+      "width": 0.2,
+      "budgetTris": 120,
+      "budgetParts": 1,
+      "instanced": true
+    },
+    {
+      "file": "toaster_mailbox.glb",
+      "bytes": 561344,
+      "tris": 144,
+      "parts": 2,
+      "bounds": {
+        "min": [
+          -0.24,
+          -0.005,
+          -0.16
+        ],
+        "max": [
+          0.24,
+          1.32,
+          0.16
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_mailbox",
+      "note": "Post box at the head of each drive. Three placements — the three properties on the road.",
+      "budgetTris": 200,
+      "budgetParts": 2
+    },
+    {
+      "file": "toaster_woodpile.glb",
+      "bytes": 179168,
+      "tris": 424,
+      "parts": 2,
+      "bounds": {
+        "min": [
+          -1.45,
+          -0.097,
+          -0.71
+        ],
+        "max": [
+          1.45,
+          1.177,
+          0.86
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_woodpile",
+      "note": "Split logs stacked under the edge of a tarp. Two placements.",
+      "budgetTris": 600,
+      "budgetParts": 2
+    },
+    {
+      "file": "toaster_hay_bale.glb",
+      "bytes": 5404,
+      "tris": 48,
+      "parts": 1,
+      "bounds": {
+        "min": [
+          -0.6,
+          0,
+          -0.75
+        ],
+        "max": [
+          0.6,
+          1.5,
+          0.75
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_hay_bale",
+      "note": "Round bale lying on its side in the east field, instanced about twenty-five times. One part, twelve sides — at this size a rounder cylinder is triangles spent on a silhouette nobody reads.",
+      "budgetTris": 150,
+      "budgetParts": 1,
+      "instanced": true
+    },
+    {
+      "file": "toaster_propane_tank.glb",
+      "bytes": 23304,
+      "tris": 420,
+      "parts": 3,
+      "bounds": {
+        "min": [
+          -1.55,
+          0,
+          -0.5
+        ],
+        "max": [
+          1.55,
+          1.5,
+          0.5
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_propane_tank",
+      "note": "Horizontal propane tank on saddle legs, one behind each house. Revolved, because a tank is a turned form with dished ends — a capsule of two hemispheres and a cylinder is the thing this kit is replacing.",
+      "budgetTris": 500,
+      "budgetParts": 3
+    },
+    {
+      "file": "toaster_wreck_pickup.glb",
+      "bytes": 39096,
+      "tris": 348,
+      "parts": 6,
+      "bounds": {
+        "min": [
+          -2.95,
+          -0.101,
+          -1.2
+        ],
+        "max": [
+          1.98,
+          1.78,
+          1.2
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_wreck_pickup",
+      "note": "Rusted pickup on flat tyres with the hood up, behind the barn. DRESSING, NOT A VEHICLE — no rig, no named wheel nodes, nothing the vehicle code could bind to. It sits 120 mm lower than it should because the tyres are flat, which is most of what makes a wreck read as a wreck rather than as a car you cannot drive.",
+      "budgetTris": 4000,
+      "budgetParts": 6
+    },
+    {
+      "file": "toaster_leaf_pile.glb",
+      "bytes": 421468,
+      "tris": 18,
+      "parts": 1,
+      "bounds": {
+        "min": [
+          -1.17,
+          0.032,
+          -1.413
+        ],
+        "max": [
+          1.442,
+          0.268,
+          1.388
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_leaf_pile",
+      "note": "A drift of leaves for the inner edge of the belt, where the wood sheds onto the field. One merged part of MASK cards.",
+      "budgetTris": 60,
+      "budgetParts": 1,
+      "instanced": true
+    },
+    {
+      "file": "vfx_teleport_burst.glb",
+      "bytes": 11752,
+      "tris": 232,
+      "parts": 2,
+      "bounds": {
+        "min": [
+          -1.5,
+          0,
+          -1.485
+        ],
+        "max": [
+          1.5,
+          3,
+          1.485
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "vfx_teleport_burst",
+      "note": "A short column of light for a player arriving or leaving on a pad, and for an enemy coming through a warp gate. One file, tinted by the code — teal for a player, red for an enemy — so it is authored white and standing on the ground. Stand-in today is the Nova impact ring, which is flat, and a flat ring on a flat pad is the §4.12 problem again.",
+      "budgetTris": 400,
+      "budgetParts": 2
+    },
+    {
+      "file": "vehicle_buggy.glb",
+      "bytes": 241944,
+      "tris": 5420,
+      "parts": 23,
+      "bounds": {
+        "min": [
+          -0.77,
+          0,
+          -2.005
+        ],
+        "max": [
+          0.77,
+          1.448,
+          1.945
+        ]
+      },
+      "kind": "vehicle",
+      "id": "vehicle_buggy",
+      "note": "Rear-engined saloon, two seats abreast, in FADED RED. One continuous lofted skin from nose to tail with a crowned roof and tumblehome at the waist — not the stack of thirteen boxes it started as, which announced a flat at every joint. The cabin is the glass: a rounded dark volume with a painted crown over it and slim pillars down its corners, which is how a saloon actually reads, rather than a painted box with window holes cut in it. One dented wing — farm-kept rather than restored: it is the thing that lives under the carport and gets driven to the end of the road. Origin at the ground contact point under the chassis centre, nose along −Z. Wheels pivot at the axle centre with the axle along local X, which is what lets the code spin them at speed ÷ radius.",
+      "budgetTris": 8000,
+      "budgetParts": 24,
+      "vehicle": {
+        "seats": [
+          "seat_driver",
+          "seat_passenger"
+        ],
+        "wheels": [
+          {
+            "node": "wheel_fl",
+            "radius": 0.29,
+            "steers": true
+          },
+          {
+            "node": "wheel_fr",
+            "radius": 0.29,
+            "steers": true
+          },
+          {
+            "node": "wheel_rl",
+            "radius": 0.29,
+            "steers": false
+          },
+          {
+            "node": "wheel_rr",
+            "radius": 0.29,
+            "steers": false
+          }
+        ],
+        "steer": "steer_wheel",
+        "steerMaxDeg": 32,
+        "hull": [
+          1.55,
+          1.5,
+          4.1
+        ],
+        "eye": 1.15
+      }
+    },
+    {
+      "file": "vehicle_dagator.glb",
+      "bytes": 239536,
+      "tris": 3788,
+      "parts": 24,
+      "bounds": {
+        "min": [
+          -0.75,
+          0,
+          -1.445
+        ],
+        "max": [
+          0.75,
+          1.84,
+          1.42
+        ]
+      },
+      "kind": "vehicle",
+      "id": "vehicle_dagator",
+      "note": "Utility vehicle with a YELLOW vinyl bench — the one bright thing on a drab work machine and what you pick it out by across a field. The bonnet and scuttle are one lofted pressing that crowns over the engine and falls to the grille, and the fenders are real curved bands over the knobblies: a work vehicle is still a pressing, and four flat-topped crates is the whole of why it read as primitive. Roll cage, open cargo bed with a strapped tarp, light bar. Eye height 1.0 — low and workmanlike. Lives in the barn and is driven through its 5 × 4 door, which is why that door is 5 × 4. Knobbly tread is cut as real geometry here because the tyre is 300 mm across and read from two metres; on the saloon the same detail is in the texture.",
+      "budgetTris": 8000,
+      "budgetParts": 24,
+      "vehicle": {
+        "seats": [
+          "seat_driver",
+          "seat_passenger"
+        ],
+        "wheels": [
+          {
+            "node": "wheel_fl",
+            "radius": 0.31,
+            "steers": true
+          },
+          {
+            "node": "wheel_fr",
+            "radius": 0.31,
+            "steers": true
+          },
+          {
+            "node": "wheel_rl",
+            "radius": 0.31,
+            "steers": false
+          },
+          {
+            "node": "wheel_rr",
+            "radius": 0.31,
+            "steers": false
+          }
+        ],
+        "steer": "steer_wheel",
+        "steerMaxDeg": 34,
+        "hull": [
+          1.5,
+          1.85,
+          2.9
+        ],
+        "eye": 1
+      }
+    },
+    {
+      "file": "vehicle_grnmchn.glb",
+      "bytes": 111912,
+      "tris": 1812,
+      "parts": 18,
+      "bounds": {
+        "min": [
+          -0.38,
+          0,
+          -0.87
+        ],
+        "max": [
+          0.391,
+          0.893,
+          0.87
+        ]
+      },
+      "kind": "vehicle",
+      "id": "vehicle_grnmchn",
+      "note": "Motorised drift trike, and the lowest thing on the map at 0.75 m eye height, which is most of the joke. Front `wheel_0` r 0.25 on a fork; rear `wheel_1` and `wheel_2` at r 0.13 wearing PLASTIC DRIFT SLEEVES, which is why it slides — the sleeves are a slick, high-envMap material against the matte rubber everywhere else, so the reason it drifts is visible rather than just simulated. It steers by pulling TWO LEVERS, not by turning a wheel, and that is why it can spin on the spot. The levers and the front wheel are children of one `steer_fork` node so a single steering input turns all three together; if upstream would rather bind the levers directly, the node names are there for it.",
+      "budgetTris": 8000,
+      "budgetParts": 24,
+      "vehicle": {
+        "seats": [
+          "seat_driver"
+        ],
+        "wheels": [
+          {
+            "node": "wheel_0",
+            "radius": 0.25,
+            "steers": true
+          },
+          {
+            "node": "wheel_1",
+            "radius": 0.13,
+            "steers": false
+          },
+          {
+            "node": "wheel_2",
+            "radius": 0.13,
+            "steers": false
+          }
+        ],
+        "steer": "steer_fork",
+        "steerLevers": [
+          "steer_lever_l",
+          "steer_lever_r"
+        ],
+        "steerMaxDeg": 60,
+        "hull": [
+          0.9,
+          0.9,
+          1.9
+        ],
+        "eye": 0.75
+      }
+    },
+    {
+      "file": "vehicle_vehickle.glb",
+      "bytes": 222116,
+      "tris": 3752,
+      "parts": 23,
+      "bounds": {
+        "min": [
+          -0.58,
+          0,
+          -0.92
+        ],
+        "max": [
+          0.58,
+          1.087,
+          0.909
+        ]
+      },
+      "kind": "vehicle",
+      "id": "vehicle_vehickle",
+      "note": "Sport quad in BLUE, and the sleekest thing on the map: one lofted plastic shell whose first station is a 0.05 m half-width, so the nose is a beak that starts at a knife edge and flares back over the front arches rather than the four flat slabs it was. Saddle lofted to narrow at the tank so the rider’s knees have somewhere to go; guards are curved bands over the crown of each tyre, all four merged to one part. The fastest thing on the map at 22 m/s and it handles like it. `steer_bars` is the node the code turns and the node the `bars` hand pose grips, so the grips are 0.7 m apart to match it.",
+      "budgetTris": 8000,
+      "budgetParts": 24,
+      "vehicle": {
+        "seats": [
+          "seat_driver"
+        ],
+        "wheels": [
+          {
+            "node": "wheel_fl",
+            "radius": 0.28,
+            "steers": true
+          },
+          {
+            "node": "wheel_fr",
+            "radius": 0.28,
+            "steers": true
+          },
+          {
+            "node": "wheel_rl",
+            "radius": 0.28,
+            "steers": false
+          },
+          {
+            "node": "wheel_rr",
+            "radius": 0.28,
+            "steers": false
+          }
+        ],
+        "steer": "steer_bars",
+        "steerMaxDeg": 38,
+        "hull": [
+          1.16,
+          1.13,
+          1.85
+        ],
+        "eye": 1.05
+      }
+    },
+    {
       "file": "shared_ladder.glb",
-      "bytes": 416280,
+      "bytes": 416292,
       "tris": 14056,
       "parts": 48,
       "bounds": {
@@ -9326,7 +11698,91 @@
       },
       "kind": "shared",
       "id": "shared_ladder",
-      "note": "Fixed-height 6 m ladder (Switchyard's 5 m / 5.4 m ladders scale Y). Bolted wall flanges every 1.5 m so it reads as attached, not leaning."
+      "note": "Fixed 6 m ladder — Foundry yard → upper deck (y 6). Rungs are a true 30 cm pitch at every height in the set, so no placement should ever scale one: pick the height instead. Cage hoops from 2.4 m with side rails to the top. Bolted wall flanges every 1.5 m so it reads as attached, not leaning."
+    },
+    {
+      "file": "shared_ladder_250.glb",
+      "bytes": 157248,
+      "tris": 5164,
+      "parts": 21,
+      "bounds": {
+        "min": [
+          -0.668,
+          -0.011,
+          -0.18
+        ],
+        "max": [
+          0.668,
+          3.13,
+          0.48
+        ]
+      },
+      "kind": "shared",
+      "id": "shared_ladder_250",
+      "note": "Fixed 2.5 m ladder — railcar roofs, kerb-wall hops — under the cage threshold, so no hoops. Rungs are a true 30 cm pitch at every height in the set, so no placement should ever scale one: pick the height instead. Bolted wall flanges every 1.5 m so it reads as attached, not leaning."
+    },
+    {
+      "file": "shared_ladder_500.glb",
+      "bytes": 343812,
+      "tris": 11516,
+      "parts": 40,
+      "bounds": {
+        "min": [
+          -0.725,
+          -0.011,
+          -0.18
+        ],
+        "max": [
+          0.725,
+          5.63,
+          0.48
+        ]
+      },
+      "kind": "shared",
+      "id": "shared_ladder_500",
+      "note": "Fixed 5 m ladder — Switchyard yard → mid deck (y 5). Rungs are a true 30 cm pitch at every height in the set, so no placement should ever scale one: pick the height instead. Cage hoops from 2.4 m with side rails to the top. Bolted wall flanges every 1.5 m so it reads as attached, not leaning."
+    },
+    {
+      "file": "shared_ladder_540.glb",
+      "bytes": 362504,
+      "tris": 12156,
+      "parts": 42,
+      "bounds": {
+        "min": [
+          -0.725,
+          -0.011,
+          -0.18
+        ],
+        "max": [
+          0.725,
+          6.03,
+          0.48
+        ]
+      },
+      "kind": "shared",
+      "id": "shared_ladder_540",
+      "note": "Fixed 5.4 m ladder — Switchyard mid deck (y 4.8) → catwalk (y 10.2). Rungs are a true 30 cm pitch at every height in the set, so no placement should ever scale one: pick the height instead. Cage hoops from 2.4 m with side rails to the top. Bolted wall flanges every 1.5 m so it reads as attached, not leaning."
+    },
+    {
+      "file": "shared_ladder_1000.glb",
+      "bytes": 712528,
+      "tris": 24004,
+      "parts": 84,
+      "bounds": {
+        "min": [
+          -0.781,
+          -0.011,
+          -1.04
+        ],
+        "max": [
+          0.781,
+          10.63,
+          0.48
+        ]
+      },
+      "kind": "shared",
+      "id": "shared_ladder_1000",
+      "note": "Fixed 10 m ladder — ground → catwalk in one run. Rungs are a true 30 cm pitch at every height in the set, so no placement should ever scale one: pick the height instead. Cage hoops from 2.4 m with side rails to the top. Breaks at half height for an intermediate rest landing with a guard rail, per fixed-ladder practice for runs over 9 m. Bolted wall flanges every 1.5 m so it reads as attached, not leaning."
     },
     {
       "file": "shared_zipline_anchor.glb",
@@ -10989,17 +13445,17 @@
     },
     {
       "file": "ammo_standard.glb",
-      "bytes": 547352,
+      "bytes": 547368,
       "tris": 9328,
       "parts": 28,
       "bounds": {
         "min": [
-          -0.025,
+          -0.02,
           -0.001,
           -0.041
         ],
         "max": [
-          0.028,
+          0.081,
           0.108,
           0.029
         ]
@@ -11010,17 +13466,17 @@
     },
     {
       "file": "ammo_ap.glb",
-      "bytes": 641600,
+      "bytes": 641616,
       "tris": 13000,
       "parts": 34,
       "bounds": {
         "min": [
-          -0.028,
+          -0.02,
           -0.001,
           -0.045
         ],
         "max": [
-          0.028,
+          0.084,
           0.108,
           0.029
         ]
@@ -11031,17 +13487,17 @@
     },
     {
       "file": "ammo_hollowpoint.glb",
-      "bytes": 635700,
+      "bytes": 635716,
       "tris": 12928,
       "parts": 31,
       "bounds": {
         "min": [
-          -0.023,
+          -0.02,
           -0.001,
           -0.039
         ],
         "max": [
-          0.028,
+          0.079,
           0.108,
           0.029
         ]
@@ -11052,17 +13508,17 @@
     },
     {
       "file": "ammo_incendiary.glb",
-      "bytes": 632176,
+      "bytes": 632196,
       "tris": 12784,
       "parts": 31,
       "bounds": {
         "min": [
-          -0.025,
+          -0.02,
           -0.001,
           -0.041
         ],
         "max": [
-          0.028,
+          0.081,
           0.108,
           0.029
         ]
@@ -11073,17 +13529,17 @@
     },
     {
       "file": "ammo_cryo.glb",
-      "bytes": 631960,
+      "bytes": 631980,
       "tris": 12784,
       "parts": 31,
       "bounds": {
         "min": [
-          -0.025,
+          -0.02,
           -0.001,
           -0.041
         ],
         "max": [
-          0.028,
+          0.081,
           0.108,
           0.029
         ]
@@ -11094,372 +13550,223 @@
     },
     {
       "file": "vfx_tracer_standard.glb",
-      "bytes": 23312,
-      "tris": 816,
-      "parts": 2,
+      "bytes": 49176,
+      "tris": 1376,
+      "parts": 6,
       "bounds": {
         "min": [
-          -0.024,
-          -0.024,
-          -1.024
+          -0.013,
+          -0.023,
+          -1.007
         ],
         "max": [
-          0.024,
-          0.024,
+          0.013,
+          0.023,
           0
         ]
       },
       "kind": "tracer",
       "id": "vfx_tracer_standard",
-      "note": "Unit-length streak the client stretches to the hit; pale-gold tracer."
+      "note": "Unit-length streak the client stretches to the hit (head at z = −1). Crossed soft-edged ribbons graded white-hot → amber → ember, a hot filament behind the head, and a thin smoke wisp at the tail. Unlit, alpha-blended, colour and falloff in vertex RGBA — no material overrides on import."
     },
     {
       "file": "vfx_tracer_ap.glb",
-      "bytes": 27204,
-      "tris": 912,
-      "parts": 3,
+      "bytes": 28476,
+      "tris": 640,
+      "parts": 5,
       "bounds": {
         "min": [
-          -0.02,
-          -0.02,
-          -1.014
+          -0.009,
+          -0.005,
+          -1
         ],
         "max": [
-          0.02,
-          0.02,
+          0.009,
+          0.005,
           0
         ]
       },
       "kind": "tracer",
       "id": "vfx_tracer_ap",
-      "note": "Unit-length streak the client stretches to the hit; thin white-hot tracer."
+      "note": "Unit-length streak the client stretches to the hit (head at z = −1). Not a plume — a bolt. Near-constant width, a hard-cut tail that ends at ~85% instead of fading out, a forward lance through the head, and two hairline rails flanking the core. Cold steel-white into violet; no smoke, since the penetrator does not burn. Unlit, alpha-blended, colour and falloff in vertex RGBA — no material overrides on import."
     },
     {
       "file": "vfx_tracer_hollowpoint.glb",
-      "bytes": 23324,
-      "tris": 816,
-      "parts": 2,
+      "bytes": 49172,
+      "tris": 1376,
+      "parts": 6,
       "bounds": {
         "min": [
+          -0.03,
           -0.036,
-          -0.036,
-          -1.036
+          -1.01
         ],
         "max": [
-          0.036,
+          0.03,
           0.036,
           0
         ]
       },
       "kind": "tracer",
       "id": "vfx_tracer_hollowpoint",
-      "note": "Unit-length streak the client stretches to the hit; wide orange tracer that reads as a mushrooming hit."
+      "note": "Unit-length streak the client stretches to the hit (head at z = −1). Widest and slowest-dying of the set — a fat orange streak that keeps blooming behind the round, so the trail itself telegraphs the mushrooming hit. Unlit, alpha-blended, colour and falloff in vertex RGBA — no material overrides on import."
     },
     {
       "file": "vfx_tracer_incendiary.glb",
-      "bytes": 47776,
-      "tris": 1456,
-      "parts": 7,
+      "bytes": 64224,
+      "tris": 1616,
+      "parts": 11,
       "bounds": {
         "min": [
-          -0.034,
-          -0.035,
-          -1.024
+          -0.065,
+          -0.109,
+          -1.009
         ],
         "max": [
-          0.04,
-          0.039,
+          0.117,
+          0.1,
           0
         ]
       },
       "kind": "tracer",
       "id": "vfx_tracer_incendiary",
-      "note": "Unit-length streak the client stretches to the hit; tracer trails flame petals."
+      "note": "Unit-length streak the client stretches to the hit (head at z = −1). Ember-graded streak shedding flame licks that peel off-axis and fall behind, over the heaviest smoke plume of the set. Unlit, alpha-blended, colour and falloff in vertex RGBA — no material overrides on import."
     },
     {
       "file": "vfx_tracer_cryo.glb",
-      "bytes": 33364,
-      "tris": 864,
-      "parts": 8,
+      "bytes": 60176,
+      "tris": 1424,
+      "parts": 12,
       "bounds": {
         "min": [
-          -0.074,
-          -0.073,
-          -1.024
+          -0.037,
+          -0.031,
+          -1.008
         ],
         "max": [
-          0.075,
-          0.07,
+          0.034,
+          0.037,
           0
         ]
       },
       "kind": "tracer",
       "id": "vfx_tracer_cryo",
-      "note": "Unit-length streak the client stretches to the hit; tracer sheds ice crystals."
+      "note": "Unit-length streak the client stretches to the hit (head at z = −1). Cold blue streak trailing vapour rather than smoke, shedding ice shards that tumble off the flight line. Unlit, alpha-blended, colour and falloff in vertex RGBA — no material overrides on import."
     },
     {
-      "file": "hands_firstperson_pistol.glb",
-      "bytes": 1070360,
-      "tris": 26376,
-      "parts": 62,
+      "file": "weapon_sidearm_magazine.glb",
+      "bytes": 4832212,
+      "tris": 6016,
+      "parts": 9,
       "bounds": {
         "min": [
+          -0.012,
+          -0.055,
+          -0.009
+        ],
+        "max": [
+          0.012,
+          0.006,
+          0.025
+        ]
+      },
+      "kind": "weapon_reload",
+      "id": "weapon_sidearm_magazine",
+      "weapon": "sidearm",
+      "source": "sidearm_magazine",
+      "note": "Detachable box magazine exported on its own — the same node as `sidearm_magazine` in the viewmodel, origin on the seated top face, +Y up. Dropping it is a translate down plus a tip about X; `userData.drop` on the source group carries both axes."
+    },
+    {
+      "file": "weapon_rifle_magazine.glb",
+      "bytes": 3272828,
+      "tris": 14232,
+      "parts": 3,
+      "bounds": {
+        "min": [
+          -0.014,
           -0.151,
-          -0.117,
-          -0.051
+          -0.047
         ],
         "max": [
-          0.096,
-          0.027,
-          0.338
+          0.014,
+          0.073,
+          0.021
         ]
       },
-      "kind": "hands",
-      "id": "hands_pistol",
-      "pose": "pistol",
-      "note": "Base gloved forearms, posed per platform (weapon.handsPose). Fingers are capsule bone chains that actually wrap the grip — three fingers closed on the front strap, index on the trigger, thumb over the backstrap — with knuckle plates, wrist cuffs and rolled sleeves. Rifle: support hand C-clamps the handguard. Pistol: support hand cups the firing hand. Tool: right hand on the handle, left on the foregrip. Faction variants swap the plates."
+      "kind": "weapon_reload",
+      "id": "weapon_rifle_magazine",
+      "weapon": "rifle",
+      "source": "rifle_magazine",
+      "note": "STANAG magazine on its own, origin on the magwell mouth plane (1.9 mm forward of the well centre, where the 25 mm curve crosses it). Feed lips and top round included — they are visible for the half second it is in the air."
     },
     {
-      "file": "hands_forge_pistol.glb",
-      "bytes": 1128576,
-      "tris": 27864,
-      "parts": 71,
+      "file": "weapon_emberpistol_magazine.glb",
+      "bytes": 2951928,
+      "tris": 4864,
+      "parts": 5,
       "bounds": {
         "min": [
-          -0.151,
-          -0.117,
-          -0.051
+          -0.023,
+          -0.023,
+          0
         ],
         "max": [
-          0.096,
-          0.027,
-          0.338
+          0.023,
+          0.023,
+          0.088
         ]
       },
-      "kind": "hands",
-      "id": "hands_forge_pistol",
-      "pose": "pistol",
-      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, tool loop and brass bolts on the left cuff."
+      "kind": "weapon_reload",
+      "id": "weapon_emberpistol_magazine",
+      "weapon": "emberpistol",
+      "source": "emberpistol_magazine",
+      "note": "Fuel canister, not a magazine — the vessel is what this gun reloads, so it now carries the armoury’s `_magazine` name and exports under it. Origin on the forward dome, the face that meets the regulator; it pulls off rearward, so `userData.drop` is +Z rather than −Y."
     },
     {
-      "file": "hands_ember_pistol.glb",
-      "bytes": 1105600,
-      "tris": 26896,
-      "parts": 67,
+      "file": "weapon_scattergun_magazine.glb",
+      "bytes": 71480,
+      "tris": 1320,
+      "parts": 8,
       "bounds": {
         "min": [
-          -0.151,
-          -0.117,
-          -0.051
+          -0.01,
+          -0.01,
+          0
         ],
         "max": [
-          0.097,
-          0.027,
-          0.368
+          0.01,
+          0.01,
+          0.068
         ]
       },
-      "kind": "hands",
-      "id": "hands_ember_pistol",
-      "pose": "pistol",
-      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, braided fuel hose along the right forearm."
+      "kind": "weapon_reload",
+      "id": "weapon_scattergun_magazine",
+      "weapon": "scattergun",
+      "source": "scattergun_shell",
+      "note": "A loaded 12-gauge hull under the requested filename so nothing falls back to a placeholder. This gun has no detachable magazine; see `weapon_scattergun_shell.glb`, which is the same file under the name that tells the truth."
     },
     {
-      "file": "hands_tempest_pistol.glb",
-      "bytes": 1132264,
-      "tris": 27816,
-      "parts": 69,
+      "file": "weapon_scattergun_shell.glb",
+      "bytes": 71476,
+      "tris": 1320,
+      "parts": 8,
       "bounds": {
         "min": [
-          -0.151,
-          -0.117,
-          -0.051
+          -0.01,
+          -0.01,
+          0
         ],
         "max": [
-          0.096,
-          0.027,
-          0.338
+          0.01,
+          0.01,
+          0.068
         ]
       },
-      "kind": "hands",
-      "id": "hands_tempest_pistol",
-      "pose": "pistol",
-      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, capacitor ring and arc electrodes on the right cuff."
-    },
-    {
-      "file": "hands_glacier_pistol.glb",
-      "bytes": 1182164,
-      "tris": 30072,
-      "parts": 69,
-      "bounds": {
-        "min": [
-          -0.151,
-          -0.117,
-          -0.051
-        ],
-        "max": [
-          0.096,
-          0.027,
-          0.338
-        ]
-      },
-      "kind": "hands",
-      "id": "hands_glacier_pistol",
-      "pose": "pistol",
-      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, frosted coolant coil around the right cuff."
-    },
-    {
-      "file": "hands_specter_pistol.glb",
-      "bytes": 1110676,
-      "tris": 26736,
-      "parts": 68,
-      "bounds": {
-        "min": [
-          -0.151,
-          -0.117,
-          -0.051
-        ],
-        "max": [
-          0.096,
-          0.027,
-          0.338
-        ]
-      },
-      "kind": "hands",
-      "id": "hands_specter_pistol",
-      "pose": "pistol",
-      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, wrist scanner screen on the left cuff."
-    },
-    {
-      "file": "hands_firstperson_tool.glb",
-      "bytes": 1085400,
-      "tris": 26880,
-      "parts": 64,
-      "bounds": {
-        "min": [
-          -0.132,
-          -0.208,
-          -0.191
-        ],
-        "max": [
-          0.102,
-          0.144,
-          0.365
-        ]
-      },
-      "kind": "hands",
-      "id": "hands_tool",
-      "pose": "tool",
-      "note": "Base gloved forearms, posed per platform (weapon.handsPose). Fingers are capsule bone chains that actually wrap the grip — three fingers closed on the front strap, index on the trigger, thumb over the backstrap — with knuckle plates, wrist cuffs and rolled sleeves. Rifle: support hand C-clamps the handguard. Pistol: support hand cups the firing hand. Tool: right hand on the handle, left on the foregrip. Faction variants swap the plates."
-    },
-    {
-      "file": "hands_forge_tool.glb",
-      "bytes": 1143620,
-      "tris": 28368,
-      "parts": 73,
-      "bounds": {
-        "min": [
-          -0.132,
-          -0.208,
-          -0.191
-        ],
-        "max": [
-          0.102,
-          0.144,
-          0.365
-        ]
-      },
-      "kind": "hands",
-      "id": "hands_forge_tool",
-      "pose": "tool",
-      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, tool loop and brass bolts on the left cuff."
-    },
-    {
-      "file": "hands_ember_tool.glb",
-      "bytes": 1120640,
-      "tris": 27400,
-      "parts": 69,
-      "bounds": {
-        "min": [
-          -0.132,
-          -0.208,
-          -0.191
-        ],
-        "max": [
-          0.104,
-          0.144,
-          0.393
-        ]
-      },
-      "kind": "hands",
-      "id": "hands_ember_tool",
-      "pose": "tool",
-      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, braided fuel hose along the right forearm."
-    },
-    {
-      "file": "hands_tempest_tool.glb",
-      "bytes": 1147308,
-      "tris": 28320,
-      "parts": 71,
-      "bounds": {
-        "min": [
-          -0.132,
-          -0.208,
-          -0.191
-        ],
-        "max": [
-          0.102,
-          0.144,
-          0.365
-        ]
-      },
-      "kind": "hands",
-      "id": "hands_tempest_tool",
-      "pose": "tool",
-      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, capacitor ring and arc electrodes on the right cuff."
-    },
-    {
-      "file": "hands_glacier_tool.glb",
-      "bytes": 1197204,
-      "tris": 30576,
-      "parts": 71,
-      "bounds": {
-        "min": [
-          -0.132,
-          -0.208,
-          -0.191
-        ],
-        "max": [
-          0.102,
-          0.144,
-          0.365
-        ]
-      },
-      "kind": "hands",
-      "id": "hands_glacier_tool",
-      "pose": "tool",
-      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, frosted coolant coil around the right cuff."
-    },
-    {
-      "file": "hands_specter_tool.glb",
-      "bytes": 1125720,
-      "tris": 27240,
-      "parts": 70,
-      "bounds": {
-        "min": [
-          -0.132,
-          -0.208,
-          -0.191
-        ],
-        "max": [
-          0.102,
-          0.144,
-          0.365
-        ]
-      },
-      "kind": "hands",
-      "id": "hands_specter_tool",
-      "pose": "tool",
-      "note": "Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer, wrist scanner screen on the left cuff."
+      "kind": "weapon_reload",
+      "id": "weapon_scattergun_shell",
+      "weapon": "scattergun",
+      "source": "scattergun_shell",
+      "note": "Loaded 12-gauge hull: brass head with rim and extractor groove, full-length body, folded six-point crimp cut into the dome as ridges. Origin at the rim face so a reload pushes it in along +Z at `scattergun_mount_loadport`. Distinct from `scattergun_case`, which is fired — open mouth, no crimp."
     }
   ]
 }

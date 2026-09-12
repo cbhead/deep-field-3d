@@ -26,8 +26,12 @@ Always the open **forward manifest**. Each one is a request list for a specific
 piece of work, written against something that already runs in the game, so
 every dimension in it is measured off the built thing rather than proposed:
 
-- **[FORWARD-MANIFEST-toaster.md](FORWARD-MANIFEST-toaster.md)** — sector 4's
-  whole kit, and the largest outstanding ask. It carries the one rule the rest
+- **[FORWARD-MANIFEST-hero.md](FORWARD-MANIFEST-hero.md)** — what the
+  2026-09-12 drop taught us: the hero texture set is embedded in every file
+  that uses it, the world weapons are the viewmodels under another name, and
+  two hand poses are still on the old rig.
+- [FORWARD-MANIFEST-toaster.md](FORWARD-MANIFEST-toaster.md) — sector 4's
+  whole kit, delivered 2026-09-12 and kept as the record of the ask. It carries the one rule the rest
   of this document does not: anything that repeats on that map is drawn as a
   single instanced mesh, so a file's **part count is its draw-call count** and
   its triangles are multiplied by every placement. That is why those entries
@@ -40,6 +44,31 @@ every dimension in it is measured off the built thing rather than proposed:
 is being asked for *now*, and anything in one should appear in
 `docs/forward-manifest.json` on the next drop. `MAP-AUTHORING.md` is the rules a
 map has to satisfy before any of its art is worth drawing.
+
+## Textures the importer writes beside a model
+
+A hero-standard GLB carries its texture set embedded, and Godot's importer
+extracts each one as `<model>_<n>.png` next to the file before importing it.
+Those PNGs are build output: every `--import` (CI runs one first) regenerates
+them, so they are ignored by git (`game/assets/**/*_[0-9]*.png`) and never
+committed. The 2026-09-12 drop would otherwise have added 447 of them at
+365 MB. The brand icons in `game/assets/brand/` are real files and stay tracked.
+
+One migration step for a checkout that pulled this change with the old tracked
+sidecars in place: the pull deletes those PNGs, but their gitignored
+`.png.import` files stay behind, and the importer takes an existing sidecar to
+mean the texture is already extracted — so it never rewrites the PNG and the
+Foundry and Switchyard ground load without their textures. Deleting the orphan
+sidecars alone is not enough either: extraction only runs when the model
+itself is re-imported, and its source has not changed. The fix that always
+works is the one a fresh clone gets — no import metadata at all:
+
+```sh
+find game/assets -name '*.import' -delete && make import
+```
+
+It takes a few minutes and rebuilds every cache entry. A fresh clone needs
+nothing.
 
 ## Where the models come from
 
@@ -62,6 +91,24 @@ zipping). When design sends a new project export, unpack it over `docs/design/`
 and run the same command; `docs/ASSET-DELIVERY.md` is design's note on what
 changed.
 
+Because the geometry is code, a tweak is an edit to `docs/design/models/*.js` —
+a Drifter's head is `box(.30, .20, .30)` at a named position, not a mesh you
+drag. `ONLY=` rebuilds just the part you touched, so checking that edit costs
+one file instead of the whole drop:
+
+```sh
+make design-export ONLY=lance     # one tower: chassis and its 30 stage modules
+make design-export ONLY=drifter   # one model, by item id or by file stem
+make design-export ONLY=rifle     # both the viewmodel and the world gun
+make design-export ONLY=vfx       # a whole category — everything vfx.js builds
+```
+
+A filtered run merges its rows into `game/assets/structures/manifest.json`
+rather than replacing it — dropping the rows for models it did not build would
+take the rig limits `TowerRig` reads with them — and skips the palette, icon
+and design-system bundle, which it never rewrites anyway. A selector that
+matches nothing fails the run instead of quietly exporting zero files.
+
 ## Checking what's landed
 
 ```sh
@@ -81,6 +128,34 @@ exists (there is no Shade to render yet).
 The report also lists anything on disk the manifest doesn't name, which is
 almost always a filename typo — otherwise it looks identical to "not delivered
 yet".
+
+## Checking the models themselves
+
+```sh
+make model-validate         # every .glb against the rules below
+```
+
+The two checks above read file *names*. This one opens the models and checks
+what the code consumes: the `_foot → _yaw → _pitch → _muzzle` chain
+`TowerRig.Resolve` drives, the shared empties `GameRoot.MergeRig` relies on to
+put a stage module's parts in the right place, the `<id>_mount_<slot>` nodes
+`WeaponAssembly` hangs attachments from, an aura tower having no yaw to point
+with, the manifest agreeing with what is on disk, and — the rule that paid for
+the script — a stage whose manifest entry says it *adds* something having more
+triangles than the stage below it.
+
+It reads the glTF JSON directly, so it needs no Godot, no browser and no
+packages, and the whole drop takes about two seconds. CI runs it in the fast
+lane and `make check` runs it before the engine half.
+
+Everything is a **ratchet** against `docs/model-validation-baseline.tsv`: a
+violation that is *not* in the baseline fails the build, and one that disappears
+is reported so the row can be dropped and the gain locked in. Most rows are the
+twenty models that do not sit on their own origin today, several of them
+correctly — a Leaper mid-jump is airborne, a broken Barricade sags, a wall
+socket hangs off a wall. A row for one of the *contract* checks means a real
+defect somebody chose to carry, so give it a reason and a way out; those are
+restated on every run rather than passing quietly.
 
 ## Checking what the code asks for
 

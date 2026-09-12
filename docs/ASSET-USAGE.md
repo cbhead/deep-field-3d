@@ -1,6 +1,6 @@
 # Asset usage
 
-**519 delivered · 384 consumed · 135 unused** — regenerate with `make usage`.
+**612 delivered · 434 consumed · 178 unused** — regenerate with `make usage`.
 
 `asset-report.sh` answers *has design shipped it*. This answers the question that
 rots silently: an asset can be delivered, imported, and never referenced by a
@@ -27,7 +27,25 @@ and nothing gets hurt, so state variants the code *does* request — a spent tra
 plate, a half-demolished barricade — never come up in the measurement. They are
 marked `wired=yes` in the manifest by reading the code, and show as unused here.
 
-## What the unused 135 are
+## What the 2026-09-12 drop added to the unused list
+
+The drop (docs/ASSET-DELIVERY.md, plus the Toaster kit and vehicles it carried)
+took the count from 129 to 178. The Toaster's forty-odd files are all consumed
+— tiles in four variants, roads, the drive, trees and their billboards, four
+shells and roofs, the interiors, the dressing, the live warp gate, the vehicles
+— and the 49 that are not fall into six groups, none of them by mistake:
+
+| Group | Count | Why |
+|---|---|---|
+| Off-hand reload poses (`hands_<set>_magout` / `_magin` / `_charge`) | 18 | **Requested by code** — the reload animation swaps them in for the platform's own left hand — but only during a reload, and a solo match never reloads: the blind spot above. `--shot foundry <txt> reload` exercises all eighteen. |
+| Reload props (`weapon_<id>_magazine` ×3, `weapon_scattergun_shell`) | 4 | Same blind spot: they exist for the half-second a magazine is in the air. |
+| `weapon_scattergun_magazine` | 1 | **Deliberately unused.** The same hull as `_shell`, shipped under the armoury's name so nothing fell back to a placeholder; `_shell` is the one the code loads. |
+| Spire kit, first export | 20 | `BuildSpireStructures` is the graybox from before design's redesign and mounts the floor, facade, roof and terrain; the redesign's antenna, HVAC, water tank, lobby, stairwell, fire-escape flight, interior lane, parapet, boundary wall and dressed car have no placement yet. Adopting the authored Spire (`docs/design/models/levels.js`) is its own change — new socket ids, save data, the harness build order. |
+| `shared_ladder_250` / `_500` / `_540` / `_1000` | 4 | Height variants of the ladder; the client scales the one it has. |
+| `shared_warp_gate_idle` | 1 | The gate is live at both ends; idle is the fallback for a kit without the active one. |
+| `foundry_gantry_walk` | 1 | A 4 m grating bridge design added so the Foundry gantry could clear its lane (MAP-AUTHORING §4.10); the gantry still uses a deck bay. |
+
+## What the unused 129 were before it
 
 The 2026-09-07 drop (427 models, 65 icons) replaced the first delivery's
 geometry and added 47 names beyond the brief — M4/M5 enemies, the Glacier and

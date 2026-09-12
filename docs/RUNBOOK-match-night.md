@@ -83,3 +83,14 @@ is fresh. Rooms don't outlive the process.
 | "factionTaken" | duplicate faction pick | pick the other faction |
 | joined but frozen enemies | snapshot channel not flowing (check server log) | rejoin; file it if it repeats |
 | `/info` answers but wrong game | the 2D relay owns the port | Mission Control probe, stop the other process |
+| server exits at once: `cannot open the info port` | something else holds TCP on that port | free it, or `--server --port 8791` |
+| server exits at once: `cannot open the game port` | something else holds UDP on that port | as above |
+| hosting from the window, strip says `no /info` | the info port is taken; the party still works | friends can join; Mission Control cannot name this server |
+
+A dedicated server **refuses to start** when it cannot bind its info port, even
+though the match itself would run — ENet is UDP and would have its port. It
+refuses because a headless server has no other way to say what it is, so the
+curl above would be answered by whatever holds the TCP port instead, and on a
+machine with the 2D checkouts on it that answer is a different game describing
+itself confidently. Hosting from the window only warns, because a window has
+somewhere to put the warning and someone to read it.

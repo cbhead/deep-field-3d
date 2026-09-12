@@ -17,7 +17,8 @@ the Monolith is still a box.
 | `structures/` | `tower_*`, `trap_*`, `socket_*` |
 | `weapons/` | `weapon_*`, `attach_*`, `ammo_*`, `hands_*` |
 | `heroes/` | `hero_*` |
-| `maps/` | `foundry_*`, `switchyard_*`, `shared_*`, `prop_*` |
+| `maps/` | `foundry_*`, `switchyard_*`, `spire_*`, `toaster_*`, `shared_*`, `prop_*` |
+| `vehicles/` | `vehicle_*` — the four drivable rigs; named nodes (`seat_*`, `wheel_*`, `steer_*`) are what the code moves |
 | `vfx/` | `vfx_*`, `proj_*` |
 | `economy/` | `pickup_*` |
 | `ui/` | `icon_*.png`, `ui_*` |

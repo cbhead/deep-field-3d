@@ -1,6 +1,6 @@
 /**
  * Deep Field 3D — Switchyard environment kit (DESIGN-BRIEF §3.6).
- * Rail-yard theme: ballast terrain with embedded track, the freight cut (a
+ * Rail-yard theme: bare ballast terrain (track lives only in the lane module), the freight cut (a
  * sunken channel with retaining walls the ground shortcut runs through), a
  * mid deck at y 5, an upper catwalk at y 10, and a rail-yard dressing set.
  * Metres, Y-up, origin at footprint centre on the ground.
@@ -42,7 +42,7 @@ function track(K, id, len = 4) {
 
 /* Terrain tile 20×20: ballast bed, three tiers implied by height variants (see levels: yard 0, deck 5, catwalk 10 are structures). */
 P({ id: 'switchyard_terrain', label: 'Terrain tile (20 m)', size: '20 m', swatch: '#4a4742', stats: { Tile: '20×20', Grid: '6×4', Relief: '±0.12 m' },
-  note: 'Tileable ballast bed baked into a 1024² albedo/roughness/normal set (30k pebbles, oil, rust dust along the sidings, puddles with silt rims, faded yard markings, weeds at the margins) plus two disused sidings and a drain with grates. Four variants add standing water, weed tufts, a switch stand, a cable trough or dropped sleepers. The "three tiers" are the yard (0 m), mid deck (5 m) and catwalk (10 m) structures placed on top.',
+  note: 'Tileable ballast bed baked into a 1024² albedo/roughness/normal set (30k pebbles, oil, rust dust along the old siding lines, puddles with silt rims, faded yard markings, weeds at the margins) plus a drain with grates. No track: the terrain is bare ballast so the lane module (switchyard_path_ground) owns every rail in the yard and nothing double-lays under the route. Sleeper impressions in the bake keep the lifted-siding read. Four variants add standing water, weed tufts, a switch stand, a cable trough or dropped sleepers. The "three tiers" are the yard (0 m), mid deck (5 m) and catwalk (10 m) structures placed on top.',
   build(K) { return this.buildVariant(K, 0); },
   buildVariant(K, v = 0) {
     const { part, grp, mats, THREE, box, cyl } = K, g = grp('switchyard_terrain'), F = floorMaterials(THREE);
@@ -51,7 +51,8 @@ P({ id: 'switchyard_terrain', label: 'Terrain tile (20 m)', size: '20 m', swatch
     for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i); const edge = Math.abs(x) > 9.9 || Math.abs(z) > 9.9; p.setY(i, edge ? 0 : Math.sin(x * .9 + v) * Math.cos(z * 1.4) * .07 + Math.sin(x * 2.7 + z * 1.9 + v) * .025); }
     geo.computeVertexNormals();
     const ground = part('terrain_ballast', geo, F.switchyard); ground.rotation.y = (v % 2) * Math.PI; ground.receiveShadow = true; g.add(ground);
-    for (const z of [-6, 6]) { const t = track(K, 'terrain_siding' + z, 20); t.position.set(0, -.04, z); g.add(t); }
+    // No embedded sidings: rails live only in switchyard_path_ground, so the lane never
+    // double-lays over terrain track. The ballast bake carries the lifted-siding marks.
     g.add(part('terrain_drain', box(20, .06, .5), mats.ballast_dark, [0, -.02, 0]));
     for (let i = 0; i < 5; i++) g.add(part('terrain_drain_grate' + i, box(.6, .02, .56), mats.rust, [-8 + i * 4, .012, 0]));
     // Variant details: standing water, weed tufts, dropped sleepers, a switch stand, a cable trough.

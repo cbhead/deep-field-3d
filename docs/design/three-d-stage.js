@@ -309,7 +309,9 @@
       this._object = object;
       object.traverse((o) => {
         if (o.isMesh) {
-          o.castShadow = true;
+          // `userData.noShadow` opts a mesh out of casting — dressing and
+          // field-edge geometry, where the caster costs more than it shows.
+          o.castShadow = !o.userData.noShadow;
           o.receiveShadow = true;
         }
       });

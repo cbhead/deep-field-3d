@@ -45,6 +45,61 @@ const PRESETS = {
     ],
     hotspots: [],
   },
+  spire: {
+    // A city block at night: the sky is the light source, the plaza's sodium
+    // lamps and the block's own lit offices do the rest. Thinner fog than the
+    // yards — the roof fight is forty metres up and has to read from the plaza.
+    fog: 0x070912, density: .0042, exposure: 1.15,
+    hemi: [0x46527a, 0x101218, .85], key: [0xbcd0ff, .9, [-30, 46, 34]], fill: [0xff9a4a, .3],
+    particles: { kind: 'ash', count: 1100, color: 0xc6ccd8, size: 3, height: 44, speed: .3 },
+    haze: { color: 0x1c2130, layers: [[.3, .16], [.9, .1], [1.8, .06]] },
+    lights: [
+      { p: [0, 42.4, 0], c: 0x22d3ee, i: 220, d: 46 },                                                        // the core, on the roof
+      { p: [-34, 2.2, 0], c: 0xff2e4a, i: 120, d: 26 }, { p: [-34, 2.2, 16], c: 0xff2e4a, i: 120, d: 26 },    // both spawn portals
+      { p: [-26, 3.0, 10], c: 0xf0c83a, i: 60, d: 14 },                                                       // armory kiosk
+      { p: [-21.4, 7.6, 0], c: 0xff4f7a, i: 90, d: 18 }, { p: [-21.4, 7.6, 16], c: 0xff4f7a, i: 70, d: 16 },  // neon over both doors
+      { p: [-21.6, 5.2, 0], c: 0xffe2b0, i: 50, d: 12 }, { p: [-21.6, 5.2, 16], c: 0xffe2b0, i: 40, d: 11 },  // canopy downlights
+      { p: [-13, 11.4, -6], c: 0xffe2b0, i: 26, d: 12 }, { p: [13, 11.4, 6], c: 0xffe2b0, i: 26, d: 12 },     // floor troughs, f1
+      { p: [-13, 21.4, 8], c: 0xffe2b0, i: 26, d: 12 }, { p: [13, 21.4, -8], c: 0xffe2b0, i: 26, d: 12 },     // f2
+      { p: [-13, 31.4, -2], c: 0xffe2b0, i: 26, d: 12 }, { p: [13, 31.4, 12], c: 0xffe2b0, i: 26, d: 12 },    // f3
+      { p: [21, 10.6, 10], c: 0xffb35c, i: 30, d: 10 }, { p: [21, 20.6, 2], c: 0xffb35c, i: 30, d: 10 },      // fire-escape landings
+      { p: [-16, 51.5, -16], c: 0xff2e4a, i: 40, d: 18 },                                                     // antenna beacon
+      { p: [-20, 41.3, 0], c: 0xff2e4a, i: 8, d: 5 }, { p: [20, 41.3, 0], c: 0xff2e4a, i: 8, d: 5 },          // parapet warning lamps
+      { p: [-44, 5.9, -22], c: 0xff9a2e, i: 40, d: 16 }, { p: [42, 5.9, 24], c: 0xff9a2e, i: 40, d: 16 }, { p: [-12, 5.9, 30], c: 0xff9a2e, i: 40, d: 16 }, { p: [30, 5.9, -12], c: 0xff9a2e, i: 40, d: 16 }, // plaza street lamps
+    ],
+    floods: [ // plaza uplights washing the west face, and one on the roof walkway
+      { p: [-26, .4, -8], yaw: Math.PI, c: 0xbcd0ff, i: 50, d: 26 }, { p: [-26, .4, 8], yaw: Math.PI, c: 0xbcd0ff, i: 50, d: 26 },
+      { p: [8, 40.4, -10], yaw: 0, down: true, c: 0xdce8ff, i: 60, d: 20 },
+    ],
+    hotspots: [{ p: [0, 41.6, 0], r: 2.2, c: 0x22d3ee }], // core glow on the roof
+  },
+  /* The Toaster. The only map in the set lit by DAYLIGHT — an overcast late
+     autumn afternoon — and the only one that is 320 m across, which changes
+     both numbers that matter. Fog density has to be a third of a yard's or
+     the far treeline disappears and the map reads as 80 m of grass in a grey
+     box; and with no emissive industry anywhere, the sky is very nearly the
+     whole light budget, so the hemisphere carries it and the point lights are
+     down to the four things that actually glow. */
+  toaster: {
+    fog: 0xa9a89c, density: .0022, exposure: 1.05,
+    hemi: [0xb9bfc4, 0x6a6450, 1.15], key: [0xffd9a8, 1.35, [-120, 54, -100]], fill: [0x8fa0b4, .45],
+    // Leaf fall rather than ash, and slow: the same particle system, but a
+    // hundred and eighty of them over six times the area is a hint of
+    // movement, and fourteen hundred would be a blizzard.
+    particles: { kind: 'ash', count: 180, color: 0xc08a44, size: 7, height: 16, speed: .22 },
+    haze: { color: 0xb2b0a2, layers: [[.4, .10], [1.4, .06]] },
+    lights: [
+      { p: [-57, 2.2, -10], c: 0x22d3ee, i: 160, d: 30 },                                                     // the core
+      { p: [72, 2.2, 24], c: 0xff2e4a, i: 120, d: 26 },                                                       // the spawn gate
+      { p: [-66, 3.0, -22], c: 0xf0c83a, i: 60, d: 14 },                                                      // armory kiosk
+      { p: [72, 2.4, -40], c: 0xff2e4a, i: 70, d: 16 }, { p: [-137, 2.4, 11], c: 0xff2e4a, i: 70, d: 16 },    // warp gates, south ⇒ west
+      { p: [-44, 2.4, 60], c: 0xff2e4a, i: 70, d: 16 }, { p: [52, 2.4, 29], c: 0xff2e4a, i: 70, d: 16 },      // warp gates, north ⇒ house
+      { p: [-134, 1.6, -12], c: 0x7ad6d0, i: 40, d: 10 }, { p: [23, 1.6, 31], c: 0x7ad6d0, i: 40, d: 10 },    // player pads
+      { p: [86, 1.6, -48], c: 0x7ad6d0, i: 40, d: 10 }, { p: [-52, 1.6, -14], c: 0x7ad6d0, i: 40, d: 10 },
+    ],
+    floods: [],
+    hotspots: [{ p: [-57, 2.4, -10], r: 2.2, c: 0x22d3ee }],
+  },
 };
 
 let saved = null, loopers = [];

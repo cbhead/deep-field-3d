@@ -29,7 +29,12 @@
 /* The same export as docs/design/"Deep Field 3D - Asset Export.html" — the page Claude Design ships — with two
    changes: every file is PUT to tools/design-export/server.mjs at /out/<repo path> instead of being zipped for
    download, and the run starts on load. The build / prune / bake logic is verbatim; when design's page changes,
-   port the change here. Served at http://127.0.0.1:8765/export.html by tools/design-export.sh. */
+   port the change here. Served at http://127.0.0.1:8765/export.html by tools/design-export.sh.
+
+   Ported 2026-09-12 from the drop of the same day: per-item manifest fields (run/repeat/width, arcDeg/radius,
+   budgetTris/budgetParts, instanced, lod1/lodSwitch, the vehicle block), all four variants of a tile that has
+   them, one file per hand pose from the item's own `poses` list, and the five reload props lifted out of the
+   weapon viewmodels. */
 const post = (s) => fetch('/log', { method: 'POST', body: s }).catch(() => {});
 const status = document.getElementById('status');
 const say = (s) => { status.textContent = s; post(s); };
@@ -49,35 +54,9 @@ import { SWITCHYARD, makeSwitchyardMats } from './models/switchyard.js';
 // imported three map modules and stopped, so every spire_ name in the game
 // resolves to nothing and that map is forty metres of untinted boxes.
 import { SPIRE, makeSpireMats } from './models/spire.js';
+import { TOASTER, makeToasterMats } from './models/toaster.js';
+import { VEHICLES, makeVehicleMats } from './models/vehicles.js';
 import { VFX, makeVfxMats } from './models/vfx.js';
-
-// Kits arrive with design's drops, and a drop can be vendored before every kit
-// named on this page ships with it. A *static* import of a file design has not
-// delivered throws at module resolution — before a single line of the export
-// runs — so one absent kit produced zero assets for every other kit here. That
-// is how `toaster.js` and `vehicles.js` came to block the Spire, whose own kit
-// has been written since M3 and is imported on the line above this comment.
-//
-// So the newest kits load tolerantly: a missing one is named and skipped, the
-// rest of the pack still exports, and it starts exporting the day it lands with
-// no change here. Foundry, Switchyard, Shared and the Spire stay static on
-// purpose — those are delivered, and a break in one of them is a real failure
-// that should stop the run rather than quietly export a smaller pack.
-const MISSING_KITS = [];
-async function optionalKit(name, itemsKey, matsKey) {
-  try {
-    const mod = await import(`./models/${name}.js`);
-    return { items: mod[itemsKey] ?? [], mats: mod[matsKey] ?? (() => {}) };
-  } catch (err) {
-    // Reported verbatim rather than as "missing": this also catches a syntax
-    // error inside a kit that *is* delivered, and silently treating that as an
-    // absent file is how a broken kit ships as an empty one.
-    MISSING_KITS.push(`${name}.js — ${err.message}`);
-    return { items: [], mats: () => {} };
-  }
-}
-const { items: TOASTER, mats: makeToasterMats } = await optionalKit('toaster', 'TOASTER', 'makeToasterMats');
-const { items: VEHICLES, mats: makeVehicleMats } = await optionalKit('vehicles', 'VEHICLES', 'makeVehicleMats');
 const MODS = ['lance', 'nova', 'singularity', 'skywatch', 'arc', 'barricade', 'filament', 'detector', 'overclock'];
 const ICONS = [
   'icon_tower_lance', 'icon_tower_nova', 'icon_tower_arc', 'icon_tower_singularity', 'icon_tower_skywatch', 'icon_tower_barricade', 'icon_tower_detector', 'icon_tower_filament', 'icon_tower_overclock',
@@ -92,9 +71,25 @@ const ICONS = [
   'icon_path_damage', 'icon_path_range', 'icon_path_rate'];
 const EXTRA = [
   { dir: 'enemies/', items: ENEMIES, kind: 'enemy' }, { dir: 'traps/', items: TRAPS, kind: 'trap' }, { dir: 'towers/', items: PROJECTILES, kind: 'projectile' },
-  { dir: 'weapons/', items: WEAPONS, kind: 'weapon' }, { dir: 'weapons/', items: WEAPONS.filter((w) => w.worldFile).map((w) => ({ ...w, file: w.worldFile, id: w.id + '_world' })), kind: 'weapon_world' },
+  { dir: 'weapons/', items: WEAPONS, kind: 'weapon' }, { dir: 'weapons/', items: WEAPONS.filter((w) => w.worldFile).map((w) => ({ ...w, file: w.worldFile, id: w.id + '_world', baseId: w.id })), kind: 'weapon_world' },
   { dir: 'heroes/', items: HEROES, kind: 'hero' }, { dir: 'maps/foundry/', items: FOUNDRY, kind: 'map_foundry' }, { dir: 'maps/switchyard/', items: SWITCHYARD, kind: 'map_switchyard' }, { dir: 'maps/spire/', items: SPIRE, kind: 'map_spire' }, { dir: 'maps/toaster/', items: TOASTER, kind: 'map_toaster' }, { dir: 'vehicles/', items: VEHICLES, kind: 'vehicle' }, { dir: 'shared/', items: SHARED, kind: 'shared' }, { dir: 'vfx/', items: VFX, kind: 'vfx' }, { dir: 'economy/', items: PICKUPS, kind: 'pickup' }, { dir: 'weapons/', items: ATTACHMENTS, kind: 'attachment' }, { dir: 'weapons/', items: AMMO, kind: 'ammo' }, { dir: 'weapons/', items: TRACERS, kind: 'tracer' }];
-const EXTRA_COUNT = EXTRA.reduce((a, c) => a + c.items.length, 0);
+/* Reload props (FORWARD-MANIFEST-reload Ask A). Not new geometry: the feed part
+   already in each viewmodel, lifted out and exported on its own so a reload can
+   put one in the air as the spent mag and another in the off-hand as the fresh
+   one. Lifting it out is only correct because the part's pivot now sits on the
+   seated face (Ask C) — dropping it is a translation and a tip, not a swing
+   about the weapon origin.
+
+   The Scattergun is tube-fed, so its reload is shells through the loading port
+   and its prop is a LOADED hull, not a magazine. It ships under both the
+   requested name and the honest one; `_shell` is the one to keep. */
+const RELOAD_PROPS = [
+  ['sidearm', 'sidearm_magazine', 'weapon_sidearm_magazine.glb', 'Detachable box magazine exported on its own — the same node as `sidearm_magazine` in the viewmodel, origin on the seated top face, +Y up. Dropping it is a translate down plus a tip about X; `userData.drop` on the source group carries both axes.'],
+  ['rifle', 'rifle_magazine', 'weapon_rifle_magazine.glb', 'STANAG magazine on its own, origin on the magwell mouth plane (1.9 mm forward of the well centre, where the 25 mm curve crosses it). Feed lips and top round included — they are visible for the half second it is in the air.'],
+  ['emberpistol', 'emberpistol_magazine', 'weapon_emberpistol_magazine.glb', 'Fuel canister, not a magazine — the vessel is what this gun reloads, so it now carries the armoury’s `_magazine` name and exports under it. Origin on the forward dome, the face that meets the regulator; it pulls off rearward, so `userData.drop` is +Z rather than −Y.'],
+  ['scattergun', 'scattergun_shell', 'weapon_scattergun_magazine.glb', 'A loaded 12-gauge hull under the requested filename so nothing falls back to a placeholder. This gun has no detachable magazine; see `weapon_scattergun_shell.glb`, which is the same file under the name that tells the truth.'],
+  ['scattergun', 'scattergun_shell', 'weapon_scattergun_shell.glb', 'Loaded 12-gauge hull: brass head with rim and extractor groove, full-length body, folded six-point crimp cut into the dome as ridges. Origin at the rim face so a reload pushes it in along +Z at `scattergun_mount_loadport`. Distinct from `scattergun_case`, which is fired — open mouth, no crimp.'],
+];
 const ROUTES = [['enemy_', 'enemies'], ['boss_', 'enemies'], ['tower_', 'structures'], ['trap_', 'structures'], ['socket_', 'structures'], ['weapon_', 'weapons'], ['attach_', 'weapons'], ['ammo_', 'weapons'], ['hands_', 'weapons'], ['hero_', 'heroes'], ['proj_', 'vfx'], ['vfx_', 'vfx'], ['pickup_', 'economy'], ['foundry_', 'maps'], ['switchyard_', 'maps'], ['spire_', 'maps'], ['toaster_', 'maps'], ['vehicle_', 'vehicles'], ['shared_', 'maps'], ['prop_', 'maps'], ['ui_', 'ui']];
 const routeFor = (file) => 'game/assets/' + (ROUTES.find(([p]) => file.startsWith(p))?.[1] || 'misc') + '/' + file;
 const TOWERS = (await Promise.all(MODS.map((m) => import(`./models/${m}.js`)))).map((m) => m.TOWER);
@@ -121,7 +116,13 @@ function visBox(root) {
   return b;
 }
 function pruneToPath(model, id, path) {
-  const re = new RegExp(`^${id}_up_${path}_l\\d+$`);
+  // The `$` used to close this pattern, which dropped every increment a tower
+  // names per part rather than as one group: the Singularity mirrors its
+  // per-arm copies onto <id>_up_<path>_l<N>_arm<i> (singularity.js cue()), so
+  // six of its twenty range/rate stages exported identical to the stage below
+  // them — an upgrade you bought and could not see. Match the level, then a
+  // boundary: a suffixed child belongs to the same increment.
+  const re = new RegExp(`^${id}_up_${path}_l\\d+(?:_|$)`);
   const keep = (o, under) => {
     if (!o.visible && o !== model) return false;
     const u = under || re.test(o.name);
@@ -140,16 +141,11 @@ function chassis(t, variant) {
   m.rotation.y = Math.PI;
   return m;
 }
-function fileList() {
-  const out = [];
-  for (const t of TOWERS) {
-    if (t.id === 'barricade') { out.push('tower_barricade.glb', 'tower_barricade_damaged.glb', 'tower_barricade_broken.glb'); continue; }
-    out.push(`tower_${t.id}_chassis.glb`);
-    for (const p of t.paths) for (let s = 1; s <= 10; s++) out.push(`tower_${t.id}_${p.id}_s${s}.glb`);
-  }
-  return out;
-}
-const FILES = fileList();
+/** What each contributes to the progress total: a tower is a chassis plus ten
+ *  stages per path (the barricade is three states); an item is its build, plus
+ *  three more if it has variants, plus one per extra pose. */
+const towerFileCount = (t) => (t.id === 'barricade' ? 3 : 1 + t.paths.length * 10);
+const itemFileCount = (it) => (it.buildVariant ? 4 : 1) + (it.poses ? it.poses.length - 1 : 0);
 stage.setObject(chassis(TOWERS[0]));
 
 const glb = async (obj) => new Uint8Array(await exporter.parseAsync(obj, { binary: true, trs: true, onlyVisible: true }));
@@ -186,20 +182,49 @@ async function bakeSkies(obj) {
 const tick = () => new Promise((r) => setTimeout(r, 0));
 const bounds = (o) => { const b = visBox(o); return b.isEmpty() ? null : { min: b.min.toArray().map((v) => +v.toFixed(3)), max: b.max.toArray().map((v) => +v.toFixed(3)) }; };
 const text = async (p) => { const r = await fetch(p); if (!r.ok) throw new Error(`fetch ${p}: ${r.status}`); return new Uint8Array(await r.arrayBuffer()); };
+const readJson = async (p) => { const r = await fetch(p); return r.ok ? r.json() : null; };
 const put = async (name, data) => {
   const r = await fetch('/out/' + name, { method: 'PUT', body: data });
   if (!r.ok) throw new Error(`PUT ${name}: ${r.status}`);
 };
 
-/* Hands come in three poses in the source (weapon.handsPose: rifle / pistol / tool) and the base export ships
-   only the default. The game holds pistols and the wrench too, so the other two are exported as
-   hands_<id>_pistol / hands_<id>_tool beside the rifle-posed hands_<id>. `?only=hands` exports just these. */
-const HAND_POSES = ['pistol', 'tool'];
-const HAND_ITEMS = [...WEAPONS.filter((w) => w.id === 'hands'), ...HEROES.filter((h) => h.id.startsWith('hands_'))];
-const ONLY = new URLSearchParams(location.search).get('only');
-const TOTAL = ONLY === 'hands' ? HAND_ITEMS.length * HAND_POSES.length : FILES.length + EXTRA_COUNT + HAND_ITEMS.length * HAND_POSES.length;
-if (MISSING_KITS.length) say(`SKIPPED KITS — ${MISSING_KITS.join(' · ')}`);
-say(`Ready — ${TOTAL} GLB files; starting${MISSING_KITS.length ? ` (${MISSING_KITS.length} kit(s) skipped)` : ''}`);
+/* The delivery note is design's to rewrite, but the repo appends its own "Integration record"
+   section — what actually landed on the code side — and a full run used to overwrite the file and
+   delete it. It already ate the 2026-09-07 record once. Carry every record across onto the fresh
+   note instead. (A zip drop unpacked by hand still clobbers it; only this path can protect it.) */
+const putDeliveryNote = async (srcPath, destPath) => {
+  const fresh = new TextDecoder().decode(await text(srcPath)).replace(/\s*$/, '');
+  const res = await fetch('/out/' + destPath);
+  const prev = res.ok ? await res.text() : '';
+  const at = prev.search(/^## Integration record/m);
+  const keep = at < 0 || /^## Integration record/m.test(fresh) ? '' : prev.slice(at).replace(/\s*$/, '');
+  const out = keep ? `${fresh}\n\n---\n\n${keep}\n` : `${fresh}\n`;
+  await put(destPath, new TextEncoder().encode(out));
+};
+
+/* `?only=<sel>[,<sel>…]` rebuilds part of the drop instead of all of it, so a tweak to one model
+   costs one export rather than five hundred. A selector is a tower id (`lance` — its chassis and
+   thirty stage modules), a category (`vfx`, `enemy`, `map_toaster`, `vehicle` — everything one
+   source module builds), or an item id or file stem (`drifter`, `enemy_drifter`, `rifle` for the
+   viewmodel and the world gun alike, `hands` for a hand set and every pose it ships).
+   A selector matching nothing is an error: a silent empty run looks just like a successful one. */
+const ONLY = (new URLSearchParams(location.search).get('only') || '').split(',').map((s) => s.trim()).filter(Boolean);
+const PARTIAL = ONLY.length > 0;
+const stemOf = (file) => file.split('/').pop().replace(/\.glb$/, '');
+const matchedSel = new Set();
+const wanted = (...keys) => {
+  if (!PARTIAL) return true;
+  let hit = false;
+  for (const s of ONLY) if (keys.includes(s)) { matchedSel.add(s); hit = true; }
+  return hit;
+};
+const TOWERS_SEL = TOWERS.filter((t) => wanted(t.id, `tower_${t.id}`));
+const EXTRA_SEL = EXTRA.map((c) => ({ ...c, items: c.items.filter((it) => wanted(c.kind, it.id, it.baseId, stemOf(it.file))) })).filter((c) => c.items.length);
+const RELOAD_SEL = RELOAD_PROPS.filter(([wid, , file]) => wanted('weapon_reload', wid, stemOf(file)));
+const TOTAL = TOWERS_SEL.reduce((a, t) => a + towerFileCount(t), 0)
+  + EXTRA_SEL.reduce((a, c) => a + c.items.reduce((n, it) => n + itemFileCount(it), 0), 0)
+  + RELOAD_SEL.length;
+say(`Ready — ${TOTAL} GLB file${TOTAL === 1 ? '' : 's'}${PARTIAL ? ` (only: ${ONLY.join(', ')})` : ''}; starting`);
 const manifest = { version: '1.0', generated: new Date().toISOString(), units: 'metres', up: '+Y', forward: '-Z', files: [] };
 let done = 0;
 const add = async (name, obj, meta) => {
@@ -212,16 +237,10 @@ const add = async (name, obj, meta) => {
   say(`${done} / ${TOTAL} · ${name} · ${data.length} bytes`);
   await tick();
 };
-async function exportHandPoses() {
-  for (const pose of HAND_POSES) for (const it of HAND_ITEMS) {
-    kit.__handsPose = pose;
-    const m = it.build(kit);
-    await add(it.file.replace(/\.glb$/, `_${pose}.glb`), m, { kind: 'hands', id: `${it.id}_${pose}`, pose, note: it.note });
-  }
-  delete kit.__handsPose;
-}
 try {
-  for (const t of ONLY === 'hands' ? [] : TOWERS) {
+  const unmatched = ONLY.filter((s) => !matchedSel.has(s));
+  if (unmatched.length) throw new Error(`--only matched nothing: ${unmatched.join(', ')}`);
+  for (const t of TOWERS_SEL) {
     const rigMeta = t.rig ? { rig: { yaw: t.id + '_yaw', pitch: t.id + '_pitch', muzzle: t.id + '_muzzle', yawLimits: t.rig.yaw, pitchLimits: t.rig.pitch, traverseDegPerSec: t.rig.traverse, elevateDegPerSec: t.rig.elevate, pitchSign: -1 } } : { spin: t.id + '_spin' };
     if (t.id === 'barricade') {
       for (const [file, v] of [['tower_barricade.glb', null], ['tower_barricade_damaged.glb', 'damaged'], ['tower_barricade_broken.glb', 'broken']])
@@ -238,27 +257,84 @@ try {
       await add(`tower_${t.id}_${p.id}_s${s}.glb`, staged, { tower: t.id, kind: 'module', path: p.id, stage: s, breakpoint: [4, 7, 10].includes(s), adds: p.steps[s] || null, increments: Array.from({ length: s - 1 }, (_, i) => `${t.id}_up_${p.id}_l${i + 2}`) });
     }
   }
-  for (const c of ONLY === 'hands' ? [] : EXTRA) for (const it of c.items) {
+  for (const c of EXTRA_SEL) for (const it of c.items) {
     const m = it.build(kit);
-    await add(it.file, m, { kind: c.kind, id: it.id, note: it.note });
+    /* Linear modules carry their run axis, repeat length and width
+       (FORWARD-MANIFEST-switchyard, "Conventions we need stated on
+       delivery"). Neither `run` nor `repeat` is recoverable from the mesh,
+       and a cut channel placed with a +Z helper when it runs +X cost a
+       whole review pass — perfectly plausible art, placed perfectly wrongly. */
+    const lin = it.run ? { run: it.run, repeat: it.repeat, width: it.width } : null;
+    /* An arc is a linear module whose axis is a radius: `arcDeg`, `radius`
+       and `width`, with the origin at the CENTRE OF CURVATURE. Budgets ship
+       beside the measured counts so `make assets` can fail on a file that is
+       over, instead of the cost turning up as a frame rate three weeks later;
+       `instanced` marks the files meant for the multimesh path; `lod1` /
+       `lodSwitch` tie a tree to its billboard (FORWARD-MANIFEST-toaster,
+       "Conventions we need stated on delivery", items 1–4). */
+    const arc = it.arcDeg ? { arcDeg: it.arcDeg, radius: it.radius, width: it.width } : null;
+    const budget = it.budgetTris ? { budgetTris: it.budgetTris, budgetParts: it.budgetParts } : null;
+    const inst = it.instanced ? { instanced: true } : null;
+    const lod = it.lod1 ? { lod1: it.lod1, lodSwitch: it.lodSwitch } : null;
+    const veh = m.userData && m.userData.vehicle ? { vehicle: m.userData.vehicle } : null;
+    await add(it.file, m, { kind: c.kind, id: it.id, note: it.note, ...lin, ...arc, ...budget, ...inst, ...lod, ...veh });
+    // A tile with variants ships all four. The exporter called build() only,
+    // so v0 was the sole GLB and one tile laid twenty-four times put the same
+    // puddle on a lattice — and the switch stand in v1 was never delivered at
+    // all (design-system README, “ships one variant of four”).
+    if (it.buildVariant) for (let v = 1; v <= 3; v++)
+      await add(it.file.replace(/\.glb$/, `_v${v}.glb`), it.buildVariant(kit, v), { kind: c.kind, id: `${it.id}_v${v}`, variant: v, note: it.note, ...lin, ...arc, ...budget, ...inst });
+    /* Hand sets ship one file per pose. poses[0] is the base build above; the
+       rest are the pistol and tool grips the viewmodel picks by platform, and
+       the three reload poses, which carry the OFF-HAND ALONE — the firing hand
+       never leaves the grip during a reload, so one set of three serves every
+       platform instead of one set per platform. */
+    if (it.poses) for (const p of it.poses.slice(1)) {
+      kit.__handsPose = p;
+      const pm = it.build(kit);
+      kit.__handsPose = null;
+      await add(it.file.replace(/\.glb$/, `_${p}.glb`), pm, { kind: c.kind, id: `${it.id}_${p}`, pose: p, offhandOnly: ['magout', 'magin', 'charge'].includes(p) || undefined, note: it.note });
+    }
   }
-  await exportHandPoses();
-  if (ONLY !== 'hands') {
-  say('Bundling palette, icons, manifest, design system…');
+  for (const [wid, node, file, note] of RELOAD_SEL) {
+    const src = WEAPONS.find((x) => x.id === wid).build(kit);
+    const n = src.getObjectByName(node);
+    if (!n) { say(`WARN reload prop node missing: ${node}`); continue; }
+    n.parent.remove(n);
+    n.position.set(0, 0, 0); n.rotation.set(0, 0, 0);
+    n.traverse((o) => { o.visible = true; });
+    await add(file, n, { kind: 'weapon_reload', id: file.replace(/\.glb$/, ''), weapon: wid, source: node, note });
+  }
+  /* A filtered run rewrites only the rows it rebuilt, in place. Replacing the file outright would
+     strip every row for a model this run did not build — including the rig limits and slew rates
+     TowerRig reads back for each chassis, which would quietly reset every tower to its defaults.
+     Existing order is kept so the diff shows what changed rather than the whole file. */
+  if (PARTIAL) {
+    const prev = await readJson('/out/game/assets/structures/manifest.json');
+    if (prev?.files?.length) {
+      const mine = new Map(manifest.files.map((f) => [f.file, f]));
+      const had = new Set(prev.files.map((f) => f.file));
+      manifest.files = [...prev.files.map((f) => mine.get(f.file) ?? f), ...manifest.files.filter((f) => !had.has(f.file))];
+    }
+  }
+  say('Writing manifest…');
   await put('game/assets/structures/manifest.json', new TextEncoder().encode(JSON.stringify(manifest, null, 2)));
+
+  if (!PARTIAL) {
+  say('Bundling palette, icons, design system…');
   await put('docs/forward-manifest.json', await text('game/assets/forward-manifest.json'));
   await put('game/assets/brand/README.md', await text('game/assets/brand/README.md'));
   for (const n of ['logo_mark.svg', 'logo_mark_mono.svg', 'logo_horizontal.svg', 'logo_horizontal_onbrass.svg', 'logo_stacked.svg']) await put('game/assets/brand/' + n, await text('game/assets/brand/' + n));
   for (const s of [16, 32, 48, 64, 128, 256, 512, 1024]) await put(`game/assets/brand/appicon_${s}.png`, await text(`game/assets/brand/appicon_${s}.png`));
   for (const [p, n] of [['game/assets/palette.json', 'docs/palette.json'], ['game/assets/palette.md', 'docs/PALETTE.md'], ['game/assets/towers/README.md', 'game/assets/structures/README-towers.md'], ['docs/ASSET-DELIVERY.md', 'docs/ASSET-DELIVERY.md']])
-    await put(n, await text(p));
+    await (n === 'docs/ASSET-DELIVERY.md' ? putDeliveryNote(p, n) : put(n, await text(p)));
   for (const i of ICONS) await put(`game/assets/ui/${i}.svg`, await text(`game/assets/ui/${i}.svg`));
   for (const t of ['base', 'colors', 'effects', 'fonts', 'spacing', 'typography']) await put(`docs/design-system/${t}.css`, await text(`ds/tokens/${t}.css`));
-  for (const f of ['ui-kit.css', 'ui-screens.js', 'ui-branding.js', 'ui-weapon-view.js']) await put('docs/design-system/' + f, await text(f));
+  // ui-screens.html imports ui-screens-v2.js since the 2026-09-12 drop; a viewer copied without it is a blank page.
+  for (const f of ['ui-kit.css', 'ui-screens.js', 'ui-screens-v2.js', 'ui-branding.js', 'ui-weapon-view.js']) await put('docs/design-system/' + f, await text(f));
   await put('docs/design-system/ui-screens.html', new TextEncoder().encode((await (await fetch('Deep Field 3D - UI Screens.html')).text()).replaceAll('ds/tokens/', '')));
   }
-  say(`DONE — ${done} GLB files exported`
-    + (MISSING_KITS.length ? `\nWARNING — ${MISSING_KITS.length} kit(s) not exported: ${MISSING_KITS.join(' · ')}` : ''));
+  say(`DONE — ${done} GLB files exported`);
 } catch (err) {
   say('ERROR export failed: ' + (err.stack || err.message));
 }

@@ -34,6 +34,8 @@ jobs:
         run: dotnet test sim/Sim.Core.Tests --configuration Release
       - name: Harness gates
         run: dotnet run --project sim/Sim.Harness --configuration Release
+      - name: Model validation (the delivery contract, docs/ART-INTEGRATION.md)
+        run: ./tools/model-validate.py
       - name: Balance baseline (numbers, for the cross-architecture compare)
         run: dotnet run --project sim/Sim.Harness --configuration Release -- --baseline
       # The standing form of "the neutral configuration reproduces the
@@ -114,6 +116,37 @@ jobs:
           grep -q '"app":"deepfield-3d"' info.json
           grep -q "\[client\] joined seat" client.log
 
+      # The info port is TCP while the game itself is ENet/UDP, so losing that
+      # one bind costs a server nothing it can feel: it hosts and plays
+      # perfectly while answering nothing, and the runbook's curl gets answered
+      # by whatever won the port instead — on a dev box, most likely one of the
+      # 2D checkouts confidently describing itself. It was silent for exactly
+      # that reason, so hold the TCP port with the UDP one left free and require
+      # a refusal rather than a blind server.
+      - name: A held info port refuses rather than serving blind
+        run: |
+          cat > /tmp/hold.py <<'PY'
+          import socket, time
+          s = socket.socket(socket.AF_INET6)
+          s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+          s.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)   # hold both families
+          s.bind(('::', 8792))
+          s.listen(1)
+          time.sleep(120)
+          PY
+          python3 /tmp/hold.py &
+          HOLD=$!
+          sleep 2
+          # --quit-after bounds the regression case: if this error is ever
+          # swallowed again, the server would otherwise sit here until the job
+          # timed out, which is the same "looks fine, does nothing" failure.
+          godot --headless --path game --quit-after 1800 -- --server --port 8792 \
+            > blind.log 2>&1 && rc=0 || rc=$?
+          kill $HOLD || true
+          cat blind.log
+          test "$rc" -ne 0
+          grep -q "cannot open the info port" blind.log
+
       # Builds one view of every enemy, tower, trap, upgrade stage, projectile
       # and hero, then checks that every asset name the code asks for is a name
       # the design brief actually gives design. Silent drift here means art
@@ -182,20 +215,21 @@ jobs:
       # plane before taking the angle — so a barrel aimed level at a Skiff
       # fifteen metres up scores a perfect zero.
       #
-      # A ratchet, not a gate. Filament's manifest row caps its pitch at 48
-      # degrees and a Skiff passing near-overhead sits at 74, so it currently
-      # points 26 degrees below what it is beaming. That is design's number to
-      # change (docs/FORWARD-MANIFEST-reload.md, "Turret elevation"); until it
-      # does, this holds the line at 26 so nothing gets worse.
+      # A ratchet, not a gate. Filament's manifest row capped its pitch at 48
+      # degrees while a Skiff passing near-overhead sits at 74, so for a whole
+      # milestone it beamed a target it was pointing 26 degrees below. Design
+      # raised the ceiling to 78 in the 2026-09-12 drop (the ask was
+      # docs/FORWARD-MANIFEST-reload.md, "Turret elevation") and the settled
+      # error measured 10.2 the day it landed; this holds the line there.
       - name: Air tracking (turrets elevate onto what they shoot)
         run: |
           godot --headless --path game --quit-after 12000 -- \
             --shot foundry /tmp/aimair.txt aimair > aimair.log 2>&1 || true
           cat /tmp/aimair.txt | tail -4
           WORST=$(grep -o 'worst elevation error once settled: [0-9.]*' /tmp/aimair.txt | grep -o '[0-9.]*$')
-          echo "worst elevation error: ${WORST:-none} (baseline 26)"
+          echo "worst elevation error: ${WORST:-none} (baseline 10.5)"
           test -n "$WORST"
-          awk -v w="$WORST" 'BEGIN { exit (w <= 26.0) ? 0 : 1 }'
+          awk -v w="$WORST" 'BEGIN { exit (w <= 10.5) ? 0 : 1 }'
           grep -q "worst yaw error once settled: 0" /tmp/aimair.txt
 
       # The Spire has shipped teleport pads since M3 that were coloured boxes
@@ -225,6 +259,20 @@ jobs:
             --shot toaster /tmp/veh.txt vehicle > veh.log 2>&1 || true
           cat /tmp/veh.txt
           grep -q "^PASS" /tmp/veh.txt
+
+      # The reload is code moving named nodes that design delivered as static
+      # parts — a magazine with its pivot on the seated face, one posed
+      # off-hand per beat, an action that carries its own travel. A node that
+      # is missing skips its step by design, which is the one failure a
+      # screenshot cannot see: the reload "plays" and nothing on screen moves.
+      # This equips each platform, reloads it at the sim's own duration, and
+      # checks the magazine-in beat and the clean-up.
+      - name: Reload probe (every platform reloads with its own parts)
+        run: |
+          godot --headless --path game --quit-after 9000 -- \
+            --shot foundry /tmp/reload.txt reload > reload.log 2>&1 || true
+          cat /tmp/reload.txt
+          grep -q "^PASS" /tmp/reload.txt
 
       # The rules in docs/MAP-AUTHORING.md §4, measured on the assembled map.
       # A ratchet rather than a gate: all three maps fail the rules today, each
