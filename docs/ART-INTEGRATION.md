@@ -85,7 +85,16 @@ make design-export      # rebuild game/assets + docs from docs/design/
 
 That opens the export page in your browser — it has to be a browser, because
 the skyboxes are shaders baked to a texture on the way out — writes each file
-straight into the repo, prepares the icons and re-imports for Godot. The host
+straight into the repo, prepares the icons and re-imports for Godot.
+
+The page lists every file as it writes it, beside the viewer: folder, triangle
+count, and whether it is one of the deliberately empty `_s1` modules. The model
+on the stage is the one currently being written, and clicking any row afterwards
+loads that `.glb` back **off disk** through the host, so the index doubles as
+proof the file is really there and really parses. Filter by name, or collapse the
+panel with the button top-right. Before this the stage showed one frozen tower
+for the whole run and a drop of five hundred models looked exactly like a drop of
+none. The host
 is `tools/design-export/` (pinned three.js, a page that uploads instead of
 zipping). When design sends a new project export, unpack it over `docs/design/`
 and run the same command; `docs/ASSET-DELIVERY.md` is design's note on what

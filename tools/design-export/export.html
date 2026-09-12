@@ -9,20 +9,48 @@
     "three": "/vendor/three/build/three.module.js",
     "three/addons/controls/OrbitControls.js": "/vendor/three/examples/jsm/controls/OrbitControls.js",
     "three/addons/exporters/OBJExporter.js": "/vendor/three/examples/jsm/exporters/OBJExporter.js",
-    "three/addons/exporters/GLTFExporter.js": "/vendor/three/examples/jsm/exporters/GLTFExporter.js"
+    "three/addons/exporters/GLTFExporter.js": "/vendor/three/examples/jsm/exporters/GLTFExporter.js",
+    "three/addons/loaders/GLTFLoader.js": "/vendor/three/examples/jsm/loaders/GLTFLoader.js"
   }
 }
 </script>
 <style>
   html,body{margin:0;height:100%;background:#0D1119;color:#c3ccd8;font:13px/1.5 monospace}
-  body{display:grid;grid-template-rows:1fr auto;height:100%}
-  three-d-stage{width:100%;height:100%;display:block;min-height:320px}
+  body{display:grid;grid-template-columns:1fr var(--aside,320px);grid-template-rows:1fr auto;height:100%}
+  body.wide{--aside:0px}
+  three-d-stage{width:100%;height:100%;display:block;min-height:320px;grid-column:1;grid-row:1}
   three-d-stage:not(:defined){visibility:hidden}
-  #status{padding:8px 12px;border-top:1px solid #333;white-space:pre-wrap;max-height:40vh;overflow:auto}
+  #files{grid-column:2;grid-row:1;border-left:1px solid #333;display:flex;flex-direction:column;overflow:hidden}
+  body.wide #files{display:none}
+  #files header{padding:6px 34px 6px 8px;border-bottom:1px solid #333;display:flex;gap:6px;align-items:center}
+  #files header b{font-weight:600;color:#e6edf5}
+  #filter{flex:1;min-width:0;background:#161b26;border:1px solid #333;color:inherit;font:inherit;padding:3px 6px;border-radius:3px}
+  #filter:focus{outline:1px solid #4a6a9a}
+  #toggle{position:fixed;top:6px;right:8px;z-index:5;background:#161b26;border:1px solid #333;color:inherit;font:inherit;cursor:pointer;padding:3px 7px;border-radius:3px;opacity:.85}
+  #toggle:hover{opacity:1}
+  #list{overflow:auto;flex:1;padding-bottom:12px}
+  #list .grp{position:sticky;top:0;background:#0D1119;color:#7e8b9e;padding:5px 8px 2px;border-bottom:1px solid #222}
+  #list a{display:flex;gap:8px;padding:2px 8px;color:inherit;text-decoration:none;cursor:pointer;white-space:nowrap}
+  /* an explicit display beats the UA's [hidden] rule, so the filter needs this */
+  #list a[hidden],#list .grp[hidden]{display:none}
+  #list a:hover{background:#182030}
+  #list a.on{background:#23324a;color:#fff}
+  #list a.empty span.n{color:#6b7686}
+  #list a span.n{flex:1;overflow:hidden;text-overflow:ellipsis}
+  #list a span.t{color:#7e8b9e;font-size:11px}
+  #status{grid-column:1/-1;grid-row:2;padding:8px 12px;border-top:1px solid #333;white-space:pre-wrap;max-height:30vh;overflow:auto}
 </style>
 </head>
 <body>
 <three-d-stage name="deepfield_tower_pack" background="#0D1119"></three-d-stage>
+<button id="toggle" title="hide the index">›</button>
+<aside id="files">
+  <header>
+    <b id="count">0</b>
+    <input id="filter" placeholder="filter…" autocomplete="off" spellcheck="false">
+  </header>
+  <div id="list"></div>
+</aside>
 <pre id="status">Loading models…</pre>
 <script src="./three-d-stage.js"></script>
 <script type="module">
@@ -36,6 +64,56 @@
    them, one file per hand pose from the item's own `poses` list, and the five reload props lifted out of the
    weapon viewmodels. */
 const post = (s) => fetch('/log', { method: 'POST', body: s }).catch(() => {});
+
+/* Every file this run wrote, listed beside the viewer and clickable. The page
+   used to show one frozen Lance — `stage.setObject` was called once, before the
+   loop, and `add()` never touched the stage again — so a run that wrote five
+   hundred models looked identical to one that wrote nothing, and there was no
+   way to see any of them without digging through game/assets/ by hand.
+   Clicking a row loads that .glb back off disk through the host's GET /out/,
+   which also proves the file is really there and really parses. */
+const EXPORTED = [];
+const listEl = document.getElementById('list');
+const countEl = document.getElementById('count');
+const filterEl = document.getElementById('filter');
+let lastGroup = null, currentRow = null;
+
+const addRow = (rec) => {
+  const folder = rec.path.split('/').slice(0, -1).join('/');
+  if (folder !== lastGroup) {
+    lastGroup = folder;
+    const h = document.createElement('div');
+    h.className = 'grp';
+    h.textContent = folder.replace(/^game\/assets\//, '');
+    listEl.append(h);
+  }
+  const a = document.createElement('a');
+  a.className = rec.parts ? '' : 'empty';
+  a.title = `${rec.path} · ${rec.bytes.toLocaleString()} bytes · ${rec.parts} part(s)`;
+  a.innerHTML = '<span class="n"></span><span class="t"></span>';
+  a.querySelector('.n').textContent = rec.name.replace(/\.glb$/, '');
+  a.querySelector('.t').textContent = rec.parts ? `${rec.tris}▲` : 'empty';
+  a.onclick = () => show(rec, a);
+  rec.el = a;
+  listEl.append(a);
+  countEl.textContent = EXPORTED.length;
+};
+
+filterEl.oninput = () => {
+  const q = filterEl.value.trim().toLowerCase();
+  for (const rec of EXPORTED) if (rec.el) rec.el.hidden = q && !rec.name.toLowerCase().includes(q);
+  for (const h of listEl.querySelectorAll('.grp')) {
+    let n = h.nextElementSibling, any = false;
+    while (n && !n.classList.contains('grp')) { if (!n.hidden) any = true; n = n.nextElementSibling; }
+    h.hidden = !any;
+  }
+};
+
+document.getElementById('toggle').onclick = (e) => {
+  const hidden = document.body.classList.toggle('wide');
+  e.target.textContent = hidden ? '‹' : '›';
+  e.target.title = hidden ? 'show the index' : 'hide the index';
+};
 const status = document.getElementById('status');
 const say = (s) => { status.textContent = s; post(s); };
 window.addEventListener('error', (e) => say('ERROR ' + (e.error?.stack || e.message)));
@@ -180,6 +258,34 @@ async function bakeSkies(obj) {
   return obj;
 }
 const tick = () => new Promise((r) => setTimeout(r, 0));
+const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+const loader = new GLTFLoader();
+let lastShown = 0;
+
+/** Put an object on the stage and mark its row, without disturbing the export. */
+function preview(obj, rec) {
+  try { stage.setObject(obj); } catch { return; }
+  if (currentRow) currentRow.classList.remove('on');
+  currentRow = rec?.el || null;
+  if (currentRow) {
+    currentRow.classList.add('on');
+    currentRow.scrollIntoView({ block: 'nearest' });
+  }
+}
+
+/** Load an exported file back off disk and show it. The host serves the repo at
+ *  GET /out/, so this reads the actual bytes that were written. */
+async function show(rec, el) {
+  try {
+    const res = await fetch('/out/' + rec.path);
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    const gltf = await loader.parseAsync(await res.arrayBuffer(), '');
+    preview(gltf.scene, { el });
+    say(`${rec.path} · ${rec.bytes.toLocaleString()} bytes · ${rec.parts} part(s) · ${rec.tris} tris`);
+  } catch (err) {
+    say(`could not open ${rec.path}: ${err.message}`);
+  }
+}
 const bounds = (o) => { const b = visBox(o); return b.isEmpty() ? null : { min: b.min.toArray().map((v) => +v.toFixed(3)), max: b.max.toArray().map((v) => +v.toFixed(3)) }; };
 const text = async (p) => { const r = await fetch(p); if (!r.ok) throw new Error(`fetch ${p}: ${r.status}`); return new Uint8Array(await r.arrayBuffer()); };
 const readJson = async (p) => { const r = await fetch(p); return r.ok ? r.json() : null; };
@@ -231,8 +337,17 @@ const add = async (name, obj, meta) => {
   obj.name = name.split('/').pop().replace(/\.glb$/, '');
   obj = await bakeSkies(obj);
   const data = await glb(obj);
-  await put(routeFor(name), data);
-  manifest.files.push({ file: name, bytes: data.length, tris: triCount(obj), parts: countMeshes(obj), bounds: bounds(obj), ...meta });
+  const route = routeFor(name);
+  await put(route, data);
+  const tris = triCount(obj), parts = countMeshes(obj);
+  manifest.files.push({ file: name, bytes: data.length, tris, parts, bounds: bounds(obj), ...meta });
+  const rec = { name: name.split('/').pop(), path: route, bytes: data.length, tris, parts };
+  EXPORTED.push(rec);
+  addRow(rec);
+  // A frozen preview says nothing about whether the run is working. Showing the
+  // model being written does, and throttling keeps it from thrashing the GPU on
+  // a run that writes a file every forty milliseconds.
+  if (parts && performance.now() - lastShown > 120) { lastShown = performance.now(); preview(obj, rec); }
   done++;
   say(`${done} / ${TOTAL} · ${name} · ${data.length} bytes`);
   await tick();
