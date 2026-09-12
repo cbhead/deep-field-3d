@@ -36,7 +36,7 @@ public sealed class Enemy
     public int EdgeStep;          // how far along that itinerary's edge list
     public int Segment;           // index into the current edge's segments
     public float SegmentProgress; // meters along the current segment
-    public float TotalTraveled;   // meters walked — the "first" targeting metric
+    public float TotalTraveled;   // meters walked; keys the burrow cycle
     public Vec3 Pos;              // spine position + lateral offset applied
     public Vec3 Facing;           // normalized travel direction (Aegis front arc)
     public float LateralOffset;   // scatter across the path width (seeded at spawn)
@@ -59,22 +59,32 @@ public sealed class Enemy
     /// structure is in reach, so it cannot get stuck on.</summary>
     public bool Sieging;
 
-    /// <summary>Put this enemy at a leg of a route, in the coordinates the
-    /// harness fixtures and the unit tests are written in.
+    /// <summary>Metres still to walk before this reaches a core.
     ///
-    /// Sixteen gate fixtures say things like "leg 3 of the ground route, 14 m
-    /// along" and one of them explains that leg 3 runs (0,14) to (0,-8) so 14 m
-    /// puts it four metres from socket g4. That is a good way to write a
-    /// fixture and a bad thing to have to rewrite as an edge and a segment when
-    /// the storage changes underneath it. Route legs map one-to-one onto the
-    /// itinerary's flattened segments, in order, so this is an exact
-    /// translation rather than an approximation.</summary>
-    /// <remarks>Deliberately does not touch <see cref="TotalTraveled"/>. Several
-    /// fixtures set it by hand to a round number and then assert against that
-    /// number — the launcher gate measures a setback from exactly 60 — so
-    /// computing a "truer" value here would quietly move what those gates
-    /// measure. Position is what this translates; distance walked stays the
-    /// caller's business, as it was.</remarks>
+    /// The metric towers and bots pick targets on. It replaces TotalTraveled,
+    /// which measured metres *walked* and was therefore incomparable between
+    /// routes of different lengths: on the Toaster a Skiff 100 m down `direct`
+    /// (139 m long) and a Drifter 100 m down `long` (471 m) sorted as equally
+    /// advanced, when one was 39 m from the core and the other 371 m. Worse, an
+    /// enemy that had just come out of a warp — having crossed most of the map
+    /// for free — sorted as barely started, so the wave that arrives behind you
+    /// was the wave towers ignored.
+    ///
+    /// Remaining distance has none of that: it is the same question the defence
+    /// is actually asking, in the same units, wherever the enemy came from.</summary>
+    public float RemainingToCore(World w)
+    {
+        var edgeSteps = w.ItineraryEdges[ItineraryIndex];
+        if (EdgeStep >= edgeSteps.Length) return 0f;             // leaked
+
+        var lengths = w.EdgeSegmentLengths[edgeSteps[EdgeStep]];
+        float onThisEdge = -SegmentProgress;
+        for (int i = Segment; i < lengths.Length; i++) onThisEdge += lengths[i];
+
+        var edge = w.Graph.Edges[edgeSteps[EdgeStep]];
+        return onThisEdge + w.DistToCore[w.Graph.NodeIndex[edge.To]];
+    }
+
     /// <summary>Which leg of the underlying route this enemy is on — the read
     /// side of <see cref="AtRouteLeg"/>.
     ///
@@ -92,6 +102,22 @@ public sealed class Enemy
         return leg + Segment;
     }
 
+    /// <summary>Put this enemy at a leg of a route, in the coordinates the
+    /// harness fixtures and the unit tests are written in.
+    ///
+    /// Sixteen gate fixtures say things like "leg 3 of the ground route, 14 m
+    /// along" and one of them explains that leg 3 runs (0,14) to (0,-8) so 14 m
+    /// puts it four metres from socket g4. That is a good way to write a
+    /// fixture and a bad thing to have to rewrite as an edge and a segment when
+    /// the storage changes underneath it. Route legs map one-to-one onto the
+    /// itinerary's flattened segments, in order, so this is an exact
+    /// translation rather than an approximation.</summary>
+    /// <remarks>Deliberately does not touch <see cref="TotalTraveled"/>. Several
+    /// fixtures set it by hand to a round number and then assert against that
+    /// number — the launcher gate measures a setback from exactly 60 — so
+    /// computing a "truer" value here would quietly move what those gates
+    /// measure. Position is what this translates; distance walked stays the
+    /// caller's business, as it was.</remarks>
     public Enemy AtRouteLeg(World w, int routeIndex, int leg, float progress)
     {
         ItineraryIndex = routeIndex;
@@ -398,6 +424,10 @@ public sealed class World
     /// is crossed, not walked.</summary>
     public readonly float[][] EdgeSegmentLengths;
 
+    /// <summary>Metres from each graph node to the nearest core. Recomputed
+    /// whenever the graph's open edges change — which is never, yet.</summary>
+    public float[] DistToCore;
+
     /// <summary>Drivable vehicles, parked where the map put them. The sim owns
     /// their seats and takes the driver's word for their position.</summary>
     public List<Vehicle> Vehicles = new();
@@ -463,6 +493,8 @@ public sealed class World
                     : edge.Waypoints[i].DistanceTo(edge.Waypoints[i + 1]);
             EdgeSegmentLengths[e] = lengths;
         }
+
+        DistToCore = Graph.DistanceToCore();
 
         var edgeIndex = new Dictionary<string, int>();
         for (int e = 0; e < Graph.Edges.Count; e++) edgeIndex[Graph.Edges[e].Id] = e;

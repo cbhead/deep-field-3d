@@ -100,7 +100,7 @@ if (args.Contains("--baseline"))
     // spawned against 203, and the floor loses it on wave 9 with no lives left.
     // Whether that is a real co-op scaling problem or a floor-policy problem is
     // a question for the balance phase; it is here so it stops being invisible.
-    Row("foundry/4p-distinct-factions (not a gate)", MatchRunner.Run(Seed, Maps.Foundry,
+    Row("foundry/4p-distinct-factions~not-a-gate", MatchRunner.Run(Seed, Maps.Foundry,
         MidBot(1, "ember"), MidBot(2, "forge"), MidBot(3, "tempest"), MidBot(4, "glacier")));
 
     Row("switchyard/mid-band", MatchRunner.Run(Seed, Maps.Switchyard, MidBot()));

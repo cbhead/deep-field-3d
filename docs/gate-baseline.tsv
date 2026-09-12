@@ -14,15 +14,15 @@
 #
 # seed 20260906
 scenario	result	waves	lives	spawned	leaked	towerKills	playerKills	ticks	logHash16
-foundry/mid-band	win	10	17	127	3	75	49	14240	FEC75200A049DD45
+foundry/mid-band	win	10	19	127	1	82	44	13873	8B560FEE1CED48A6
 foundry/towers-only	win	10	7	127	13	114	0	18435	C4D5B6560270D6B2
-foundry/low-skill	win	10	13	127	7	93	27	15808	0FF7ECD49293D521
-foundry/high-skill	win	10	18	127	2	73	52	12771	2809BE8FE6EDC84E
-foundry/4p	win	10	11	203	9	104	90	17744	58714E2C3C3F29FA
-foundry/4p-distinct-factions (not a gate)	loss	9	0	356	20	140	173	20221	545D57C0DE5043EA
-switchyard/mid-band	win	12	19	179	1	121	57	24942	FCE810151237FC5E
-switchyard/towers-only	win	12	10	179	10	169	0	30092	60CAF74BA8124E10
-spire/mid-band	win	12	17	134	3	74	57	20334	EE06883713C94C94
-spire/towers-only	win	12	12	134	8	126	0	26555	C2EED292AA6D0CE9
-toaster/mid-band	win	12	10	176	10	58	108	37203	797C2B23E8DC9602
+foundry/low-skill	win	10	13	127	7	97	23	15639	42789B525C182835
+foundry/high-skill	win	10	19	127	1	75	51	13047	06BD29DBF6A4CBDB
+foundry/4p	win	10	14	203	6	108	89	17810	CA8716F708B62E20
+foundry/4p-distinct-factions~not-a-gate	loss	9	0	356	20	164	166	20919	BC356DBDA0126C74
+switchyard/mid-band	win	12	17	179	3	113	63	25187	675795F4407847E2
+switchyard/towers-only	win	12	9	179	11	168	0	30238	F94C93F355B070F6
+spire/mid-band	win	12	17	134	3	73	58	20561	56D5318AEB2EBC03
+spire/towers-only	win	12	11	134	9	125	0	26932	C4F2A3A56B70CD41
+toaster/mid-band	win	12	14	181	6	56	119	40437	DCA336302916A4A5
 toaster/towers-only	win	12	4	171	16	155	0	62132	B7C8FD5F2E777B3B

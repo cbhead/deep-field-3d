@@ -310,6 +310,55 @@ public sealed class LaneGraph
     /// flags is a deliberate two-places-close-together.</summary>
     public const float NearMissMeters = 0.5f;
 
+    /// <summary>Metres from each node to the nearest core, over open edges.
+    ///
+    /// Computed once per graph, from the core outwards over reversed edges —
+    /// not per enemy. One array answers four questions at once: which way an
+    /// enemy goes at a junction, how close it is to hurting you (the targeting
+    /// metric), whether a spawn can still reach the core at all (the rule that
+    /// no mutation may seal the map), and how long a run can take. Per enemy per
+    /// tick that is two array reads.
+    ///
+    /// Relaxed to a fixed point rather than run through a priority queue. The
+    /// graph is 35 edges wide at its largest, so the cost is nothing either
+    /// way, and repeated relaxation has no tie-break to get wrong — a heap
+    /// ordering two equal-distance nodes differently on two machines is exactly
+    /// the class of thing <see cref="DetMath"/> exists to keep out of the tick.</summary>
+    public float[] DistanceToCore(IReadOnlyList<bool>? edgeOpen = null)
+    {
+        var index = NodeIndex;
+        var dist = new float[Nodes.Count];
+        for (int i = 0; i < dist.Length; i++)
+            dist[i] = Nodes[i].Kind == LaneNodeKind.Core ? 0f : float.PositiveInfinity;
+
+        for (int pass = 0; pass < Nodes.Count; pass++)
+        {
+            bool changed = false;
+            for (int e = 0; e < Edges.Count; e++)
+            {
+                if (edgeOpen is not null && !edgeOpen[e]) continue;
+                var edge = Edges[e];
+                float ahead = dist[index[edge.To]];
+                if (float.IsPositiveInfinity(ahead)) continue;
+                float through = ahead + edge.WalkedLength * edge.CostFactor;
+                int from = index[edge.From];
+                if (through < dist[from]) { dist[from] = through; changed = true; }
+            }
+            if (!changed) break;
+        }
+        return dist;
+    }
+
+    /// <summary>Node id to index, for the distance array.</summary>
+    public IReadOnlyDictionary<string, int> NodeIndex => _nodeIndex ??= BuildNodeIndex();
+    private Dictionary<string, int>? _nodeIndex;
+    private Dictionary<string, int> BuildNodeIndex()
+    {
+        var index = new Dictionary<string, int>();
+        for (int i = 0; i < Nodes.Count; i++) index[Nodes[i].Id] = i;
+        return index;
+    }
+
     /// <summary>Walk an itinerary back into the polyline it came from. The
     /// derivation is lossless exactly when this returns the route's original
     /// waypoints, which is what the harness gate asserts.</summary>

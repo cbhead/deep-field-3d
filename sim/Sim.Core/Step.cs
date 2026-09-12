@@ -1438,8 +1438,12 @@ public static class Step
     private static Enemy? PickTarget(World w, Tower tower, TowerDef def)
     {
         float range = EffectiveRange(w, tower, def);
-        Enemy? best = null;
-        float bestTraveled = -1f;
+        // "First" is now whichever is closest to hurting you, measured as metres
+        // still to walk. It used to be metres *walked*, which is not comparable
+        // between routes of different lengths and actively wrong after a warp —
+        // see Enemy.RemainingToCore.
+        Enemy? bestEnemy = null;
+        float bestRemaining = float.MaxValue;
 
         foreach (var enemy in w.Enemies)
         {
@@ -1457,13 +1461,14 @@ public static class Step
             if (distance > range || distance < def.MinRangeMeters) continue;
             if (SightBlocked(w, tower.Pos, enemy)) continue;
 
-            if (enemy.TotalTraveled > bestTraveled)
+            float remaining = enemy.RemainingToCore(w);
+            if (remaining < bestRemaining)
             {
-                bestTraveled = enemy.TotalTraveled;
-                best = enemy;
+                bestRemaining = remaining;
+                bestEnemy = enemy;
             }
         }
-        return best;
+        return bestEnemy;
     }
 
     /// <summary>Monolith is living cover: a sight-blocker standing between the

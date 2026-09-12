@@ -2569,15 +2569,20 @@ public partial class GameRoot : Node3D
             if (def.RangeMeters <= 0f) continue;      // a barricade has nothing to aim
             var rig = RigFor(tower.Id, view, tower.DefId);
 
+            // The same "first" the sim picks on — metres still to walk, not
+            // metres walked. This mirrors Step.PickTarget independently, so it
+            // has to mirror the metric too: a turret aiming by one rule at a
+            // target chosen by another points at the wrong enemy.
             Enemy? best = null;
-            float bestTraveled = -1f;
+            float bestRemaining = float.MaxValue;
             foreach (var enemy in _world.Enemies)
             {
                 if (enemy.Dead || enemy.Burrowed) continue;
                 if (!def.TargetLayers.Contains(Enemies.All[enemy.DefId].Layer)) continue;
                 if (tower.Pos.DistanceTo(enemy.Pos) > def.RangeMeters * 1.15f) continue;
-                if (enemy.TotalTraveled <= bestTraveled) continue;
-                bestTraveled = enemy.TotalTraveled;
+                float remaining = enemy.RemainingToCore(_world);
+                if (remaining >= bestRemaining) continue;
+                bestRemaining = remaining;
                 best = enemy;
             }
             if (best is null)                         // hold the last heading
