@@ -121,7 +121,7 @@ public partial class GameRoot : Node3D
     private string _traversalReportPath = "";
     private int _traversalIndex = -1;
     private float _traversalTimer;
-    private readonly List<(string Id, Vector3 Base, Vector3 Deck)> _climbs = new();
+    private readonly List<(string Id, Vector3 Base, Vector3 Deck, bool Lift)> _climbs = new();
     private readonly List<string> _unreachable = new();
     private float _partyElapsed;
 
@@ -767,7 +767,24 @@ public partial class GameRoot : Node3D
                 // can begin twenty metres up, and standing the probe at y=0.6
                 // would have it climbing thin air.
                 var foot = new Vector3(centre.X, centre.Y - half + 0.6f, centre.Z);
-                _climbs.Add((Describe(area), foot, centre + new Vector3(0f, half, 0f)));
+                _climbs.Add((Describe(area), foot, centre + new Vector3(0f, half, 0f), false));
+            }
+            // Lifts too, now that `elevator` is a kind a player can actually
+            // use. A lift declared out of service (both stops the same height)
+            // is skipped rather than failed — that is an authored statement, and
+            // §4.1 already stops crediting it as a way up.
+            foreach (var area in FindAreasOfKind(AreaKinds.Elevator))
+            {
+                float bottom = (float)area.GetMeta(AreaKinds.LiftBottomMeta, 0f);
+                float top = (float)area.GetMeta(AreaKinds.LiftTopMeta, 0f);
+                if (Mathf.Abs(top - bottom) < 0.5f)
+                {
+                    _traversalReport.Add($"{Describe(area)}: out of service (both stops at {bottom:0.0} m)");
+                    continue;
+                }
+                var at = area.GlobalPosition;
+                _climbs.Add((Describe(area), new Vector3(at.X, bottom + 1.2f, at.Z),
+                    new Vector3(at.X, top, at.Z), true));
             }
             _traversalReport.Add($"{_climbs.Count} climb(s) found");
             _traversalIndex = 0;
@@ -2891,7 +2908,10 @@ public partial class GameRoot : Node3D
     private static string Describe(Area3D area)
     {
         var p = area.GlobalPosition;
-        return $"ladder at ({p.X:0.#}, {p.Y:0.#}, {p.Z:0.#})";
+        // The kind, not the word "ladder": this probe walks lifts too now, and
+        // a report calling one of them a ladder is a report you cannot act on.
+        string kind = (string)area.GetMeta("kind", "climb");
+        return $"{kind} at ({p.X:0.#}, {p.Y:0.#}, {p.Z:0.#})";
     }
 
     /// <summary>Somewhere to step off at the top: the nearest wall socket
@@ -2915,12 +2935,17 @@ public partial class GameRoot : Node3D
     }
 
     /// <summary>Every ladder volume in the level, in a stable order.</summary>
-    private List<Area3D> FindLadderAreas()
+    private List<Area3D> FindLadderAreas() => FindAreasOfKind(AreaKinds.Ladder);
+
+    /// <summary>Every traversal volume of one kind, in a stable order — the
+    /// probes walk them one at a time and their report has to read the same way
+    /// twice.</summary>
+    private List<Area3D> FindAreasOfKind(string kind)
     {
         var found = new List<Area3D>();
         void Walk(Node n)
         {
-            if (n is Area3D area && (string)area.GetMeta("kind", "") == "ladder") found.Add(area);
+            if (n is Area3D area && (string)area.GetMeta("kind", "") == kind) found.Add(area);
             foreach (var child in n.GetChildren()) Walk(child);
         }
         Walk(this);
@@ -3231,15 +3256,33 @@ public partial class GameRoot : Node3D
         if (_traversalTimer <= 0f)
         {
             _player.GlobalPosition = climb.Base;
-            _player.ClimbHeld = true;
+            // A ladder is held; a lift is pressed. HoldingBuild is the same
+            // hook the vehicle probe boards with, and it is what E does.
+            _player.ClimbHeld = !climb.Lift;
+            _player.HoldingBuild = climb.Lift;
             _player.WalkHeld = Vector3.Zero;
         }
         _traversalTimer += (float)delta;
 
+        // Hold the press across a few frames before letting go. Setting it and
+        // clearing it inside one tick is setting it never: Player reads the
+        // hook in its own _PhysicsProcess, so the press has to outlive the
+        // frame that made it. The lift drives itself once boarded.
+        if (climb.Lift && _traversalTimer > 0.3f) _player.HoldingBuild = false;
+
+        // A lift is timed by its own shaft rather than by a flat window: at
+        // 3 m/s the Spire's would want thirteen seconds, and the four a ladder
+        // needs would have reported every lift as stopping short.
+        float rideSeconds = climb.Lift
+            ? Mathf.Abs(climb.Deck.Y - climb.Base.Y) / 3f + 2f
+            : 4f;
+
         // Climb, then walk at the deck this ladder serves and let go: if there
         // is something to stand on, they end up standing on it at its height.
-        if (_traversalTimer < 4f) return;
-        if (_traversalTimer < 6.5f)
+        if (_traversalTimer < rideSeconds) return;
+        // A lift puts you on its own deck — there is nothing to step off onto,
+        // and walking would only carry you off it.
+        if (!climb.Lift && _traversalTimer < rideSeconds + 2.5f)
         {
             _player.ClimbHeld = false;
             // Step off toward whatever the rungs' head is next to.
@@ -3255,11 +3298,20 @@ public partial class GameRoot : Node3D
         float reached = _player.GlobalPosition.Y;
         // Two metres of slack: the step off lands you on the deck, which sits
         // a little under the head of the rungs.
-        bool landed = _player.Standing && reached >= climb.Deck.Y - 2f;
-        _traversalReport.Add($"{climb.Id}: rungs end at {climb.Deck.Y:0.0} m, " +
+        // A ladder is asked whether there is a deck at the top to stand on; a
+        // lift is asked whether it arrives. The car is the floor on a lift, so
+        // requiring IsOnFloor() there measures the resting contact against a
+        // static body the ride itself repositioned, which is not the question
+        // and does not answer reliably. Whether the top stop is level with
+        // something walkable is §4.1's job, and it is checked there.
+        bool landed = climb.Lift
+            ? Mathf.Abs(reached - climb.Deck.Y) < 0.5f
+            : _player.Standing && reached >= climb.Deck.Y - 2f;
+        string ends = climb.Lift ? "top stop" : "rungs end";
+        _traversalReport.Add($"{climb.Id}: {ends} at {climb.Deck.Y:0.0} m, " +
             $"left standing at {reached:0.0} m " + (landed ? "-> lands on it" : "-> GOES NOWHERE"));
         if (!landed)
-            _unreachable.Add($"{climb.Id} tops out at {reached:0.0} m for rungs ending at {climb.Deck.Y:0.0} m");
+            _unreachable.Add($"{climb.Id} tops out at {reached:0.0} m for a {ends} at {climb.Deck.Y:0.0} m");
         _traversalIndex++;
         _traversalTimer = 0f;
     }
@@ -4056,7 +4108,20 @@ public partial class GameRoot : Node3D
         MapKit.NoShadow(liftShaft);
         var lift = AddStaticBox(new Vector3(-17f, 0.6f, -17f), new Vector3(4f, 0.4f, 4f),
             new Color(0.62f, 0.55f, 0.28f), layer: 1);
-        lift.AddChild(MakeArea("elevator", new BoxShape3D { Size = new Vector3(4.4f, 3f, 4.4f) }));
+        var liftArea = MakeArea(AreaKinds.Elevator, new BoxShape3D { Size = new Vector3(4.4f, 3f, 4.4f) });
+        // Both stops are the car's own height, which declares this lift out of
+        // service — and it is. The shaft stands at (-17, -17) and the west-wing
+        // floor plate spans x -19..-7, z -20..20 at y 10, 20, 30 and 40, so the
+        // car would rise into four solid slabs. Nothing was ever cut for it.
+        //
+        // That is the Spire being un-designed rather than a bug to patch here:
+        // giving it a shaft means cutting openings through four floors, which is
+        // the redesign's job. What is fixed now is the lie — §4.1 was crediting
+        // this lift as a way up, so a tier reachable only by it measured as
+        // reachable. It no longer does, and the hint says so to the player's face.
+        liftArea.SetMeta(AreaKinds.LiftBottomMeta, 0.6f);
+        liftArea.SetMeta(AreaKinds.LiftTopMeta, 0.6f);
+        lift.AddChild(liftArea);
         MapKit.Mount(lift, "shared_elevator", MapKit.GroundLocal(lift));
 
         // Teleport pads: lobby to roof and back, for the rotation the lift is
@@ -4071,7 +4136,11 @@ public partial class GameRoot : Node3D
         {
             var nest = AddStaticBox(pos, new Vector3(5f, 0.4f, 5f),
                 new Color(0.45f, 0.4f, 0.3f), layer: 1);
-            nest.AddChild(MakeArea("nest", new BoxShape3D { Size = new Vector3(5f, 3f, 5f) }));
+            // No `nest` Area3D. It carried no hint, no handler and no effect —
+            // a floor with a name — and the only thing naming it bought was a
+            // kind in the validator's vocabulary that meant nothing. The
+            // platform is a walkable static box, so the perch still works as a
+            // perch; it just is not pretending to be a mechanic.
             MapKit.Mount(nest, "shared_snipernest", MapKit.GroundLocal(nest));
         }
 
@@ -4526,12 +4595,32 @@ public partial class GameRoot : Node3D
             if (n is Area3D area)
             {
                 string kind = (string)area.GetMeta("kind", "");
+                // A kind may only be counted as a way up if Player actually
+                // does something about it. This is the check that would have
+                // caught the elevator: it was credited here for three
+                // milestones and no handler for it has ever existed.
+                if (System.Array.IndexOf(AreaKinds.Traversal, kind) >= 0
+                    && System.Array.IndexOf(AreaKinds.Handled, kind) < 0)
+                {
+                    failures.Add($"§4.1 '{kind}' is credited as traversal and has no handler");
+                    return;
+                }
                 // Where this piece of traversal leaves you.
-                if (kind == "ladder")
+                if (kind == AreaKinds.Ladder)
                     tops.Add(area.GlobalPosition + new Vector3(0, LadderHalfHeight(area), 0));
-                else if (kind == "zipline" && area.HasMeta("zip_end"))
+                else if (kind == AreaKinds.Zipline && area.HasMeta("zip_end"))
                     tops.Add((Vector3)area.GetMeta("zip_end"));
-                else if (kind is "launcher" or "teleporter" or "elevator")
+                else if (kind == AreaKinds.Elevator)
+                {
+                    // The car's declared top stop, not the tube's height and not
+                    // where the car is parked. A lift whose stops are the same
+                    // height goes nowhere and is credited with nothing.
+                    float bottom = (float)area.GetMeta(AreaKinds.LiftBottomMeta, 0f);
+                    float top = (float)area.GetMeta(AreaKinds.LiftTopMeta, 0f);
+                    if (Mathf.Abs(top - bottom) >= 0.5f)
+                        tops.Add(area.GlobalPosition with { Y = top });
+                }
+                else if (kind is AreaKinds.Launcher or AreaKinds.Teleporter)
                     tops.Add(area.GlobalPosition);
             }
             foreach (var child in n.GetChildren()) Walk(child);
