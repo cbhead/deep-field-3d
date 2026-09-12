@@ -478,8 +478,23 @@ public sealed class World
     /// <summary>Open or close every gated edge from what is standing on its
     /// socket, then rebuild the routing tables. Called after anything that can
     /// put a barricade up or take one down.</summary>
+    /// <summary>Levers currently shut, by gate id, and how long until each can
+    /// be flipped again. A cooldown is the whole cost of a free verb: without
+    /// one, a lever is a lane you toggle every time a tower is about to fire.</summary>
+    public readonly HashSet<string> ShutGates = new();
+    public readonly Dictionary<string, float> GateCooldowns = new();
+
     public void RefreshEdgeState(string cause = "")
     {
+        foreach (var lever in Map.OperatedGates)
+        {
+            int e = Graph.EdgeIndexOf(lever.EdgeId);
+            if (e < 0) continue;
+            bool open = !ShutGates.Contains(lever.Id);
+            if (open && !EdgeOpen[e] && cause.Length > 0)
+                Emit(new SimEvent.LaneOpened(lever.EdgeId, cause));
+            EdgeOpen[e] = open;
+        }
         foreach (var gate in Map.LaneGates)
         {
             int e = Graph.EdgeIndexOf(gate.EdgeId);
@@ -488,7 +503,9 @@ public sealed class World
                 && Content.Towers.All[t.DefId].Kind == TowerKind.Barricade);
             if (open && !EdgeOpen[e] && cause.Length > 0)
                 Emit(new SimEvent.LaneOpened(gate.EdgeId, cause));
-            EdgeOpen[e] = open;
+            // A lever already holding this lane shut wins: a wall coming down
+            // does not open a door somebody closed.
+            EdgeOpen[e] = open && EdgeOpen[e];
         }
         RefreshRouting();
     }

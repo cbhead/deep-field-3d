@@ -640,6 +640,7 @@ if (args.Contains("--baseline"))
         new Command.Launch(1),
         new Command.PlayerSync(1, new Vec3(1.5f, 2f, -3.25f)),
         new Command.PlaceTower(1, "lance", "g1"),
+        new Command.OperateGate(1, "cutGate"),
         new Command.SellTower(1, 7),
         new Command.UpgradeTower(1, 7, 2),
         new Command.StartWave(1),
@@ -2218,10 +2219,17 @@ if (args.Contains("--baseline"))
     {
         var world = new World(Seed, map);
         var graph = world.Graph;
-        var gateEdges = map.LaneGates
-            .Select(g => graph.EdgeIndexOf(g.EdgeId))
-            .Where(e => e >= 0)
+        // Both kinds of door count, and an edge with one of each counts once:
+        // what the enumeration is about is which lanes can be shut, not how
+        // many ways there are to shut them.
+        var gateEdges = map.LaneGates.Select(g => g.EdgeId)
+            .Concat(map.OperatedGates.Select(g => g.EdgeId))
             .Distinct()
+            .Select(graph.EdgeIndexOf)
+            .Where(e => e >= 0)
+            .ToList();
+        var gateNames = map.LaneGates.Select(g => g.SocketId)
+            .Concat(map.OperatedGates.Select(g => g.Id))
             .ToList();
 
         if (gateEdges.Count > 8)
@@ -2250,7 +2258,7 @@ if (args.Contains("--baseline"))
         // 2. WouldSeal says the same thing, one gate at a time from neutral.
         for (int g = 0; g < gateEdges.Count; g++)
             if (world.WouldSeal(gateEdges[g]) == legal[1 << g])
-                problems.Add($"{map.Id}/{map.LaneGates[g].SocketId}: WouldSeal disagrees with the enumeration");
+                problems.Add($"{map.Id}/{gateNames[g]}: WouldSeal disagrees with the enumeration");
 
         // 3. Every gate changes where something walks.
         //
@@ -2271,13 +2279,16 @@ if (args.Contains("--baseline"))
             bool changed = graph.Itineraries.Any(i =>
                 !graph.PathFor(i, open).SequenceEqual(before[i.Id]));
             if (!changed)
-                problems.Add($"{map.Id}/{map.LaneGates[g].SocketId}: shutting it moves nothing");
+                problems.Add($"{map.Id}/{gateNames[g]}: shutting it moves nothing");
         }
 
         // 4. No edge is permanently unreachable.
         foreach (var gate in map.LaneGates)
             if (graph.EdgeIndexOf(gate.EdgeId) < 0)
                 problems.Add($"{map.Id}/{gate.SocketId}: gates edge '{gate.EdgeId}', which does not exist");
+        foreach (var lever in map.OperatedGates)
+            if (graph.EdgeIndexOf(lever.EdgeId) < 0)
+                problems.Add($"{map.Id}/{lever.Id}: gates edge '{lever.EdgeId}', which does not exist");
 
         int shuttable = Enumerable.Range(1, configurations - 1).Count(m => legal[m]);
         shape.Add($"{map.Id} {gateEdges.Count}g/{shuttable + 1} legal");
@@ -2286,6 +2297,111 @@ if (args.Contains("--baseline"))
     Gate("configurations: every shape a map can be put into is proved before it ships",
         problems.Count == 0,
         problems.Count == 0 ? string.Join(", ", shape) : string.Join(" | ", problems.Take(6)));
+}
+
+// --- Gate 58: the lever, and everything it refuses.
+//
+// A free, instant, reversible verb has to cost something or it is not a
+// decision. Four things make it one, and all four are checked: you have to be
+// there, you have to wait between flips, you cannot shut the last way through,
+// and it will not shut on a body — chaff in the doorway is the attacker using
+// your own mutation against you.
+{
+    static World Ready()
+    {
+        var w = new World(Seed, Maps.Switchyard);
+        w.Enqueue(new Command.Join(1, "solo", "ember"));
+        Step.Advance(w);
+        var lever = Maps.Switchyard.OperatedGates.First(g => g.Id == "cutGate");
+        w.Enqueue(new Command.PlayerSync(1, lever.At));
+        Step.Advance(w);
+        return w;
+    }
+
+    string Flip(World w, string id)
+    {
+        w.Enqueue(new Command.OperateGate(1, id));
+        Step.Advance(w);
+        var bad = w.Events.OfType<SimEvent.GateRejected>().FirstOrDefault();
+        return bad?.Reason ?? "ok";
+    }
+
+    var problems = new List<string>();
+    int cut = new World(Seed, Maps.Switchyard).Graph.EdgeIndexOf("westGate-cutMouth");
+
+    // Shuts, and the lane is shut.
+    var world = Ready();
+    if (Flip(world, "cutGate") != "ok") problems.Add("would not shut");
+    if (world.EdgeOpen[cut]) problems.Add("shut the lever and the lane stayed open");
+
+    // Cooldown: not twice in a row.
+    if (Flip(world, "cutGate") != "cooldown") problems.Add("no cooldown");
+
+    // Reopens once it has elapsed, and the lane comes back.
+    for (int i = 0; i < 8 * Balance.TickHz; i++) Step.Advance(world);
+    if (Flip(world, "cutGate") != "ok") problems.Add("would not reopen");
+    if (!world.EdgeOpen[cut]) problems.Add("opened the lever and the lane stayed shut");
+
+    // Out of reach.
+    var far = Ready();
+    far.Enqueue(new Command.PlayerSync(1, new Vec3(40f, 0f, 8f)));
+    Step.Advance(far);
+    if (Flip(far, "cutGate") != "notNear") problems.Add("reachable from the far side of the map");
+
+    // Will not shut on a body.
+    var blocked = Ready();
+    var lever = Maps.Switchyard.OperatedGates.First(g => g.Id == "cutGate");
+    blocked.Enemies.Add(new Enemy
+    {
+        Id = blocked.NextId(), DefId = "drifter", Hp = 10f, MaxHp = 10f,
+        Pos = lever.At, Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1,
+    }.AtRouteLeg(blocked, 1, 0, 0f));
+    if (Flip(blocked, "cutGate") != "blocked") problems.Add("shut on a body");
+
+    // Cannot shut the last way through: barricade one lane, lever the other.
+    var sealing = Ready();
+    sealing.Money = 1000;
+    sealing.Enqueue(new Command.PlaceTower(1, "barricade", "b2"));
+    Step.Advance(sealing);
+    if (Flip(sealing, "cutGate") != "wouldSeal") problems.Add("sealed the map with a lever");
+
+    Gate("lever: it shuts a lane, and refuses the four things it should",
+        problems.Count == 0,
+        problems.Count == 0
+            ? "reach, cooldown, a body in the doorway, and the last way through"
+            : string.Join(" | ", problems));
+}
+
+// --- Gate 59: a lever turns the wave; it does not turn the Ram.
+//
+// The lever's whole cost, stated as an assertion. There is nothing to break, so
+// a siege enemy's breach price is zero and it walks straight through a shut
+// gate — while the walkers behind it turn at the fork. If you want a Ram
+// stopped you buy the wall, which is what the wall is for.
+{
+    var world = new World(Seed, Maps.Switchyard);
+    world.Enqueue(new Command.Join(1, "solo", "ember"));
+    Step.Advance(world);
+    world.Enqueue(new Command.PlayerSync(1, Maps.Switchyard.OperatedGates[0].At));
+    Step.Advance(world);
+    world.Enqueue(new Command.OperateGate(1, "cutGate"));
+    Step.Advance(world);
+
+    int cut = world.Graph.EdgeIndexOf("westGate-cutMouth");
+    world.Enqueue(new Command.StartWave(1));
+    Step.Advance(world);
+    world.PendingSpawns.Clear();
+    world.PendingSpawns.Add(new SpawnEntry("ram", 0, 1f, RouteIndex: 1, LateralOffset: 0f));
+    world.PendingSpawns.Add(new SpawnEntry("drifter", 0, 1f, RouteIndex: 1, LateralOffset: 0f));
+    while (world.Enemies.Count < 2) Step.Advance(world);
+
+    var ram = world.Enemies.First(e => e.DefId == "ram");
+    var walker = world.Enemies.First(e => e.DefId == "drifter");
+
+    Gate("lever: it turns the wave and not the Ram",
+        !world.EdgeOpen[cut] && ram.EdgeIndex == cut && walker.EdgeIndex != cut,
+        $"cut shut {!world.EdgeOpen[cut]}; ram through it {ram.EdgeIndex == cut}; "
+        + $"walker round it {walker.EdgeIndex != cut}");
 }
 
 // --- Gate 52: nothing is ever stranded, anywhere in the campaign.

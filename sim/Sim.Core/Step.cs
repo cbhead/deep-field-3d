@@ -67,6 +67,7 @@ public static class Step
                 case Command.SetFaction pick: ApplySetFaction(w, pick); break;
                 case Command.Launch launch: ApplyLaunch(w, launch); break;
                 case Command.PlayerSync sync: ApplyPlayerSync(w, sync); break;
+                case Command.OperateGate gate: ApplyOperateGate(w, gate); break;
                 case Command.PlaceTower place: ApplyPlaceTower(w, place); break;
                 case Command.SellTower sell: ApplySellTower(w, sell); break;
                 case Command.UpgradeTower upgrade: ApplyUpgradeTower(w, upgrade); break;
@@ -245,6 +246,75 @@ public static class Step
         if (vehicle is null || vehicle.DriverId != sync.PlayerId) return;
         vehicle.Pos = sync.Pos;
         vehicle.YawDegrees = sync.YawDegrees;
+    }
+
+    /// <summary>How close you have to stand to flip a lever. The same reach the
+    /// client's interaction ray uses, so what the prompt offers is what the sim
+    /// will accept.</summary>
+    private const float GateReachMeters = 9f;
+
+    /// <summary>Seconds before a lever can be flipped again. The only cost a
+    /// free, instant, reversible verb has, and the thing that stops a lane
+    /// being toggled once per tower volley.</summary>
+    private const float GateCooldownSeconds = 6f;
+
+    /// <summary>How close an enemy has to be to the gateway to deny the close.
+    /// Scoped to the gate rather than the whole edge on purpose: one Mote forty
+    /// metres down a lane should not hold a door open, and one standing in the
+    /// doorway absolutely should.</summary>
+    private const float GateBlockRadiusMeters = 4f;
+
+    private static void ApplyOperateGate(World w, Command.OperateGate operate)
+    {
+        var lever = w.Map.OperatedGates.FirstOrDefault(g => g.Id == operate.GateId);
+        if (lever is null)
+        {
+            w.Emit(new SimEvent.GateRejected(operate.PlayerId, operate.GateId, "unknownGate"));
+            return;
+        }
+
+        void Refuse(string reason) =>
+            w.Emit(new SimEvent.GateRejected(operate.PlayerId, operate.GateId, reason));
+
+        if (!w.Players.TryGetValue(operate.PlayerId, out var player) || !player.Alive)
+        {
+            Refuse("downed");
+            return;
+        }
+        if (player.Pos.DistanceTo(lever.At) > GateReachMeters) { Refuse("notNear"); return; }
+        if (w.GateCooldowns.TryGetValue(lever.Id, out float left) && left > 0f)
+        {
+            Refuse("cooldown");
+            return;
+        }
+
+        int edge = w.Graph.EdgeIndexOf(lever.EdgeId);
+        if (edge < 0) { Refuse("unknownEdge"); return; }
+
+        bool shutting = !w.ShutGates.Contains(lever.Id);
+        if (shutting)
+        {
+            // It will not shut on a body. This is what a free verb costs: chaff
+            // in the doorway is the attacker using your own mutation against
+            // you, and it is legible in a way a cooldown alone is not.
+            foreach (var enemy in w.Enemies)
+            {
+                if (enemy.Dead) continue;
+                if (enemy.Pos.DistanceTo(lever.At) > GateBlockRadiusMeters) continue;
+                Refuse("blocked");
+                return;
+            }
+            if (w.WouldSeal(edge)) { Refuse("wouldSeal"); return; }
+            w.ShutGates.Add(lever.Id);
+        }
+        else
+        {
+            w.ShutGates.Remove(lever.Id);
+        }
+
+        w.GateCooldowns[lever.Id] = GateCooldownSeconds;
+        w.RefreshEdgeState("lever");
+        w.Emit(new SimEvent.GateOperated(operate.PlayerId, lever.Id, shutting));
     }
 
     private static void ApplyPlaceTower(World w, Command.PlaceTower place)
@@ -869,6 +939,10 @@ public static class Step
 
     private static void UpdateWaves(World w)
     {
+        if (w.GateCooldowns.Count > 0)
+            foreach (var id in w.GateCooldowns.Keys.OrderBy(k => k, StringComparer.Ordinal).ToList())
+                w.GateCooldowns[id] = MathF.Max(0f, w.GateCooldowns[id] - Balance.Dt);
+
         if (w.Phase == MatchPhase.Intermission)
         {
             if (w.Lobby) return;

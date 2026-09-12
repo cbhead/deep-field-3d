@@ -213,6 +213,7 @@ public partial class Player : CharacterBody3D
 
     // What the player is currently looking at (refreshed each physics frame).
     private string _aimSocketId = "";
+    private string _aimGateId = "";
     private int _aimEnemyId = -1;
 
     public override void _Ready()
@@ -588,6 +589,7 @@ public partial class Player : CharacterBody3D
     private void UpdateAim()
     {
         _aimSocketId = "";
+        _aimGateId = "";
         _aimEnemyId = -1;
 
         // Enemies first (they're what you shoot), then sockets (what you build on).
@@ -596,8 +598,13 @@ public partial class Player : CharacterBody3D
             _aimEnemyId = area.GetMeta("enemy_id").AsInt32();
 
         if (Raycast(InteractRange, worldMask: 1 | (1 << 3), areaMask: 0) is { } reach
-            && reach.Collider is StaticBody3D body && body.HasMeta("socket_id"))
-            _aimSocketId = body.GetMeta("socket_id").AsString();
+            && reach.Collider is StaticBody3D body)
+        {
+            if (body.HasMeta("socket_id")) _aimSocketId = body.GetMeta("socket_id").AsString();
+            // Levers share the socket layer and the same reach, so what the
+            // prompt offers is what the sim will accept.
+            if (body.HasMeta("gate_id")) _aimGateId = body.GetMeta("gate_id").AsString();
+        }
 
         _aimVehicleId = "";
         if (Raycast(InteractRange, worldMask: 1 | (1 << 6), areaMask: 0) is { } near
@@ -633,6 +640,7 @@ public partial class Player : CharacterBody3D
             return _teleportCooldown > 0f
                 ? $"teleporter recharging · {_teleportCooldown:0}s"
                 : "[hold E] choose a destination";
+        if (_aimGateId.Length > 0) return _root.GateHint(_aimGateId);
         if (InArea(AreaKinds.Armory)) return "[Tab] armory   ·   [5] recraft blueprint";
         if (InArea(AreaKinds.Zipline)) return "[E] ride the zipline";
         if (InArea(AreaKinds.Elevator)) return LiftHint();
@@ -728,6 +736,15 @@ public partial class Player : CharacterBody3D
             foreach (var area in _sensor.GetOverlappingAreas())
                 if ((string)area.GetMeta("kind", "") == AreaKinds.Zipline)
                     _zipTarget = (Vector3)area.GetMeta("zip_end");
+            return;
+        }
+
+        // E at a lever flips it. Ahead of the build wheel because a lever is
+        // not on a socket, so the two can never both be offered.
+        if (buildHeld && !_boardPressed && !_root.WheelOpen && _aimGateId.Length > 0)
+        {
+            _boardPressed = true;
+            _root.Submit(new Command.OperateGate(_root.LocalPlayerId, _aimGateId));
             return;
         }
 

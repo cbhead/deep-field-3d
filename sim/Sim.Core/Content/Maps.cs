@@ -373,6 +373,27 @@ public static class Maps
         {
             new LaneGateDef("westGate-cutMouth", "b1"),
             new LaneGateDef("westGate-switchbackNorth", "b2"),
+        },
+        // A lever on each of the same two lanes, so the map carries both kinds
+        // of door side by side and the contrast is the lesson.
+        //
+        // The barricade is an economic commitment: sixty credits, three hundred
+        // health, and a Ram has to break it. The lever is a timing decision:
+        // free, instant, reversible on a six-second cooldown — and it stops
+        // walkers only, because there is nothing to break, so a Ram's breach
+        // price is zero and it comes straight through. The lever turns the wave
+        // and does not turn the thing sent to open the wave's way.
+        //
+        // Both sit *in* their doorways rather than beside them, because the
+        // rule that a gate will not shut on a body is measured from the gate.
+        // Closing during a wave means finding a gap in the stream, which is
+        // what stops a free verb from being a free win.
+        OperatedGatesOrNull: new[]
+        {
+            new OperatedGateDef("cutGate", "westGate-cutMouth",
+                new Vec3(-22f, 0f, -2.6f), "FREIGHT CUT"),
+            new OperatedGateDef("switchbackGate", "westGate-switchbackNorth",
+                new Vec3(-36f, 0f, -10f), "SWITCHBACK"),
         });
 
     /// <summary>Sector 3. A tower block, and the only map where the core is at

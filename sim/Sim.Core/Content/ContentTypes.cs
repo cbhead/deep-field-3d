@@ -269,8 +269,13 @@ public sealed record MapDef(
     // save file naming it back both need an id that survives a map edit.
     IReadOnlyList<LaneNodeNameDef>? LaneNodeNamesOrNull = null,
     // Which lane edges a player can shut, and with what.
-    IReadOnlyList<LaneGateDef>? LaneGatesOrNull = null)
+    IReadOnlyList<LaneGateDef>? LaneGatesOrNull = null,
+    // Levers: lanes a player shuts by hand rather than by building.
+    IReadOnlyList<OperatedGateDef>? OperatedGatesOrNull = null)
 {
+    public IReadOnlyList<OperatedGateDef> OperatedGates =>
+        OperatedGatesOrNull ?? System.Array.Empty<OperatedGateDef>();
+
     public IReadOnlyList<LaneNodeNameDef> LaneNodeNames =>
         LaneNodeNamesOrNull ?? System.Array.Empty<LaneNodeNameDef>();
 

@@ -1672,6 +1672,9 @@ public partial class GameRoot : Node3D
     /// ids are "from-to" by construction, so "westGate-cutMouth" becomes "the
     /// cut mouth" — the far end, which is the bit of map the announcement is
     /// about.</summary>
+    private string GateLabel(string gateId) =>
+        _map.OperatedGates.FirstOrDefault(g => g.Id == gateId)?.Label ?? gateId;
+
     private static string LaneName(string edgeId)
     {
         int dash = edgeId.LastIndexOf('-');
@@ -1749,6 +1752,13 @@ public partial class GameRoot : Node3D
             // somewhere they were not looking is worse — so both are said out
             // loud, and the breach is said the moment the Ram commits rather
             // than when the wall falls.
+            case "gateOperated":
+                RefreshGateArt(p[3], p[4] == "shut");
+                Post($"{GateLabel(p[3])} {(p[4] == "shut" ? "shut" : "open")}", UiTheme.Accent);
+                break;
+            case "gateRejected" when int.Parse(p[2]) == LocalPlayerId:
+                Post(Explain(p[4]), UiTheme.Warn);
+                break;
             case "breachTargeted":
                 Post($"BREACH — {LaneName(p[3])}, {float.Parse(p[4],
                     System.Globalization.CultureInfo.InvariantCulture):0}s", UiTheme.Danger);
@@ -1941,6 +1951,10 @@ public partial class GameRoot : Node3D
         // one. It is the only refusal that is about the shape of the level
         // rather than about the thing being built.
         "wouldSeal" => "that would leave the wave nowhere to walk",
+        "notNear" => "too far away",
+        "cooldown" => "the gate is still resetting",
+        "blocked" => "something is standing in the gateway",
+        "unknownGate" => "no gate there",
         "maxLevel" => "already at max level",
         "unknownPath" => "no such upgrade path",
         "factionTaken" => "another player already has that faction",
@@ -3516,6 +3530,7 @@ public partial class GameRoot : Node3D
         if (map.Id == "switchyard") BuildSwitchyardStructures();
         if (map.Id == "spire") BuildSpireStructures();
         if (map.Id == "toaster") BuildToasterStructures(map);
+        BuildOperatedGates(map);
 
         BuildVehicles(map);
 
@@ -4981,6 +4996,54 @@ public partial class GameRoot : Node3D
         }
         AddStaticBox(at + new Vector3(0, 6.4f, 0), new Vector3(3f, 1.6f, 12f),
             new Color(0.34f, 0.35f, 0.4f), layer: 1);
+    }
+
+    /// <summary>The map's levers, on the socket layer so the same interaction
+    /// ray that finds a build pad finds a door.</summary>
+    private void BuildOperatedGates(MapDef map)
+    {
+        foreach (var lever in map.OperatedGates)
+        {
+            var body = new StaticBody3D { CollisionLayer = 1 << 3, CollisionMask = 0 };
+            body.AddChild(new CollisionShape3D
+            {
+                Shape = new BoxShape3D { Size = new Vector3(2.2f, 2.6f, 2.2f) },
+            });
+            body.Position = ToGd(lever.At) + new Vector3(0, 1.3f, 0);
+            body.SetMeta("gate_id", lever.Id);
+            AddChild(body);
+            _gateBodies[lever.Id] = body;
+
+            if (!MapKit.Mount(body, "shared_gate_operated", -1.3f))
+                body.AddChild(new MeshInstance3D
+                {
+                    Mesh = new BoxMesh { Size = new Vector3(2f, 2.4f, 0.4f) },
+                });
+            RefreshGateArt(lever.Id, shut: false);
+        }
+    }
+
+    private readonly Dictionary<string, StaticBody3D> _gateBodies = new();
+    private readonly HashSet<string> _shutGates = new();
+
+    /// <summary>A shut gate stands across its lane; an open one lies flat
+    /// beside it. One model, rotated, because the state has to be readable from
+    /// across the yard and a colour change is not.</summary>
+    private void RefreshGateArt(string gateId, bool shut)
+    {
+        if (!_gateBodies.TryGetValue(gateId, out var body)) return;
+        if (shut) _shutGates.Add(gateId); else _shutGates.Remove(gateId);
+        body.RotationDegrees = new Vector3(shut ? 0f : -80f, body.RotationDegrees.Y, 0f);
+    }
+
+    /// <summary>What the crosshair says at a lever.</summary>
+    public string GateHint(string gateId)
+    {
+        var lever = _map.OperatedGates.FirstOrDefault(g => g.Id == gateId);
+        if (lever is null) return "";
+        return _shutGates.Contains(gateId)
+            ? $"[E] open the {lever.Label.ToLowerInvariant()}"
+            : $"[E] shut the {lever.Label.ToLowerInvariant()}";
     }
 
     private static Area3D MakeArea(string kind, Shape3D shape)

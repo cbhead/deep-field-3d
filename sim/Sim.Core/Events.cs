@@ -81,6 +81,17 @@ public abstract record SimEvent
             $"{Tick} breachTargeted {EnemyId} {EdgeId} {F(EtaSeconds)}";
     }
 
+    public sealed record GateOperated(int PlayerId, string GateId, bool Closed) : SimEvent
+    {
+        public override string LogLine() =>
+            $"{Tick} gateOperated {PlayerId} {GateId} {(Closed ? "shut" : "open")}";
+    }
+
+    public sealed record GateRejected(int PlayerId, string GateId, string Reason) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} gateRejected {PlayerId} {GateId} {Reason}";
+    }
+
     /// <summary>A blocked lane is open again, and what opened it.</summary>
     public sealed record LaneOpened(string EdgeId, string Cause) : SimEvent
     {

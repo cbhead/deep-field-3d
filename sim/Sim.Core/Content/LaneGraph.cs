@@ -66,6 +66,26 @@ public sealed record LaneNodeNameDef(string Id, Vec3 At);
 /// thinks is happening and never was.</summary>
 public sealed record LaneGateDef(string EdgeId, string SocketId);
 
+/// <summary>A lever, and the lane it shuts.
+///
+/// The other half of the barricade, and deliberately the opposite of it in
+/// every respect that matters. A barricade is an economic commitment: you pay
+/// for it, it stands there, a Ram has to break it and you lose it when one
+/// does. A lever is a timing decision — free, instant, reversible, and used
+/// forty times a match rather than once.
+///
+/// What it costs is that it stops walkers and not sieges. There is nothing to
+/// break, so a Ram's breach price is zero and it comes straight through a shut
+/// gate. That is not a hole in the mechanic, it is the mechanic: the lever
+/// turns the wave and does not turn the thing sent to open the wave's way. If
+/// you want a Ram stopped you buy the wall.
+///
+/// And it will not shut on a body. An enemy inside the gateway denies the
+/// close, which turns chaff into a tool the *attacker* uses against your
+/// mutation — the one thing a free, instant, reversible verb needed in order to
+/// cost something.</summary>
+public sealed record OperatedGateDef(string Id, string EdgeId, Vec3 At, string Label);
+
 /// <summary>One authored span between two nodes. <see cref="Waypoints"/>
 /// includes both endpoints, so an edge carries its whole geometry and a walker
 /// needs nothing but the edge to know where it is.</summary>
