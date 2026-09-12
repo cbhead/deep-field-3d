@@ -260,8 +260,18 @@ public sealed record MapDef(
     // and the default is what those maps already are.
     float FieldX = 110f,
     float FieldZ = 80f,
-    IReadOnlyList<VehicleSpawnDef>? VehiclesOrNull = null)
+    IReadOnlyList<VehicleSpawnDef>? VehiclesOrNull = null,
+    // Names for the junctions the lane graph derives from Routes. The
+    // derivation can find them; it cannot know that (-20, 0, -2) is the mouth
+    // of the freight cut. Naming them here makes an edge id readable
+    // ("westGate-cutMouth") and, more importantly, *stable*: positional ids
+    // renumber the moment a waypoint moves, and a fixture naming an edge and a
+    // save file naming it back both need an id that survives a map edit.
+    IReadOnlyList<LaneNodeNameDef>? LaneNodeNamesOrNull = null)
 {
+    public IReadOnlyList<LaneNodeNameDef> LaneNodeNames =>
+        LaneNodeNamesOrNull ?? System.Array.Empty<LaneNodeNameDef>();
+
     public IReadOnlyDictionary<int, string> ConditionSchedule =>
         ConditionScheduleOrNull ?? EmptySchedule;
 

@@ -18,6 +18,32 @@ const uint Seed = 20260906;
 PlayerBot MidBot(int id = 1, string faction = "ember") =>
     new(Seed + (uint)id) { PlayerId = id, FactionId = faction, Accuracy = 0.6f, Uptime = 0.8f };
 
+// --- `--lane-graph [map]`: print the derived graph, for reading and for naming.
+//
+// The derivation numbers its nodes by position (n0, n1, …), which is stable for
+// a fixed set of waypoints and renumbers the moment one moves. That is fine for
+// a check and useless as a reference: a fixture naming an edge, and a save file
+// naming it back, need an id that survives a map edit. So the graph gets read
+// here and named in Maps.cs.
+if (args.Contains("--lane-graph"))
+{
+    foreach (var map in Maps.All.Values)
+    {
+        if (map.Id == "testlane") continue;
+        var graph = LaneGraph.FromRoutes(map);
+        Console.WriteLine($"== {map.Id}: {graph.Nodes.Count} nodes, {graph.Edges.Count} edges");
+        foreach (var n in graph.Nodes)
+            Console.WriteLine($"   {n.Id,-4} {n.Kind,-8} ({n.Pos.X,7:0.#}, {n.Pos.Y,5:0.#}, {n.Pos.Z,7:0.#})");
+        foreach (var e in graph.Edges)
+            Console.WriteLine($"   {e.Id,-4} {e.From,-4} -> {e.To,-4} {e.Layer,-6} {e.Kind,-5} "
+                + $"{e.Waypoints.Count} pts {e.WalkedLength,7:0.#} m");
+        foreach (var i in graph.Itineraries)
+            Console.WriteLine($"   itinerary {i.Id,-12} {string.Join(" -> ", i.Via)}");
+        Console.WriteLine();
+    }
+    return 0;
+}
+
 // --- `--baseline`: write the numbers behind the balance gates, not the verdicts.
 //
 // A gate says PASS. That is the right thing for CI to read and the wrong thing
@@ -1843,6 +1869,42 @@ if (args.Contains("--baseline"))
         found.Count == 0
             ? $"exact-equality coalescing is safe on all {Maps.All.Count} maps"
             : string.Join(" | ", found.Take(6)));
+}
+
+// --- Gate 51: every junction on a campaign map is named, and every name is real.
+//
+// Derived ids are positional and renumber the moment a waypoint moves, so a
+// fixture naming an edge, and a save file naming it back, need authored names.
+// Checked in both directions: an unnamed node means a map edit added a junction
+// nobody described, and a name matching nothing means one was moved or removed
+// and the name was left behind pointing at empty ground. The second is the one
+// that rots quietly — it is exactly how levels.js fell three passes behind.
+{
+    var problems = new List<string>();
+    foreach (var map in Campaign.Sectors.Select(id => Maps.All[id]))
+    {
+        var graph = LaneGraph.FromRoutes(map);
+        var named = map.LaneNodeNames.ToDictionary(n => n.At, n => n.Id);
+
+        foreach (var node in graph.Nodes)
+            if (!named.ContainsKey(node.Pos))
+                problems.Add($"{map.Id}: junction at ({node.Pos.X:0.#},{node.Pos.Y:0.#},{node.Pos.Z:0.#}) has no name");
+
+        var positions = graph.Nodes.Select(n => n.Pos).ToHashSet();
+        foreach (var name in map.LaneNodeNames)
+            if (!positions.Contains(name.At))
+                problems.Add($"{map.Id}/{name.Id}: names ({name.At.X:0.#},{name.At.Y:0.#},{name.At.Z:0.#}), which is not a junction");
+
+        var duplicates = map.LaneNodeNames.GroupBy(n => n.Id).Where(g => g.Count() > 1);
+        foreach (var dup in duplicates) problems.Add($"{map.Id}: duplicate node name {dup.Key}");
+    }
+
+    Gate("lane graph: every junction is named, and every name is a junction",
+        problems.Count == 0,
+        problems.Count == 0
+            ? string.Join(", ", Campaign.Sectors.Select(id =>
+                $"{id} {Maps.All[id].LaneNodeNames.Count}"))
+            : string.Join(" | ", problems.Take(6)));
 }
 
 Console.WriteLine();

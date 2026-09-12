@@ -46,6 +46,11 @@ public enum LaneEdgeKind
 
 public sealed record LaneNodeDef(string Id, Vec3 Pos, LaneNodeKind Kind);
 
+/// <summary>A name for a junction the derivation finds, authored on the map.
+/// See <see cref="MapDef.LaneNodeNamesOrNull"/> for why derived ids are not
+/// enough.</summary>
+public sealed record LaneNodeNameDef(string Id, Vec3 At);
+
 /// <summary>One authored span between two nodes. <see cref="Waypoints"/>
 /// includes both endpoints, so an edge carries its whole geometry and a walker
 /// needs nothing but the edge to know where it is.</summary>
@@ -218,8 +223,10 @@ public sealed class LaneGraph
         var ordered = isNode
             .OrderBy(p => p.X).ThenBy(p => p.Y).ThenBy(p => p.Z)
             .ToList();
+        var authored = map.LaneNodeNames.ToDictionary(n => n.At, n => n.Id);
         var nodeId = new Dictionary<Vec3, string>();
-        for (int i = 0; i < ordered.Count; i++) nodeId[ordered[i]] = $"n{i}";
+        for (int i = 0; i < ordered.Count; i++)
+            nodeId[ordered[i]] = authored.TryGetValue(ordered[i], out var name) ? name : $"n{i}";
 
         var kinds = new Dictionary<Vec3, LaneNodeKind>();
         foreach (var at in ordered) kinds[at] = LaneNodeKind.Junction;
@@ -261,7 +268,17 @@ public sealed class LaneGraph
                     + string.Join(";", span.Select(p => $"{p.X:R},{p.Y:R},{p.Z:R}"));
                 if (!edgeByShape.TryGetValue(shape, out var edge))
                 {
-                    edge = new LaneEdgeDef($"e{edges.Count}", from, to, route.Layer, span,
+                    // Named for where it runs, not for the order it was found
+                    // in: "gate-drive" survives a waypoint being nudged, "e6"
+                    // does not, and a fixture has to be able to name an edge in
+                    // content and in save data. The suffix is for the case the
+                    // node promotion above could not separate — two spans
+                    // between the same pair with no interior to promote.
+                    string id = $"{from}-{to}";
+                    if (route.Layer == EnemyLayer.Air) id += "@air";
+                    for (int n = 2; edges.Any(x => x.Id == id); n++) id = $"{from}-{to}#{n}";
+
+                    edge = new LaneEdgeDef(id, from, to, route.Layer, span,
                         warp ? LaneEdgeKind.Warp : LaneEdgeKind.Walk);
                     edgeByShape[shape] = edge;
                     edges.Add(edge);

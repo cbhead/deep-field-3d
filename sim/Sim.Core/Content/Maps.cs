@@ -172,6 +172,17 @@ public static class Maps
         ConditionScheduleOrNull: new Dictionary<int, string>
         {
             [8] = Conditions.Fog.Id,
+        },
+        // Names for the junctions the lane graph derives. Foundry has no
+        // junction at all — one ground lane, one strand, neither branching —
+        // so this is four names for its four ends, and the flatness is the
+        // point: it is the map where the graph has nothing to say yet.
+        LaneNodeNamesOrNull: new[]
+        {
+            new LaneNodeNameDef("westGate", new Vec3(-40f, 0f, 0f)),
+            new LaneNodeNameDef("core", new Vec3(36f, 0f, 6f)),
+            new LaneNodeNameDef("airWest", new Vec3(-40f, 9f, -4f)),
+            new LaneNodeNameDef("airCore", new Vec3(36f, 9f, 4f)),
         });
 
     /// <summary>M2 — "Switchyard": three tiers and the barricade lesson. The
@@ -325,6 +336,20 @@ public static class Maps
         ConditionScheduleOrNull: new Dictionary<int, string>
         {
             [8] = Conditions.Night.Id,
+        },
+        // The first map whose graph says something. `cutMouth` is the freight
+        // cut's midpoint and `switchbackNorth` the long way's — the derivation
+        // promotes both, because two routes between the same gate and the same
+        // core are only tellable apart by where they go. That pair is this
+        // map's whole lesson, and `b1` sits on the edge through `cutMouth`.
+        LaneNodeNamesOrNull: new[]
+        {
+            new LaneNodeNameDef("westGate", new Vec3(-45f, 0f, -10f)),
+            new LaneNodeNameDef("cutMouth", new Vec3(-20f, 0f, -2f)),
+            new LaneNodeNameDef("switchbackNorth", new Vec3(-5f, 0f, 12f)),
+            new LaneNodeNameDef("core", new Vec3(40f, 0f, 8f)),
+            new LaneNodeNameDef("airWest", new Vec3(-45f, 9f, 4f)),
+            new LaneNodeNameDef("airCore", new Vec3(40f, 9f, 6f)),
         });
 
     /// <summary>Sector 3. A tower block, and the only map where the core is at
@@ -484,6 +509,19 @@ public static class Maps
         {
             [7] = Conditions.Night.Id,
             [11] = Conditions.Fog.Id,
+        },
+        // `floorThree` is where the stair and the fire escape converge — the
+        // one junction on the map, and the reason the upper half is a single
+        // flight you have to hold rather than two independent forty-metre
+        // climbs against one life pool.
+        LaneNodeNamesOrNull: new[]
+        {
+            new LaneNodeNameDef("lobby", new Vec3(-34f, 0f, 0f)),
+            new LaneNodeNameDef("escapeFoot", new Vec3(-34f, 0f, 16f)),
+            new LaneNodeNameDef("floorThree", new Vec3(14f, 20f, 14f)),
+            new LaneNodeNameDef("roofCore", new Vec3(0f, 40f, 0f)),
+            new LaneNodeNameDef("airStreet", new Vec3(-40f, 8f, 0f)),
+            new LaneNodeNameDef("airCore", new Vec3(0f, 44f, 0f)),
         });
 
     /// <summary>M4 — "The Toaster": a farm three times the width of any yard
@@ -792,6 +830,23 @@ public static class Maps
             new VehicleSpawnDef("dagator1", "dagator", new Vec3(-110f, 0f, 40f), 0f),
             new VehicleSpawnDef("grnmchn1", "grnmchn", new Vec3(76f, 0f, -30f), 180f),
             new VehicleSpawnDef("vehickle1", "vehickle", new Vec3(58f, 0f, 38f), -90f),
+        },
+        // The four warp pads and the drive, named as the route comments already
+        // name them. `drive` is waypoint 23 of `long` — "every route joins
+        // here" — and it is the node that makes this map's three routes three
+        // paths through one graph rather than three polylines: `direct` reaches
+        // it straight from the gate, `long` and `west` arrive via the pads.
+        LaneNodeNamesOrNull: new[]
+        {
+            new LaneNodeNameDef("gate", new Vec3(72f, 0f, 24f)),
+            new LaneNodeNameDef("southPad", new Vec3(72f, 0f, -40f)),
+            new LaneNodeNameDef("westPad", new Vec3(-137f, 0f, 11f)),
+            new LaneNodeNameDef("northPad", new Vec3(-44f, 0f, 60f)),
+            new LaneNodeNameDef("housePad", new Vec3(52f, 0f, 29f)),
+            new LaneNodeNameDef("drive", new Vec3(56f, 0f, 19f)),
+            new LaneNodeNameDef("core", new Vec3(-57f, 0f, -10f)),
+            new LaneNodeNameDef("airGate", new Vec3(72f, 9f, 24f)),
+            new LaneNodeNameDef("airCore", new Vec3(-57f, 9f, -10f)),
         });
 
     public static readonly IReadOnlyDictionary<string, MapDef> All =
