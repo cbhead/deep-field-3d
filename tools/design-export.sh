@@ -41,6 +41,32 @@ done
 
 command -v node >/dev/null || { echo "node is required (see docs/INSTALL.md)"; exit 1; }
 [ -d docs/design/models ] || { echo "docs/design/models/ is missing — vendor the design project first"; exit 1; }
+
+# Every kit the export page imports must actually be vendored.
+#
+# export.html imports its kits statically, which is correct — it is a faithful
+# port of design's own page and should stay one. But a static import of a file a
+# drop did not carry throws at module *resolution*, before a single line of the
+# export runs, so one absent kit produces zero assets for every other kit on the
+# page. That is not a hypothetical: `toaster.js` and `vehicles.js` were named
+# there and not vendored, and the export had been silently producing nothing —
+# which is why the Spire, whose kit was written and correct, was forty metres of
+# untinted boxes for three milestones.
+#
+# The page cannot guard against it without diverging from design's copy. This
+# can, and it costs one grep.
+missing=""
+while read -r kit; do
+  [ -f "docs/design/models/$kit.js" ] || missing="$missing $kit.js"
+done <<EOF
+$(grep -oE "from '\./models/[a-z-]+\.js'" tools/design-export/export.html \
+    | sed -E "s#from '\./models/##; s#\.js'##" | sort -u)
+EOF
+if [ -n "$missing" ]; then
+  echo "export.html imports kits this checkout does not have:$missing"
+  echo "vendor the drop that carries them, or the export will produce nothing at all."
+  exit 1
+fi
 if [ ! -d "$HOST/node_modules/three" ]; then
   echo "installing three.js (pinned in $HOST/package.json)…"
   (cd "$HOST" && npm install --no-audit --no-fund --silent)
