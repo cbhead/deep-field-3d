@@ -215,7 +215,13 @@ function visBox(root) {
 
 /** Hide every mesh outside the path's `_up_<path>_l*` groups; drop empty groups. */
 function pruneToPath(model, id, path) {
-  const re = new RegExp(`^${id}_up_${path}_l\\d+$`);
+  // The `$` used to close this pattern, which dropped every increment a tower
+  // names per part rather than as one group: the Singularity mirrors its
+  // per-arm copies onto <id>_up_<path>_l<N>_arm<i> (singularity.js cue()), so
+  // six of its twenty range/rate stages exported identical to the stage below
+  // them — an upgrade you bought and could not see. Match the level, then a
+  // boundary: a suffixed child belongs to the same increment.
+  const re = new RegExp(`^${id}_up_${path}_l\\d+(?:_|$)`);
   const keep = (o, under) => {
     if (!o.visible && o !== model) return false; // applyLevels hid this rung — leave it hidden
     const u = under || re.test(o.name);

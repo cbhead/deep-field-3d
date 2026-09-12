@@ -21,6 +21,8 @@ jobs:
         run: dotnet test sim/Sim.Core.Tests --configuration Release
       - name: Harness gates
         run: dotnet run --project sim/Sim.Harness --configuration Release
+      - name: Model validation (the delivery contract, docs/ART-INTEGRATION.md)
+        run: ./tools/model-validate.py
 
   # Smoke lane: headless dedicated server + headless client join on loopback.
   smoke:

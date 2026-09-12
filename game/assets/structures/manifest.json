@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generated": "2026-09-12T14:13:54.630Z",
+  "generated": "2026-09-12T21:00:13.318Z",
   "units": "metres",
   "up": "+Y",
   "forward": "-Z",
@@ -1889,10 +1889,21 @@
     },
     {
       "file": "tower_singularity_range_s2.glb",
-      "bytes": 236,
-      "tris": 0,
-      "parts": 0,
-      "bounds": null,
+      "bytes": 24704,
+      "tris": 468,
+      "parts": 15,
+      "bounds": {
+        "min": [
+          -0.777,
+          0.813,
+          -0.763
+        ],
+        "max": [
+          0.544,
+          0.882,
+          0.763
+        ]
+      },
       "tower": "singularity",
       "kind": "module",
       "path": "range",
@@ -1905,10 +1916,21 @@
     },
     {
       "file": "tower_singularity_range_s3.glb",
-      "bytes": 236,
-      "tris": 0,
-      "parts": 0,
-      "bounds": null,
+      "bytes": 109848,
+      "tris": 3924,
+      "parts": 18,
+      "bounds": {
+        "min": [
+          -0.777,
+          0.813,
+          -0.763
+        ],
+        "max": [
+          0.544,
+          2.707,
+          0.763
+        ]
+      },
       "tower": "singularity",
       "kind": "module",
       "path": "range",
@@ -1922,9 +1944,9 @@
     },
     {
       "file": "tower_singularity_range_s4.glb",
-      "bytes": 130292,
-      "tris": 3624,
-      "parts": 13,
+      "bytes": 239712,
+      "tris": 7548,
+      "parts": 31,
       "bounds": {
         "min": [
           -1.096,
@@ -1933,7 +1955,7 @@
         ],
         "max": [
           1.096,
-          0.14,
+          2.707,
           1.096
         ]
       },
@@ -1951,9 +1973,9 @@
     },
     {
       "file": "tower_singularity_range_s5.glb",
-      "bytes": 157356,
-      "tris": 4544,
-      "parts": 16,
+      "bytes": 266776,
+      "tris": 8468,
+      "parts": 34,
       "bounds": {
         "min": [
           -1.111,
@@ -1962,7 +1984,7 @@
         ],
         "max": [
           1.111,
-          0.281,
+          2.707,
           1.111
         ]
       },
@@ -1981,9 +2003,9 @@
     },
     {
       "file": "tower_singularity_range_s6.glb",
-      "bytes": 157356,
-      "tris": 4544,
-      "parts": 16,
+      "bytes": 314952,
+      "tris": 9608,
+      "parts": 40,
       "bounds": {
         "min": [
           -1.146,
@@ -1992,7 +2014,7 @@
         ],
         "max": [
           1.146,
-          0.281,
+          2.945,
           1.146
         ]
       },
@@ -2012,9 +2034,9 @@
     },
     {
       "file": "tower_singularity_range_s7.glb",
-      "bytes": 234184,
-      "tris": 6836,
-      "parts": 23,
+      "bytes": 391832,
+      "tris": 11900,
+      "parts": 47,
       "bounds": {
         "min": [
           -1.182,
@@ -2023,7 +2045,7 @@
         ],
         "max": [
           1.182,
-          1.459,
+          2.945,
           1.182
         ]
       },
@@ -2044,9 +2066,9 @@
     },
     {
       "file": "tower_singularity_range_s8.glb",
-      "bytes": 234212,
-      "tris": 6836,
-      "parts": 23,
+      "bytes": 489072,
+      "tris": 14420,
+      "parts": 56,
       "bounds": {
         "min": [
           -1.217,
@@ -2055,7 +2077,7 @@
         ],
         "max": [
           1.217,
-          1.459,
+          2.945,
           1.217
         ]
       },
@@ -2077,9 +2099,9 @@
     },
     {
       "file": "tower_singularity_range_s9.glb",
-      "bytes": 414168,
-      "tris": 14068,
-      "parts": 30,
+      "bytes": 669040,
+      "tris": 21652,
+      "parts": 63,
       "bounds": {
         "min": [
           -1.252,
@@ -2088,7 +2110,7 @@
         ],
         "max": [
           1.252,
-          2.51,
+          2.945,
           1.252
         ]
       },
@@ -2111,9 +2133,9 @@
     },
     {
       "file": "tower_singularity_range_s10.glb",
-      "bytes": 414140,
-      "tris": 14068,
-      "parts": 30,
+      "bytes": 717356,
+      "tris": 22792,
+      "parts": 69,
       "bounds": {
         "min": [
           -1.287,
@@ -2122,7 +2144,7 @@
         ],
         "max": [
           1.287,
-          2.51,
+          2.945,
           1.287
         ]
       },
@@ -2370,19 +2392,19 @@
     },
     {
       "file": "tower_singularity_rate_s9.glb",
-      "bytes": 612884,
-      "tris": 21780,
-      "parts": 38,
+      "bytes": 653692,
+      "tris": 22140,
+      "parts": 44,
       "bounds": {
         "min": [
-          -0.589,
+          -0.783,
           0.286,
-          -0.585
+          -0.654
         ],
         "max": [
           0.632,
           2.792,
-          0.585
+          0.774
         ]
       },
       "tower": "singularity",
@@ -2404,19 +2426,19 @@
     },
     {
       "file": "tower_singularity_rate_s10.glb",
-      "bytes": 723456,
-      "tris": 24564,
-      "parts": 48,
+      "bytes": 764264,
+      "tris": 24924,
+      "parts": 54,
       "bounds": {
         "min": [
-          -0.755,
+          -0.783,
           0.286,
           -0.755
         ],
         "max": [
           0.755,
           2.792,
-          0.755
+          0.774
         ]
       },
       "tower": "singularity",

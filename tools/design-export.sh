@@ -10,8 +10,16 @@
 # docs/ASSET-DELIVERY.md, docs/design-system/, game/assets/structures/manifest.json
 # — then prepares the icons and re-imports for Godot.
 #
-#   tools/design-export.sh            # full run
-#   tools/design-export.sh --serve    # just host the page (debugging the export)
+#   tools/design-export.sh                  # full run
+#   tools/design-export.sh --only lance     # one tower: chassis + its 30 stages
+#   tools/design-export.sh --only drifter   # one model, by item id or file stem
+#   tools/design-export.sh --only vfx       # a category: everything one module builds
+#   tools/design-export.sh --serve          # just host the page (debugging the export)
+#
+# A tweak to one model is a one-line edit in docs/design/models/*.js, and --only
+# is what makes checking it cost one file instead of the whole drop. A run merges
+# its rows into the existing manifest rather than replacing it, and skips the
+# palette/icon/design-system bundle, which it never rewrites anyway.
 #
 # Afterwards: `make assets && make usage`, and read docs/ASSET-DELIVERY.md for
 # what design says changed.
@@ -20,6 +28,16 @@ cd "$(dirname "$0")/.."
 HOST=tools/design-export
 PORT="${PORT:-8765}"
 GODOT="${GODOT:-$HOME/Applications/Godot_mono.app/Contents/MacOS/Godot}"
+ONLY=""
+SERVE=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --only)   ONLY="${2:-}"; [ -n "$ONLY" ] || { echo "--only needs a selector"; exit 2; }; shift 2 ;;
+    --only=*) ONLY="${1#--only=}"; shift ;;
+    --serve)  SERVE=1; shift ;;
+    *) echo "unknown argument: $1 (usage: $0 [--only <sel>[,<sel>...]] [--serve])"; exit 2 ;;
+  esac
+done
 
 command -v node >/dev/null || { echo "node is required (see docs/INSTALL.md)"; exit 1; }
 [ -d docs/design/models ] || { echo "docs/design/models/ is missing — vendor the design project first"; exit 1; }
@@ -34,7 +52,8 @@ trap 'kill $SERVER 2>/dev/null || true' EXIT
 for _ in $(seq 1 50); do curl -sf "http://127.0.0.1:$PORT/status" >/dev/null && break; sleep 0.2; done
 
 URL="http://127.0.0.1:$PORT/export.html"
-if [ "${1:-}" = --serve ]; then
+if [ -n "$ONLY" ]; then URL="$URL?only=$ONLY"; fi
+if [ -n "$SERVE" ]; then
   echo "serving $URL — Ctrl-C to stop"
   wait $SERVER
   exit 0
@@ -54,7 +73,8 @@ while :; do
   esac
 done
 
-./tools/prepare-icons.sh
+# Only a full run rewrites the icons, so preparing them again buys nothing.
+if [ -z "$ONLY" ]; then ./tools/prepare-icons.sh; fi
 if [ -x "$GODOT" ]; then
   echo "importing for Godot…"
   "$GODOT" --headless --path game --import >/dev/null 2>&1 || echo "godot import reported errors — run: $GODOT --headless --path game --import"

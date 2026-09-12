@@ -190,6 +190,7 @@ public partial class GameRoot : Node3D
         Kit.ReleaseCaches();
         AssetLibrary.ReleaseCaches();
         TowerRig.ReleaseCaches();
+        DesignManifest.ReleaseCaches();
         // Same rule for the view maps this class keeps: they hold managed
         // wrappers for nodes the SceneTree is about to take away, and anything
         // still referenced when mono shuts down is reported as leaked.
@@ -5206,6 +5207,11 @@ public partial class GameRoot : Node3D
         return body;
     }
 
+    /// <summary>How far an overhead bar floats above the model's own top. The
+    /// Drifter is the reference grunt and sat 0.19 m clear under the old
+    /// multiplier, so matching it leaves the roster looking as it did.</summary>
+    private const float OverheadClearance = 0.2f;
+
     private Node3D SpawnEnemyView(int enemyId, string defId)
     {
         var root = new TintableView();
@@ -5244,9 +5250,16 @@ public partial class GameRoot : Node3D
         area.SetMeta("enemy_id", enemyId);
         root.AddChild(area);
 
-        // Overheads sit just above the silhouette; scale drives the offset so a
-        // Monolith's bar doesn't sit inside its chest.
-        root.SetMeta("head_height", 1.9f * scale);
+        // Overheads sit just above the silhouette. The multiplier below was
+        // calibrated against the graybox capsule, and the delivered art does not
+        // agree with it: a Ram's bar sat 0.26 m inside its head, a Monolith's and
+        // an Aegis's floated 0.6 m clear, and a Skiff's hung 1.2 m over a craft
+        // half a metre tall. Design measures every model on the way out, so take
+        // the height from the manifest and keep the multiplier for the enemies
+        // still standing on a graybox.
+        root.SetMeta("head_height", DesignManifest.TryBounds(bodyAsset, out _, out var top)
+            ? top.Y + OverheadClearance
+            : 1.9f * scale);
         root.SetMeta("def_id", defId);
 
         AddChild(root);
