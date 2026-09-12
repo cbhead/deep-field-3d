@@ -6,14 +6,17 @@ Bloons-depth counters and machine-swept balance, Sanctum-style build-and-shoot.
 
 **Status: M4 in progress.** Four maps, ten enemies, eight towers, five factions,
 and the full design system worn across all sixteen UI surfaces — Claude Design's
-427 models and 65 icons replacing the graybox everywhere the code reaches,
+547 models and 65 icons replacing the graybox everywhere the code reaches,
 turrets driven on design's yaw/pitch rigs.
 Information warfare has landed: stealth and healing enemies, the Detector and
 Filament towers, poison and detection channels, and Night/Fog conditions.
 The Toaster adds the three things a farm three fields wide needs: routes with
 warp gates that throw a wave across the property mid-walk, four drivable
 vehicles whose handling is read off the road under them, and a network of
-teleport pads for the player.
+teleport pads for the player — and its kit has landed: instanced terrain,
+roads and treeline, four enterable houses, the four vehicle rigs, the warp
+gate. The weapons were rebuilt to the hero standard in the same drop, and
+reloads now play on the delivered magazines and off-hand poses.
 48 harness gates + 90 unit tests green.
 
 Design's spec is the source of truth for colour ([docs/PALETTE.md](docs/PALETTE.md));
@@ -29,7 +32,8 @@ proposed:
 
 | | |
 |---|---|
-| **[docs/FORWARD-MANIFEST-toaster.md](docs/FORWARD-MANIFEST-toaster.md)** | **open — the whole kit for sector 4.** Terrain, roads and an instanced treeline with part budgets; four building shells with their openings at the offsets the volumes are built at; four vehicle rigs; a warp gate; the pond and the sky. The map is playable today and every piece of it is a grey box. |
+| **[docs/FORWARD-MANIFEST-hero.md](docs/FORWARD-MANIFEST-hero.md)** | **open — after the 2026-09-12 drop.** Share the hero texture set instead of embedding it twenty-four times, a world model that is not the viewmodel, rifle and tool hands to the hero standard, and the Toaster's lane module. |
+| [docs/FORWARD-MANIFEST-toaster.md](docs/FORWARD-MANIFEST-toaster.md) | **delivered 2026-09-12** — the whole kit for sector 4 landed and the map runs on it; kept as the record of what was asked and why |
 | [docs/FORWARD-MANIFEST-switchyard.md](docs/FORWARD-MANIFEST-switchyard.md) | open — separating what repeats from what punctuates, and the turnout, headwall, overbridge and portal that map still grayboxes |
 | [docs/FORWARD-MANIFEST-reload.md](docs/FORWARD-MANIFEST-reload.md) | open — magazines that exist off the gun, off-hand poses, and turret elevation |
 

@@ -16,7 +16,7 @@ export function assembleWeapon(K, id, build = {}) {
     const att = ATTACHMENTS.find((a) => a.id === attId); if (!att) continue;
     const hide = (n) => { const o = model.getObjectByName(n); if (o) o.visible = false; };
     if (slot === 'barrel') hide(`${id}_barrel`);
-    if (slot === 'magazine') hide(`${id}_magazine`);
+    if (slot === 'magazine') { hide(`${id}_magazine`); hide(`${id}_mag_tube`); }
     if (slot === 'stock') hide(`${id}_stock`);
     let mnt = model.getObjectByName(`${id}_mount_${slot}`);
     if (slot === 'muzzle' && build.barrel) mnt = model.getObjectByName('attach_mount_muzzle') || mnt;

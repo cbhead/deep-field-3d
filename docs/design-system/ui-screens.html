@@ -38,25 +38,38 @@
 </main>
 <script type="module">
 import { SCREENS } from './ui-screens.js';
+import { SCREENS_V2 } from './ui-screens-v2.js';
 import './ui-branding.js';
 import { mountWeaponViews } from './ui-weapon-view.js';
+const ALL = [...SCREENS_V2, ...SCREENS];
 const el = (id) => document.getElementById(id);
 el('tabs').innerHTML = `<a href="Deep Field 3D - Asset Export.html"><span class="faction forge" style="width:8px;height:8px"></span>Export pack</a><a href="Deep Field 3D - Roster.html">Roster</a><a href="Deep Field 3D - Gunsmith.html">Gunsmith</a><a href="Deep Field 3D - Maps.html">Maps</a><a href="Lance.html">Towers</a>`;
-const groups = [...new Set(SCREENS.map((s) => s.group))];
-el('nav').innerHTML = groups.map((g) => `<h2>${g}</h2>` + SCREENS.filter((s) => s.group === g).map((s) => `<button type="button" data-id="${s.id}">${s.label}<small>${s.tag || ''}</small></button>`).join('')).join('');
+const groups = [...new Set(ALL.map((s) => s.group))];
+el('nav').innerHTML = groups.map((g) => `<h2>${g}</h2>` + ALL.filter((s) => s.group === g).map((s) => `<button type="button" data-id="${s.id}">${s.label}<small>${s.tag || ''}</small></button>`).join('')).join('');
 el('nav').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) show(b.dataset.id); });
 function show(id) {
-  const s = SCREENS.find((x) => x.id === id); if (!s) return;
+  const s = ALL.find((x) => x.id === id); if (!s) return;
   for (const b of el('nav').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.id === id));
   el('stage').innerHTML = s.render();
   mountWeaponViews(el('stage'));
   el('cap').innerHTML = `<b>${s.label}</b>${s.note}`;
   location.hash = id;
+  fit();
 }
-function fit() { const w = el('wrap').clientWidth - 48, h = el('wrap').clientHeight - 48; el('stage').style.transform = `translate(-50%,-50%) scale(${Math.min(w / 1920, h / 1080)})`; }
-window.addEventListener('resize', fit); fit();
-show(location.hash.slice(1) || SCREENS[0].id);
-window.__screens = { SCREENS, show };
+/* Writes only the ratio, into --stage-k (see ui-kit.css). Retries on a TIMER, not a
+   frame: some render contexts deliver no animation frames and no ResizeObserver
+   callbacks at all, so a frame-driven first measurement never lands. */
+function fit() {
+  const wrap = el('wrap'), w = wrap.clientWidth - 48, h = wrap.clientHeight - 48;
+  if (w <= 0 || h <= 0) { setTimeout(fit, 50); return; }
+  el('stage').style.setProperty('--stage-k', Math.min(w / 1920, h / 1080));
+}
+const ro = new ResizeObserver(fit);
+ro.observe(el('wrap'));
+window.addEventListener('resize', fit);
+show(location.hash.slice(1) || ALL[0].id);
+setTimeout(fit, 0);
+window.__screens = { SCREENS: ALL, show };
 </script>
 </body>
 </html>

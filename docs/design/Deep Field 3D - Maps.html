@@ -62,7 +62,7 @@
   .swatch{width:8px;height:8px;flex:0 0 auto;transform:rotate(45deg)}
   .stats{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3) var(--space-4);margin:0}
   .stats dt{font:var(--text-label);letter-spacing:var(--tracking-micro);text-transform:uppercase;color:var(--text-muted);margin:0}
-  .stats dd{margin:3px 0 0;font:var(--weight-bold) var(--size-stat-sm)/1 var(--font-mono);color:var(--text-primary)} .stats dd.arcane{color:var(--text-arcane)}
+  .stats dd{margin:3px 0 0;font:var(--weight-bold) var(--size-stat-sm)/1 var(--font-mono);color:var(--text-primary)} .stats dd.arcane{color:var(--text-arcane)} .stats dd.warn{color:var(--state-danger)}
   hr{border:0;border-top:var(--stroke-panel) solid var(--border-panel);margin:var(--space-4) 0}
   .note{font-size:var(--size-caption);line-height:var(--leading-normal);color:var(--text-muted);margin:var(--space-3) 0 0}
   code{font:var(--weight-regular) var(--size-micro)/1 var(--font-mono);color:var(--text-arcane)}
@@ -72,7 +72,7 @@
 </head>
 <body>
 <header>
-  <div class="brand"><h1 id="title">Maps</h1><p>Deep Field 3D · brief §3.6 · kit pieces + full assembly from Maps.cs / GameRoot.cs coordinates</p></div>
+  <div class="brand"><h1 id="title">Maps</h1><p>Deep Field 3D · brief §3.6 · kit pieces + full assembly · levels authored to docs/MAP-AUTHORING.md</p></div>
   <nav class="tabs" id="tabs"></nav>
 </header>
 <main>
@@ -86,6 +86,7 @@
       <label><input type="checkbox" id="showRoutes" checked> Route ribbons + sockets (sim truth)</label>
       <label><input type="checkbox" id="showSight" checked> Socket → route sightlines</label>
       <label><input type="checkbox" id="showDress" checked> Dressing set</label>
+      <label><input type="checkbox" id="showVolumes"> Volumes + socket checks (§2.2 / §2.4 / §4.9)</label>
       <label><input type="checkbox" id="showSky" checked> Skybox</label>
       <label><input type="checkbox" id="showAtmo" checked> Atmosphere — fog, lights, particles, haze</label>
     </div>
@@ -127,7 +128,10 @@ import { makeEnemyKit } from './models/enemies.js';
 import { FOUNDRY, makeFoundryMats } from './models/foundry.js';
 import { SHARED } from './models/shared.js';
 import { SWITCHYARD, makeSwitchyardMats } from './models/switchyard.js';
-import { LEVELS } from './models/levels.js';
+import { SPIRE, makeSpireMats } from './models/spire.js';
+import { TOASTER, makeToasterMats, buildToasterBelt, buildToasterRoads, buildToasterDrive } from './models/toaster.js';
+import { VEHICLES, makeVehicleMats } from './models/vehicles.js';
+import { LEVELS, roadKeepOut } from './models/levels.js';
 import { applyAtmosphere, clearAtmosphere } from './models/atmosphere.js';
 import { triCount, countMeshes } from './models/tower-kit.js';
 import { applyStudio } from './models/studio.js';
@@ -136,14 +140,17 @@ const el = (id) => document.getElementById(id);
 const stage = document.querySelector('three-d-stage');
 const { THREE } = await stage.ready;
 applyStudio(stage, THREE, { intensity: .55 });
-const K = makeEnemyKit(THREE); makeFoundryMats(THREE, K.mats); makeSwitchyardMats(THREE, K.mats);
+const K = makeEnemyKit(THREE); makeFoundryMats(THREE, K.mats); makeSwitchyardMats(THREE, K.mats); makeSpireMats(THREE, K.mats); makeToasterMats(THREE, K.mats); makeVehicleMats(THREE, K.mats);
 K.mats.grip_rubber = K.mats.rubber; K.mats.threat = K.mats.weak;
-const ALL = Object.fromEntries([...FOUNDRY, ...SWITCHYARD, ...SHARED].map((m) => [m.id, m]));
+const ALL = Object.fromEntries([...FOUNDRY, ...SWITCHYARD, ...SPIRE, ...TOASTER, ...VEHICLES, ...SHARED].map((m) => [m.id, m]));
 const CATS = [
   { id: 'foundry', label: 'Foundry', groups: [['Assembly', [{ id: '__assembly_foundry', label: 'Full level', size: '110×80', swatch: '#ff8a1f', assembly: 'foundry' }]], ['Foundry kit', FOUNDRY], ['Shared kit', SHARED]] },
   { id: 'switchyard', label: 'Switchyard', groups: [['Assembly', [{ id: '__assembly_switchyard', label: 'Full level', size: '110×80', swatch: '#d8a13a', assembly: 'switchyard' }]], ['Switchyard kit', SWITCHYARD], ['Shared kit', SHARED]] },
+  { id: 'spire', label: 'Spire', groups: [['Assembly', [{ id: '__assembly_spire', label: 'Full level', size: '40×40×40', swatch: '#ff4f7a', assembly: 'spire' }]], ['Spire kit', SPIRE], ['Shared kit', SHARED]] },
+  { id: 'toaster', label: 'The Toaster', groups: [['Assembly', [{ id: '__assembly_toaster', label: 'Full level', size: '320×160', swatch: '#92844e', assembly: 'toaster' }]], ['Toaster kit', TOASTER], ['Vehicles', VEHICLES], ['Shared kit', SHARED]] },
 ];
-let cat = CATS[0], cur = null, model = null;
+let cat = CATS[0], cur = null, model = null, diag = {}, diagNote = '';
+const view = (L) => L.view || { cam: [L.field[0] * .55, 38, L.field[1] * .9], target: [0, 2, 0] };
 const tweaks = { condition: 'clear', vantage: 'overview', dressing: 'full' };
 let condBase = null, stormRaf = 0;
 
@@ -160,7 +167,7 @@ function setCat(c) {
 }
 function renderList() { el('items').innerHTML = cat.groups.map(([h, items]) => `<li class="head">${h}</li>` + items.map((it) => `<li><button type="button" data-id="${it.id}"><span class="swatch" style="background:${it.swatch}"></span>${it.label}<small>${it.size || ''}</small></button></li>`).join('')).join(''); }
 el('items').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; select(b.dataset.id); });
-for (const id of ['showRoutes', 'showSight', 'showDress', 'showSky', 'showAtmo']) el(id).addEventListener('change', () => cur?.assembly && select(cur.id));
+for (const id of ['showRoutes', 'showSight', 'showDress', 'showSky', 'showAtmo', 'showVolumes']) el(id).addEventListener('change', () => cur?.assembly && select(cur.id));
 
 function find(id) { for (const [, items] of cat.groups) { const it = items.find((x) => x.id === id); if (it) return it; } }
 function select(id) {
@@ -171,8 +178,8 @@ function select(id) {
   stage.setAttribute('name', cur.assembly ? cur.assembly + '_assembly' : cur.file.replace(/\.glb$/, ''));
   stage.setObject(model);
   if (cur.assembly) { // frame the playfield, not the 400 m sky dome
-    const cam = stage._camera, ctl = stage._controls, L = LEVELS[cur.assembly];
-    cam.near = .15; cam.far = 1500; cam.position.set(L.field[0] * .55, 38, L.field[1] * .9); ctl.target.set(0, 2, 0); cam.updateProjectionMatrix(); ctl.update();
+    const cam = stage._camera, ctl = stage._controls, L = LEVELS[cur.assembly], V = view(L);
+    cam.near = .15; cam.far = 1500; cam.position.set(...V.cam); ctl.target.set(...V.target); cam.updateProjectionMatrix(); ctl.update();
     const span = 70; for (const k of ['left', 'right', 'top', 'bottom']) stage._key.shadow.camera[k] = (k === 'left' || k === 'bottom' ? -1 : 1) * span; stage._key.shadow.camera.updateProjectionMatrix();
     stage._ground.position.y = -.02;
   }
@@ -180,29 +187,152 @@ function select(id) {
   if (cur.assembly) { condBase = null; applyCondition(); applyVantage(); }
   el('assemblyChecks').hidden = !cur.assembly;
   el('info-title').textContent = cur.label;
-  el('file').textContent = cur.assembly ? 'sim/Sim.Core/Content/Maps.cs · game/scripts/GameRoot.cs' : 'game/assets/' + cur.dir + cur.file;
-  el('note').textContent = cur.note || 'Every kit piece instanced at its GameRoot.cs graybox coordinate. Cyan lines are socket→route sightlines: dressing must never cross them.';
+  el('file').textContent = cur.assembly ? 'models/levels.js · sim/Sim.Core/Content/Maps.cs' : 'game/assets/' + cur.dir + cur.file;
+  el('note').textContent = cur.note || (cur.assembly
+    ? (diagNote || 'Authored to docs/MAP-AUTHORING.md: routes, sockets and anchors are sim truth, volumes and areas are design\u2019s. Cyan lines are socket→route sightlines — dressing must never cross them; every wall socket sits on a solid volume.')
+    : 'Every kit piece instanced at its GameRoot.cs graybox coordinate.');
   const b = new THREE.Box3(); model.traverse((o) => { if (o.isMesh && !o.userData.gizmo && !o.name.startsWith('sky_')) b.expandByObject(o); }); const s = b.getSize(new THREE.Vector3());
-  el('stats').innerHTML = Object.entries({ ...(cur.stats || {}), Bounds: `${s.x.toFixed(1)}×${s.y.toFixed(1)}×${s.z.toFixed(1)}`, Tris: triCount(model).toLocaleString(), Parts: String(countMeshes(model)) })
-    .map(([k, v]) => `<div><dt>${k}</dt><dd class="${k === 'Tris' || k === 'Parts' ? 'arcane' : ''}">${v}</dd></div>`).join('');
+  el('stats').innerHTML = Object.entries({ ...(cur.stats || {}), ...(cur.assembly ? diag : {}), Bounds: `${s.x.toFixed(1)}×${s.y.toFixed(1)}×${s.z.toFixed(1)}`, Tris: triCount(model).toLocaleString(), Parts: String(countMeshes(model)) })
+    .map(([k, v]) => `<div><dt>${k}</dt><dd class="${k === 'Tris' || k === 'Parts' ? 'arcane' : ''}${['Stranded', 'Off-lane', 'Crowded', 'Perched', 'Uncovered', 'Headroom', 'Masts'].includes(k) && v !== '0' ? ' warn' : ''}">${v}</dd></div>`).join('');
 }
 
 function buildAssembly(L) {
   const g = new THREE.Group(); g.name = L.label + '_assembly';
   const [W, H] = L.field;
+  /* Dressing and the perimeter street shade themselves and nothing else. */
+  const noShadow = (o) => { o.traverse((c) => { if (c.isMesh) { c.castShadow = false; c.userData.noShadow = true; } }); return o; };
+  /* Furniture the terrain grid brings with it, for the clearance check, and
+     what had to be thinned out of it. */
+  const tileProps = [], thinned = [];
+  /* Distance to the nearest ground lane — wanted by the terrain thinning pass
+     as well as by the §4 checks below, so it lives above both.
+
+     A TELEPORT LEG is not a lane. The sim moves the wave from one pad to the
+     other in a single tick, so nothing ever stands on the line between them —
+     but treated as geometry it is a two-hundred-metre straight across the
+     whole property, and every check that measures “distance to a lane” then
+     measures distance to a line that does not exist. On the Toaster that one
+     mistake put a house, a pond and the entire treeline “in the lane” and
+     reported three samples of a phantom leg as uncovered. So a route is split
+     at its teleport legs and every check sees the WALKED pieces only. */
+  const splitRoute = (name, pts) => {
+    const tl = new Set((L.teleportLegs && L.teleportLegs[name]) || []);
+    const out = []; let run = [pts[0]];
+    for (let i = 0; i < pts.length - 1; i++) {
+      if (tl.has(i)) { if (run.length > 1) out.push(run); run = [pts[i + 1]]; }
+      else run.push(pts[i + 1]);
+    }
+    if (run.length > 1) out.push(run);
+    return out;
+  };
+  const WALKED = Object.entries(L.routes).flatMap(([n, r]) => (n === 'air' ? [] : splitRoute(n, r).map((s) => [n, s])));
+  const FLOWN = Object.entries(L.routes).flatMap(([n, r]) => (n === 'air' ? splitRoute(n, r).map((s) => [n, s]) : []));
+  const lanes = WALKED.map(([, s]) => s);
+  const laneDist = (p) => {
+    const s = new THREE.Vector3(...p); let best = Infinity;
+    for (const r of lanes) for (let i = 0; i < r.length - 1; i++) {
+      const a = new THREE.Vector3(...r[i]), ab = new THREE.Vector3(...r[i + 1]).sub(a);
+      const t = Math.max(0, Math.min(1, s.clone().sub(a).dot(ab) / ab.lengthSq()));
+      best = Math.min(best, s.distanceTo(a.clone().addScaledVector(ab, t)));
+    }
+    return best;
+  };
   // Terrain tiles.
-  const kit = L.kit, TERRAIN = ALL[kit + '_terrain'], WALL = ALL[kit === 'foundry' ? 'foundry_wall_boundary' : 'switchyard_retainingwall'], ROAD = ALL[kit + '_path_ground'];
+  const kit = L.kit, TERRAIN = ALL[kit + '_terrain'], WALL = ALL[kit + '_wall_boundary'] || ALL[kit + '_retainingwall'], ROAD = ALL[kit + '_path_ground'];
   const nx = Math.ceil(W / 20), nz = Math.ceil(H / 20);
-  for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) { const t = TERRAIN.buildVariant ? TERRAIN.buildVariant(K, (i * 3 + j * 2 + (i * j)) % 4) : TERRAIN.build(K); t.position.set(-W / 2 + 10 + i * 20, 0, -H / 2 + 10 + j * 20); t.scale.set(Math.min(1, (W / 2 - (-W / 2 + i * 20)) / 20), 1, Math.min(1, (H / 2 - (-H / 2 + j * 20)) / 20)); t.position.x = -W / 2 + i * 20 + 10 * t.scale.x; t.position.z = -H / 2 + j * 20 + 10 * t.scale.z; g.add(t); }
-  // Boundary walls.
-  for (let x = -W / 2 + 5; x < W / 2; x += 10) for (const s of [-1, 1]) { const w = WALL.build(K); w.position.set(x, 0, s * (H / 2 + .6)); w.rotation.y = s > 0 ? Math.PI : 0; g.add(w); }
-  for (let z = -H / 2 + 5; z < H / 2; z += 10) for (const s of [-1, 1]) { const w = WALL.build(K); w.position.set(s * (W / 2 + .6), 0, z); w.rotation.y = s > 0 ? Math.PI / 2 : -Math.PI / 2; g.add(w); }
-  // Roadway along the ground route.
-  const gr = L.routes.ground;
-  const roads = L.cut ? [L.routes.ground, L.routes[L.cut.route]] : [gr];
-  for (const rt of roads) for (let i = 0; i < rt.length - 1; i++) {
-    const a = new THREE.Vector3(...rt[i]), b = new THREE.Vector3(...rt[i + 1]), d = b.clone().sub(a), len = d.length(), n = Math.ceil(len / 4);
-    for (let k = 0; k < n; k++) { const p = ROAD.build(K); p.position.copy(a).addScaledVector(d, (k + .5) / n); p.position.y = .06; p.rotation.y = Math.atan2(d.x, d.z) + Math.PI / 2; p.scale.x = (len / n) / 4; g.add(p); }
+  for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) { const t = TERRAIN.buildVariant ? TERRAIN.buildVariant(K, (i * 3 + j * 2 + (i * j)) % 4) : TERRAIN.build(K); t.position.set(-W / 2 + 10 + i * 20, 0, -H / 2 + 10 + j * 20); t.scale.set(Math.min(1, (W / 2 - (-W / 2 + i * 20)) / 20), 1, Math.min(1, (H / 2 - (-H / 2 + j * 20)) / 20)); t.position.x = -W / 2 + i * 20 + 10 * t.scale.x; t.position.z = -H / 2 + j * 20 + 10 * t.scale.z;
+    // Every tile's furniture gets walked on every map — this used to sit inside
+    // the indoor branch, so on the two maps without an `indoor` field the grid's
+    // props were never looked at. Flush or standing is measured, not listed:
+    // measured across all three kits, surface pieces run 0–0.27 m (ballast,
+    // drains, grates, sleepers, manhole lids), weed tufts reach 0.36 and bike
+    // hoops 0.43 — all stepped over — while a planter is 1.27 and a switch
+    // stand 1.49. Half a metre is the line, and it needs no name blocklist to
+    // fall out of date.
+    for (const c of [...t.children]) {
+      if (/(^|_)terrain_ground$/.test(c.name)) continue;
+      const p = c.position.clone().multiply(t.scale).add(t.position);
+      if (L.indoor && p.x >= L.indoor.x[0] - 2.5 && p.x <= L.indoor.x[1] + 2.5 && p.z >= L.indoor.z[0] - 2.5 && p.z <= L.indoor.z[1] + 2.5) { t.remove(c); continue; }
+      const bb = new THREE.Box3().setFromObject(c);
+      if (bb.max.y - Math.max(0, bb.min.y) < .5) continue;
+      // Standing prop on a fixed grid: it cannot be nudged the way a placed one
+      // can, so a tile that drops one on a build pad loses it — the HideNamed
+      // treatment the game already gives these stands.
+      if (L.sockets.some(([, q]) => Math.abs(q[1] - p.y) < 2 && Math.hypot(q[0] - p.x, q[2] - p.z) < 3) || laneDist([p.x, p.y, p.z]) < 3) { t.remove(c); thinned.push(c.name); continue; }
+      tileProps.push([c.name, [p.x, 0, p.z]]);
+    }
+    g.add(t); }
+  // Boundary walls — only where the kit ships one (the Spire's is a street
+  // frontage, so its variants cycle: one piece laid thirty-eight times would
+  // put the same shopfront on a lattice, the terrain tile's mistake at street
+  // scale). The detailed face is authored on +Z and must look inward on all
+  // four edges. Nothing at the field edge casts — the key light's shadow
+  // camera only spans 70 m, so those casters were pure cost.
+  if (WALL) {
+    const wall = (i) => noShadow(WALL.buildVariant ? WALL.buildVariant(K, i % 4) : WALL.build(K));
+    let i = 0;
+    for (let x = -W / 2 + 5; x < W / 2; x += 10) for (const s of [-1, 1]) { const w = wall(i++ + (s > 0 ? 2 : 0)); w.position.set(x, 0, s * (H / 2 + .6)); w.rotation.y = s > 0 ? Math.PI : 0; g.add(w); }
+    for (let z = -H / 2 + 5; z < H / 2; z += 10) for (const s of [-1, 1]) { const w = wall(i++ + (s > 0 ? 1 : 3)); w.position.set(s * (W / 2 + .6), 0, z); w.rotation.y = s > 0 ? -Math.PI / 2 : Math.PI / 2; g.add(w); }
+  }
+  // The made roads (Toaster): 4 m modules along the authored polylines, plus
+  // the circular drive from twelve 30° arcs off one centre of curvature.
+  // These are the VEHICLE network, not the enemy lane — handling is read off
+  // these same centre lines, so the art is laid on the line by construction.
+  if (L.vroads) g.add(buildToasterRoads(K, L.vroads, ALL));
+  if (L.drive) g.add(buildToasterDrive(K, L.drive, ALL));
+  /* The treeline. Laid by rule rather than listed: about 780 trees on the
+     same hashed 3.5 m lattice the client uses, merged to one mesh per species
+     per LOD — the viewer's equivalent of the multimesh, and the only way a
+     belt this size is affordable either side. Trees keep out of the lane
+     mouths, the routes and the pads, exactly as upstream's does. */
+  if (L.belt) {
+    const roadOut = roadKeepOut(L, 2);
+    const mouths = [L.spawn, L.core, ...(L.stations || []).map(([, p]) => p)].filter(Boolean);
+    const belt = buildToasterBelt(K, {
+      halfX: W / 2, halfZ: H / 2, depth: L.belt.depth, step: L.belt.step,
+      /* Lanes AND roads. The belt only ever avoided enemy lanes, which was
+         survivable while the roads were short stubs inside the field and put
+         36 trunks in the carriageway the moment they reached the boundaries:
+         the county road exits north through the belt, the south road exits
+         both sides through it, and at z − 66 it lies inside the 12 m belt
+         band along its whole length. `roadKeepOut` is the level's own test,
+         so the belt and the dressing pass cannot disagree about where the
+         road is. */
+      keepOut: (x, z) => laneDist([x, 0, z]) < 8 || roadOut(x, z)
+        || mouths.some((m) => Math.hypot(m[0] - x, m[2] - z) < 10)
+        || L.sockets.some(([, q]) => Math.hypot(q[0] - x, q[2] - z) < 5)
+        || (L.vroads || []).some((r) => r.pts.some((p, i) => {
+          if (i === r.pts.length - 1) return false;
+          const a = new THREE.Vector3(...p), ab = new THREE.Vector3(...r.pts[i + 1]).sub(a);
+          const s = new THREE.Vector3(x, 0, z), t = Math.max(0, Math.min(1, s.clone().sub(a).dot(ab) / ab.lengthSq()));
+          return s.distanceTo(a.clone().addScaledVector(ab, t)) < r.width / 2 + 3;
+        })),
+    });
+    g.add(belt);
+  }
+  // Roadway along the ground routes. A climbing leg is a stair or a flight, so
+  // it gets no lane; a flat leg gets asphalt at grade and the painted interior
+  // lane on a floor plate, which is how the route reads on every level. Legs
+  // shared between routes are laid once — the Spire's roof lap belongs to both
+  // the stair and the escape, and laying it twice put two coplanar copies of
+  // the paint on the surface the match ends on.
+  const roads = L.roads || ['ground'], ROAD_UP = ALL[kit + '_path_interior'], laid = new Set(), laneLegs = [];
+  const vols0 = L.volumes || [];
+  for (const name of roads) {
+    const rt = L.routes[name]; if (!rt) continue;
+    for (let i = 0; i < rt.length - 1; i++) {
+      const a = new THREE.Vector3(...rt[i]), b = new THREE.Vector3(...rt[i + 1]);
+      if (a.y !== b.y) continue;
+      const key = [a.toArray(), b.toArray()].map((p) => p.join()).sort().join('|');
+      if (laid.has(key)) continue; laid.add(key);
+      // Indoors is a taped corridor, not tarmac — the ground lap runs through
+      // the lobby, and picking the module by height alone paved it with kerbs.
+      const mid = a.clone().lerp(b, .5);
+      const inside = L.indoor && mid.x >= L.indoor.x[0] && mid.x <= L.indoor.x[1] && mid.z >= L.indoor.z[0] && mid.z <= L.indoor.z[1];
+      const painted = ROAD_UP && (a.y > .5 || inside);
+      const M = painted ? ROAD_UP : ROAD; if (!M) continue;
+      laneLegs.push([a, b, M, painted]);
+    }
   }
   // Freight cut (Switchyard): channel pieces only along the x-range of the short route no other route/socket touches.
   if (L.cut) {
@@ -221,14 +351,49 @@ function buildAssembly(L) {
   let dressN = 0;
   for (const [mid, pos, rot = 0, sc = 1] of L.place) {
     if (mid.includes('_dress_') || mid.includes('_scatter')) { if (!dressOn || tweaks.dressing === 'bare' || (tweaks.dressing === 'sparse' && dressN++ % 2)) continue; }
-    const m = ALL[mid]?.build(K); if (!m) continue; m.position.set(...pos); m.rotation.y = rot; m.scale.setScalar(sc); if (mid === 'shared_airlane_pylon') m.scale.set(1, sc, 1); g.add(m);
+    // `id#2` asks a piece with variants for that one — a row of parked cars is
+    // four models, not one model nineteen times.
+    const [base, vv] = mid.split('#'), src = ALL[base];
+    const m = vv !== undefined && src?.buildVariant ? src.buildVariant(K, +vv) : src?.build(K); if (!m) continue;
+    if (base.includes('_dress_') || base.includes('_scatter')) noShadow(m);
+    m.position.set(...pos); m.rotation.y = rot;
+    if (Array.isArray(sc)) m.scale.set(...sc); else if (base === 'shared_airlane_pylon') m.scale.set(1, sc, 1); else m.scale.setScalar(sc);
+    g.add(m);
+  }
+  // Now the surfaces exist, measure them and lay the lane on top. Authored
+  // heights kept lying about where the floor is — a floor bay's slab renders its
+  // top at +0.272, not the +0.2 the plate convention implies, because the kit's
+  // refinement pass inflates it — so the paint spent a turn 2 cm inside the
+  // floor and a turn 17 cm above the roof. A ray down onto the built geometry
+  // cannot be wrong about it.
+  g.updateMatrixWorld(true);
+  const surfMeshes = [];
+  g.traverse((o) => { if (o.isMesh && !o.userData.gizmo && /_floor|_deck|_middeck|_catwalk|_roof|_fireescape|_gantry_walk|_terrain/.test(o.parent?.name || '')) surfMeshes.push(o); });
+  const rayDown = new THREE.Raycaster(); rayDown.far = 2.4;
+  const surfaceAt = (x, z, near) => {
+    rayDown.set(new THREE.Vector3(x, near + 1.2, z), new THREE.Vector3(0, -1, 0));
+    const hit = rayDown.intersectObjects(surfMeshes, false)[0];
+    return hit ? hit.point.y : null;
+  };
+  for (const [a, b, M, painted] of laneLegs) {
+    const d = b.clone().sub(a), len = d.length(), n = Math.ceil(len / 4);
+    for (let k = 0; k < n; k++) {
+      const p = M.build(K);
+      p.position.copy(a).addScaledVector(d, (k + .5) / n);
+      p.position.y = painted ? (surfaceAt(p.position.x, p.position.z, a.y) ?? a.y) + .03 : .06;
+      p.rotation.y = Math.atan2(d.x, d.z) + Math.PI / 2; p.scale.x = (len / n) / 4; noShadow(p); g.add(p);
+    }
   }
   // Zipline cable.
   if (L.zipline) { const [a, b] = L.zipline.map((p) => new THREE.Vector3(...p)); const c = ALL.shared_zipline_cable.build(K); c.position.copy(a); c.lookAt(b); c.rotateY(Math.PI); c.scale.z = a.distanceTo(b); g.add(c); }
   if (el('showSky').checked) g.add(ALL[kit + '_skybox'].build(K));
   // Sim truth overlays.
   if (el('showRoutes').checked) {
-    for (const [name, pts] of Object.entries(L.routes)) {
+    /* Drawn from the walked pieces, not the raw waypoint list: a straight
+       line across the map between two warp pads is decoration that states a
+       route position the route does not have, which is the §4.12 problem in
+       the overlay rather than in the world. */
+    for (const [name, pts] of [...WALKED, ...FLOWN]) {
       const air = name === 'air', short = name === 'groundShort';
       const geo = new THREE.BufferGeometry().setFromPoints(pts.map((p) => new THREE.Vector3(p[0], p[1] + .3, p[2])));
       const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: air ? 0x22d3ee : short ? 0xe9614c : 0xf0c83a })); line.name = 'route_' + name; g.add(line);
@@ -238,8 +403,197 @@ function buildAssembly(L) {
   }
   if (el('showSight').checked) {
     const pts = [];
-    for (const [, pos, tag] of L.sockets) { if (tag === 'trap') continue; const s = new THREE.Vector3(pos[0], pos[1] + 1.5, pos[2]); for (const [name, r] of Object.entries(L.routes)) for (let i = 0; i < r.length - 1; i++) { const a = new THREE.Vector3(...r[i]), b = new THREE.Vector3(...r[i + 1]); const t = Math.max(0, Math.min(1, s.clone().sub(a).dot(b.clone().sub(a)) / b.distanceToSquared(a))); const q = a.clone().lerp(b, t); q.y += name === 'air' ? 0 : .8; if (s.distanceTo(q) < 22) pts.push(s, q); } }
+    for (const [, pos, tag] of L.sockets) { if (tag === 'trap') continue; const s = new THREE.Vector3(pos[0], pos[1] + 1.5, pos[2]); for (const [name, r] of [...WALKED, ...FLOWN]) for (let i = 0; i < r.length - 1; i++) { const a = new THREE.Vector3(...r[i]), b = new THREE.Vector3(...r[i + 1]); const t = Math.max(0, Math.min(1, s.clone().sub(a).dot(b.clone().sub(a)) / b.distanceToSquared(a))); const q = a.clone().lerp(b, t); q.y += name === 'air' ? 0 : .8; if (s.distanceTo(q) < 22) pts.push(s, q); } }
     const sl = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0x65dce4, transparent: true, opacity: .55 })); sl.name = 'sightlines'; g.add(sl);
+  }
+  // Volumes + the two checks that decide whether a tier is usable at all:
+  // every wall socket must sit inside a solid volume by ≥1 m (§4.9), and every
+  // climb must top out level with a walkable surface (§4.2).
+  const vols = L.volumes || [];
+  const supports = ([, pos]) => vols.find((v) => v.solid !== false
+    && Math.abs(pos[0] - v.at[0]) <= v.size[0] / 2 - 1 && Math.abs(pos[2] - v.at[2]) <= v.size[2] / 2 - 1
+    // Footprint only. Whether the pad sits ON the surface is measured off the
+    // built geometry below, not off an authored height that can disagree with it.
+    && Math.abs(pos[1] - (v.top ?? v.at[1] + v.size[1] / 2)) <= .35);
+  const perched = L.sockets.filter(([, p, tag]) => tag !== 'trap' && p[1] > .1).filter(([, p]) => {
+    const top = surfaceAt(p[0], p[2], p[1]);
+    return top === null || Math.abs(p[1] - top) > .2;
+  });
+  // §4.4 — every ground segment within reach of at least three pads, so
+  // placement is a decision rather than a forced build. The last un-encoded
+  // rule, and the one that quietly regressed every time a lane moved.
+  /* §4.4 — every ground segment within reach of at least three pads, so
+     placement is a decision rather than a forced build. The last un-encoded
+     rule, and the one that quietly regressed every time a lane moved.
+
+     APRON. The eight metres after the spawn gate — and, on a map with warp
+     gates, after every arrival pad — are exempt, which is upstream's rule and
+     not a convenience: an enemy standing on an arrival pad has its whole walk
+     ahead of it, and demanding three pads around each gate would pay players
+     to camp the four of them instead of holding the lane. Before this was
+     encoded, the Toaster reported three "uncovered" legs that were all the
+     first few metres out of the west warp pad. */
+  const pads = L.sockets.filter(([, , tag]) => tag === 'ground' || tag === 'wall');
+  const aprons = [L.spawn].filter(Boolean).map((p) => new THREE.Vector3(...p));
+  for (const [n, legs] of Object.entries(L.teleportLegs || {})) {
+    for (const i of legs) aprons.push(new THREE.Vector3(...L.routes[n][i + 1]));
+  }
+  const inApron = (p) => aprons.some((a) => a.distanceTo(p) < 8);
+  const thin = [];
+  for (const [wi, [nm, r]] of WALKED.entries()) {
+    for (let i = 0; i < r.length - 1; i++) {
+      const a = new THREE.Vector3(...r[i]), b = new THREE.Vector3(...r[i + 1]), ab = b.clone().sub(a);
+      // Keep only the part of the leg outside every apron, then measure pad
+      // reach against what is left.
+      const n = Math.max(1, Math.ceil(a.distanceTo(b) / 2)), keep = [];
+      for (let k = 0; k <= n; k++) { const q = a.clone().lerp(b, k / n); if (!inApron(q)) keep.push(q); }
+      if (!keep.length) continue;
+      const near = pads.filter(([, q]) => {
+        const p = new THREE.Vector3(...q);
+        return keep.some((s) => p.distanceTo(s) <= 12);
+      }).length;
+      if (near < 3) thin.push(`${nm}${WALKED.filter(([x]) => x === nm).length > 1 ? '#' + wi : ''}[${i}] ${near}`);
+    }
+  }
+  // Any tower pad off the ground plane needs a plate under it, whichever tag it
+  // carries: on a gallery the floor IS the ground, and the sim builds the same
+  // towers on `ground` and `wall` alike (Step.cs — "Ground or Wall").
+  const stranded = L.sockets.filter(([, p, tag]) => (tag === 'wall' || tag === 'ground') && p[1] > .1).filter((s) => !supports(s));
+  // A trap is a path plate: §2.2 puts it "in the lane, on the route line", and
+  // §4.6 says no socket covers nothing. Checking wall pads only would have let
+  // the whole trap set fall off the lane unnoticed the moment a route moved —
+  // if it is only checked by looking at it, it is not checked.
+  const offLane = L.sockets.filter(([, , tag]) => tag === 'trap' || tag === 'barricade').filter(([, p]) => laneDist(p) > 1.7);
+  // §4.8 in the viewer rather than in a throwaway probe: everything placed —
+  // dressing, roof plant, traversal fixtures and the furniture the terrain grid
+  // carries — against every socket. Each pass that checked only the categories
+  // it remembered to name let the next category through: a planter in the lane,
+  // then a bench beside a pad, then a hop pad under one. Flush pieces are
+  // exempt: a floor grate, a capture pad and a manhole lid are surface, and a
+  // tower stands on them quite happily.
+  // §4.8, measured the only way that holds: sweep the built scene, take each
+  // piece's own bounding box, and measure box-to-segment against every ground
+  // route and box-to-centre against every socket. The previous pass was an id
+  // allowlist over origin points, so structural placements (pillars, columns,
+  // air-lane pylons) were never tested at all, and a 1.2×5.8 m pillar read clear
+  // while its body straddled the lane. Exclusions are by surface kind — what a
+  // route runs on, through or ends at — a shorter and more stable list than
+  // enumerating every prop that might stand somewhere.
+  const SURFACE = /_terrain$|_floor$|_roof$|_roof_parapet$|_deck$|_deck_rail$|_middeck$|_catwalk$|_gantry_walk$|_stairwell$|_fireescape$|_fireescape_flight$|_path_ground$|_path_interior$|_cut_channel$|_facade$|_lobby$|_wall_boundary$|_retainingwall$|_vent_tunnel$|^shared_vent_grate$|^shared_ladder|^shared_spawn_portal$|^shared_core$|^shared_armory_kiosk$|^shared_zipline_cable$|^shared_controlpoint|^shared_warp_gate|^shared_teleporter_pad|^toaster_roads$|^toaster_drive$|^socket_/;
+  g.updateMatrixWorld(true);
+  const bb = new THREE.Box3(), probe = new THREE.Vector3(), crowded = [];
+  for (const o of g.children) {
+    if (!o.isGroup || o.userData.gizmo || !o.name || SURFACE.test(o.name)) continue;
+    bb.setFromObject(o);
+    if (bb.max.y - Math.max(0, bb.min.y) < .5) continue;            // flush: stepped over
+    /* A merged instanced FIELD is not a prop. The treeline is one mesh per
+       species covering the whole 320 × 160 property, so its bounding box
+       touches every lane on the map and box-to-segment says nothing about it
+       — the clearance that matters was applied per tree when the lattice was
+       laid. Anything whose footprint spans more than a quarter of the field
+       is in that class; a prop never is. */
+    if ((bb.max.x - bb.min.x) > W / 4 && (bb.max.z - bb.min.z) > H / 4) continue;
+    let d = Infinity, why = '';
+    /* A piece that declares a round plan is measured from its centre less its
+       radius. Measured as a box, a 36 m circle reaches 25.5 m at the corners
+       — the pond read as standing in a lane it is nearly four metres clear
+       of, and no amount of moving it would have fixed a square that is not
+       there. */
+    const round = o.userData.plan === 'round';
+    const cen = round ? bb.getCenter(new THREE.Vector3()) : null;
+    const rad = round ? Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) / 2 : 0;
+    const reach = (p) => (round ? Math.max(0, Math.hypot(cen.x - p.x, cen.z - p.z) - rad) : bb.distanceToPoint(p));
+    for (const r of lanes) for (let i = 0; i < r.length - 1; i++) {
+      const a = new THREE.Vector3(...r[i]), b = new THREE.Vector3(...r[i + 1]), n = Math.max(1, Math.ceil(a.distanceTo(b) * 2));
+      for (let k = 0; k <= n; k++) { const q = reach(probe.copy(a).lerp(b, k / n)); if (q < d) { d = q; why = 'lane'; } }
+    }
+    // A pillar or column carries the deck the pad stands on, and a building
+    // shell carries its own roof pad, so being under one is not a clearance
+    // defect — it is the structure. They are still tested against lanes:
+    // nothing may stand in the lane, load-bearing or not.
+    if (!/_pillar$|_column$|_shell$/.test(o.name))
+      for (const [, q] of L.sockets) { const t2 = reach(probe.set(q[0], q[1], q[2])); if (t2 < d) { d = t2; why = 'pad'; } }
+    if (d < 3) crowded.push([o.name, o.position.toArray(), d, why]);
+  }
+  // §4.10 — anything spanning a lane leaves ≥5.5 m so enemies pass under. The
+  // surfaces excluded above are exactly the candidates here: a deck bay reaching
+  // over the lane is the piece that can be too low, and its geometry hangs below
+  // its mount point, so the mount height alone never answered this.
+  const lowSpans = [];
+  for (const o of g.children) {
+    // Only genuine overhead spans: a lane module lying on its own lane, the
+    // socket pad drawn at the pad's own height and the zipline cable dipping to
+    // its landing are all at the level they belong to, not over it.
+    if (!o.isGroup || o.userData.gizmo || !o.name || /^socket_|^shared_zipline_cable$/.test(o.name)) continue;
+    bb.setFromObject(o);
+    if (bb.min.y < .3) continue;                                    // sits on the ground: not a span
+    let head = Infinity;
+    for (const r of lanes) for (let i = 0; i < r.length - 1; i++) {
+      if (r[i][1] !== r[i + 1][1]) continue;                        // a stair, not a lane under a span
+      const a = new THREE.Vector3(...r[i]), b = new THREE.Vector3(...r[i + 1]), n = Math.max(1, Math.ceil(a.distanceTo(b) * 2));
+      for (let k = 0; k <= n; k++) {
+        probe.copy(a).lerp(b, k / n);
+        if (probe.x < bb.min.x - 1.7 || probe.x > bb.max.x + 1.7 || probe.z < bb.min.z - 1.7 || probe.z > bb.max.z + 1.7) continue;
+        if (probe.y > bb.min.y) continue;                           // the lane is above it, not under
+        head = Math.min(head, bb.min.y - probe.y);
+      }
+    }
+    if (head > .5 && head < 5.5) lowSpans.push([o.name, head]);   // ≤0.5 m: it IS the surface there
+  }
+  // §4.12 — a mast scaled to mark the air strand has to stand under it. Moving
+  // one for ground clearance and leaving the strand where it was makes the decor
+  // state a route position the route does not have.
+  const air = L.routes.air || [], strayMasts = [];
+  for (const [m, p] of L.place || []) {
+    if (m !== 'shared_airlane_pylon' || !air.length) continue;
+    let best = Infinity, wy = 0;
+    for (const w of air) { const q = Math.hypot(w[0] - p[0], w[2] - p[2]); if (q < best) { best = q; wy = w[1]; } }
+    if (best > 2.5) strayMasts.push([m, p, best, wy]);
+  }
+  const climbs = (L.areas || []).filter((ar) => ar.kind === 'ladder');
+  const badClimbs = climbs.filter((ar) => !vols.some((v) => v.solid !== false && Math.abs((ar.tops ?? (ar.at[1] + ar.size[1] / 2)) - (v.at[1] + .2)) < .8));
+  diag = { Sockets: String(L.sockets.length), Volumes: String(vols.length), Stranded: String(stranded.length), 'Off-lane': String(offLane.length), Crowded: String(crowded.length), Perched: String(perched.length), Uncovered: String(thin.length), Headroom: String(lowSpans.length), Masts: String(strayMasts.length), Thinned: String(thinned.length), Waves: String(L.totalWaves ?? '—') };
+  // Say why, not just how many: a socket at a height no surface reaches is a
+  // different ask (a landing, or a socket that moves) to one that overhangs a
+  // plate by half a metre.
+  const floors = [...new Set(vols.filter((v) => v.solid !== false).map((v) => v.at[1]))];
+  const midAir = stranded.filter(([, p]) => !floors.some((y) => Math.abs(p[1] - y) < 1.2));
+  diagNote = stranded.length || offLane.length || crowded.length || thinned.length || lowSpans.length || strayMasts.length || perched.length || thin.length
+    ? (stranded.length ? `\u00a74.9 — ${stranded.length} of ${L.sockets.filter((s) => s[1][1] > .1 && (s[2] === 'wall' || s[2] === 'ground')).length} raised tower pads sit on no solid volume: ${stranded.map(([id]) => id).join(' ')}. `
+        + `${midAir.length} of them (${midAir.map(([id]) => id).join(' ')}) are at heights no floor, roof or landing reaches. ` : '')
+      + (offLane.length ? `\u00a72.2 — ${offLane.length} path plates are off the lane, ${offLane.map(([id, p]) => id + ' ' + laneDist(p).toFixed(1) + ' m').join(' · ')} from the nearest ground route: a plate the lane does not cross is a plate nothing walks over. ` : '')
+      + (crowded.length ? `\u00a74.8 — ${crowded.length} standing pieces are within 3 m of a lane or a build pad, measured from their own footprint: ${crowded.map(([m, , d, why]) => `${m} ${d.toFixed(1)} m (${why})`).join(' · ')}. ` : '')
+      + (lowSpans.length ? `\u00a74.10 — ${lowSpans.length} pieces span a lane with under 5.5 m of headroom: ${lowSpans.map(([m, h]) => m + ' ' + h.toFixed(2) + ' m').join(' · ')}. ` : '')
+      + (strayMasts.length ? `\u00a74.12 — ${strayMasts.length} air-lane masts stand away from the strand they are scaled to mark: ${strayMasts.map(([, p, q]) => '[' + p + '] ' + q.toFixed(1) + ' m off').join(' · ')}. ` : '')
+      + (perched.length ? `\u00a74.9 — ${perched.length} pads do not sit on a surface, measured by ray: ${perched.map(([id, p]) => id + ' y' + p[1]).join(' · ')}. ` : '')
+      + (thin.length ? `\u00a74.4 — ${thin.length} ground segments have under three pads within 12 m: ${thin.join(' · ')}. A lane with two answers is not a placement decision. ` : '')
+      + (thinned.length ? `Thinned — ${thinned.length} grid-placed props landed on a build pad and were dropped (${[...new Set(thinned)].join(' · ')}); a tile variant cannot be nudged, so the piece wants shipping as its own prop. ` : '')
+      + 'Both sets were generated against route lines that have since moved. MAP-AUTHORING §7.3: redesign the socket set with the layout rather than preserving it.'
+    : '';
+  if (el('showVolumes').checked) {
+    for (const v of vols) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(...v.size), new THREE.MeshBasicMaterial({ color: v.solid === false ? 0x7d8ba3 : 0x7fe65a, transparent: true, opacity: .12, depthWrite: false }));
+      m.position.set(...v.at); m.name = 'volume_' + v.id; m.userData.gizmo = true; g.add(m);
+      const e = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0x7fe65a, transparent: true, opacity: .5 })); e.position.copy(m.position); e.userData.gizmo = true; g.add(e);
+    }
+    for (const [id, pos] of stranded) {
+      const m = new THREE.Mesh(new THREE.OctahedronGeometry(.9, 0), new THREE.MeshBasicMaterial({ color: 0xc93b28, wireframe: true }));
+      m.position.set(pos[0], pos[1] + 1.6, pos[2]); m.name = 'stranded_' + id; m.userData.gizmo = true; g.add(m);
+    }
+    for (const [id, pos] of offLane) {
+      const m = new THREE.Mesh(new THREE.TorusGeometry(1.2, .08, 6, 16), new THREE.MeshBasicMaterial({ color: 0xc93b28 }));
+      m.position.set(pos[0], pos[1] + .3, pos[2]); m.rotation.x = Math.PI / 2; m.name = 'offlane_' + id; m.userData.gizmo = true; g.add(m);
+    }
+    for (const [, pos] of crowded) {
+      const m = new THREE.Mesh(new THREE.TorusGeometry(1.6, .07, 6, 18), new THREE.MeshBasicMaterial({ color: 0xe8862b }));
+      m.position.set(pos[0], pos[1] + .5, pos[2]); m.rotation.x = Math.PI / 2; m.name = 'crowded'; m.userData.gizmo = true; g.add(m);
+    }
+    for (const ar of L.areas || []) {
+      const bad = badClimbs.includes(ar);
+      const m = new THREE.Mesh(new THREE.BoxGeometry(...(ar.size || [1.5, 1.5, 1.5])), new THREE.MeshBasicMaterial({ color: bad ? 0xc93b28 : 0x22d3ee, wireframe: true, transparent: true, opacity: .8 }));
+      m.position.set(...ar.at); m.name = 'area_' + ar.kind; m.userData.gizmo = true; g.add(m);
+      if (ar.to) { const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(...ar.at), new THREE.Vector3(...ar.to)]), new THREE.LineBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: .6 })); l.userData.gizmo = true; g.add(l); }
+    }
   }
   return g;
 }
@@ -264,8 +618,8 @@ function applyCondition() {
 function applyVantage() {
   const L = LEVELS[cur?.assembly]; if (!L) return;
   const cam = stage._camera, ctl = stage._controls, V = THREE.Vector3, v = (a) => new V(...a);
-  const g = L.routes.ground || L.routes[L.roads?.[0]], core = v(g[g.length - 1]);
-  if (tweaks.vantage === 'overview') { cam.position.set(L.field[0] * .55, 38, L.field[1] * .9); ctl.target.set(0, 2, 0); }
+  const g = L.routes.ground || L.routes[(L.roads || [])[0]] || Object.values(L.routes)[0], core = v(g[g.length - 1]);
+  if (tweaks.vantage === 'overview') { const V = view(L); cam.position.set(...V.cam); ctl.target.set(...V.target); }
   else if (tweaks.vantage === 'hero') { const p = v(L.heroSpawn).add(new V(0, 1.7, 0)); cam.position.copy(p); ctl.target.copy(p).lerp(core.clone().setY(1.2), .35); }
   else { const w = L.sockets.find(([, , tag]) => tag === 'wall') || L.sockets[0]; const p = v(w[1]).add(new V(0, 1.6, 0)); cam.position.copy(p); let best = null, bd = 1e9; for (const q of g) { const d = v(q).distanceTo(p); if (d < bd) { bd = d; best = v(q); } } ctl.target.copy(best.setY(best.y + .8)); }
   cam.updateProjectionMatrix(); ctl.update();

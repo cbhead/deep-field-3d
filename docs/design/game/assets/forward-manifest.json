@@ -255,6 +255,15 @@
           ]
         },
         {
+          "id": "warp_gate",
+          "files": [
+            "shared_warp_gate_idle.glb",
+            "shared_warp_gate_active.glb",
+            "vfx_teleport_burst.glb"
+          ],
+          "note": "A new silhouette, and specifically NOT a flat pad: the player has been taught on this same map that a flat 3 m hex means stand-here-and-hold-E, so a flat enemy gate would say that and mean the opposite — §4.12 forbids decoration reading as a control. Vertical: 4.5 m ring/arch on a 0.3 m plinth, 3 m clear opening facing ±Z, ≤2,500 tris / ≤12 parts. _active carries an emissive MASK part named warp_membrane for the code to pulse."
+        },
+        {
           "id": "switchyard_morph",
           "files": [
             "switchyard_bridge_intact.glb",
@@ -265,11 +274,127 @@
       ],
       "maps": [
         {
-          "id": "map3",
+          "id": "toaster_terrain",
           "files": [
-            "maps/<theme>/… (full kit: terrain, path, decks, walls, skybox, 4–5 dressing)"
+            "toaster_terrain.glb",
+            "toaster_terrain_v1.glb",
+            "toaster_terrain_v2.glb",
+            "toaster_terrain_v3.glb",
+            "toaster_terrain_scatter.glb",
+            "toaster_understory.glb"
           ],
-          "note": "Theme TBD with the user — budget a third full environment on the Foundry/Switchyard pattern."
+          "note": "20 m dry-autumn-grass tile in four variants, ≤900 tris / ≤4 parts each, one shared 2048² set; relief ≤0.15 m and exactly 0 within 2 m of every edge. 128 instanced placements, so the tile carries no road, fence or grass tuft — tufts are the scatter clump (≤400/4, cap now 140)."
+        },
+        {
+          "id": "toaster_roads",
+          "files": [
+            "toaster_road_asphalt.glb",
+            "toaster_road_gravel.glb",
+            "toaster_road_arc.glb"
+          ],
+          "note": "Linear modules: asphalt run +X repeat 4.0 width 6.0 top y 0.05 (≤200/2); gravel width 4.0 top y 0.04 (≤150/1); 30° arc, origin at the centre of curvature, radius 12 (≤200/1). Vehicle handling reads the road CENTRE LINES, so the art must sit on the line. Note that the network in the brief is four disconnected fragments — the barn drive stops 19 m short of the barn and dies 8 m off the county road, the county road ends in open field, the south road starts and stops 100 m inside each boundary, and the circular drive sat 22 m from the house it serves. Every authored vertex is kept and the gaps closed by extension, so the delivered network is one connected graph reaching all four buildings; three bends were added to keep carriageway out of the Vehickle and Grnmchn footprints. Interior bends are filleted — two runs butting at a vertex leave a notch on the outside of the turn as wide as the turn is sharp."
+        },
+        {
+          "id": "toaster_trees",
+          "files": [
+            "toaster_tree_oak.glb",
+            "toaster_tree_maple.glb",
+            "toaster_tree_pine.glb",
+            "toaster_tree_oak_lod1.glb",
+            "toaster_tree_maple_lod1.glb",
+            "toaster_tree_pine_lod1.glb"
+          ],
+          "note": "~780 placements now, ~1,500 dressed — the most instanced thing on the map. Closed-canopy second-growth hardwood: trunks run bare and near-vertical for more than half their height and the crowns start where they reach the light, which is what the street views show and what an open-grown specimen tree is not. LOD0 ≤600 tris and EXACTLY 2 parts (_trunk, _canopy) because culling acts on a multimesh's whole box; LOD1 ≤40 tris, 1 part, sized off a measured build of LOD0 so the 90 m swap does not change the outline. Shared 1024² leaf atlas, alphaMode MASK; lodSwitch 90."
+        },
+        {
+          "id": "toaster_buildings",
+          "files": [
+            "toaster_barn_shell.glb",
+            "toaster_barn_roof.glb",
+            "toaster_house_buggy_shell.glb",
+            "toaster_house_buggy_roof.glb",
+            "toaster_house_vehickle_shell.glb",
+            "toaster_house_vehickle_roof.glb",
+            "toaster_house_grnmchn_shell.glb",
+            "toaster_house_grnmchn_roof.glb"
+          ],
+          "note": "Shell + roof per building (the roof is stood on, so it carries its own collider). All four are BRICK — red-brown on the main house and the shed, browner on the ranch, buff on the south house — with stucco gable fields above the eaves, which is the two-tone that gives these rooflines their read. Barn 30×21 eaves 6.0; three houses 19×28 / 34×26 / 24×30, eaves 3.4. Each roof carries ONE 6×6 m flat at the stated height, placed at the ladder head (a corner on all four), with the rest a real 28° gabled roof split into bays across X — three parallel gables ridging at 6.4 m on the main house. The contract asks for a flat AREA, not a flat roof, and allows pitched slopes to 30°; reading it the other way is what made the first pass look like four sheds with lids. Projecting cross-gabled entry bays with brick arches on the three houses, trimmed back to 0.9–1.8 m where §4.8 lane clearance needs it. Walls 0.3 thick, interior floor top y 0.15, clear height ≥3.0, door OPENINGS only (the shed's second bay is a closed white leaf, not an opening), windows in the texture. ≤6,000/12 per shell, ≤1,500/3 per roof."
+        },
+        {
+          "id": "toaster_interiors",
+          "files": [
+            "toaster_dress_workbench.glb",
+            "toaster_dress_shelving.glb",
+            "toaster_dress_furniture_living.glb",
+            "toaster_dress_furniture_kitchen.glb"
+          ],
+          "note": "Placed by the level file rather than baked into the shells, so rooms arrange around the teleport pads and sockets. ≤1,500 tris, ≤8 parts each."
+        },
+        {
+          "id": "toaster_pond",
+          "files": [
+            "toaster_pond.glb",
+            "toaster_dock.glb"
+          ],
+          "note": "Drawn UPWARD, not dug — the ground is one flat slab: an ELLIPTICAL basin (36 × 30, long axis north-east, measured off the aerial rather than assumed round), riprap bank ring r 15–18 rising to 0.5 m, an opaque dark water ring at y 0.15, and a big bare island of r 9.6 filling most of the middle. The pond on this property reads as a ring of water round an island, not as a lake. ≤2,500 tris, 3 parts named pond_bank / pond_water / pond_island, no collision. Dock optional."
+        },
+        {
+          "id": "toaster_skybox",
+          "files": [
+            "toaster_skybox.glb"
+          ],
+          "note": "700 m dome, overcast late-autumn afternoon, sun 24° elevation / 220° azimuth. Treeline silhouette baked into the horizon band so the belt meets the sky. Bake 2048×1024 — half the existing two, which are 9 MB each for no gain here."
+        },
+        {
+          "id": "toaster_dressing",
+          "files": [
+            "toaster_fence_wood.glb",
+            "toaster_mailbox.glb",
+            "toaster_woodpile.glb",
+            "toaster_hay_bale.glb",
+            "toaster_propane_tank.glb",
+            "toaster_wreck_pickup.glb",
+            "toaster_leaf_pile.glb"
+          ],
+          "note": "Fence is a linear module (run +X, repeat 4.0, width 0.2); bales and leaf piles instance. The wrecked pickup is DRESSING, no rig. Nothing here may sit within 3 m of a route, socket, pad, spawn, armory or hero station — the code refuses and logs those placements."
+        }
+      ],
+      "vehicles": [
+        {
+          "id": "buggy",
+          "files": [
+            "vehicle_buggy.glb"
+          ],
+          "note": "Rear-engined saloon, 2 seats abreast, hull 1.55×1.5×4.1, wheel r 0.29, steer_wheel, eye 1.15. Farm-kept, faded paint, one dented wing."
+        },
+        {
+          "id": "dagator",
+          "files": [
+            "vehicle_dagator.glb"
+          ],
+          "note": "Utility vehicle, hull 1.5×1.85×2.9, wheel r 0.31, bench seat, roll cage, open bed with strapped tarp, light bar, eye 1.0. Lives in the barn and is driven through its 5×4 door."
+        },
+        {
+          "id": "grnmchn",
+          "files": [
+            "vehicle_grnmchn.glb"
+          ],
+          "note": "Motorised drift trike, hull 0.9×0.9×1.9. Front wheel_0 r 0.25 on a fork that is also the steering node; rear wheel_1/_2 r ~0.13 in plastic drift sleeves. Steers by TWO LEVERS (steer_lever_l/_r pivoting about Y at the fork), not a wheel — which is why it spins on the spot. Eye 0.75, the lowest on the map. Green."
+        },
+        {
+          "id": "vehickle",
+          "files": [
+            "vehicle_vehickle.glb"
+          ],
+          "note": "Sport quad, hull 1.16×1.13×1.85, wheel r 0.28, steer_bars, saddle eye 1.05. Fastest thing on the map at 22 m/s."
+        },
+        {
+          "id": "vehicle_hands",
+          "files": [
+            "hands_<set>_wheel.glb",
+            "hands_<set>_bars.glb"
+          ],
+          "note": "Two poses through the existing HAND_POSES mechanism, six sets each. wheel: ten-and-two on a 0.38 m rim, origin at the hub, viewmodel frame. bars: grips 0.7 m apart, used by the quad and the trike's levers. Not blocking; wheel first if only one is affordable."
         }
       ],
       "pickups": [
@@ -378,6 +503,23 @@
     }
   },
   "delivered": {
+    "M4": {
+      "date": "2026-09-11",
+      "items": [
+        "toaster_terrain (×4 variants) + toaster_terrain_scatter + toaster_understory",
+        "toaster_road_asphalt / _gravel / _arc (run+repeat+width, arcDeg+radius in the manifest)",
+        "toaster_tree_oak/maple/pine + three _lod1 billboards (2 parts each, lodSwitch 90)",
+        "toaster_barn / house_buggy / house_vehickle / house_grnmchn — shell + roof each",
+        "toaster_dress_workbench / _shelving / _furniture_living / _furniture_kitchen",
+        "toaster_pond / _dock / _skybox (2048×1024)",
+        "toaster_fence_wood / _mailbox / _woodpile / _hay_bale / _propane_tank / _wreck_pickup / _leaf_pile",
+        "shared_warp_gate_idle / _active (vertical arch, warp_membrane part)",
+        "vfx_teleport_burst",
+        "vehicle_buggy / _dagator / _grnmchn / _vehickle (full rig blocks, hull-checked)",
+        "toaster level authored in models/levels.js against Maps.Toaster — 82 sockets, 4 routes, 738 trees"
+      ],
+      "note": "The specs under M4 above are the delivered contract, not a plan: every file was measured against its budget and every vehicle against its hull. NOT delivered: hands_<set>_wheel and hands_<set>_bars (V5), which the commission itself marks not blocking."
+    },
     "M3": {
       "date": "2026-09-07",
       "items": [

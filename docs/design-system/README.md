@@ -9,6 +9,7 @@ that doesn't live in someone's Downloads folder.
 | `ui-kit.css` | Component styles — panel, button, bar, slot, tag, pips, toast, table, spark. Mirrored in `game/scripts/ui/UiKit.cs`. |
 | `ui-screens.js` | **All sixteen screens.** Each entry has an `id`, a `note` explaining the intent, and a `render()` producing a 1920×1080 frame. This is the spec to build against. |
 | `ui-branding.js` | Logo, app icon and title-treatment usage. |
+| `ui-screens-v2.js` | **AUGUR** — a second HUD direction (an in-helmet holographic HUD: emissive line-work, no fills, canted onto the visor), five frames. The viewer shows it beside the sixteen; the game implements the sixteen. Not adopted; a product decision, recorded here so it is not mistaken for drift. |
 | `ui-screens.html` | The viewer. Open it from this directory to see the frames — it loads the files above by relative path. |
 
 ## Reading a screen spec

@@ -37,6 +37,9 @@ public partial class Player : CharacterBody3D
     private double _meleeCooldown;
     private bool _triggerHeld;
     private Node3D? _viewModel;
+    private Node3D? _gun;
+    private Node3D? _hands;
+    private ReloadAnimation? _reload;
     private Node3D? _muzzle;
     private string _viewModelFor = "";
     private Vector3 _viewModelRest;
@@ -59,6 +62,9 @@ public partial class Player : CharacterBody3D
             ?? new System.Collections.Generic.Dictionary<AttachmentSlot, string>();
         string key = $"{weaponId}|{factionId}|" + string.Join(",", fitted.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}={kv.Value}"));
         if (_viewModelFor == key && GodotObject.IsInstanceValid(_viewModel)) return;
+        // A reload in progress holds nodes of the model about to be freed.
+        _reload?.Cancel();
+        _reload = null;
         if (GodotObject.IsInstanceValid(_viewModel)) _viewModel!.QueueFree();
         _viewModelFor = key;
         _muzzle = null;
@@ -73,6 +79,7 @@ public partial class Player : CharacterBody3D
         var rig = new Node3D { Position = _viewModelRest };
 
         var gun = WeaponAssembly.Build(weaponId, fitted, world: false);
+        _gun = gun;
         if (gun is not null)
         {
             rig.AddChild(gun);
@@ -91,8 +98,9 @@ public partial class Player : CharacterBody3D
                     ?? AssetLibrary.TryInstantiate($"hands_{factionId}")
                     ?? AssetLibrary.TryInstantiate("hands_firstperson");
         if (hands is not null) rig.AddChild(hands);
+        _hands = hands;
 
-        if (gun is null && hands is null) { _viewModel = null; return; }
+        if (gun is null && hands is null) { _viewModel = null; _gun = null; _hands = null; return; }
 
         // A viewmodel throws no shadow: it would paint the shape of your own
         // gun across the floor in front of you.
@@ -123,7 +131,38 @@ public partial class Player : CharacterBody3D
         _recoil = Mathf.MoveToward(_recoil, 0f, (float)delta * 6f);
         _viewModel.Position = _viewModelRest + new Vector3(0f, _recoil * 0.02f, _recoil * 0.05f);
         _viewModel.Rotation = new Vector3(_recoil * 0.06f, 0f, 0f);
+        if (_reload is not null)
+        {
+            _reload.Tick((float)delta);
+            if (_reload.Finished) _reload = null;
+        }
     }
+
+    /// <summary>The sim started a reload on the weapon in these hands. The
+    /// animation is client-only and cosmetic: it plays the sim's duration,
+    /// and the sim's <c>Reloaded</c> is what ends it, so a reload that the
+    /// sim cut short (death, a swap) never leaves a magazine in the air.</summary>
+    public void OnReloadStarted(string weaponId, float seconds)
+    {
+        if (_viewModel is null || !GodotObject.IsInstanceValid(_viewModel)) return;
+        if (!string.Equals(weaponId, _root.CurrentWeaponId(), System.StringComparison.OrdinalIgnoreCase)) return;
+        _reload?.Cancel();
+        _reload = new ReloadAnimation(_viewModel, _gun, _hands, _root, weaponId, _root.LocalFactionId, seconds);
+    }
+
+    public void OnReloaded()
+    {
+        _reload?.Finish();
+        _reload = null;
+    }
+
+    /// <summary>For the review shots and the reload probe: play the held
+    /// weapon's reload without asking the sim.</summary>
+    public void BeginReloadForReview(float seconds) => OnReloadStarted(_root.CurrentWeaponId(), seconds);
+
+    public bool Reloading => _reload is { Finished: false };
+    public ReloadAnimation.State? ReloadSnapshot() => _reload?.Snapshot();
+    public bool HasWeaponModel => _gun is not null && GodotObject.IsInstanceValid(_gun);
 
     private bool _onLadder;
     private Vector3? _zipTarget;

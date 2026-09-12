@@ -24,6 +24,10 @@
  * Ammo files are a magazine + exposed round; tracers are unit-length along −Z.
  */
 import { makeKit } from './tower-kit.js';
+import { buildSidearmHero, buildHeroHands, buildOffhandPose, OFFHAND_POSES } from './sidearm-hero.js';
+import { buildRifleHero } from './rifle-hero.js';
+import { buildScattergunHero } from './scattergun-hero.js';
+import { buildEmberPistolHero } from './emberpistol-hero.js';
 
 export function makeWeaponKit(THREE) {
   const K = makeKit(THREE);
@@ -44,6 +48,16 @@ export function makeWeaponKit(THREE) {
   const glow = (n, hex, i = 1) => mat(n, hex, { roughness: .3, metalness: .05, emissive: new THREE.Color(hex), emissiveIntensity: i });
   glow('infuse_ember', 0xe8622b); glow('infuse_cryo', 0x4fc0e8); glow('infuse_volt', 0xf05ae6); glow('infuse_gravium', 0x9b5be8, .8);
   glow('tracer_standard', 0xf4dca4, 1.2); glow('tracer_ap', 0xcfd7e4, 1.4); glow('tracer_hp', 0xe8862b, 1.2);
+  /* Realistic tracer stack. Deliberately UNLIT (MeshBasicMaterial → KHR_materials_unlit)
+     with the whole colour + falloff ramp baked into per-vertex RGBA, so the streak reads
+     the same in any GLTF viewer and needs no additive-blend override on import. */
+  const basic = (n, color, o = {}) => { const m = new THREE.MeshBasicMaterial({ color, ...o }); m.name = n; mats[n] = m; return m; };
+  basic('tracer_streak', 0xffffff, { vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+  basic('tracer_hot', 0xfff6e4);
+  basic('tracer_hot_ap', 0xeaf2ff); basic('tracer_hot_hp', 0xffd49a);
+  basic('tracer_hot_inc', 0xffc078); basic('tracer_hot_cryo', 0xdff4ff);
+  basic('tracer_ice', 0x9fdcf5, { transparent: true, opacity: .5, depthWrite: false });
+  basic('tracer_smoke_v', 0xffffff, { vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide });
   glow('ammo_lamp', 0x7fe65a, .9);
   glow('flame_glow', 0xffa24a, .8); mats.flame_glow.transparent = true; mats.flame_glow.opacity = .35;
   mat('glass_dark', 0x0e1a26, { roughness: .1, metalness: .2, transparent: true, opacity: .8 });
@@ -249,266 +263,31 @@ const M = (w) => ({ ...w, file: `weapon_${w.id}_vm.glb`, worldFile: `weapon_${w.
 
 export const WEAPONS = [
   M({
-    id: 'sidearm', handsPose: 'pistol', label: 'Sidearm', swatch: '#8d99ad', stats: { Cost: '0', Damage: '5', Rate: '3.0/s', Range: '60 m' },
-    note: 'The starter, never taken away. Striker-fired micro-compact after the reference: tall flat-sided slide with a chamfered top rib, wide angled cocking serrations front and rear, twin slanted lightening ports ahead of the ejection port with the barrel visible through them, loaded-chamber window, blacked-out high-profile sights. One-piece polymer frame with a deep beavertail, squared undercut trigger guard with a forward hook, flat-faced trigger with a blade safety, slide stop and takedown levers, an accessory rail, stippled grip panels with a raised palm swell and a forward-lipped baseplate. Seven mounts, so even the free gun is a build.',
+    id: 'sidearm', handsPose: 'pistol', label: 'Sidearm', swatch: '#14171d', stats: { Cost: '0', Damage: '5', Rate: '3.0/s', Range: '60 m' },
+    note: 'The starter, never taken away — and the hero asset the rest of the armoury is being rebuilt against. Striker-fired micro-compact, DLC-black slide over a graphite polymer frame: two blacks separated by surface, not colour. Every surface is a swept compound section rather than a constant extrusion, so the slide crowns, tapers at the nose and carries crisp machined chamfers with smooth faces between them. Detail is cut IN, not stacked on: forward-raked cocking serrations milled into both flats, a milled ejection pocket with the barrel hood and breech face standing inside it, a hooked extractor and firing-pin hole, an optic cut under its cover plate, five witness holes down the 15-round magazine. Roll-marked BODIED GUARD 3.0 on the left flat, 9×19MM on the right. Tritium night sights, three vials. Surface is procedural PBR at 2K — draw-polish on the DLC, glass-filler mottle in the polymer, a pebble stipple field with the palm patch rubbed smooth — and honest wear rides in vertex colour, so the serration lands, muzzle crown and control faces burnish themselves. Seven mounts, so even the free gun is a build.',
     build(K) {
-      const { THREE, mats, grp, part } = K, id = 'sidearm', g = grp(id);
-      g.add(grip(K, id));
-      // Stippled panels over the grip: pebble field on both faces + a thumb patch.
-      for (const s of [-1, 1]) for (let i = 0; i < 9; i++) for (let k = 0; k < 4; k++) { const y = -.030 - i * .009, z = .006 + k * .009 + (-y) * .3; g.add(part(`${id}_stipple${s}_${i}_${k}`, new THREE.SphereGeometry(.0015, 5, 4), mats.grip_rubber, [s * .0138, y, z])); }
-      for (const s of [-1, 1]) g.add(part(`${id}_thumb_pad${s}`, new THREE.BoxGeometry(.002, .012, .016), mats.grip_rubber, [s * .0138, .004, .036]));
-      g.add(trigger(K, id, [0, .012, -.030]));
-      g.add(part(id + '_trigger_blade', new THREE.BoxGeometry(.004, .008, .0015), mats.gun_pale, [0, -.004, -.0295]));
-      g.add(part(id + '_trigger_pin', new THREE.CylinderGeometry(.0018, .0018, .034, 10), mats.chrome, [0, .0105, -.030], [0, 0, Math.PI / 2]));
-      // Frame: beavertail at the back, squared guard with a forward hook and an undercut behind it, dust cover to the muzzle.
-      const frame = shape(THREE, [[-.128, .022], [-.131, .032], [-.126, .044], [.050, .044], [.062, .034], [.058, .012], [-.004, .008], [-.008, -.010], [-.014, -.018], [-.060, -.018], [-.066, -.012], [-.068, .004], [-.066, .022]]);
-      frame.holes.push(rr(THREE, -.058, -.011, .046, .024, .004));
-      g.add(plate(K, id + '_frame', frame, .027, mats.polymer, { b: .0015, seg: 3 }));
-      g.add(part(id + '_guard_hook', new THREE.BoxGeometry(.024, .005, .010), mats.polymer, [0, -.019, -.060]));
-      for (const s of [-1, 1]) { g.add(part(`${id}_frame_stipple${s}`, new THREE.BoxGeometry(.0012, .010, .020), mats.grip_rubber, [s * .0138, .032, -.078])); g.add(part(`${id}_frame_ledge${s}`, new THREE.BoxGeometry(.002, .003, .030), mats.gun_dark, [s * .0138, .040, -.050])); }
-      g.add(rail(K, id + '_frame_rail', .040, [0, .012, -.100], .018, true));
-      // Slide: tall and flat with a chamfered top rib.
-      g.add(plate(K, id + '_slide', shape(THREE, [[-.138, .044], [-.141, .054], [-.138, .066], [-.132, .070], [.040, .070], [.048, .064], [.048, .044]]), .025, mats.gun_metal, { b: .0015, seg: 3 }));
-      g.add(part(id + '_slide_rib', new THREE.BoxGeometry(.012, .0014, .170), mats.gun_dark, [0, .0705, -.048]));
-      for (const s of [-1, 1]) g.add(part(`${id}_slide_chamfer${s}`, new THREE.BoxGeometry(.006, .0012, .170), mats.gun_pale, [s * .009, .0695, -.048], [0, 0, s * .6]));
-      // Angled cocking serrations: wide flats, raked forward, front and rear.
-      for (let i = 0; i < 6; i++) g.add(part(`${id}_serration_f${i}`, new THREE.BoxGeometry(.0262, .018, .0022), mats.trim, [0, .057, -.096 + i * .0062], [.25, 0, 0]));
-      for (let i = 0; i < 8; i++) g.add(part(`${id}_serration_r${i}`, new THREE.BoxGeometry(.0262, .020, .0022), mats.trim, [0, .057, -.006 + i * .0058], [.25, 0, 0]));
-      // Twin slanted lightening ports through the slide, ahead of the serrations: dark recessed slots with a pale rim, barrel showing inside.
-      for (const s of [-1, 1]) for (let i = 0; i < 2; i++) { const z = -.130 + i * .011; g.add(part(`${id}_port${s}${i}`, new THREE.BoxGeometry(.0024, .007, .0045), mats.trim, [s * .0114, .057, z], [.7, 0, 0])); g.add(part(`${id}_port_rim${s}${i}`, new THREE.BoxGeometry(.0006, .009, .0065), mats.gun_pale, [s * .0126, .057, z], [.7, 0, 0])); }
-      g.add(part(id + '_port_barrel', new THREE.CylinderGeometry(.0075, .0075, .030, 16), mats.gun_bronze, [0, .057, -.125], [Math.PI / 2, 0, 0]));
-      g.add(part(id + '_ejection_port', new THREE.BoxGeometry(.002, .013, .034), mats.trim, [.012, .059, -.060]));
-      g.add(part(id + '_barrel_hood', new THREE.BoxGeometry(.0016, .008, .028), mats.gun_bronze, [.0122, .060, -.062]));
-      g.add(part(id + '_chamber_window', new THREE.BoxGeometry(.0016, .003, .006), mats.gun_bronze, [.0126, .0665, -.050]));
-      g.add(bar(K, id + '_extractor', rr(THREE, -.0015, -.0025, .003, .005, .001), .016, mats.chrome, { b: .0003, pos: [.0124, .054, -.036] }));
-      g.add(part(id + '_rear_plate', new THREE.BoxGeometry(.022, .024, .0025), mats.gun_dark, [0, .057, .0465]));
-      g.add(part(id + '_striker_dot', new THREE.CylinderGeometry(.0015, .0015, .001, 12), mats.infuse_ember, [0, .057, .048], [Math.PI / 2, 0, 0]));
-      g.add(part(id + '_optic_plate', new THREE.BoxGeometry(.016, .002, .028), mats.gun_dark, [0, .0705, .014]));
-      g.add(screws(K, id + '_optic_screws', [[0, .0715, .004], [0, .0715, .024]], .002, 'y'));
-      // Controls: slide stop with a scalloped thumb pad, takedown lever, mag release, slide-stop pin heads.
-      g.add(bar(K, id + '_slide_stop', rr(THREE, -.0015, -.003, .003, .006, .001), .026, mats.gun_dark, { b: .0004, pos: [-.0135, .046, -.010] }));
-      g.add(part(id + '_slide_stop_pad', new THREE.BoxGeometry(.002, .005, .010), mats.trim, [-.0145, .046, -.002]));
-      g.add(part(id + '_takedown', new THREE.CylinderGeometry(.004, .004, .002, 16), mats.gun_dark, [-.0145, .032, -.044], [0, 0, Math.PI / 2]));
-      g.add(part(id + '_takedown_lever', new THREE.BoxGeometry(.002, .003, .012), mats.gun_dark, [-.0145, .032, -.050], [0, 0, 0]));
-      g.add(part(id + '_mag_release', new THREE.CylinderGeometry(.0045, .0045, .004, 20), mats.gun_dark, [-.0155, -.002, .0], [0, 0, Math.PI / 2]));
-      g.add(part(id + '_mag_release_ring', new THREE.TorusGeometry(.0045, .0008, 6, 20), mats.chrome, [-.0175, -.002, 0], [0, Math.PI / 2, 0]));
-      g.add(part(id + '_round_lamp', new THREE.BoxGeometry(.0015, .0025, .022), mats.ammo_lamp, [-.0128, .050, -.020]));
-      g.add(screws(K, id + '_pins', [[.0138, .034, -.026], [-.0138, .034, -.026], [.0138, .028, .028], [-.0138, .028, .028], [.0138, .020, .006], [-.0138, .020, .006]], .0024));
-      // Barrel proud of the muzzle, high blacked-out sights.
-      g.add(barrelGroup(K, id, .0075, .014, [0, .057, -.138], { rc: .0075, material: mats.gun_bronze }));
-      g.add(part(id + '_front_post', new THREE.BoxGeometry(.003, .009, .006), mats.gun_dark, [0, .074, -.126]));
-      g.add(part(id + '_front_dot', new THREE.CylinderGeometry(.0012, .0012, .001, 10), mats.ammo_lamp, [0, .076, -.1295], [Math.PI / 2, 0, 0]));
-      g.add(bar(K, id + '_rear_sight', rr(THREE, -.010, 0, .020, .009, .0015), .010, mats.gun_dark, { b: .0006, pos: [0, .070, .032] }));
-      g.add(part(id + '_rear_notch', new THREE.BoxGeometry(.004, .005, .012), mats.trim, [0, .077, .032]));
-      for (let i = 0; i < 4; i++) g.add(part(`${id}_rear_serration${i}`, new THREE.BoxGeometry(.018, .0012, .0012), mats.trim, [0, .072 + i * .002, .0275]));
-      // Magazine with a forward-lipped baseplate.
-      g.add(pistolMag(K, id, [0, -.110, .043]));
-      g.add(part(id + '_base_lip', new THREE.BoxGeometry(.031, .009, .012), mats.gun_dark, [0, -.116, .014]));
-      g.add(mount(K, id, 'barrel', [0, .057, -.138]));
-      g.add(mount(K, id, 'muzzle', [0, .057, -.160]));
-      g.add(mount(K, id, 'optic', [0, .0715, .014]));
-      g.add(mount(K, id, 'magazine', [0, -.110, .043]));
-      g.add(mount(K, id, 'stock', [0, .020, .058]));
-      g.add(mount(K, id, 'underbarrel', [0, .002, -.100]));
-      g.add(mount(K, id, 'infusion', [-.014, .030, -.062]));
-      return g;
+      return buildSidearmHero(K);
     },
   }),
   M({
-    id: 'rifle', handsPose: 'rifle', label: 'Rifle', swatch: '#8a6b3a', stats: { Cost: '120', Damage: '11', Rate: '2.2/s', Range: '80 m', Applies: 'mark' },
-    note: 'Hitscan priority tool, after the reference: a bronze-anodised AR-pattern carbine. Flat-top upper with a continuous top rail and brass deflector, forward assist and dust cover; matching lower with a flared magwell, bilateral selector, bolt catch and an oversized trigger guard. Long slim octagonal free-float handguard with M-LOK slots on every face and a vented cap, three anti-rotation screws at the root, a birdcage flash hider on the bare barrel. Ribbed 30-round polymer magazine with a floorplate, skeletonised collapsible stock with a sling loop and rubber pad. Designator lamp above the port telegraphs the mark alt-fire.',
+    id: 'rifle', handsPose: 'rifle', label: 'Rifle', swatch: '#7d6134', stats: { Cost: '120', Damage: '11', Rate: '2.2/s', Range: '80 m', Applies: 'mark' },
+    note: 'Hitscan priority tool, rebuilt to the hero standard and measured against a real 14.5" carbine rather than eyeballed: 25.4 mm receiver, 368 mm barrel, 10.2 mm Picatinny slot pitch, 36 mm M-LOK pitch, STANAG magazine section, 89 mm carrier travel. Every detail that used to be a box glued to a slab is now cut in — Picatinny cross-slots milled through the rail rib for its full length, M-LOK cut clean through four faces of the free-float handguard, the ejection port a real pocket with the bolt carrier standing inside it, the brass deflector and forward-assist boss swelled out of the receiver wall instead of stuck onto it, A2 birdcage ports cut through the flash hider, magwell flare and stock lightening pockets as displacement. Bronze anodising keeps the weapon\'s identity; only the quality level rises. The carrier group reciprocates on its declared axis and throws a 5.56 case from the port.',
     build(K) {
-      const { THREE, mats, grp, part } = K, id = 'rifle', g = grp(id);
-      const bronze = mats.gun_bronze;
-      g.add(grip(K, id));
-      g.add(trigger(K, id, [0, .012, -.034]));
-      // Lower: flared magwell, oversized guard, integral trigger-guard bow, buffer-tower at the rear.
-      const lower = shape(THREE, [[.052, .050], [.052, .014], [.020, .010], [-.004, .010], [-.008, -.010], [-.014, -.022], [-.058, -.022], [-.064, -.012], [-.066, .012], [-.082, .010], [-.086, -.030], [-.140, -.030], [-.146, .012], [-.160, .020], [-.160, .050]]);
-      lower.holes.push(rr(THREE, -.058, -.014, .046, .026, .005));
-      g.add(plate(K, id + '_lower', lower, .032, bronze, { b: .0015, seg: 3 }));
-      g.add(bar(K, id + '_magwell_flare', rr(THREE, -.019, -.006, .038, .010, .004), .060, bronze, { b: .001, pos: [0, -.030, -.113] }));
-      for (const s of [-1, 1]) g.add(part(`${id}_magwell_texture${s}`, new THREE.BoxGeometry(.001, .020, .040), mats.trim, [s * .0165, -.006, -.113]));
-      // Upper: flat-top with continuous rail, port, dust cover, deflector, forward assist.
-      g.add(plate(K, id + '_upper', shape(THREE, [[-.170, .052], [-.170, .084], [.048, .084], [.056, .076], [.056, .052]]), .034, bronze, { b: .002, seg: 3 }));
-      g.add(rail(K, id + '_top_rail', .226, [0, .084, -.170], .021));
-      g.add(part(id + '_ejection_port', new THREE.BoxGeometry(.002, .015, .044), mats.trim, [.017, .067, -.062]));
-      g.add(part(id + '_bolt', new THREE.BoxGeometry(.0016, .010, .034), mats.gun_pale, [.0175, .067, -.062]));
-      g.add(part(id + '_dust_cover', new THREE.BoxGeometry(.0024, .016, .046), bronze, [.0178, .052, -.062], [-.9, 0, 0]));
-      g.add(part(id + '_deflector', new THREE.BoxGeometry(.007, .014, .012), bronze, [.020, .064, -.032], [0, -.5, 0]));
-      g.add(part(id + '_forward_assist', new THREE.CylinderGeometry(.006, .006, .010, 20), bronze, [.020, .066, -.016], [0, 0, Math.PI / 2]));
-      g.add(part(id + '_forward_assist_cap', new THREE.CylinderGeometry(.0045, .0045, .002, 20), mats.trim, [.026, .066, -.016], [0, 0, Math.PI / 2]));
-      g.add(part(id + '_designator_lamp', new THREE.BoxGeometry(.0015, .003, .028), mats.energy_fuse, [.0175, .078, -.062]));
-      // Charging handle (ambidextrous latch), buffer tube castle nut.
-      g.add(bar(K, id + '_charging_handle', rr(THREE, -.024, -.003, .048, .006, .002), .014, mats.gun_dark, { b: .0008, pos: [0, .089, .050] }));
-      g.add(part(id + '_charging_shaft', new THREE.BoxGeometry(.009, .005, .06), mats.gun_dark, [0, .0875, .020]));
-      for (const s of [-1, 1]) g.add(part(`${id}_charging_latch${s}`, new THREE.BoxGeometry(.005, .008, .012), mats.gun_dark, [s * .023, .089, .050]));
-      g.add(lathe(K, id + '_castle_nut', Array.from({ length: 9 }, (_, i) => [i % 2 ? .015 : .017, i * .001]).concat([[.017, .008], [0, .008], [0, 0]]), bronze, [0, .066, .052 + .004], { axis: 'z' }));
-      // Controls: bilateral selector, bolt catch, mag release, takedown pins.
-      for (const s of [-1, 1]) { g.add(part(`${id}_selector_hub${s}`, new THREE.CylinderGeometry(.005, .005, .003, 20), mats.gun_dark, [s * .0165, .040, .0], [0, 0, Math.PI / 2])); g.add(bar(K, `${id}_selector${s}`, rr(THREE, -.002, -.003, .004, .006, .001), .024, mats.gun_dark, { b: .0005, pos: [s * .0175, .040, -.011] })); }
-      g.add(bar(K, id + '_bolt_catch', rr(THREE, -.002, -.009, .004, .018, .001), .012, mats.gun_dark, { b: .0005, pos: [-.017, .050, -.078] }));
-      g.add(part(id + '_mag_release', new THREE.CylinderGeometry(.0045, .0045, .004, 20), mats.gun_dark, [.017, .030, -.078], [0, 0, Math.PI / 2]));
-      g.add(part(id + '_mag_release_fence', new THREE.BoxGeometry(.003, .020, .020), bronze, [.0175, .030, -.068]));
-      g.add(screws(K, id + '_pins', [[.016, .032, -.150], [-.016, .032, -.150], [.016, .032, .034], [-.016, .032, .034]], .003));
-      // Handguard: long slim octagon, M-LOK slots on side, top-45 and bottom faces, vented cap, anti-rotation screws.
-      const HG = .275, hz = -.170 - HG / 2, oct = shape(THREE, [[-.011, .054], [.011, .054], [.016, .059], [.016, .077], [.011, .082], [-.011, .082], [-.016, .077], [-.016, .059]]);
-      const octIn = shape(THREE, [[-.009, .056], [.009, .056], [.013, .060], [.013, .076], [.009, .080], [-.009, .080], [-.013, .076], [-.013, .060]]);
-      oct.holes.push(octIn);
-      g.add(bar(K, id + '_hg_body', oct, HG, bronze, { b: .0015, seg: 2, pos: [0, 0, hz] }));
-      for (const s of [-1, 1]) for (let i = 0; i < 7; i++) { const z = -.180 - .012 - i * .036; g.add(part(`${id}_mlok_side${s}${i}`, new THREE.BoxGeometry(.005, .006, .028), mats.trim, [s * .016, .068, z])); g.add(part(`${id}_mlok_upper${s}${i}`, new THREE.BoxGeometry(.004, .004, .028), mats.trim, [s * .0138, .0798, z], [0, 0, -s * Math.PI / 4])); }
-      for (let i = 0; i < 7; i++) g.add(part(`${id}_mlok_bottom${i}`, new THREE.BoxGeometry(.006, .005, .028), mats.trim, [0, .054, -.192 - i * .036]));
-      g.add(rail(K, id + '_hg_rail', HG, [0, .082, hz], .019));
-      for (let i = 0; i < 3; i++) g.add(part(`${id}_hg_screw${i}`, new THREE.CylinderGeometry(.0028, .0028, .002, 12), mats.gun_dark, [-.0165, .058, -.182 - i * .010], [0, 0, Math.PI / 2]));
-      g.add(bar(K, id + '_hg_cap', oct, .008, bronze, { b: .001, pos: [0, 0, -.170 - HG - .004] }));
-      for (let i = 0; i < 3; i++) g.add(part(`${id}_hg_cap_vent${i}`, new THREE.BoxGeometry(.024, .0025, .004), mats.trim, [0, .062 + i * .006, -.170 - HG - .009]));
-      g.add(lathe(K, id + '_barrel_nut', Array.from({ length: 17 }, (_, i) => [i % 2 ? .0165 : .018, .006 + i * .0007]).concat([[.018, .018], [0, .018], [0, .006]]).reverse(), mats.gun_pale, [0, .068, -.170]));
-      // Barrel with a birdcage flash hider on the bare gun (part of the barrel group so a barrel swap removes it).
-      const bg = barrelGroup(K, id, .0085, .372, [0, .068, -.170], { rc: .011, gasBlock: .200 });
-      bg.add(lathe(K, id + '_flash_hider', [[0, .360], [.0085, .360], [.011, .364], [.011, .398], [.009, .402], [.007, .402], [.007, .364], [0, .364]], mats.gun_dark, [0, 0, 0]));
-      for (let i = 0; i < 5; i++) { const a = Math.PI / 5 + i * Math.PI * 2 / 5 * .78; bg.add(part(`${id}_hider_slot${i}`, new THREE.BoxGeometry(.003, .002, .026), mats.trim, [Math.cos(a) * .011, Math.sin(a) * .011 + .0, -.384], [0, 0, a])); }
-      g.add(bg);
-      g.add(part(id + '_qd_front', new THREE.CylinderGeometry(.005, .005, .002, 16), mats.trim, [-.0165, .062, -.420], [0, 0, Math.PI / 2]));
-      // Ribbed polymer magazine.
-      const mg = curvedMag(K, id, [0, -.030, -.113]);
-      for (let i = 0; i < 4; i++) for (const s of [-1, 1]) mg.add(part(`${id}_mag_rib${s}${i}`, new THREE.BoxGeometry(.0014, .014, .030), mats.polymer, [s * .0127, -.034 - i * .028, -.004 - i * .005]));
-      for (let i = 0; i < 4; i++) for (const s of [-1, 1]) mg.add(part(`${id}_mag_rib_edge${s}${i}`, new THREE.BoxGeometry(.0006, .016, .032), mats.grip_rubber, [s * .0123, -.034 - i * .028, -.004 - i * .005]));
-      g.add(mg);
-      // Skeletonised collapsible stock.
-      const st = grp(id + '_stock', [0, .066, .052]);
-      st.add(lathe(K, id + '_stock_tube', [[0, 0], [.013, 0], [.013, -.19], [.011, -.19], [.011, -.198], [0, -.198]], mats.gun_dark, [0, 0, 0]));
-      for (let i = 0; i < 6; i++) st.add(part(`${id}_stock_notch${i}`, new THREE.TorusGeometry(.0132, .0008, 6, 28), mats.trim, [0, 0, .05 + i * .02]));
-      const body = shape(THREE, [[.070, .022], [.200, .026], [.216, -.020], [.208, -.072], [.190, -.078], [.150, -.062], [.110, -.030], [.078, -.012]]);
-      body.holes.push(shape(THREE, [[.120, -.020], [.186, -.020], [.190, -.052], [.150, -.044]]));
-      st.add(plate(K, id + '_stock_body', body, .030, mats.polymer, { b: .002, seg: 3 }));
-      st.add(bar(K, id + '_stock_saddle', rr(THREE, -.0145, -.002, .029, .018, .005), .12, mats.polymer, { b: .0015, pos: [0, .008, .130] }));
-      st.add(plate(K, id + '_stock_pad', shape(THREE, [[.212, .030], [.226, .028], [.230, -.076], [.214, -.080], [.206, -.060]]), .032, mats.grip_rubber, { b: .002 }));
-      st.add(part(id + '_sling_loop', new THREE.TorusGeometry(.007, .0015, 6, 14), mats.gun_dark, [0, -.030, .100], [0, Math.PI / 2, 0]));
-      st.add(bar(K, id + '_stock_lever', rr(THREE, -.008, -.006, .016, .012, .003), .034, mats.polymer, { b: .001, pos: [0, -.018, .110] }));
-      st.add(part(id + '_stock_qd', new THREE.CylinderGeometry(.005, .005, .002, 16), mats.trim, [-.0175, -.010, .150], [0, 0, Math.PI / 2]));
-      g.add(st);
-      g.add(mount(K, id, 'barrel', [0, .068, -.170]));
-      g.add(mount(K, id, 'muzzle', [0, .068, -.572]));
-      g.add(mount(K, id, 'optic', [0, .094, -.10]));
-      g.add(mount(K, id, 'magazine', [0, -.030, -.113]));
-      g.add(mount(K, id, 'stock', [0, .066, .052]));
-      g.add(mount(K, id, 'underbarrel', [0, .052, -.34]));
-      g.add(mount(K, id, 'infusion', [-.017, .068, -.10]));
-      return g;
+      return buildRifleHero(K);
     },
   }),
   M({
     id: 'scattergun', handsPose: 'rifle', label: 'Scattergun', swatch: '#3a4250', stats: { Cost: '100', Damage: '24', Rate: '1.1/s', Range: '14 m' },
-    note: 'Panic weapon for the perch, after the reference: a semi-auto tactical shotgun. Tall boxed receiver with a short top rail and a ghost-ring rear sight, bolt handle and carrier proud of the ejection port, cross-bolt safety in the guard, shell lifter under the loading port. The `_magazine` group is the long tube under the barrel with its knurled cap, barrel clamp and the ribbed cylindrical forend (a drum replaces all of it and hangs from the port). The `_barrel` group carries the barrel, its front-sight tower with a fibre bead and the muzzle mount. Pistol grip into a solid fixed stock with a sling slot and a thick pad.',
+    note: 'Panic weapon for the perch, rebuilt to the hero standard and measured against a real semi-auto tactical 12-gauge: 18.5 mm bore, 18\" barrel, 41 \u00d7 45 mm boxed alloy receiver, 808 mm overall. The hull sizes the gun \u2014 barrel, magazine tube, loading port and ejection port all derive from it. Ejection port cut into the right wall only; loading port cut up into the belly between the side walls; one polymer handguard over barrel AND tube, vented on both flanks. Parkerised phosphate throughout: a crystalline conversion coating, not dark steel with the roughness turned up. Ghost-ring rear on a short rail, hooded tritium front post. The bolt assembly reciprocates 62 mm and throws fired hulls \u2014 brass head, dyed plastic body, blown-out crimp.',
     build(K) {
-      const { THREE, mats, grp, part } = K, id = 'scattergun', g = grp(id);
-      g.add(grip(K, id));
-      g.add(trigger(K, id, [0, .012, -.034]));
-      // Receiver: tall box, flat rear, a small chin under the guard, dust flanks.
-      const rec = shape(THREE, [[-.165, .022], [-.165, .084], [.028, .084], [.036, .076], [.036, .022], [.020, .014], [-.006, .010], [-.009, -.008], [-.014, -.018], [-.058, -.018], [-.064, -.010], [-.064, .022]]);
-      rec.holes.push(rr(THREE, -.058, -.011, .046, .023, .006));
-      g.add(plate(K, id + '_receiver', rec, .036, mats.gun_metal, { b: .002, seg: 3 }));
-      g.add(part(id + '_loading_port', new THREE.BoxGeometry(.020, .002, .056), mats.trim, [0, .021, -.110]));
-      g.add(part(id + '_shell_lifter', new THREE.BoxGeometry(.016, .003, .050), mats.gun_pale, [0, .0225, -.110], [.12, 0, 0]));
-      g.add(part(id + '_ejection_port', new THREE.BoxGeometry(.002, .020, .062), mats.trim, [.018, .058, -.078]));
-      g.add(part(id + '_bolt_carrier', new THREE.BoxGeometry(.0026, .014, .040), mats.gun_pale, [.0185, .058, -.062]));
-      g.add(part(id + '_bolt_handle', new THREE.CylinderGeometry(.003, .003, .020, 12), mats.gun_dark, [.027, .058, -.052], [0, 0, Math.PI / 2]));
-      g.add(part(id + '_bolt_handle_knob', new THREE.SphereGeometry(.0042, 12, 8), mats.gun_dark, [.038, .058, -.052]));
-      g.add(part(id + '_cross_bolt', new THREE.CylinderGeometry(.0035, .0035, .042, 14), mats.chrome, [0, .002, -.014], [0, 0, Math.PI / 2]));
-      g.add(part(id + '_bolt_release', new THREE.BoxGeometry(.003, .010, .014), mats.gun_dark, [.019, .036, -.104]));
-      for (const s of [-1, 1]) g.add(part(`${id}_flank${s}`, new THREE.BoxGeometry(.0016, .034, .120), mats.gun_dark, [s * .0185, .052, -.010]));
-      g.add(screws(K, id + '_pins', [[.0185, .032, -.140], [-.0185, .032, -.140], [.0185, .072, .010], [-.0185, .072, .010]], .0026));
-      // Rail + ghost-ring rear sight.
-      g.add(rail(K, id + '_top_rail', .140, [0, .084, -.100], .019));
-      g.add(bar(K, id + '_rs_base', rr(THREE, -.010, 0, .020, .007, .0015), .016, mats.gun_dark, { b: .0006, pos: [0, .094, .006] }));
-      for (const s of [-1, 1]) g.add(part(`${id}_rs_ear${s}`, new THREE.BoxGeometry(.0025, .016, .012), mats.gun_dark, [s * .010, .108, .006]));
-      g.add(part(id + '_rs_ring', new THREE.TorusGeometry(.005, .0011, 8, 24), mats.gun_dark, [0, .109, .006]));
-      g.add(part(id + '_rs_stem', new THREE.BoxGeometry(.003, .009, .002), mats.gun_dark, [0, .1, .006]));
-      // Barrel group: barrel, front-sight tower with wings + fibre bead, muzzle mount. Barrel swaps take the lot.
-      const bg = barrelGroup(K, id, .0105, .372, [0, .062, -.165], { rc: .013 });
-      bg.add(bar(K, id + '_fs_base', rr(THREE, -.006, 0, .012, .008, .002), .018, mats.gun_dark, { b: .0006, pos: [0, .010, -.352] }));
-      for (const s of [-1, 1]) bg.add(part(`${id}_fs_wing${s}`, new THREE.BoxGeometry(.0025, .018, .012), mats.gun_dark, [s * .007, .026, -.352], [0, 0, s * .12]));
-      bg.add(part(id + '_fs_post', new THREE.BoxGeometry(.0025, .014, .004), mats.gun_dark, [0, .024, -.352]));
-      bg.add(tube(K, id + '_fs_fibre', .0013, .006, [0, .032, -.352], mats.ammo_lamp));
-      bg.add(mount(K, id, 'muzzle', [0, 0, -.372]));
-      g.add(bg);
-      // Magazine group: long tube to near the muzzle, knurled cap, barrel clamp, ribbed forend. A drum replaces all of it.
-      const mg = grp(id + '_magazine');
-      mg.add(lathe(K, id + '_tube_mag', [[0, 0], [.010, 0], [.010, .330], [0, .330]], mats.gun_metal, [0, .034, -.165]));
-      mg.add(lathe(K, id + '_tube_cap', Array.from({ length: 11 }, (_, i) => [i % 2 ? .0115 : .013, i * .0018]).concat([[.011, .020], [.006, .024], [0, .024], [0, 0]]), mats.gun_dark, [0, .034, -.495]));
-      mg.add(bar(K, id + '_barrel_clamp', rr(THREE, -.014, -.012, .028, .054, .012), .011, mats.gun_dark, { b: .001, pos: [0, .034, -.470] }));
-      mg.add(part(id + '_clamp_sling_loop', new THREE.TorusGeometry(.006, .0015, 6, 14), mats.chrome, [-.018, .020, -.470], [0, Math.PI / 2, 0]));
-      mg.add(screws(K, id + '_clamp_screws', [[.014, .050, -.470], [-.014, .050, -.470]], .0024));
-      const fore = grp(id + '_forend', [0, .047, -.270]);
-      fore.add(lathe(K, id + '_forend_body', [[0, -.090], [.019, -.090], [.022, -.087], [.022, .087], [.019, .090], [0, .090]], mats.polymer, [0, 0, 0]));
-      for (let i = 0; i < 12; i++) for (const s of [-1, 1]) fore.add(part(`${id}_forend_rib${s}${i}`, new THREE.BoxGeometry(.005, .018, .003), mats.grip_rubber, [s * .0208, .0, -.066 + i * .012], [0, 0, s * .0]));
-      fore.add(part(id + '_forend_rib_bottom', new THREE.BoxGeometry(.012, .0035, .150), mats.grip_rubber, [0, -.0215, 0]));
-      for (let i = 0; i < 4; i++) fore.add(part(`${id}_forend_vent${i}`, new THREE.BoxGeometry(.007, .005, .014), mats.trim, [0, .023, -.060 + i * .040]));
-      fore.add(part(id + '_forend_cap_f', new THREE.CylinderGeometry(.020, .022, .005, 24), mats.gun_dark, [0, 0, -.092], [Math.PI / 2, 0, 0]));
-      fore.add(part(id + '_forend_cap_r', new THREE.CylinderGeometry(.022, .020, .005, 24), mats.gun_dark, [0, 0, .092], [Math.PI / 2, 0, 0]));
-      mg.add(fore);
-      g.add(mg);
-      // Fixed stock: solid polymer body from the receiver tang, sling slot, thick rubber pad.
-      const st = grp(id + '_stock', [0, .050, .036]);
-      const body = shape(THREE, [[0, .040], [.060, .038], [.230, .030], [.240, -.030], [.236, -.098], [.212, -.106], [.130, -.070], [.060, -.030], [0, -.008]]);
-      body.holes.push(rr(THREE, .120, -.062, .012, .034, .003));
-      st.add(plate(K, id + '_stock_body', body, .034, mats.polymer, { b: .0025, seg: 3 }));
-      st.add(part(id + '_stock_comb', new THREE.BoxGeometry(.028, .003, .150), mats.grip_rubber, [0, .035, .150]));
-      st.add(plate(K, id + '_stock_pad', shape(THREE, [[.236, .034], [.254, .030], [.258, -.108], [.238, -.112], [.228, -.096]]), .036, mats.grip_rubber, { b: .002 }));
-      for (let i = 0; i < 4; i++) st.add(part(`${id}_pad_groove${i}`, new THREE.BoxGeometry(.038, .003, .0015), mats.trim, [0, .010 - i * .030, .258]));
-      st.add(part(id + '_stock_qd', new THREE.CylinderGeometry(.005, .005, .002, 16), mats.trim, [-.0175, -.020, .190], [0, 0, Math.PI / 2]));
-      g.add(st);
-      g.add(mount(K, id, 'barrel', [0, .062, -.165]));
-      // Fixed lug under the barrel root: the tube seats against it and the underbarrel mount hangs from it, so it survives a drum.
-      g.add(bar(K, id + '_barrel_lug', rr(THREE, -.011, .024, .022, .030, .004), .040, mats.gun_metal, { b: .0012, pos: [0, 0, -.180] }));
-      g.add(mount(K, id, 'optic', [0, .094, -.100]));
-      g.add(mount(K, id, 'magazine', [0, .020, -.110]));   // loading port: drum hangs under the receiver
-      g.add(mount(K, id, 'stock', [0, .050, .036]));
-      g.add(mount(K, id, 'underbarrel', [0, .022, -.190])); // under the lug, behind the forend, clear of the drum
-      g.add(mount(K, id, 'infusion', [-.0185, .058, -.130]));
-      return g;
+      return buildScattergunHero(K);
     },
   }),
   M({
     id: 'emberpistol', handsPose: 'pistol', label: 'Ember pistol', swatch: '#e8622b', stats: { Cost: '90', Damage: '4', Rate: '2.0/s', Range: '40 m', Applies: 'burn' },
-    note: 'The shooter\'s half of Thermal Shock. A fuel-fed hand cannon: brushed-steel ember canister behind the frame with a glowing sight-glass ring and hazard bands, top valve wheel, braided hose into the frame, turned shroud with hex heat fins, pilot flame under the muzzle, thermal readout on the right of the upper.',
+    note: 'The shooter\'s half of Thermal Shock, rebuilt to the hero standard. No real-world twin, so every part is grounded in a real MACHINE instead: signal-pistol proportions (150 mm barrel, 288 mm overall, 18 mm bore), a canister built as an actual pressure vessel with torispherical ends and a rolled seam, a turned brass handwheel on a brazed boss, and a braided hose that lands in swaged ferrules at BOTH ends rather than floating. Cooling fins are steps cut into the barrel\u2019s turned profile, not discs threaded onto a tube. Fuel-fed, so it ejects nothing \u2014 what it has is a breech block that kicks 8.5 mm on discharge.',
     build(K) {
-      const { THREE, mats, grp, part } = K, id = 'emberpistol', g = grp(id);
-      g.add(grip(K, id));
-      g.add(trigger(K, id, [0, .012, -.032]));
-      const frame = shape(THREE, [[-.100, .014], [-.104, .030], [-.100, .044], [.050, .044], [.056, .034], [.052, .004], [-.006, .004], [-.009, -.010], [-.014, -.018], [-.056, -.018], [-.062, -.010], [-.062, .014]]);
-      frame.holes.push(GUARD(THREE));
-      g.add(plate(K, id + '_frame', frame, .034, mats.gun_dark, { b: .003, seg: 3 }));
-      g.add(plate(K, id + '_upper', shape(THREE, [[-.100, .044], [-.100, .072], [.020, .072], [.030, .060], [.030, .044]]), .030, mats.gun_metal, { b: .003, seg: 3 }));
-      g.add(bar(K, id + '_gauge_bezel', rr(THREE, -.0015, -.007, .003, .014, .001), .032, mats.gun_dark, { b: .0005, pos: [.0165, .058, -.030] }));
-      g.add(part(id + '_gauge', new THREE.BoxGeometry(.0012, .008, .026), mats.infuse_ember, [.0182, .058, -.030]));
-      g.add(lathe(K, id + '_canister', [[0, 0], [.016, 0], [.021, -.006], [.021, -.060], [.018, -.066], [.012, -.070], [.012, -.076], [0, -.076]], mats.gun_pale, [0, .056, .030]));
-      g.add(part(id + '_canister_glass', new THREE.TorusGeometry(.0215, .003, 10, 40), mats.infuse_ember, [0, .056, .060]));
-      for (const z of [.044, .078]) g.add(part(`${id}_canister_band${z}`, new THREE.TorusGeometry(.0215, .002, 8, 40), mats.hazard, [0, .056, z]));
-      g.add(lathe(K, id + '_valve', [[0, 0], [.005, 0], [.005, .008], [.008, .009], [.008, .011], [.003, .012], [0, .012]], mats.brass, [0, .076, .090], { axis: 'y', seg: 20 }));
-      g.add(part(id + '_valve_wheel', new THREE.TorusGeometry(.007, .0015, 8, 24), mats.chrome, [0, .090, .090], [Math.PI / 2, 0, 0]));
-      for (let i = 0; i < 3; i++) g.add(part(`${id}_valve_spoke${i}`, new THREE.BoxGeometry(.014, .0015, .0015), mats.chrome, [0, .090, .090], [0, i * Math.PI / 3, 0]));
-      g.add(K.cableRun(id + '_hose', [[.018, .050, .085], [.033, .030, .030], [.026, .030, -.030], [.016, .036, -.070]], .0035, mats.grip_rubber));
-      const sh = grp(id + '_shroud', [0, .056, -.100]);
-      sh.add(lathe(K, id + '_shroud_body', [[0, 0], [.012, 0], [.016, .004], [.016, .070], [.013, .074], [.010, .076], [0, .076]], mats.gun_metal, [0, 0, 0]));
-      const fin = poly(THREE, 0, 0, .025, 6, Math.PI / 6); fin.holes.push(circ(THREE, 0, 0, .0158));
-      for (let i = 0; i < 5; i++) sh.add(bar(K, `${id}_fin${i}`, fin, .0016, mats.gun_pale, { b: .0003, pos: [0, 0, -.012 - i * .010] }));
-      for (let i = 0; i < 4; i++) { const a = Math.PI / 4 + i * Math.PI / 2; sh.add(part(`${id}_vent${i}`, new THREE.BoxGeometry(.0025, .002, .012), mats.trim, [Math.cos(a) * .0162, Math.sin(a) * .0162, -.066], [0, 0, a])); }
-      g.add(sh);
-      g.add(barrelGroup(K, id, .007, .044, [0, .056, -.176], { rc: .007, material: mats.gun_bronze }));
-      g.add(lathe(K, id + '_pilot_nozzle', [[0, 0], [.004, 0], [.004, .016], [.003, .020], [0, .020]], mats.brass, [0, .038, -.170], { seg: 20 }));
-      g.add(lathe(K, id + '_pilot_flame', [[0, 0], [.0035, 0], [.003, .012], [.0012, .020], [0, .022]], mats.infuse_ember, [0, .038, -.190], { seg: 16 }));
-      g.add(lathe(K, id + '_pilot_glow', [[0, 0], [.006, 0], [.005, .014], [.002, .026], [0, .030]], mats.flame_glow, [0, .038, -.190], { seg: 16 }));
-      g.add(sights(K, id, [0, .072, -.092], [0, .072, .024]));
-      g.add(pistolMag(K, id, [0, -.110, .043]));
-      g.add(rail(K, id + '_top_rail', .08, [0, .072, -.050], .02));
-      g.add(screws(K, id + '_pins', [[.0172, .028, -.03], [-.0172, .028, -.03], [.0172, .024, .03], [-.0172, .024, .03]], .0028));
-      g.add(mount(K, id, 'barrel', [0, .056, -.176]));
-      g.add(mount(K, id, 'muzzle', [0, .056, -.220]));
-      g.add(mount(K, id, 'optic', [0, .082, -.050]));
-      g.add(mount(K, id, 'magazine', [0, -.110, .043]));
-      g.add(mount(K, id, 'stock', [0, .056, .106]));
-      g.add(mount(K, id, 'underbarrel', [0, .004, -.080]));
-      g.add(mount(K, id, 'infusion', [-.017, .028, -.040]));
-      return g;
+      return buildEmberPistolHero(K);
     },
   }),
   {
@@ -539,10 +318,12 @@ export const WEAPONS = [
   },
   {
     id: 'hands', file: 'hands_firstperson.glb', label: 'First-person hands', swatch: '#3a3f4b', stats: { Base: 'faction-neutral', Variants: 'hands_<faction> (§3.5)' },
-    poses: ['rifle', 'pistol', 'tool'],
+    poses: ['rifle', 'pistol', 'tool', ...OFFHAND_POSES],
     note: 'Base gloved forearms, posed per platform (weapon.handsPose). Fingers are capsule bone chains that actually wrap the grip — three fingers closed on the front strap, index on the trigger, thumb over the backstrap — with knuckle plates, wrist cuffs and rolled sleeves. Rifle: support hand C-clamps the handguard. Pistol: support hand cups the firing hand. Tool: right hand on the handle, left on the foregrip. Faction variants swap the plates.',
     build(K) {
       const { THREE, grp, D } = K, g = grp('hands'), pose = K.__handsPose || 'rifle';
+      if (OFFHAND_POSES.includes(pose)) return buildOffhandPose(K, pose);
+      if (pose === 'pistol') return buildHeroHands(K, 'pistol');
       const frame = (name, pos, rx) => { const f = grp(name, pos); f.rotation.x = rx; g.add(f); return f; };
       if (pose === 'tool') {
         frame('hands_frame_r', [0, .050, 0], -90 * D).add(wrapHand(K, 'r', { hw: .016, zf: -.017, zb: .017, levels: [-.092, -.072, -.052, -.032], thumbPts: [[.026, -.030, .012], [.008, -.030, .028], [-.012, -.034, .026], [-.020, -.052, .020], [-.018, -.070, .016]], wrist: [.030, -.115, .030], elbow: [.06, -.42, .05], up: [0, 0, 1] }));
@@ -703,6 +484,30 @@ export const ATTACHMENTS = [
     }),
 ];
 
+/** Soft-edged streak ribbon along −Z with colour + alpha baked into vertex RGBA.
+ *  Sampled with t = 0 at the head → 1 at the tail; edges of the ribbon are alpha 0,
+ *  the centre line carries a(t), so it reads as a soft streak with no texture and
+ *  no additive blending. `zHead` places the head (defaults to −len). */
+function ribbon(K, name, material, { len = 1, segs = 48, w, a, c, roll = 0, zHead } = {}) {
+  const { THREE } = K, pos = [], col = [], idx = [];
+  for (let i = 0; i <= segs; i++) {
+    const t = i / segs, z = -len * (1 - t), hw = w(t), al = a(t), [r, g, b] = c(t);
+    pos.push(-hw, 0, z, 0, 0, z, hw, 0, z);
+    col.push(r, g, b, 0, r, g, b, al, r, g, b, 0);
+  }
+  for (let i = 0; i < segs; i++) {
+    const o = i * 3;
+    idx.push(o, o + 1, o + 4, o, o + 4, o + 3, o + 1, o + 2, o + 5, o + 1, o + 5, o + 4);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 4));
+  geo.setIndex(idx); geo.computeVertexNormals();
+  const m = new THREE.Mesh(geo, material);
+  m.name = name; m.rotation.z = roll; m.position.z = (zHead ?? -len) + len;
+  return m;
+}
+
 /* ── ammo + tracers ──────────────────────────────────────────────────── */
 const AMMO_DEF = {
   standard: { label: 'Standard', swatch: '#f4dca4', tip: 'chrome', band: null, tracer: 'tracer_standard', stats: { Damage: '×1.0', Recipe: '—' }, note: 'Brass case, plain jacketed tip; pale-gold tracer.' },
@@ -740,21 +545,117 @@ export const AMMO = Object.entries(AMMO_DEF).map(([id, d]) => ({
     g.add(part(n + '_label_stripe', new THREE.BoxGeometry(.0012, .004, .02), mats.gun_dark, [-W / 2 - .0006, .058, .006]));
     g.add(round(n + '_top', [0, H + .012, Dp / 2 - .012], [-Math.PI / 2, 0, 0]));
     g.add(round(n + '_second', [0, H + .003, Dp / 2 - .014], [-Math.PI / 2, 0, 0]));
-    g.add(round(n + '_loose', [W / 2 + .012, .006, .018], [-Math.PI / 2, 0, 1.35]));
+    // Loose round for the armory grid. The Z term was +1.35, which aimed it −X:
+    // its 52 mm length ran back through the magazine and surfaced at the base as
+    // a round that looked like a modelling mistake. Now it points away, resting
+    // on the ground plane clear of the ribs.
+    g.add(round(n + '_loose', [W / 2 + .014, .0058, .014], [-Math.PI / 2, 0, -1.35]));
     return g;
   },
 }));
-export const TRACERS = Object.entries(AMMO_DEF).map(([id, d]) => ({
-  id: 'vfx_tracer_' + id, file: `vfx_tracer_${id}.glb`, label: d.label + ' tracer', swatch: d.swatch, stats: { Length: '1 m unit', Forward: '−Z' },
-  note: 'Unit-length streak the client stretches to the hit; ' + d.note.split(';')[1]?.trim(),
-  build(K) {
-    const { grp, part, THREE, mats } = K, g = grp('vfx_tracer_' + id), em = mats[d.tracer];
-    const r = id === 'hollowpoint' ? .03 : id === 'ap' ? .012 : .02;
-    g.add(lathe(K, g.name + '_core', [[0, 0], [r * .4, 0], [r, 1], [0, 1]], em, [0, 0, 0], { seg: 16 }));
-    g.add(part(g.name + '_head', new THREE.SphereGeometry(r * 1.2, 16, 12), em, [0, 0, -1]));
-    if (id === 'incendiary') for (let i = 0; i < 5; i++) g.add(part(`${g.name}_flame${i}`, new THREE.ConeGeometry(.02, .12, 8), em, [Math.cos(i * 1.3) * .04, Math.sin(i * 1.3) * .04, -.15 - i * .17], [Math.PI / 2, 0, 0]));
-    if (id === 'cryo') for (let i = 0; i < 6; i++) g.add(part(`${g.name}_crystal${i}`, new THREE.OctahedronGeometry(.025, 0), em, [Math.cos(i * 1.1) * .05, Math.sin(i * 1.1) * .05, -.1 - i * .15]));
-    if (id === 'ap') g.add(lathe(K, g.name + '_sheath', [[0, 0], [.004, 0], [.02, .6], [0, .6]], mats.chrome, [0, 0, 0], { seg: 16 }));
-    return g;
+/* Per-round tracer character. Colour grade + falloff are baked into vertex RGBA by
+   `ribbon`, so every one of these is unlit, alpha-blended geometry that reads the same
+   in-engine as in any GLTF viewer. `fall` is the exponential decay of the streak
+   (higher = shorter, hotter burn); `w0`/`wk` are head and tail half-widths. */
+const TRACER_VFX = {
+  standard: {
+    hot: [1, .97, .88], mid: [1, .70, .28], tail: [.70, .24, .06],
+    fall: 3.4, w0: .0045, wk: .011, head: .0075, headMat: 'tracer_hot',
+    smoke: { len: .62, w0: .006, wk: .026, a: .10, c: [.48, .45, .42] },
+    note: 'Crossed soft-edged ribbons graded white-hot \u2192 amber \u2192 ember, a hot filament behind the head, and a thin smoke wisp at the tail.',
   },
-}));
+  ap: {
+    hot: [1, 1, 1], mid: [.72, .82, 1], tail: [.34, .42, .78],
+    fall: 5.4, w0: .0026, wk: .0034, head: .0050, headMat: 'tracer_hot_ap',
+    smoke: null, profile: 'hard', filament: false, lance: true, rails: true,
+    note: 'Not a plume \u2014 a bolt. Near-constant width, a hard-cut tail that ends at ~85% instead of fading out, a forward lance through the head, and two hairline rails flanking the core. Cold steel-white into violet; no smoke, since the penetrator does not burn.',
+  },
+  hollowpoint: {
+    hot: [1, .93, .72], mid: [1, .54, .15], tail: [.52, .15, .04],
+    fall: 2.4, w0: .0095, wk: .030, head: .0105, headMat: 'tracer_hot_hp',
+    smoke: { len: .74, w0: .010, wk: .042, a: .14, c: [.44, .38, .34] },
+    note: 'Widest and slowest-dying of the set \u2014 a fat orange streak that keeps blooming behind the round, so the trail itself telegraphs the mushrooming hit.',
+  },
+  incendiary: {
+    hot: [1, .92, .70], mid: [.98, .40, .09], tail: [.40, .09, .02],
+    fall: 2.1, w0: .0065, wk: .020, head: .0090, headMat: 'tracer_hot_inc',
+    smoke: { len: .80, w0: .012, wk: .048, a: .17, c: [.34, .28, .26] },
+    licks: 5,
+    note: 'Ember-graded streak shedding flame licks that peel off-axis and fall behind, over the heaviest smoke plume of the set.',
+  },
+  cryo: {
+    hot: [.94, .99, 1], mid: [.42, .76, .95], tail: [.14, .36, .60],
+    fall: 3.0, w0: .0042, wk: .013, head: .0080, headMat: 'tracer_hot_cryo',
+    smoke: { len: .70, w0: .008, wk: .036, a: .13, c: [.62, .76, .84] },
+    shards: 6,
+    note: 'Cold blue streak trailing vapour rather than smoke, shedding ice shards that tumble off the flight line.',
+  },
+};
+export const TRACERS = Object.entries(AMMO_DEF).map(([id, d]) => {
+  const V = TRACER_VFX[id];
+  return {
+    id: 'vfx_tracer_' + id, file: `vfx_tracer_${id}.glb`, label: d.label + ' tracer', swatch: d.swatch,
+    stats: { Length: '1 m unit', Forward: '\u2212Z' },
+    note: 'Unit-length streak the client stretches to the hit (head at z = \u22121). ' + V.note
+      + ' Unlit, alpha-blended, colour and falloff in vertex RGBA \u2014 no material overrides on import.',
+    build(K) {
+      const { grp, part, THREE, mats } = K, g = grp('vfx_tracer_' + id), n = g.name;
+      const mix = (p, q, t) => p.map((v, i) => v + (q[i] - v) * t);
+      const grade = (t) => (t < .35 ? mix(V.hot, V.mid, t / .35) : mix(V.mid, V.tail, (t - .35) / .65));
+      /* Soft rounds fade exponentially into nothing. AP holds near-full brightness then
+         cuts \u2014 a bolt of finite length, which is what separates it from the plumes. */
+      const alpha = V.profile === 'hard'
+        ? (t) => (t < .60 ? .92 - .18 * (t / .60) : .74 * Math.pow(Math.max(0, 1 - (t - .60) / .26), 1.6))
+        : (t) => Math.exp(-V.fall * t) * .95;
+      const width = (t) => V.w0 + (V.wk - V.w0) * Math.pow(t, .7);
+      // main streak: two ribbons crossed so the light reads from any viewing angle
+      for (const [k, roll] of [['a', 0], ['b', Math.PI / 2]])
+        g.add(ribbon(K, `${n}_streak_${k}`, mats.tracer_streak, { w: width, a: alpha, c: grade, roll }));
+      // Incandescent head — the one solid element, what the eye tracks. AP skips it:
+      // its lance already terminates in a bright point, and a sphere would round off
+      // the pointed silhouette that separates it from Standard.
+      if (!V.lance) g.add(part(n + '_head', new THREE.SphereGeometry(V.head, 14, 10), mats[V.headMat], [0, 0, -1]));
+      // hot filament right behind the head, crossed off the main streak's axis
+      if (V.filament !== false) for (const [k, roll] of [['a', Math.PI / 4], ['b', -Math.PI / 4]])
+        g.add(ribbon(K, `${n}_core_${k}`, mats.tracer_streak,
+          { len: V.head * 45, segs: 20, zHead: -1, w: () => V.w0 * .55, a: (t) => Math.exp(-4.5 * t), c: () => V.hot, roll }));
+      // AP lance: an elongated dart tapering to a point exactly at the head, so the
+      // silhouette reads pointed rather than round. Spans z −.875 → −1; never overshoots.
+      if (V.lance) {
+        g.add(lathe(K, n + '_lance', [[0, 0], [.0030, .025], [.0052, .070], [.0016, .113], [0, .125]], mats.tracer_hot_ap, [0, 0, -.875], { seg: 12 }));
+      }
+      // AP rails: hairline guides flanking the bolt — engineered, not organic
+      if (V.rails) for (const [k, x] of [['l', -.0085], ['r', .0085]]) {
+        const rail = ribbon(K, `${n}_rail_${k}`, mats.tracer_streak, {
+          len: .52, segs: 20, zHead: -1, w: () => .0011, roll: Math.PI / 2,
+          a: (t) => .5 * Math.pow(Math.max(0, 1 - t), .8), c: (t) => mix(V.mid, V.tail, t),
+        });
+        rail.position.x = x;
+        g.add(rail);
+      }
+      if (V.smoke) {
+        const S = V.smoke;
+        g.add(ribbon(K, n + '_smoke', mats.tracer_smoke_v,
+          { len: S.len, segs: 28, w: (t) => S.w0 + (S.wk - S.w0) * t, a: (t) => S.a * Math.sin(t * Math.PI), c: () => S.c, roll: Math.PI / 3 }));
+      }
+      // flame licks: short ribbons peeling off the flight line and trailing back
+      for (let i = 0; i < (V.licks || 0); i++) {
+        const t = .12 + i * .15, a = i * 2.4;
+        const f = ribbon(K, `${n}_lick${i}`, mats.tracer_streak,
+          { len: .10 + i * .035, segs: 12, w: (u) => .004 + .014 * u, a: (u) => .55 * Math.exp(-2.2 * u) * (1 - t * .7), c: (u) => mix(V.mid, V.tail, u) });
+        f.position.set(Math.cos(a) * .012, Math.sin(a) * .012, -1 + t);
+        f.rotation.set(Math.sin(a) * .5, Math.cos(a) * .5, a);
+        g.add(f);
+      }
+      // ice shards: small tumbling solids, shrinking and dimming down the trail
+      for (let i = 0; i < (V.shards || 0); i++) {
+        const t = .10 + i * .14, a = i * 1.9;
+        const c = part(`${n}_shard${i}`, new THREE.OctahedronGeometry(.009 - i * .0009, 0), mats.tracer_ice,
+          [Math.cos(a) * (.006 + t * .028), Math.sin(a) * (.006 + t * .028), -1 + t], [a, a * .7, a * 1.3]);
+        c.scale.set(1, 1, 2.4);
+        g.add(c);
+      }
+      return g;
+    },
+  };
+});

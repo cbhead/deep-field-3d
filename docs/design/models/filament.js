@@ -13,7 +13,11 @@ export const TOWER = {
   swatch: '#ff2e4a',
   stats: { Milestone: 'M3', Kind: 'Beam (ramp)', Applies: 'shred (L7)', Sim: 'not yet' },
   layers: 'Ground + Air',
-  rig: { yaw: [-180, 180], pitch: [-12, 48], traverse: 220, elevate: 160 },
+  // Ceiling raised 48 → 78 (FORWARD-MANIFEST-reload §8b): a Skiff on the air
+  // strand passing near-overhead sits at 74° from a pad beneath it, so the old
+  // 48 parked the barrel 26° below a target it was killing. 78 clears that with
+  // margin; the emitter head still cannot fold back into its own radiator stack.
+  rig: { yaw: [-180, 180], pitch: [-12, 78], traverse: 220, elevate: 160 },
   note: 'A beam has no travel time, so the rig IS the weapon: 220°/s yaw so it never loses a strafing target once acquired. Heat ramp is shown as the radiator stack glowing; the client drives emissive from the sim\'s ramp multiplier. Beam origin is the lens — `filament_muzzle`.',
   paths: [
     {
