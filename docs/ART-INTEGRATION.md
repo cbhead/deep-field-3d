@@ -20,6 +20,27 @@ The folder is chosen by name prefix (`enemy_` → `enemies/`, `tower_` →
 `structures/`, …); the table lives in `AssetLibrary.Routes` and is repeated in
 [game/assets/README.md](../game/assets/README.md).
 
+## What to build next
+
+Always the open **forward manifest**. Each one is a request list for a specific
+piece of work, written against something that already runs in the game, so
+every dimension in it is measured off the built thing rather than proposed:
+
+- **[FORWARD-MANIFEST-toaster.md](FORWARD-MANIFEST-toaster.md)** — sector 4's
+  whole kit, and the largest outstanding ask. It carries the one rule the rest
+  of this document does not: anything that repeats on that map is drawn as a
+  single instanced mesh, so a file's **part count is its draw-call count** and
+  its triangles are multiplied by every placement. That is why those entries
+  carry budgets and the older briefs do not.
+- [FORWARD-MANIFEST-switchyard.md](FORWARD-MANIFEST-switchyard.md) — the
+  tiling-versus-punctuating split, and four pieces that map still grayboxes.
+- [FORWARD-MANIFEST-reload.md](FORWARD-MANIFEST-reload.md) — weapons.
+
+`DESIGN-BRIEF.md` §3 remains the standing name list; a forward manifest is what
+is being asked for *now*, and anything in one should appear in
+`docs/forward-manifest.json` on the next drop. `MAP-AUTHORING.md` is the rules a
+map has to satisfy before any of its art is worth drawing.
+
 ## Where the models come from
 
 Design does not hand-model GLBs. The Claude Design project is three.js code —
