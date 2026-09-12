@@ -313,9 +313,8 @@ if (args.Contains("--baseline"))
     var enemy = new Enemy
     {
         Id = world.NextId(), DefId = "monolith", Hp = 300f, MaxHp = 300f,
-        RouteIndex = 0, Leg = 2, LegProgress = 15f,
         Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1,
-    };
+    }.AtRouteLeg(world, 0, 2, 15f);
     world.Enemies.Add(enemy);
     Step.Advance(world);   // aura chills
 
@@ -360,10 +359,9 @@ if (args.Contains("--baseline"))
     var world = new World(Seed, Maps.Foundry);
     var cluster = new Enemy
     {
-        Id = world.NextId(), DefId = "cluster", Hp = 1f, MaxHp = 80f,   // 2x wave scaling
-        RouteIndex = 0, Leg = 1, LegProgress = 2f, Facing = new Vec3(1, 0, 0),
+        Id = world.NextId(), DefId = "cluster", Hp = 1f, MaxHp = 80f,   // 2x wave scaling Facing = new Vec3(1, 0, 0),
         Bounty = 10, LeakDamage = 1,
-    };
+    }.AtRouteLeg(world, 0, 1, 2f);
     world.Enemies.Add(cluster);
     world.Enqueue(new Command.Join(1, "p1", "ember"));
     Step.Advance(world);
@@ -384,10 +382,9 @@ if (args.Contains("--baseline"))
     Step.Advance(world);
     var warden = new Enemy
     {
-        Id = world.NextId(), DefId = "warden", Hp = 60f, MaxHp = 60f, Shield = 25f,
-        RouteIndex = 0, Leg = 1, LegProgress = 2f, Facing = new Vec3(1, 0, 0),
+        Id = world.NextId(), DefId = "warden", Hp = 60f, MaxHp = 60f, Shield = 25f, Facing = new Vec3(1, 0, 0),
         Bounty = 0, LeakDamage = 1,
-    };
+    }.AtRouteLeg(world, 0, 1, 2f);
     world.Enemies.Add(warden);
     world.Players[1].Pos = warden.Pos + new Vec3(3, 0, 0);
 
@@ -418,10 +415,9 @@ if (args.Contains("--baseline"))
     Step.Advance(world);
     var mole = new Enemy
     {
-        Id = world.NextId(), DefId = "mole", Hp = 34f, MaxHp = 34f,
-        RouteIndex = 0, Leg = 0, LegProgress = 10f, TotalTraveled = 10f,
+        Id = world.NextId(), DefId = "mole", Hp = 34f, MaxHp = 34f, TotalTraveled = 10f,
         Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1,
-    };
+    }.AtRouteLeg(world, 0, 0, 10f);
     world.Enemies.Add(mole);
 
     bool firedWhileBurrowed = false, firedWhileSurfaced = false;
@@ -444,10 +440,9 @@ if (args.Contains("--baseline"))
     var world = new World(Seed, Maps.Foundry);
     var target = new Enemy
     {
-        Id = world.NextId(), DefId = "drifter", Hp = 1000f, MaxHp = 1000f,
-        RouteIndex = 0, Leg = 1, LegProgress = 2f, Facing = new Vec3(1, 0, 0),
+        Id = world.NextId(), DefId = "drifter", Hp = 1000f, MaxHp = 1000f, Facing = new Vec3(1, 0, 0),
         Bounty = 0, LeakDamage = 1,
-    };
+    }.AtRouteLeg(world, 0, 1, 2f);
     world.Enemies.Add(target);
     target.Statuses[(int)Channel.Movement] = new StatusSlot { StatusId = "chill", TimeLeft = 5f, Source = "t" };
     target.CcResist = 0f;
@@ -477,12 +472,11 @@ if (args.Contains("--baseline"))
     world.Enqueue(new Command.PlaceTower(0, "arc", "g3"));
     Step.Advance(world);
 
-    Enemy Spawn(float lateral) => new()
+    Enemy Spawn(float lateral) => new Enemy
     {
-        Id = world.NextId(), DefId = "drifter", Hp = 500f, MaxHp = 500f,
-        RouteIndex = 0, Leg = 2, LegProgress = 15f, LateralOffset = lateral,
+        Id = world.NextId(), DefId = "drifter", Hp = 500f, MaxHp = 500f, LateralOffset = lateral,
         Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1,
-    };
+    }.AtRouteLeg(world, 0, 2, 15f);
     var a = Spawn(0f);
     var b = Spawn(2f);
     a.Statuses[(int)Channel.Movement] = new StatusSlot { StatusId = "chill", TimeLeft = 10f, Source = "t" };
@@ -515,10 +509,9 @@ if (args.Contains("--baseline"))
         // Trap t2 sits at (0,0,3); ground route leg 3 runs (0,14)→(0,-8).
         var e = new Enemy
         {
-            Id = world.NextId(), DefId = defId, Hp = 10000f, MaxHp = 10000f,
-            RouteIndex = 0, Leg = 3, LegProgress = 11f, TotalTraveled = 60f,
+            Id = world.NextId(), DefId = defId, Hp = 10000f, MaxHp = 10000f, TotalTraveled = 60f,
             Facing = new Vec3(0, 0, -1), Bounty = 0, LeakDamage = 1,
-        };
+        }.AtRouteLeg(world, 0, 3, 11f);
         world.Enemies.Add(e);
         return e;
     }
@@ -555,12 +548,11 @@ if (args.Contains("--baseline"))
     var player = world.Players[1];
     player.Scrap[ScrapType.Plating] = 10;
 
-    Enemy Armored() => new()
+    Enemy Armored() => new Enemy
     {
-        Id = world.NextId(), DefId = "aegis", Hp = 500f, MaxHp = 500f,
-        RouteIndex = 0, Leg = 1, LegProgress = 2f, Facing = new Vec3(1, 0, 0),
+        Id = world.NextId(), DefId = "aegis", Hp = 500f, MaxHp = 500f, Facing = new Vec3(1, 0, 0),
         Bounty = 0, LeakDamage = 1,
-    };
+    }.AtRouteLeg(world, 0, 1, 2f);
 
     // Baseline: sidearm into the FRONT of an Aegis.
     var target = Armored();
@@ -683,9 +675,8 @@ if (args.Contains("--baseline"))
         var e = new Enemy
         {
             Id = w.NextId(), DefId = defId, Hp = hp, MaxHp = hp,
-            Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1,
-            RouteIndex = 0, Leg = 0, LegProgress = 0f, Pos = new Vec3(x, y, z),
-        };
+            Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1, Pos = new Vec3(x, y, z),
+        }.AtRouteLeg(world, 0, 0, 0f);
         w.Enemies.Add(e);
         return e;
     }
@@ -871,8 +862,7 @@ if (args.Contains("--baseline"))
         {
             Id = world.NextId(), DefId = "drifter", Hp = 400f, MaxHp = 400f,
             Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1,
-            RouteIndex = 0, Leg = 3, LegProgress = 14f,
-        };
+        }.AtRouteLeg(world, 0, 3, 14f);
         world.Enemies.Add(enemy);
         Step.Advance(world);
 
@@ -1163,7 +1153,7 @@ if (args.Contains("--baseline"))
             if (e is SimEvent.EnemySpawned spawned)
             {
                 var enemy = world.Enemies.First(x => x.Id == spawned.EnemyId);
-                routeOf[spawned.EnemyId] = world.Map.Routes[enemy.RouteIndex].Id;
+                routeOf[spawned.EnemyId] = world.Graph.Itineraries[enemy.ItineraryIndex].Id;
             }
             if (e is SimEvent.EnemyTeleported jump)
                 jumps[jump.EnemyId] = jumps.GetValueOrDefault(jump.EnemyId) + 1;
@@ -1251,9 +1241,9 @@ if (args.Contains("--baseline"))
 
     // Wave 1 is authored entirely onto groundShort (route index 1); with the
     // gate closed every spawn must walk route index 0 (the long way).
-    bool rerouted = world.Enemies.All(e => e.RouteIndex == 0);
+    bool rerouted = world.Enemies.All(e => e.ItineraryIndex == 0);
     Gate("barricade: gated shortcut spawns fall back to the long route", rerouted,
-        $"routes {string.Join(",", world.Enemies.Select(e => e.RouteIndex).Distinct())}");
+        $"routes {string.Join(",", world.Enemies.Select(e => e.ItineraryIndex).Distinct())}");
 }
 
 // --- Gate 24 (M3): poison is the answer burn is not.
@@ -1373,13 +1363,13 @@ if (args.Contains("--baseline"))
 
         // Leg 3 runs (0,14) → (0,-8); 14 along it puts the enemy at (0,0),
         // four metres from socket g4 and well inside the beam's reach.
-        Enemy Spawn() => new()
+        Enemy Spawn() => new Enemy
         {
             Id = world.NextId(), DefId = "drifter",
             Hp = 4000f, MaxHp = 4000f,
             Facing = new Vec3(1, 0, 0),
-            Bounty = 0, LeakDamage = 1, RouteIndex = 0, Leg = 3, LegProgress = 14f,
-        };
+            Bounty = 0, LeakDamage = 1,
+        }.AtRouteLeg(world, 0, 3, 14f);
 
         var first = Spawn();
         world.Enemies.Add(first);
@@ -1422,8 +1412,8 @@ if (args.Contains("--baseline"))
     {
         Id = world.NextId(), DefId = "drifter", Hp = 100f, MaxHp = 100f,
         Facing = new Vec3(1, 0, 0),
-        Bounty = 0, LeakDamage = 1, RouteIndex = 0, Leg = 3, LegProgress = 14f,
-    };
+        Bounty = 0, LeakDamage = 1,
+    }.AtRouteLeg(world, 0, 3, 14f);
     world.Enemies.Add(enemy);
 
     float before = enemy.Hp;
@@ -1506,8 +1496,7 @@ if (args.Contains("--baseline"))
         {
             Id = world.NextId(), DefId = "shade", Hp = 500f, MaxHp = 500f,
             Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1,
-            RouteIndex = 0, Leg = 3, LegProgress = 14f,
-        };
+        }.AtRouteLeg(world, 0, 3, 14f);
         world.Enemies.Add(shade);
 
         for (int i = 0; i < Balance.TickHz * 2; i++) Step.Advance(world);
@@ -1543,8 +1532,7 @@ if (args.Contains("--baseline"))
             {
                 Id = world.NextId(), DefId = defId, Hp = hp, MaxHp = hp,
                 Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1,
-                RouteIndex = 0, Leg = 3, LegProgress = legProgress,
-            };
+            }.AtRouteLeg(world, 0, 3, legProgress);
             world.Enemies.Add(e);
             return e;
         }
@@ -1588,8 +1576,7 @@ if (args.Contains("--baseline"))
             Id = world.NextId(), DefId = "ram",
             Hp = Enemies.Ram.Hp, MaxHp = Enemies.Ram.Hp,
             Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 2,
-            RouteIndex = 0, Leg = 2, LegProgress = 4f,
-        };
+        }.AtRouteLeg(world, 0, 2, 4f);
         world.Enemies.Add(ram);
         Step.Advance(world);
 
@@ -1635,8 +1622,7 @@ if (args.Contains("--baseline"))
             Id = world.NextId(), DefId = "ram",
             Hp = 100_000f, MaxHp = 100_000f,          // the demolition is the subject, not the kill
             Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 2,
-            RouteIndex = 0, Leg = 0, LegProgress = 0f,
-        };
+        }.AtRouteLeg(world, 0, 0, 0f);
         world.Enemies.Add(ram);
 
         // Walk it in rather than placing it. MoveEnemies recomputes position

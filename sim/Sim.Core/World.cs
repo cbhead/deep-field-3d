@@ -20,10 +20,23 @@ public sealed class Enemy
     public string DefId = "";
     public float Hp;
     public float MaxHp;
-    public int RouteIndex;        // which map route this enemy walks
-    public int Leg;               // index into route legs
-    public float LegProgress;     // meters along current leg
-    public float TotalTraveled;   // meters along whole route — the "first" targeting metric
+    // --- Where it is, in lane-graph coordinates.
+    //
+    // This was (RouteIndex, Leg, LegProgress): an index into a list of
+    // polylines and a leg of that polyline. It is now an itinerary, a step
+    // along that itinerary's edges, and a segment of the edge — the same three
+    // numbers, one level down, addressing a graph instead of a list.
+    //
+    // The arithmetic is deliberately unchanged. SegmentProgress accumulates per
+    // segment and resets at each one exactly as LegProgress did, rather than
+    // being one distance along the whole edge, because a single accumulator
+    // rounds differently and this port has to be provably free. Position is
+    // still recomputed from scratch every tick, so nothing compounds.
+    public int ItineraryIndex;    // which itinerary this enemy is following
+    public int EdgeStep;          // how far along that itinerary's edge list
+    public int Segment;           // index into the current edge's segments
+    public float SegmentProgress; // meters along the current segment
+    public float TotalTraveled;   // meters walked — the "first" targeting metric
     public Vec3 Pos;              // spine position + lateral offset applied
     public Vec3 Facing;           // normalized travel direction (Aegis front arc)
     public float LateralOffset;   // scatter across the path width (seeded at spawn)
@@ -45,6 +58,63 @@ public sealed class Enemy
     /// what the enemy is doing this tick, recomputed every tick from whether a
     /// structure is in reach, so it cannot get stuck on.</summary>
     public bool Sieging;
+
+    /// <summary>Put this enemy at a leg of a route, in the coordinates the
+    /// harness fixtures and the unit tests are written in.
+    ///
+    /// Sixteen gate fixtures say things like "leg 3 of the ground route, 14 m
+    /// along" and one of them explains that leg 3 runs (0,14) to (0,-8) so 14 m
+    /// puts it four metres from socket g4. That is a good way to write a
+    /// fixture and a bad thing to have to rewrite as an edge and a segment when
+    /// the storage changes underneath it. Route legs map one-to-one onto the
+    /// itinerary's flattened segments, in order, so this is an exact
+    /// translation rather than an approximation.</summary>
+    /// <remarks>Deliberately does not touch <see cref="TotalTraveled"/>. Several
+    /// fixtures set it by hand to a round number and then assert against that
+    /// number — the launcher gate measures a setback from exactly 60 — so
+    /// computing a "truer" value here would quietly move what those gates
+    /// measure. Position is what this translates; distance walked stays the
+    /// caller's business, as it was.</remarks>
+    /// <summary>Which leg of the underlying route this enemy is on — the read
+    /// side of <see cref="AtRouteLeg"/>.
+    ///
+    /// Two callers, and both are about talking to something outside the sim's
+    /// own coordinates: <see cref="SimEvent.EnemyTeleported"/> puts a leg index
+    /// on the wire and in the hashed log, and the tests are written in legs
+    /// because that is how the maps read. Not a second source of truth — route
+    /// legs map one-to-one onto the itinerary's segments, in order.</summary>
+    public int RouteLeg(World w)
+    {
+        var edges = w.ItineraryEdges[ItineraryIndex];
+        int leg = 0;
+        for (int s = 0; s < EdgeStep && s < edges.Length; s++)
+            leg += w.EdgeSegmentLengths[edges[s]].Length;
+        return leg + Segment;
+    }
+
+    public Enemy AtRouteLeg(World w, int routeIndex, int leg, float progress)
+    {
+        ItineraryIndex = routeIndex;
+        var edges = w.ItineraryEdges[routeIndex];
+        int walked = 0;
+        for (int step = 0; step < edges.Length; step++)
+        {
+            int count = w.EdgeSegmentLengths[edges[step]].Length;
+            if (walked + count > leg)
+            {
+                EdgeStep = step;
+                Segment = leg - walked;
+                SegmentProgress = progress;
+                return this;
+            }
+            walked += count;
+        }
+        // Past the end: leaked, which is what the caller asked for.
+        EdgeStep = edges.Length;
+        Segment = 0;
+        SegmentProgress = 0f;
+        return this;
+    }
 }
 
 public sealed class Tower
@@ -312,6 +382,22 @@ public sealed class World
     /// longer takes four times as long to leak.</summary>
     public float[] RouteWalkLengths;
 
+    /// <summary>The map's routes as a graph. Movement reads this now; the
+    /// routes themselves are only still read to build it.</summary>
+    public readonly LaneGraph Graph;
+
+    /// <summary>Edge indices, in order, for each itinerary. Itinerary i is
+    /// route i — the derivation walks the routes in order — so an enemy's
+    /// itinerary index is still the index its wave plan gave it.</summary>
+    public readonly int[][] ItineraryEdges;
+
+    /// <summary>Segment lengths of each edge, by edge index. Computed exactly
+    /// as <see cref="RouteLegLengths"/> computes leg lengths, from the same
+    /// points in the same order, because the port from legs to segments has to
+    /// be arithmetically free. A warp edge has one segment of length zero: it
+    /// is crossed, not walked.</summary>
+    public readonly float[][] EdgeSegmentLengths;
+
     /// <summary>Drivable vehicles, parked where the map put them. The sim owns
     /// their seats and takes the driver's word for their position.</summary>
     public List<Vehicle> Vehicles = new();
@@ -362,6 +448,35 @@ public sealed class World
             }
             RouteLegLengths[r] = legs;
             RouteWalkLengths[r] = walked;
+        }
+
+        Graph = LaneGraph.FromRoutes(map);
+
+        EdgeSegmentLengths = new float[Graph.Edges.Count][];
+        for (int e = 0; e < Graph.Edges.Count; e++)
+        {
+            var edge = Graph.Edges[e];
+            var lengths = new float[edge.Waypoints.Count - 1];
+            for (int i = 0; i < lengths.Length; i++)
+                lengths[i] = edge.Kind == LaneEdgeKind.Warp
+                    ? 0f
+                    : edge.Waypoints[i].DistanceTo(edge.Waypoints[i + 1]);
+            EdgeSegmentLengths[e] = lengths;
+        }
+
+        var edgeIndex = new Dictionary<string, int>();
+        for (int e = 0; e < Graph.Edges.Count; e++) edgeIndex[Graph.Edges[e].Id] = e;
+
+        ItineraryEdges = new int[Graph.Itineraries.Count][];
+        for (int i = 0; i < Graph.Itineraries.Count; i++)
+        {
+            var itinerary = Graph.Itineraries[i];
+            var steps = new int[itinerary.Via.Count - 1];
+            for (int s = 0; s < steps.Length; s++)
+                steps[s] = edgeIndex[Graph.Edges.First(e =>
+                    e.From == itinerary.Via[s] && e.To == itinerary.Via[s + 1]
+                    && e.Layer == itinerary.Layer).Id];
+            ItineraryEdges[i] = steps;
         }
 
         foreach (var spawn in map.Vehicles)

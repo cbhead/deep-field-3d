@@ -9,8 +9,14 @@ namespace DeepField.Sim;
 public static class Serialization
 {
     private sealed record StatusState(int Channel, string StatusId, float TimeLeft, string Source);
+    // ItineraryIndex/EdgeStep/Segment/SegmentProgress were RouteIndex/Leg/
+    // LegProgress: the same position, addressed against the lane graph instead
+    // of a list of polylines. Pos is still absent and still rebuilt on load —
+    // see RecomputePosition — because a derived position that is *stored* is a
+    // second source of truth waiting to disagree with the first.
     private sealed record EnemyState(
-        int Id, string DefId, float Hp, float MaxHp, int RouteIndex, int Leg, float LegProgress,
+        int Id, string DefId, float Hp, float MaxHp,
+        int ItineraryIndex, int EdgeStep, int Segment, float SegmentProgress,
         float TotalTraveled, float LateralOffset, float FacingX, float FacingY, float FacingZ,
         int Bounty, int LeakDamage, int WaveIndex, List<StatusState> Statuses,
         float Shield, float ShieldTimer, float CcResist, bool Burrowed);
@@ -70,7 +76,8 @@ public static class Serialization
             w.TeamScrap.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value),
             (int)w.Phase, w.PhaseTimer, w.WaveIndex, w.WaveStartTick,
             w.Enemies.Select(e => new EnemyState(
-                e.Id, e.DefId, e.Hp, e.MaxHp, e.RouteIndex, e.Leg, e.LegProgress,
+                e.Id, e.DefId, e.Hp, e.MaxHp,
+                e.ItineraryIndex, e.EdgeStep, e.Segment, e.SegmentProgress,
                 e.TotalTraveled, e.LateralOffset, e.Facing.X, e.Facing.Y, e.Facing.Z,
                 e.Bounty, e.LeakDamage, e.WaveIndex, ActiveStatuses(e),
                 e.Shield, e.ShieldTimer, e.CcResist, e.Burrowed)).ToList(),
@@ -134,7 +141,8 @@ public static class Serialization
             var enemy = new Enemy
             {
                 Id = e.Id, DefId = e.DefId, Hp = e.Hp, MaxHp = e.MaxHp,
-                RouteIndex = e.RouteIndex, Leg = e.Leg, LegProgress = e.LegProgress,
+                ItineraryIndex = e.ItineraryIndex, EdgeStep = e.EdgeStep,
+                Segment = e.Segment, SegmentProgress = e.SegmentProgress,
                 TotalTraveled = e.TotalTraveled, LateralOffset = e.LateralOffset,
                 Facing = new Vec3(e.FacingX, e.FacingY, e.FacingZ),
                 Bounty = e.Bounty, LeakDamage = e.LeakDamage, WaveIndex = e.WaveIndex,
@@ -272,13 +280,15 @@ public static class Serialization
 
     private static void RecomputePosition(World world, Enemy enemy)
     {
-        var waypoints = world.Map.Routes[enemy.RouteIndex].Waypoints;
-        var legs = world.RouteLegLengths[enemy.RouteIndex];
-        int leg = System.Math.Min(enemy.Leg, legs.Length - 1);
-        float legLength = legs[leg];
-        var a = waypoints[leg];
-        var b = waypoints[leg + 1];
-        var spine = Vec3.Lerp(a, b, legLength > 0f ? enemy.LegProgress / legLength : 0f);
+        var edgeSteps = world.ItineraryEdges[enemy.ItineraryIndex];
+        int step = System.Math.Min(enemy.EdgeStep, edgeSteps.Length - 1);
+        var edge = world.Graph.Edges[edgeSteps[step]];
+        var segments = world.EdgeSegmentLengths[edgeSteps[step]];
+        int segment = System.Math.Min(enemy.Segment, segments.Length - 1);
+        float length = segments[segment];
+        var a = edge.Waypoints[segment];
+        var b = edge.Waypoints[segment + 1];
+        var spine = Vec3.Lerp(a, b, length > 0f ? enemy.SegmentProgress / length : 0f);
         var facing = (b - a).Normalized();
         var perp = new Vec3(-facing.Z, 0f, facing.X);
         enemy.Pos = spine + perp * enemy.LateralOffset;

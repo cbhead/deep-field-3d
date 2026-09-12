@@ -36,6 +36,21 @@ jobs:
         run: dotnet run --project sim/Sim.Harness --configuration Release
       - name: Balance baseline (numbers, for the cross-architecture compare)
         run: dotnet run --project sim/Sim.Harness --configuration Release -- --baseline
+      # The standing form of "the neutral configuration reproduces the
+      # pre-graph hashes": a change that moves a margin or a log hash has to
+      # commit the new baseline alongside it, and say in the message whether it
+      # is a re-baseline or a regression. On ubuntu only — the committed file
+      # can match one architecture's bytes, and the job below is what says the
+      # other one agrees.
+      - name: Baseline matches the committed one
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          if git diff --exit-code -- docs/gate-baseline.tsv; then
+            echo "balance baseline unchanged"
+          else
+            echo "::error::docs/gate-baseline.tsv is stale — run 'make gate-baseline' and commit it, saying whether this is a re-baseline (margins and hashes move, verdicts do not) or a regression"
+            exit 1
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: gate-baseline-${{ matrix.os }}

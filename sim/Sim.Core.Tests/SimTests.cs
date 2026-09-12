@@ -233,8 +233,7 @@ public class StatusTests
         };
         // An aura tick refreshes to full duration. Position via leg coords
         // (MoveEnemies recomputes Pos): leg 0 at 14m sits ~5m from socket s1.
-        enemy.Leg = 0;
-        enemy.LegProgress = 14f;
+        enemy.AtRouteLeg(w, 0, 0, 14f);
         w.Money = 1000;
         w.Enqueue(new Command.PlaceTower(0, "singularity", "s1"));
         Step.Advance(w);
@@ -333,12 +332,11 @@ public class ScrapEconomyTests
         return w;
     }
 
-    private static Enemy Drifter(World w, Vec3 at) => new()
+    private static Enemy Drifter(World w, Vec3 at) => new Enemy
     {
-        Id = w.NextId(), DefId = "drifter", Hp = 1f, MaxHp = 30f,
-        RouteIndex = 0, Leg = 1, LegProgress = 1f, Pos = at,
+        Id = w.NextId(), DefId = "drifter", Hp = 1f, MaxHp = 30f, Pos = at,
         Facing = new Vec3(1, 0, 0), Bounty = 5, LeakDamage = 1,
-    };
+    }.AtRouteLeg(w, 0, 1, 1f);
 
     /// <summary>Kill something with a tower and leave the drop on the floor.
     ///
@@ -507,9 +505,8 @@ public class AirborneScrapTests
         var skiff = new Enemy
         {
             Id = w.NextId(), DefId = "skiff", Hp = 1f, MaxHp = 40f,
-            RouteIndex = airRoute, Leg = leg, LegProgress = progress,
             Facing = new Vec3(1, 0, 0), Bounty = 8, LeakDamage = 1,
-        };
+        }.AtRouteLeg(w, airRoute, leg, progress);
         w.Enemies.Add(skiff);
         Step.Advance(w);
         return skiff;
@@ -919,13 +916,12 @@ public class BountyScalingTests
             var enemy = new Enemy
             {
                 Id = w.NextId(), DefId = "drifter", Hp = 1f, MaxHp = 30f,
-                RouteIndex = 0, Leg = 1, LegProgress = 1f,
                 Facing = new Vec3(1, 0, 0),
                 Bounty = Math.Max(1, (int)MathF.Round(
                     Enemies.All["drifter"].Bounty * WavePlan.BountyScale(waveIndex),
                     MidpointRounding.AwayFromZero)),
                 LeakDamage = 1, WaveIndex = waveIndex,
-            };
+            }.AtRouteLeg(w, 0, 1, 1f);
             w.Enemies.Add(enemy);
             w.Enqueue(new Command.PlayerHit(1, enemy.Id, "sidearm"));
             Step.Advance(w);

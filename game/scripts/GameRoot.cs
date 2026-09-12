@@ -442,9 +442,8 @@ public partial class GameRoot : Node3D
                 _world.Enemies.Add(new Enemy
                 {
                     Id = _world.NextId(), DefId = "skiff", Hp = 1000000f, MaxHp = 1000000f,
-                    RouteIndex = strandIndex, Leg = 0, LegProgress = 0.5f,
                     Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1,
-                });
+                }.AtRouteLeg(_world, strandIndex, 0, 0.5f));
             }
             _aimReportPath = path;
             _aimReport = new List<string> { $"air tracking on {_map.Id}" };
@@ -471,8 +470,7 @@ public partial class GameRoot : Node3D
                 Id = _world.NextId(), DefId = "ram",
                 Hp = 100_000f, MaxHp = 100_000f,   // the demolition is the subject, not the kill
                 Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 2,
-                RouteIndex = 0, Leg = 0, LegProgress = 0f,
-            });
+            }.AtRouteLeg(_world, 0, 0, 0f));
             _siegeReportPath = path;
             _siegeReport = new List<string> { "barricade on b1, one ram walking route 0" };
             _shotView = "eye";

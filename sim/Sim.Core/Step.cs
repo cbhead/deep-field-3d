@@ -912,7 +912,7 @@ public static class Step
                 Hp = def.Hp * entry.HpFactor,
                 MaxHp = def.Hp * entry.HpFactor,
                 Shield = def.Shield * entry.HpFactor,
-                RouteIndex = routeIndex,
+                ItineraryIndex = routeIndex,
                 LateralOffset = entry.LateralOffset,
                 Pos = route.Waypoints[0],
                 Facing = (route.Waypoints[1] - route.Waypoints[0]).Normalized(),
@@ -1077,6 +1077,14 @@ public static class Step
         }
     }
 
+    /// <summary>Which leg of the underlying route this enemy is on.
+    ///
+    /// Only the wire needs this: <see cref="SimEvent.EnemyTeleported"/> carries
+    /// a leg index, it is in the hashed event log, and the client snaps a view
+    /// on it. Route legs map one-to-one onto the itinerary's segments in order,
+    /// so this is a translation rather than a second source of truth.</summary>
+    private static int LegOf(World w, Enemy enemy) => enemy.RouteLeg(w);
+
     private static void MoveEnemies(World w)
     {
         foreach (var enemy in w.Enemies)
@@ -1115,47 +1123,61 @@ public static class Step
             if (def.Burrower)
                 enemy.Burrowed = enemy.TotalTraveled % Balance.BurrowCycleMeters < Balance.BurrowedMeters;
 
-            var route = w.Map.Routes[enemy.RouteIndex];
-            var legs = w.RouteLegLengths[enemy.RouteIndex];
-            var waypoints = route.Waypoints;
+            var itinerary = w.Graph.Itineraries[enemy.ItineraryIndex];
+            var edgeSteps = w.ItineraryEdges[enemy.ItineraryIndex];
             float remaining = speed * Balance.Dt;
+            int legCounter = LegOf(w, enemy);
 
-            while (enemy.Leg < legs.Length)
+            while (enemy.EdgeStep < edgeSteps.Length)
             {
-                // A teleport leg is crossed the instant it is reached, whatever
-                // the speed — a frozen, sieging or knocked-back enemy standing
-                // on a departure pad still goes. That is not generosity: a
-                // zero-length leg is the one position this movement model
-                // cannot represent (the lerp below would divide by it), so an
-                // enemy must never be parked on one between ticks.
-                if (route.IsTeleportLeg(enemy.Leg))
+                var edge = w.Graph.Edges[edgeSteps[enemy.EdgeStep]];
+                var lengths = w.EdgeSegmentLengths[edgeSteps[enemy.EdgeStep]];
+
+                // A warp is crossed the instant it is reached, whatever the
+                // speed — a frozen, sieging or knocked-back enemy standing on a
+                // departure pad still goes. That is not generosity: a
+                // zero-length span is the one position this model cannot
+                // represent (the lerp below would divide by it), so an enemy
+                // must never be parked on one between ticks. Under the graph
+                // that stops being a rule three gates enforce and becomes
+                // structural: a warp is a whole edge, and an edge boundary is a
+                // node, which is not a place anyone stands.
+                if (edge.Kind == LaneEdgeKind.Warp)
                 {
-                    int from = enemy.Leg;
-                    enemy.Leg++;
-                    enemy.LegProgress = 0f;
-                    var pad = waypoints[from + 1];
-                    w.Emit(new SimEvent.EnemyTeleported(enemy.Id, route.Id, from, pad.X, pad.Y, pad.Z));
+                    var pad = edge.Waypoints[^1];
+                    w.Emit(new SimEvent.EnemyTeleported(
+                        enemy.Id, itinerary.Id, legCounter, pad.X, pad.Y, pad.Z));
+                    enemy.EdgeStep++;
+                    enemy.Segment = 0;
+                    enemy.SegmentProgress = 0f;
+                    legCounter++;
                     continue;
                 }
                 if (remaining <= 0f) break;
 
-                float legLeft = legs[enemy.Leg] - enemy.LegProgress;
-                if (remaining < legLeft)
+                float segmentLeft = lengths[enemy.Segment] - enemy.SegmentProgress;
+                if (remaining < segmentLeft)
                 {
-                    enemy.LegProgress += remaining;
+                    enemy.SegmentProgress += remaining;
                     enemy.TotalTraveled += remaining;
                     remaining = 0f;
                 }
                 else
                 {
-                    enemy.TotalTraveled += legLeft;
-                    remaining -= legLeft;
-                    enemy.Leg++;
-                    enemy.LegProgress = 0f;
+                    enemy.TotalTraveled += segmentLeft;
+                    remaining -= segmentLeft;
+                    enemy.Segment++;
+                    enemy.SegmentProgress = 0f;
+                    legCounter++;
+                    if (enemy.Segment >= lengths.Length)
+                    {
+                        enemy.EdgeStep++;
+                        enemy.Segment = 0;
+                    }
                 }
             }
 
-            if (enemy.Leg >= legs.Length)
+            if (enemy.EdgeStep >= edgeSteps.Length)
             {
                 enemy.Dead = true;
                 w.Lives -= enemy.LeakDamage;
@@ -1163,10 +1185,12 @@ public static class Step
                 continue;
             }
 
-            var a = waypoints[enemy.Leg];
-            var b = waypoints[enemy.Leg + 1];
+            var current = w.Graph.Edges[edgeSteps[enemy.EdgeStep]];
+            var segments = w.EdgeSegmentLengths[edgeSteps[enemy.EdgeStep]];
+            var a = current.Waypoints[enemy.Segment];
+            var b = current.Waypoints[enemy.Segment + 1];
             enemy.Facing = (b - a).Normalized();
-            var spine = Vec3.Lerp(a, b, enemy.LegProgress / legs[enemy.Leg]);
+            var spine = Vec3.Lerp(a, b, enemy.SegmentProgress / segments[enemy.Segment]);
 
             // Lateral scatter: offset perpendicular to travel on the XZ plane.
             var perp = new Vec3(-enemy.Facing.Z, 0f, enemy.Facing.X);
@@ -1645,33 +1669,41 @@ public static class Step
         w.Traps.RemoveAll(t => t.ChargesLeft <= 0 && t.RearmTimer <= 0f);
     }
 
-    /// <summary>Knockback is an instantaneous route displacement, not a status:
-    /// walk the enemy backward along its legs.</summary>
+    /// <summary>Knockback is an instantaneous displacement along the lane, not a
+    /// status: walk the enemy backward through the segments it came down, and
+    /// across an edge boundary if it runs out of them.</summary>
     private static void KnockBack(World w, Enemy enemy, float meters)
     {
+        var edgeSteps = w.ItineraryEdges[enemy.ItineraryIndex];
         float remaining = meters;
         while (remaining > 0f)
         {
-            if (enemy.LegProgress >= remaining)
+            if (enemy.SegmentProgress >= remaining)
             {
-                enemy.LegProgress -= remaining;
+                enemy.SegmentProgress -= remaining;
                 enemy.TotalTraveled -= remaining;
                 break;
             }
-            remaining -= enemy.LegProgress;
-            enemy.TotalTraveled -= enemy.LegProgress;
-            if (enemy.Leg == 0) { enemy.LegProgress = 0f; break; }
-            // Nothing pushes an enemy back through a teleporter. The arrival
-            // pad is as far back as a launcher gets it — the alternative is an
-            // enemy standing on a zero-length leg, or reappearing on the far
-            // side of the map because someone stood on a trap.
-            if (w.Map.Routes[enemy.RouteIndex].IsTeleportLeg(enemy.Leg - 1))
+            remaining -= enemy.SegmentProgress;
+            enemy.TotalTraveled -= enemy.SegmentProgress;
+
+            if (enemy.Segment == 0)
             {
-                enemy.LegProgress = 0f;
-                break;
+                // Off the front of this edge. The edge before it is where we
+                // came from — unless it is a warp, and nothing pushes an enemy
+                // back through one of those. The arrival pad is as far back as
+                // a launcher gets it; the alternative is an enemy parked on a
+                // zero-length span, or reappearing on the far side of the map
+                // because somebody stood on a trap.
+                if (enemy.EdgeStep == 0) { enemy.SegmentProgress = 0f; break; }
+                var previous = w.Graph.Edges[edgeSteps[enemy.EdgeStep - 1]];
+                if (previous.Kind == LaneEdgeKind.Warp) { enemy.SegmentProgress = 0f; break; }
+                enemy.EdgeStep--;
+                enemy.Segment = w.EdgeSegmentLengths[edgeSteps[enemy.EdgeStep]].Length;
             }
-            enemy.Leg--;
-            enemy.LegProgress = w.RouteLegLengths[enemy.RouteIndex][enemy.Leg];
+
+            enemy.Segment--;
+            enemy.SegmentProgress = w.EdgeSegmentLengths[edgeSteps[enemy.EdgeStep]][enemy.Segment];
         }
         enemy.TotalTraveled = MathF.Max(0f, enemy.TotalTraveled);
     }
@@ -1703,7 +1735,9 @@ public static class Step
             if (!enemy.Dead) continue;
             var def = Enemies.All[enemy.DefId];
             if (def.SplitInto is null || def.SplitCount <= 0) continue;
-            if (enemy.Leg >= w.RouteLegLengths[enemy.RouteIndex].Length) continue; // leaked, not killed
+            // Leaked, not killed: a Cluster that reached the core does not get
+            // to spit children at it.
+            if (enemy.EdgeStep >= w.ItineraryEdges[enemy.ItineraryIndex].Length) continue;
 
             var childDef = Enemies.All[def.SplitInto];
             var rng = Util.RngStreams.StreamFor(w.Seed, "split", (uint)enemy.Id);
@@ -1717,9 +1751,10 @@ public static class Step
                     DefId = childDef.Id,
                     Hp = childDef.Hp * hpFactor,
                     MaxHp = childDef.Hp * hpFactor,
-                    RouteIndex = enemy.RouteIndex,
-                    Leg = enemy.Leg,
-                    LegProgress = enemy.LegProgress,
+                    ItineraryIndex = enemy.ItineraryIndex,
+                    EdgeStep = enemy.EdgeStep,
+                    Segment = enemy.Segment,
+                    SegmentProgress = enemy.SegmentProgress,
                     TotalTraveled = enemy.TotalTraveled,
                     LateralOffset = (rng.NextFloat() - 0.5f) * MathF.Max(childDef.ScatterWidth, 2f),
                     Pos = enemy.Pos,
