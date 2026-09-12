@@ -30,6 +30,7 @@ public static class Serialization
         float Speed, float Damage, float SplashRadius, float SplashFalloff);
     private sealed record SpawnState(string DefId, int TickOffset, float HpFactor, int RouteIndex, float LateralOffset);
     private sealed record PickupState(int Id, string Type, int Amount, float X, float Y, float Z, float Life, float GroundY = 0f);
+    private sealed record VehicleState(string Id, float X, float Y, float Z, float Yaw, int[] Seats);
     private sealed record PlayerStateDto(
         int Id, string Name, string FactionId, int FactionLevel, int MatchXp, float X, float Y, float Z,
         float Hp, bool Downed, float BleedoutTimer, float ReviveProgress, float RespawnTimer,
@@ -56,7 +57,11 @@ public static class Serialization
         List<EnemyState> Enemies, List<TowerState> Towers, List<ProjectileState> Projectiles,
         List<SpawnState> PendingSpawns, List<PlayerStateDto> Players,
         List<TrapState>? Traps, int NextId, bool Lobby = false, bool Endless = false,
-        List<PickupState>? Pickups = null);
+        List<PickupState>? Pickups = null,
+        // Trailing optional, same rule as everything else here: a save written
+        // before vehicles existed loads with every vehicle parked where the map
+        // put it and every seat empty, which is what it had.
+        List<VehicleState>? Vehicles = null);
 
     public static string Serialize(World w)
     {
@@ -97,7 +102,9 @@ public static class Serialization
             w.Traps.Select(t => new TrapState(t.Id, t.DefId, t.SocketId, t.ChargesLeft, t.RearmTimer)).ToList(),
             w.NextIdValue, w.Lobby, w.Endless,
             w.Pickups.Select(p => new PickupState(
-                p.Id, p.Type.ToString(), p.Amount, p.Pos.X, p.Pos.Y, p.Pos.Z, p.Life, p.GroundY)).ToList());
+                p.Id, p.Type.ToString(), p.Amount, p.Pos.X, p.Pos.Y, p.Pos.Z, p.Life, p.GroundY)).ToList(),
+            w.Vehicles.Select(v => new VehicleState(
+                v.Id, v.Pos.X, v.Pos.Y, v.Pos.Z, v.YawDegrees, v.Seats)).ToList());
         return JsonSerializer.Serialize(state);
     }
 
@@ -232,6 +239,20 @@ public static class Serialization
                 Id = t.Id, DefId = t.DefId, SocketId = t.SocketId, Pos = socket.Pos,
                 ChargesLeft = t.ChargesLeft, RearmTimer = t.RearmTimer,
             });
+        }
+
+        // The map already parked every vehicle when the world was built, so a
+        // saved one is an overlay by id rather than a list to rebuild: a save
+        // from before a map gained a vehicle still loads, and one naming a
+        // vehicle the map has since dropped is ignored instead of throwing.
+        foreach (var v in state.Vehicles ?? new List<VehicleState>())
+        {
+            var vehicle = world.Vehicles.FirstOrDefault(x => x.Id == v.Id);
+            if (vehicle is null) continue;
+            vehicle.Pos = new Vec3(v.X, v.Y, v.Z);
+            vehicle.YawDegrees = v.Yaw;
+            for (int i = 0; i < vehicle.Seats.Length && i < v.Seats.Length; i++)
+                vehicle.Seats[i] = v.Seats[i];
         }
 
         world.EnsureNextIdAtLeast(state.NextId);

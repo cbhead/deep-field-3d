@@ -29,7 +29,17 @@ public sealed record MatchResult(
 /// number of PlayerBots — the M1 seed of campaign.ts/sweep.ts.</summary>
 public static class MatchRunner
 {
-    private const long MaxTicks = Balance.TickHz * 1800; // 30 min safety cap
+    /// <summary>Safety cap, sized to the map rather than fixed. Thirty minutes
+    /// was generous for a 126 m lane and is not for a 471 m one: a map whose
+    /// enemies walk four times as far takes four times as long to leak, and a
+    /// run cut off by the cap reads as a floor policy that held when it is
+    /// really a clock that ran out.</summary>
+    private static long MaxTicksFor(World world)
+    {
+        float longest = 0f;
+        foreach (float walk in world.RouteWalkLengths) longest = MathF.Max(longest, walk);
+        return Balance.TickHz * (longest > 300f ? 3600 : 1800);
+    }
 
     /// <summary>Deterministic build orders per map: "tower:socket" placed as
     /// money allows, then damage-path upgrades with the surplus. A floor policy,
@@ -92,6 +102,25 @@ public static class MatchRunner
             "skywatch:g2", "detector:w3", "singularity:w15", "lance:w23",
             "nova:g10", "lance:g1", "tar:t2", "spike:t6",
         },
+        // The Toaster: three ground routes, and the only ground all three
+        // share is the last 140 m of drive into the core. So the floor policy
+        // buys that corridor first and works outward, which is also what a
+        // player does the first time a wave comes out of a warp pad behind
+        // them. Picked on measured coverage: g55/g49/g53/g52/g47-g49 sit on the
+        // stretch every route ends on, and the air strand runs 9 m over that
+        // same stretch, so the Skywatches pay twice.
+        //
+        // The Detector is placed by a different measure and it matters: Shades
+        // debut on the west route at wave 8, which arrives at the core from the
+        // opposite side to everything else. Scored on lane coverage it would go
+        // on the drive with the rest and see none of them.
+        ["toaster"] = new[]
+        {
+            "lance:g55", "lance:g49", "skywatch:g47", "nova:g53",
+            "lance:g42", "skywatch:g38", "arc:g48", "detector:g63",
+            "nova:g40", "lance:g52", "skywatch:g57", "singularity:g54",
+            "tar:t11", "lance:g61", "nova:g45", "spike:t2",
+        },
     };
 
     /// <summary>The first entry in the build order whose socket is now empty,
@@ -123,7 +152,8 @@ public static class MatchRunner
         var buildOrder = buildOverride ?? BuildOrders[map.Id];
         int buildCursor = 0;
 
-        while (!world.IsOver && world.Tick < MaxTicks)
+        long maxTicks = MaxTicksFor(world);
+        while (!world.IsOver && world.Tick < maxTicks)
         {
             // Scripted builder (attributed to no player: team policy).
             if (buildCursor < buildOrder.Length)

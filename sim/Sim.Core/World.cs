@@ -84,6 +84,28 @@ public sealed class Tower
     public float BuffFactor = 1f;
 }
 
+/// <summary>A vehicle someone can sit in. The sim keeps two things about it and
+/// deliberately not a third: who is in which seat (authoritative — a seat is a
+/// thing two players can fight over) and where the driver last said it is (not
+/// authoritative — movement has never entered this sim and this is not the
+/// place to start). Nothing here is integrated; Pos and YawDegrees only ever
+/// change because a VehicleSync said so.</summary>
+public sealed class Vehicle
+{
+    public string Id = "";
+    public string DefId = "";
+    public Vec3 Pos;
+    public float YawDegrees;
+
+    /// <summary>Occupant player id per seat, 0 for empty. Seat 0 drives, which
+    /// is why it is an index and not a set.</summary>
+    public int[] Seats = System.Array.Empty<int>();
+
+    public int DriverId => Seats.Length > 0 ? Seats[0] : 0;
+
+    public int SeatOf(int playerId) => System.Array.IndexOf(Seats, playerId);
+}
+
 /// <summary>Path-floor trap: charge-based, rearming. Placed via the same
 /// command as towers; lives on a trap socket.</summary>
 public sealed class Trap
@@ -280,8 +302,31 @@ public sealed class World
     /// <summary>Events emitted this tick; drained by the shell/harness after each step.</summary>
     public List<SimEvent> Events = new();
 
-    /// <summary>Per-route cumulative leg lengths, precomputed once.</summary>
+    /// <summary>Per-route cumulative leg lengths, precomputed once. A teleport
+    /// leg is zero: it is crossed, not walked, so nothing that counts metres
+    /// should count it.</summary>
     public float[][] RouteLegLengths;
+
+    /// <summary>How far each route actually walks, teleports excluded. The
+    /// harness sizes its run cap off this — a map whose lane is four times
+    /// longer takes four times as long to leak.</summary>
+    public float[] RouteWalkLengths;
+
+    /// <summary>Drivable vehicles, parked where the map put them. The sim owns
+    /// their seats and takes the driver's word for their position.</summary>
+    public List<Vehicle> Vehicles = new();
+
+    /// <summary>Which vehicle and seat a player is in, if any. Four vehicles
+    /// with two seats each is not worth an index.</summary>
+    public (Vehicle Vehicle, int Seat)? SeatOf(int playerId)
+    {
+        foreach (var vehicle in Vehicles)
+        {
+            int seat = System.Array.IndexOf(vehicle.Seats, playerId);
+            if (seat >= 0) return (vehicle, seat);
+        }
+        return null;
+    }
 
     private int _nextId = 1;
     public int NextId() => _nextId++;
@@ -303,13 +348,32 @@ public sealed class World
         Lives = Balance.StartingLives;
 
         RouteLegLengths = new float[map.Routes.Count][];
+        RouteWalkLengths = new float[map.Routes.Count];
         for (int r = 0; r < map.Routes.Count; r++)
         {
-            var waypoints = map.Routes[r].Waypoints;
+            var route = map.Routes[r];
+            var waypoints = route.Waypoints;
             var legs = new float[waypoints.Count - 1];
+            float walked = 0f;
             for (int i = 0; i < legs.Length; i++)
-                legs[i] = waypoints[i].DistanceTo(waypoints[i + 1]);
+            {
+                legs[i] = route.IsTeleportLeg(i) ? 0f : waypoints[i].DistanceTo(waypoints[i + 1]);
+                walked += legs[i];
+            }
             RouteLegLengths[r] = legs;
+            RouteWalkLengths[r] = walked;
+        }
+
+        foreach (var spawn in map.Vehicles)
+        {
+            Vehicles.Add(new Vehicle
+            {
+                Id = spawn.Id,
+                DefId = spawn.DefId,
+                Pos = spawn.Pos,
+                YawDegrees = spawn.YawDegrees,
+                Seats = new int[Content.Vehicles.All[spawn.DefId].Seats],
+            });
         }
     }
 

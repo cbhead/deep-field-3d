@@ -72,6 +72,24 @@ public sealed class StructureView
     public float HpFraction = 1f;
 }
 
+/// <summary>A vehicle as the client needs it: where it is, and who is in it.
+/// Seats are the sim's answer, which is why they come through the view rather
+/// than being tracked locally — a client that decided for itself who was
+/// driving would put two players in one seat the first time two of them
+/// pressed E at once.</summary>
+public sealed class VehicleView
+{
+    public string Id = "";
+    public string DefId = "";
+    public Vector3 Pos;
+    public float Yaw;
+    public int[] Seats = System.Array.Empty<int>();
+
+    public int SeatOf(int playerId) => System.Array.IndexOf(Seats, playerId);
+    public bool SeatFree(int index) => index >= 0 && index < Seats.Length && Seats[index] == 0;
+    public int DriverId => Seats.Length > 0 ? Seats[0] : 0;
+}
+
 public sealed class GameView
 {
     public bool Valid;
@@ -94,6 +112,7 @@ public sealed class GameView
     public List<PlayerView> Players = new();
     public List<StructureView> Structures = new();
     public List<PickupView> Pickups = new();
+    public List<VehicleView> Vehicles = new();
 
     public PlayerView? Local => Players.FirstOrDefault(p => p.Id == LocalPlayerId);
 
@@ -106,6 +125,19 @@ public sealed class GameView
 
     public int PersonalScrapOf(ScrapType type) =>
         Local?.Scrap.GetValueOrDefault(type, 0) ?? 0;
+
+    /// <summary>Which vehicle and seat a player is in, if any.</summary>
+    public (VehicleView Vehicle, int Seat)? SeatOf(int playerId)
+    {
+        foreach (var vehicle in Vehicles)
+        {
+            int seat = vehicle.SeatOf(playerId);
+            if (seat >= 0) return (vehicle, seat);
+        }
+        return null;
+    }
+
+    public VehicleView? VehicleById(string id) => Vehicles.FirstOrDefault(v => v.Id == id);
 
     // ---- Builders ---------------------------------------------------------
 
@@ -135,6 +167,15 @@ public sealed class GameView
             foreach (var p in world.Pickups)
                 Pickups.Add(new PickupView { Id = p.Id, Type = p.Type, Amount = p.Amount, Pos = new Vector3(p.Pos.X, p.Pos.Y, p.Pos.Z) });
         }
+
+        Vehicles.Clear();
+        foreach (var v in world.Vehicles)
+            Vehicles.Add(new VehicleView
+            {
+                Id = v.Id, DefId = v.DefId,
+                Pos = new Vector3(v.Pos.X, v.Pos.Y, v.Pos.Z),
+                Yaw = v.YawDegrees, Seats = (int[])v.Seats.Clone(),
+            });
 
         Players.Clear();
         foreach (var p in world.Players.Values)
@@ -211,6 +252,20 @@ public sealed class GameView
                     Amount = (int)entry["amount"],
                     Pos = new Vector3((float)entry["x"], (float)entry["y"], (float)entry["z"]),
                 });
+
+        Vehicles.Clear();
+        if (meta.TryGetValue("vehicles", out var parked))
+            foreach (Godot.Collections.Dictionary entry in parked.AsGodotArray())
+            {
+                var seats = new List<int>();
+                foreach (var occupant in entry["seats"].AsGodotArray()) seats.Add((int)occupant);
+                Vehicles.Add(new VehicleView
+                {
+                    Id = (string)entry["id"], DefId = (string)entry["def"],
+                    Pos = new Vector3((float)entry["x"], (float)entry["y"], (float)entry["z"]),
+                    Yaw = (float)entry["yaw"], Seats = seats.ToArray(),
+                });
+            }
 
         Players.Clear();
         foreach (Godot.Collections.Dictionary entry in meta["players"].AsGodotArray())

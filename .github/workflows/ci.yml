@@ -108,7 +108,7 @@ jobs:
       # ladder and checks the player is left standing at the top.
       - name: Traversal probe (every climb lands on something)
         run: |
-          for MAP in foundry switchyard; do
+          for MAP in foundry switchyard toaster; do
             godot --headless --path game --quit-after 6000 -- \
               --shot $MAP /tmp/trav-$MAP.txt traversal > trav-$MAP.log 2>&1 || true
             cat /tmp/trav-$MAP.txt
@@ -135,6 +135,34 @@ jobs:
           test -n "$WORST"
           awk -v w="$WORST" 'BEGIN { exit (w <= 26.0) ? 0 : 1 }'
           grep -q "worst yaw error once settled: 0" /tmp/aimair.txt
+
+      # The Spire has shipped teleport pads since M3 that were coloured boxes
+      # you walk over — wrong asset name, the pad id on the wrong node, and no
+      # code handling the area kind at all — and every review shot of that map
+      # contained two of them. This stands on a pad, picks a destination, waits
+      # the charge, and checks both that the player arrived and that the sim
+      # was told they had.
+      - name: Teleport probe (a pad network moves you, once)
+        run: |
+          for MAP in toaster spire; do
+            godot --headless --path game --quit-after 6000 -- \
+              --shot $MAP /tmp/tele-$MAP.txt teleport > tele-$MAP.log 2>&1 || true
+            cat /tmp/tele-$MAP.txt
+            grep -q "^PASS" /tmp/tele-$MAP.txt
+          done
+
+      # Five things a vehicle has to do and none of them photograph: take a
+      # driver the sim agrees to seat, move, turn, be stopped by the edge of
+      # the world, and let the driver out standing. It also checks each one
+      # reaches the speed its handling table claims for the ground it is on,
+      # which is the only thing that would notice the surface multipliers
+      # quietly going missing.
+      - name: Vehicle probe (every vehicle can be driven)
+        run: |
+          godot --headless --path game --quit-after 9000 -- \
+            --shot toaster /tmp/veh.txt vehicle > veh.log 2>&1 || true
+          cat /tmp/veh.txt
+          grep -q "^PASS" /tmp/veh.txt
 
       # The rules in docs/MAP-AUTHORING.md §4, measured on the assembled map.
       # A ratchet rather than a gate: all three maps fail the rules today, each
@@ -179,7 +207,7 @@ jobs:
       # the view/event plumbing that only runs once a world exists.
       - name: Solo match smoke (every sector)
         run: |
-          for MAP in foundry switchyard spire; do
+          for MAP in foundry switchyard spire toaster; do
             # Capture the exit code rather than letting -e kill the step: a
             # crash here printed nothing at all, which made a CI-only failure
             # impossible to diagnose from the run page.

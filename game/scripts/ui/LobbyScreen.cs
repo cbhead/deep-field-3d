@@ -416,6 +416,10 @@ public partial class LobbyScreen : Control
             + "the stair through the inside, the fire escape up the outside, and "
             + "flyers spiralling past both. The last two flights are shared, so "
             + "whatever you let through downstairs, you meet again at the top.",
+        "toaster" => "A farm three fields wide. Three ways to the core — straight "
+            + "down the drive, or through one or two warp gates that throw the wave "
+            + "across the property and back — and every one of them ends on the same "
+            + "last hundred metres. Take a vehicle; nobody walks it twice.",
         _ => "",
     };
 

@@ -100,6 +100,7 @@ public partial class GameRoot : Node3D
     private HudRoot _hud = null!;
     private MatchScreens _screens = null!;
     private BuildWheel _wheel = null!;
+    private TeleportPicker _picker = null!;
     private UpgradePanel _upgrade = null!;
     private ArmoryScreen _armory = null!;
     private BuildGhost _ghost = null!;
@@ -190,6 +191,12 @@ public partial class GameRoot : Node3D
         _projectileViews.Clear();
         _towerViews.Clear();
         _enemyViews.Clear();
+        _teleportPads.Clear();
+        _vehicleNodes.Clear();
+        _warped.Clear();
+        _padState.Clear();
+        _footprints.Clear();
+        Surfaces.Clear();
         _avatarViews.Clear();
         _towerRigs.Clear();
     }
@@ -712,6 +719,7 @@ public partial class GameRoot : Node3D
                 if (route.Layer != EnemyLayer.Ground) continue;
                 for (int i = 0; i < route.Waypoints.Count - 1; i++)
                 {
+                    if (route.IsTeleportLeg(i)) continue;
                     var a = ToGd(route.Waypoints[i]);
                     var b = ToGd(route.Waypoints[i + 1]);
                     for (int k = 0; k <= 10; k++)
@@ -764,6 +772,52 @@ public partial class GameRoot : Node3D
             _traversalReport.Add($"{_climbs.Count} climb(s) found");
             _traversalIndex = 0;
             _traversalTimer = 0f;
+            return;
+        }
+
+        if (_shotView == "teleport")
+        {
+            _shotView = "eye";
+            _teleportReportPath = path;
+            _teleportReport = new List<string>
+            {
+                $"teleport probe on {_map.Id}",
+                $"{_teleportPads.Count} pad(s): "
+                    + string.Join(", ", _teleportPads.Select(x => $"{x.Id} at ({x.At.X:0},{x.At.Z:0})")),
+            };
+            if (_teleportPads.Count < 2)
+            {
+                WriteProbe(_teleportReport, _teleportReportPath, false,
+                    "INCONCLUSIVE: a network needs two pads and this map has "
+                    + $"{_teleportPads.Count}");
+            }
+            _teleportTimer = 0f;
+            return;
+        }
+
+        if (_shotView == "vehicle")
+        {
+            _shotView = "eye";
+            _vehicleReportPath = path;
+            _vehicleReport = new List<string>
+            {
+                $"vehicle probe on {_map.Id}",
+                $"{_map.Vehicles.Count} parked: "
+                    + string.Join(", ", _map.Vehicles.Select(v => $"{v.Id} ({v.DefId})")),
+                // Handling is read off authored road lines rather than from
+                // the meshes, so what the lines say is the only thing that
+                // makes a road a road.
+                SurfaceLine("the county road", new Vector3(-54, 0, 50), Surface.Asphalt),
+                SurfaceLine("the south road", new Vector3(0, 0, -66), Surface.Asphalt),
+                SurfaceLine("the barn drive", new Vector3(-75, 0, 47), Surface.Gravel),
+                SurfaceLine("the pond", new Vector3(19, 0, -36), Surface.Water),
+                SurfaceLine("the east field", new Vector3(120, 0, 0), Surface.Grass),
+            };
+            if (_map.Vehicles.Count == 0)
+                WriteProbe(_vehicleReport, _vehicleReportPath, false,
+                    "INCONCLUSIVE: this map parks no vehicles");
+            _vehicleIndex = 0;
+            _vehicleTimer = 0f;
             return;
         }
 
@@ -877,9 +931,13 @@ public partial class GameRoot : Node3D
         {
             var (from, look) = _shotView switch
             {
-                "top" => (new Vector3(0, 95, 1), Vector3.Zero),
-                "iso" => (new Vector3(-52, 46, 52), new Vector3(0, 0, -2)),
-                "iso2" => (new Vector3(56, 40, -46), new Vector3(0, 0, -2)),
+                // Framed off the field rather than a literal: 95 m up sees a
+                // 110 x 80 yard whole and a third of a 320 x 160 farm.
+                "top" => (new Vector3(0, Mathf.Max(_map.FieldX, _map.FieldZ * 1.6f) * 0.87f, 1), Vector3.Zero),
+                "iso" => (new Vector3(-_map.HalfX * 0.95f, _map.HalfX * 0.84f, _map.HalfZ * 1.3f),
+                          new Vector3(0, 0, -2)),
+                "iso2" => (new Vector3(_map.HalfX * 1.02f, _map.HalfX * 0.73f, -_map.HalfZ * 1.15f),
+                           new Vector3(0, 0, -2)),
                 "lane" => (new Vector3(-46, 14, -26), new Vector3(0, 0, 4)),
                 // Fixture checks: the gate enemies walk out of, the yard the
                 // players spawn into, and the air strand over the map.
@@ -1186,6 +1244,8 @@ public partial class GameRoot : Node3D
         TickShotStages();
         TickIntermissionShot();
         if (_traversalReport is not null) TickTraversalProbe(delta);
+        if (_teleportReport is not null) TickTeleportProbe(delta);
+        if (_vehicleReport is not null) TickVehicleProbe(delta);
         if (_shotPath is not null && _shotFire && _shotCountdown == 2 && _player is not null) { _player.FireForReview(); _shotFire = false; }
         if (_shotPath is not null && --_shotCountdown <= 0) CaptureShot();
         TickCoreFlash(delta);
@@ -1291,6 +1351,7 @@ public partial class GameRoot : Node3D
             {
                 var p = _player.GlobalPosition;
                 _world!.Enqueue(new Command.PlayerSync(LocalPlayerId, new Vec3(p.X, p.Y, p.Z)));
+                SendVehicleSync();
             }
             Step.Advance(_world!);
             foreach (var e in _world!.Events) _tickEvents.Add(e.LogLine());
@@ -1302,6 +1363,7 @@ public partial class GameRoot : Node3D
 
         if (Mode != RunMode.Dedicated)
         {
+            SyncVehicles();
             SyncEnemyViewsLocal(delta);
             AimTowers(delta);
             SyncProjectileViews();
@@ -1370,7 +1432,9 @@ public partial class GameRoot : Node3D
 
         var pos = _player.GlobalPosition;
         _net.SendAvatar(pos, _player.Rotation.Y);
+        SendVehicleSync();
 
+        SyncVehicles();
         SyncEnemyViewsRemote(delta);
         SyncAvatarsFromMeta();
     }
@@ -1546,6 +1610,9 @@ public partial class GameRoot : Node3D
                     FlashCore();
                     OnBreach(leaked.EnemyId);
                     break;
+                case SimEvent.EnemyTeleported warp:
+                    OnEnemyTeleported(warp.EnemyId, new Vector3(warp.X, warp.Y, warp.Z));
+                    break;
 
                 case SimEvent.ReactionTriggered reaction:
                     _reactionCount++;
@@ -1665,10 +1732,36 @@ public partial class GameRoot : Node3D
                     System.Globalization.CultureInfo.InvariantCulture), p[4]);
                 break;
             case "enemyDied": OnEnemyDied(int.Parse(p[2]), int.Parse(p[4]), p[5]); break;
+            case "enemyTeleported":
+                OnEnemyTeleported(int.Parse(p[2]), new Vector3(
+                    float.Parse(p[5], System.Globalization.CultureInfo.InvariantCulture),
+                    float.Parse(p[6], System.Globalization.CultureInfo.InvariantCulture),
+                    float.Parse(p[7], System.Globalization.CultureInfo.InvariantCulture)));
+                break;
         }
     }
 
     // ---- Shared event reactions (identical in every mode) -----------------
+
+    /// <summary>An enemy just crossed a warp gate.
+    ///
+    /// A burst at each end, and a note that this one's view must not be
+    /// interpolated on the next sync — otherwise a network client watches it
+    /// glide two hundred metres across the fields at walking speed, through
+    /// the buildings, which is both wrong and the most conspicuous thing on
+    /// the map. The distance rule in the sync does most of the work; this is
+    /// the belt to its braces, and it is the half that survives the event
+    /// arriving before the snapshot.</summary>
+    private void OnEnemyTeleported(int enemyId, Vector3 to)
+    {
+        if (_enemyViews.TryGetValue(enemyId, out var view) && IsInstanceValid(view))
+            Vfx.EnemyWarp(view.GlobalPosition);
+        Vfx.EnemyWarp(to);
+        _warped.Add(enemyId);
+    }
+
+    /// <summary>Enemies that warped since their view was last placed.</summary>
+    private readonly HashSet<int> _warped = new();
 
     /// <summary>Design's flash at the rig's muzzle, facing where the barrel
     /// points. Only the host sees these: TowerFired is not relayed, and a
@@ -1950,7 +2043,12 @@ public partial class GameRoot : Node3D
             // Forward is whatever the current leg points at, so a walker turns
             // through a corner instead of sliding round it sideways. The sim
             // already keeps Facing per leg; nothing was reading it.
-            FaceAlong(view, enemy.Facing, delta);
+            //
+            // Except out of a warp gate, where the new leg can point anywhere:
+            // easing into it would have the thing pirouette on the pad for
+            // half a second before walking off.
+            if (_warped.Remove(enemy.Id)) FaceAlongInstantly(view, enemy.Facing);
+            else FaceAlong(view, enemy.Facing, delta);
             byte bits = Protocol.PackStatusBits(enemy);
             TintEnemy(view, enemy.Hp / enemy.MaxHp, bits);
 
@@ -2217,13 +2315,22 @@ public partial class GameRoot : Node3D
                 view = SpawnEnemyView(snap.Id, snap.DefId);
                 _enemyViews[snap.Id] = view;
             }
-            var target = prevById.TryGetValue(snap.Id, out var prev)
+            // Nothing in this game moves more than a metre between two
+            // snapshots, so a jump of twenty is a warp gate and not a walk.
+            // Measured rather than trusted to the event alone: the event line
+            // and the snapshot arrive on different channels, and whichever
+            // lands first, the enemy must not be seen gliding across the map.
+            bool jumped = _warped.Remove(snap.Id)
+                || (prevById.TryGetValue(snap.Id, out var before)
+                    && before.Pos.DistanceTo(snap.Pos) > 20f);
+            var target = !jumped && prevById.TryGetValue(snap.Id, out var prev)
                 ? Vec3.Lerp(prev.Pos, snap.Pos, t)
                 : snap.Pos;
             view.Position = ToGd(target);
             // Snapshots carry the yaw the server computed, so a client sees the
             // same turn rather than a differently-oriented crowd.
-            TurnTowards(view, GodotYaw(snap.Yaw), delta);
+            if (jumped) view.Rotation = new Vector3(view.Rotation.X, GodotYaw(snap.Yaw), view.Rotation.Z);
+            else TurnTowards(view, GodotYaw(snap.Yaw), delta);
             TintEnemy(view, snap.HpFraction, snap.StatusBits);
 
             // Snapshots carry no shield channel of their own; a Warden that
@@ -2312,7 +2419,9 @@ public partial class GameRoot : Node3D
             _avatarViews[playerId] = view;
         }
         // Smooth the 8 Hz meta rate.
-        view.Position = view.Position.Lerp(pos, 0.35f);
+        // A teammate who used a pad is somewhere else entirely; easing them
+        // there walks their avatar through four buildings on the way.
+        view.Position = view.Position.DistanceTo(pos) > 20f ? pos : view.Position.Lerp(pos, 0.35f);
 
         var upright = view.GetNode<Node3D>("Body");
         if (view.GetNodeOrNull<Node3D>("Downed") is { } pose)
@@ -2374,6 +2483,15 @@ public partial class GameRoot : Node3D
     {
         if (facing.X * facing.X + facing.Z * facing.Z < 1e-4f) return;
         TurnTowards(view, GodotYaw(Mathf.Atan2(facing.X, facing.Z)), delta);
+    }
+
+    /// <summary>Set a heading outright. For arrivals: a view that was just
+    /// put somewhere else has no previous heading worth easing from.</summary>
+    private static void FaceAlongInstantly(Node3D view, Vec3 facing)
+    {
+        if (facing.X * facing.X + facing.Z * facing.Z < 1e-4f) return;
+        view.Rotation = new Vector3(view.Rotation.X,
+            GodotYaw(Mathf.Atan2(facing.X, facing.Z)), view.Rotation.Z);
     }
 
     private static void TurnTowards(Node3D view, float yaw, double delta)
@@ -2815,6 +2933,280 @@ public partial class GameRoot : Node3D
     /// <summary>Drives the probe: put the player at the foot of each climb,
     /// hold the climb for four seconds, and record where they ended up and
     /// whether they were standing on anything when they got there.</summary>
+    // =====================================================================
+    // Vehicle probe
+    // =====================================================================
+
+    private List<string>? _vehicleReport;
+    private string _vehicleReportPath = "";
+    private int _vehicleIndex;
+    private float _vehicleTimer;
+    private readonly List<string> _undrivable = new();
+
+    /// <summary>Every vehicle on the map: get in, drive, turn, hit the edge of
+    /// the world, get out standing.
+    ///
+    /// Each of those is a separate thing that can be silently wrong and none
+    /// of them is visible in a screenshot. A seat the sim refuses looks like a
+    /// player standing next to a car. A vehicle that moves on the driver's
+    /// screen and nowhere else looks perfect until someone else is watching.
+    /// A containment wall that is decoration looks like a map right up to the
+    /// moment somebody drives off it at twenty metres a second.</summary>
+    private void TickVehicleProbe(double delta)
+    {
+        if (_vehicleReport is null || _player is null || _map.Vehicles.Count == 0) return;
+
+        if (_vehicleIndex >= _map.Vehicles.Count)
+        {
+            bool pass = _undrivable.Count == 0;
+            _vehicleReport.Add(pass
+                ? "every vehicle takes a driver, moves, turns, stops at the edge and lets them out"
+                : "undrivable: " + string.Join("; ", _undrivable));
+            WriteProbe(_vehicleReport, _vehicleReportPath, pass,
+                pass ? "PASS: every vehicle on this map can be driven"
+                     : "FAIL: a vehicle does not do what a vehicle has to do");
+            return;
+        }
+
+        var spawn = _map.Vehicles[_vehicleIndex];
+        var node = VehicleNode(spawn.Id);
+        if (node is null)
+        {
+            _undrivable.Add($"{spawn.Id} has no node at all");
+            _vehicleIndex++;
+            _vehicleTimer = 0f;
+            return;
+        }
+
+        float before = _vehicleTimer;
+        _vehicleTimer += (float)delta;
+
+        // Stand beside it. The sim measures the distance off the position the
+        // player last streamed, so the walk over has to happen a tick before
+        // the ask — which is exactly what a player pressing E has already done
+        // and a probe that teleports has not.
+        if (before <= 0f)
+        {
+            _player.GlobalPosition = node.GlobalPosition + Vector3.Up * 1f;
+            _vehicleStart = node.GlobalPosition;
+            _vehicleStartYaw = node.Rotation.Y;
+            return;
+        }
+        if (_vehicleTimer < 0.3f) return;
+        if (before < 0.3f)
+        {
+            Submit(new Command.EnterVehicle(LocalPlayerId, spawn.Id, 0));
+            return;
+        }
+        if (_vehicleTimer < 0.8f) return;
+        if (before < 0.8f)
+        {
+            if (_view.SeatOf(LocalPlayerId) is not { } seated || seated.Vehicle.Id != spawn.Id)
+            {
+                _undrivable.Add($"{spawn.Id} refused the driver's seat");
+                _vehicleIndex++;
+                _vehicleTimer = 0f;
+                return;
+            }
+            node.ThrottleHeld = 1f;
+            return;
+        }
+
+        // Three seconds flat out, then two turning.
+        if (_vehicleTimer < 3.8f) return;
+        if (before < 3.8f)
+        {
+            _vehicleMoved = _vehicleStart.DistanceTo(node.GlobalPosition);
+            // What the handling table says this thing should be doing on the
+            // ground it is on. Checked, because the surface multipliers are
+            // the whole difference between four vehicles and one vehicle with
+            // four models, and nothing else would notice them going missing.
+            _vehicleTopSpeed = node.Def.TopSpeed * node.Def.Surfaces[node.SurfaceUnder].TopSpeed;
+            _vehicleReached = node.Speed;
+            node.SteerHeld = 1f;
+            return;
+        }
+        if (_vehicleTimer < 5.8f) return;
+        if (before < 5.8f)
+        {
+            _vehicleTurned = Mathf.RadToDeg(Mathf.Abs(
+                Mathf.Wrap(node.Rotation.Y - _vehicleStartYaw, -Mathf.Pi, Mathf.Pi)));
+            // Aim at the nearest edge and hold the throttle down: the wall has
+            // to be the thing that stops it.
+            node.SteerHeld = 0f;
+            float toEast = _map.HalfX - node.GlobalPosition.X;
+            float toWest = _map.HalfX + node.GlobalPosition.X;
+            node.Rotation = new Vector3(0,
+                Mathf.Atan2(toEast < toWest ? -1f : 1f, 0f) + Mathf.Pi * 0.5f, 0);
+            return;
+        }
+        if (_vehicleTimer < 12f) return;
+        if (before < 12f)
+        {
+            // Out, and then a beat: the player is put back beside the vehicle
+            // on the frame the seat clears, and moving them to the next one in
+            // that same frame has them teleported away and dropped back.
+            Submit(new Command.ExitVehicle(LocalPlayerId));
+            node.ThrottleHeld = 0f;
+            node.SteerHeld = 0f;
+            return;
+        }
+        if (_vehicleTimer < 12.6f) return;
+
+        bool contained = Mathf.Abs(node.GlobalPosition.X) <= _map.HalfX
+            && Mathf.Abs(node.GlobalPosition.Z) <= _map.HalfZ
+            && node.GlobalPosition.Y > -2f;
+        bool gotOut = _view.SeatOf(LocalPlayerId) is null && _player.Standing;
+        if (!gotOut) _undrivable.Add($"{spawn.Id} did not let the driver out standing");
+
+        // The sim has to have been told where it went, or a passenger's client
+        // is watching a parked car while the driver is a field away.
+        float simOff = _world?.Vehicles.FirstOrDefault(v => v.Id == spawn.Id) is { } known
+            ? ToGd(known.Pos).DistanceTo(node.GlobalPosition) : 999f;
+
+        // Deliberately generous, because this is a correctness check and not
+        // a tuning one: it has to pass the worst-handling vehicle on the worst
+        // surface it can be parked on. The Buggy in a field does nine metres
+        // in three seconds and turns forty-four degrees in two, and that is
+        // the Buggy working — it is a road car with the handling of one.
+        // What is measured tightly instead is whether it got as fast as the
+        // table says it should on the ground it was on.
+        bool quick = _vehicleReached > _vehicleTopSpeed * 0.55f;
+        bool ok = _vehicleMoved > 6f && _vehicleTurned > 25f && quick
+            && contained && simOff < 3f && gotOut;
+        _vehicleReport.Add($"{spawn.Id} ({spawn.DefId}): drove {_vehicleMoved:0} m in 3 s on "
+            + $"{node.SurfaceUnder.ToString().ToLowerInvariant()}, reached {_vehicleReached:0.0} "
+            + $"of {_vehicleTopSpeed:0.0} m/s, turned {_vehicleTurned:0}° in 2 s, "
+            + (contained ? "held inside the field" : "LEFT THE FIELD")
+            + $", the sim has it {simOff:0.0} m from where it is");
+        if (!quick)
+            _undrivable.Add($"{spawn.Id} reached {_vehicleReached:0.0} m/s where its table "
+                + $"says {_vehicleTopSpeed:0.0} on {node.SurfaceUnder}");
+        if (!ok)
+            _undrivable.Add($"{spawn.Id} moved {_vehicleMoved:0} m in 3 s, turned {_vehicleTurned:0}°, "
+                + (contained ? "" : "escaped the field, ") + $"sim off by {simOff:0.0} m");
+
+        _vehicleIndex++;
+        _vehicleTimer = 0f;
+    }
+
+    /// <summary>A surface answer with the answer it should have given, so the
+    /// report says whether the road lines are where the map thinks they are
+    /// rather than leaving a reader to check four coordinates by hand.</summary>
+    private string SurfaceLine(string what, Vector3 at, Surface expected)
+    {
+        var got = Surfaces.At(at);
+        if (got != expected) _undrivable.Add($"{what} at ({at.X:0},{at.Z:0}) reads {got}, not {expected}");
+        return $"{what} at ({at.X:0},{at.Z:0}) is {got}" + (got == expected ? "" : $" — expected {expected}");
+    }
+
+    private Vector3 _vehicleStart;
+    private float _vehicleStartYaw;
+    private float _vehicleMoved;
+    private float _vehicleTurned;
+    private float _vehicleTopSpeed;
+    private float _vehicleReached;
+
+    // =====================================================================
+    // Teleport probe
+    // =====================================================================
+
+    private List<string>? _teleportReport;
+    private string _teleportReportPath = "";
+    private float _teleportTimer;
+
+    /// <summary>Does the pad network actually move a player, and does it then
+    /// refuse to do it again?
+    ///
+    /// Both halves have to be measured, and neither is visible in a
+    /// screenshot. The Spire has shipped teleport pads since M3 that were
+    /// coloured boxes: the asset name never resolved, the pad id was on the
+    /// wrong node, and no code handled the area kind at all. Every review shot
+    /// of that map contained two pads and none of them were pads.</summary>
+    private void TickTeleportProbe(double delta)
+    {
+        if (_teleportReport is null || _player is null || _teleportPads.Count < 2) return;
+        float before = _teleportTimer;
+        _teleportTimer += (float)delta;
+
+        var from = _teleportPads[0];
+        var to = _teleportPads[1];
+
+        // Stand on the first pad and hold E: the picker has to open, which is
+        // what proves the area, its pad_id and the hold both work.
+        if (before <= 0f)
+        {
+            _player.GlobalPosition = from.At + Vector3.Up * 0.6f;
+            _player.HoldingBuild = false;
+            return;
+        }
+        if (_teleportTimer < 0.6f) return;
+        if (before < 0.6f)
+        {
+            _player.HoldingBuild = true;
+            return;
+        }
+        if (_teleportTimer < 1.0f) return;
+        if (before < 1.0f)
+        {
+            if (!PickerOpen)
+            {
+                _teleportReport.Add($"holding E on {from.Id} did not open the picker");
+                WriteProbe(_teleportReport, _teleportReportPath, false,
+                    "FAIL: a pad underfoot offered nothing");
+                return;
+            }
+            // Pick the pad we mean rather than whatever is nearest, so the
+            // arrival can be checked against a known destination.
+            int index = 0;
+            for (int i = 1; i < _teleportPads.Count; i++)
+                if (_teleportPads[i].Id == to.Id) index = i - 1;
+            WheelSelect(index);
+            _player.HoldingBuild = false;       // release commits
+            _teleportReport.Add($"picker opened on {from.Id}, chose {to.Id}");
+            return;
+        }
+
+        // The charge is a second and a half of standing still; give it three.
+        if (_teleportTimer < 3.2f) return;
+        if (before < 3.2f)
+        {
+            float off = _player.GlobalPosition.DistanceTo(to.At);
+            bool arrived = off < 2.5f && _player.Standing;
+            _teleportReport.Add($"{from.Id} -> {to.Id}: arrived {off:0.0} m off, "
+                + (_player.Standing ? "standing" : "NOT STANDING")
+                + $", cooldown {_player.TeleportCooldown:0.0}s");
+            // The sim has to agree: a player who moved and never told it is a
+            // player taking contact damage where they used to be.
+            if (_world is not null && _world.Players.TryGetValue(LocalPlayerId, out var seen))
+            {
+                float simOff = ToGd(seen.Pos).DistanceTo(to.At);
+                _teleportReport.Add($"the sim has them {simOff:0.0} m from {to.Id}");
+                if (simOff > 4f) arrived = false;
+            }
+            if (!arrived)
+            {
+                WriteProbe(_teleportReport, _teleportReportPath, false,
+                    "FAIL: the network did not put the player where it said");
+                return;
+            }
+            // And now it must refuse: the cooldown is the only thing stopping
+            // a pad network from deleting the distance the map is made of.
+            _player.HoldingBuild = true;
+            return;
+        }
+
+        if (_teleportTimer < 3.8f) return;
+        bool refused = !PickerOpen;
+        _player.HoldingBuild = false;
+        _teleportReport.Add(refused
+            ? $"holding E again was refused, {_player.TeleportCooldown:0}s left on the cooldown"
+            : "the picker opened again while the cooldown was still running");
+        WriteProbe(_teleportReport, _teleportReportPath, refused,
+            refused ? "PASS: the network moves you once and then makes you wait"
+                    : "FAIL: the cooldown does not hold");
+    }
+
     private void TickTraversalProbe(double delta)
     {
         if (_traversalReport is null || _player is null) return;
@@ -2895,54 +3287,64 @@ public partial class GameRoot : Node3D
 
     private void BuildLevel(MapDef map)
     {
+        int nodesBefore = GetTree().GetNodeCount();
         BuildEnvironment(map);
 
         // Ground slab — one collider, dressed with the 20 m terrain tiles.
         // Tiles are laid symmetrically so the slab is covered edge to edge;
         // an off-centre run leaves bare collider showing at one end.
-        var ground = AddStaticBox(new Vector3(0, -0.5f, 0), new Vector3(110, 1, 80), new Color(0.35f, 0.38f, 0.4f), layer: 1);
+        var ground = AddStaticBox(new Vector3(0, -0.5f, 0),
+            new Vector3(map.FieldX, 1, map.FieldZ), new Color(0.35f, 0.38f, 0.4f), layer: 1);
         if (AssetLibrary.Has($"{map.Id}_terrain"))
         {
             MapKit.HideBox(ground);
-            for (float x = -50f; x <= 50f; x += 20f)
-                for (float z = -30f; z <= 30f; z += 20f)
+            // Tile centres from the field rather than from a literal. The old
+            // -50..50 by -30..30 is what this produces for a 110 x 80 map, so
+            // the three maps that were that size are laid exactly as before.
+            float lastX = Mathf.Ceil(map.HalfX / 20f) * 20f - 10f;
+            float lastZ = Mathf.Ceil(map.HalfZ / 20f) * 20f - 10f;
+            // One instanced draw per distinct mesh instead of a subtree per
+            // copy. Switchyard's tile is 221 parts, so twenty-four of them was
+            // five thousand nodes and five thousand draw calls for one flat
+            // field; the Toaster's field is six times the size. The two things
+            // that tile needed doing to it per copy both survive: the sidings
+            // come off the prototype before anything is measured, and the
+            // half-turn that breaks the lattice is in the transform.
+            var tiles = new List<Transform3D>();
+            for (float x = -lastX; x <= lastX + 0.01f; x += 20f)
+                for (float z = -lastZ; z <= lastZ + 0.01f; z += 20f)
                 {
-                    var tile = MapKit.Prop(ground, $"{map.Id}_terrain", new Vector3(x, MapKit.GroundLocal(ground), z));
-                    // One variant of Switchyard's tile carries a switch stand —
-                    // the lever and target that work a turnout — and the tiles
-                    // are laid on a grid, so stands turned up in open ballast
-                    // with no points anywhere near them. A switch stand away
-                    // from a turnout is the clearest possible statement that
-                    // nobody looked at a railway. The turnouts are laid
-                    // deliberately in BuildSwitchyardRailway; until there is a
-                    // stand prop to put beside them, the scattered ones go.
-                    if (tile is not null && map.Id == "switchyard")
-                    {
-                        // The tile bakes in two "disused sidings" at its
-                        // local z ±6. Tiled six by four, that is eight
-                        // full-width tracks laid straight across the map on a
-                        // grid — through the lanes, through the sockets,
-                        // through the spawn, with no throat, no turnout and no
-                        // buffer at either end. They out-number and contradict
-                        // every metre of track laid deliberately, which is the
-                        // single biggest reason this map read as a railway
-                        // that makes no sense. The ballast bed is what the
-                        // tile is for; the track is laid in
-                        // BuildSwitchyardRailway or it does not exist.
-                        MapKit.HideNamed(tile, "terrain_siding-6");
-                        MapKit.HideNamed(tile, "terrain_siding6");
-
-                        // One tile repeated twenty-four times puts its puddle,
-                        // its weed tufts and its drain grates on a perfect
-                        // lattice, which reads as wallpaper rather than
-                        // ground. Turning alternate tiles about their centre
-                        // breaks the repeat; a half-turn keeps the drain and
-                        // the ballast grain running east-west with the yard,
-                        // which a quarter-turn would not.
-                        if (((int)(x / 20f) + (int)(z / 20f)) % 2 != 0)
-                            tile.RotationDegrees = new Vector3(0, 180f, 0);
-                    }
+                    // One tile repeated puts its puddle, its weed tufts and its
+                    // drain grates on a perfect lattice, which reads as
+                    // wallpaper rather than ground. A half-turn on alternate
+                    // tiles breaks the repeat and keeps the drain and the
+                    // ballast grain running east-west with the yard, which a
+                    // quarter-turn would not.
+                    bool turned = map.Id == "switchyard"
+                        && ((int)(x / 20f) + (int)(z / 20f)) % 2 != 0;
+                    var basis = turned
+                        ? Basis.FromEuler(new Vector3(0, Mathf.Pi, 0))
+                        : Basis.Identity;
+                    tiles.Add(new Transform3D(basis,
+                        new Vector3(x, MapKit.GroundLocal(ground), z)));
                 }
+
+            // The tile bakes in two "disused sidings" at its local z +/-6.
+            // Tiled six by four, that is eight full-width tracks laid straight
+            // across the map on a grid — through the lanes, through the
+            // sockets, through the spawn, with no throat, no turnout and no
+            // buffer at either end. They out-number and contradict every metre
+            // of track laid deliberately, which is the single biggest reason
+            // this map read as a railway that makes no sense. The ballast bed
+            // is what the tile is for; the track is laid in
+            // BuildSwitchyardRailway or it does not exist.
+            string[] buried = map.Id == "switchyard"
+                ? new[] { "terrain_siding-6", "terrain_siding6" }
+                : System.Array.Empty<string>();
+
+            int drawn = MapKit.InstancedChunked(ground, $"{map.Id}_terrain", tiles, 80f,
+                castShadow: false, visibleFrom: 0f, visibleTo: 0f, hide: buried);
+            GD.Print($"[map] terrain: {tiles.Count} tiles in {drawn} multimesh(es)");
         }
 
         // Lane surfaces.
@@ -2952,6 +3354,11 @@ public partial class GameRoot : Node3D
             var color = air ? new Color(0.5f, 0.6f, 0.9f, 0.25f) : new Color(0.2f, 0.22f, 0.27f);
             for (int i = 0; i < route.Waypoints.Count - 1; i++)
             {
+                // A warp leg is not walked, so there is no road to draw. Laying
+                // one would paint a two-hundred-metre diagonal of roadway
+                // across the fields, through the buildings, joining two pads
+                // that are deliberately nowhere near each other.
+                if (route.IsTeleportLeg(i)) continue;
                 var a = ToGd(route.Waypoints[i]);
                 var b = ToGd(route.Waypoints[i + 1]);
                 var mid = (a + b) * 0.5f + new Vector3(0, air ? 0f : 0.06f, 0);
@@ -2982,6 +3389,7 @@ public partial class GameRoot : Node3D
         }
 
         BuildLaneMouths(map);
+        BuildWarpGates(map);
 
         // Sockets.
         foreach (var socket in map.Sockets)
@@ -3019,6 +3427,9 @@ public partial class GameRoot : Node3D
         if (map.Id == "foundry") BuildFoundryStructures();
         if (map.Id == "switchyard") BuildSwitchyardStructures();
         if (map.Id == "spire") BuildSpireStructures();
+        if (map.Id == "toaster") BuildToasterStructures(map);
+
+        BuildVehicles(map);
 
         // Armory station.
         var armory = AddStaticBox(ToGd(map.ArmoryPos) + new Vector3(0, 1.25f, 0),
@@ -3029,6 +3440,13 @@ public partial class GameRoot : Node3D
         // pivot offset and left the kiosk hanging in mid-air.
         MapKit.Mount(armory, "shared_armory_kiosk", MapKit.GroundLocal(armory),
             MapKit.YawTowards(ToGd(map.HeroSpawn) - ToGd(map.ArmoryPos)));
+
+        // What the map cost, in the currency that actually scales. Every
+        // placement in this client used to be a node subtree, so a field was
+        // thousands of them and nobody ever counted; a number in the log is
+        // the cheapest possible ratchet against a map that quietly doubles.
+        GD.Print($"[map] {map.Id} built {GetTree().GetNodeCount() - nodesBefore} nodes "
+            + $"on a {map.FieldX:0} x {map.FieldZ:0} m field");
     }
 
     /// <summary>The gate enemies come out of and the core they are walking at.
@@ -3072,6 +3490,89 @@ public partial class GameRoot : Node3D
         _laneMouths = gates.Concat(cores).ToList();
     }
 
+    /// <summary>A gate at each end of every teleport leg.
+    ///
+    /// The sim moves an enemy from one pad to the other in a tick; without
+    /// something drawn there it reads as enemies vanishing in an empty field
+    /// and a different wave appearing in another one. The silhouette is
+    /// deliberately not the player's teleporter — that is a flat hex pad a
+    /// player has been taught to stand on and hold E, and a map must never put
+    /// a thing that means "stand here" where the answer is "do not". Until
+    /// design ships the arch, the spawn portal stands in: it already reads as
+    /// "enemies come out of here", which is exactly right at the far end and
+    /// forgivable at the near one.
+    ///
+    /// Both ends join the lane mouths, so scenery, scatter and the boundary
+    /// wall leave them the same hole they leave a spawn gate.</summary>
+    private void BuildWarpGates(MapDef map)
+    {
+        string asset = AssetLibrary.Has("shared_warp_gate_idle")
+            ? "shared_warp_gate_idle" : "shared_spawn_portal";
+        var placed = new List<Vector3>();
+
+        void Gate(Vector3 at, Vector3 facing)
+        {
+            if (placed.Any(p => p.DistanceTo(at) < 4f)) return;
+            placed.Add(at);
+            MapKit.Prop(this, asset, at, MapKit.YawTowards(facing));
+        }
+
+        foreach (var route in map.Routes)
+            for (int i = 0; i < route.Waypoints.Count - 1; i++)
+            {
+                if (!route.IsTeleportLeg(i)) continue;
+                // The departure gate faces the way the enemy was walking when
+                // it arrived; the arrival gate faces the way it leaves. Both
+                // legs exist, because a teleport leg is never first or last.
+                Gate(ToGd(route.Waypoints[i]),
+                    ToGd(route.Waypoints[i]) - ToGd(route.Waypoints[i - 1]));
+                Gate(ToGd(route.Waypoints[i + 1]),
+                    ToGd(route.Waypoints[i + 2]) - ToGd(route.Waypoints[i + 1]));
+            }
+
+        _laneMouths = _laneMouths.Concat(placed).ToList();
+        if (placed.Count > 0) GD.Print($"[map] {placed.Count} warp gate(s) using {asset}");
+    }
+
+    /// <summary>One pad in the player's teleport network.
+    ///
+    /// Three things were wrong with the Spire's version and all three were
+    /// invisible: the asset name had no state suffix so nothing ever resolved,
+    /// the pad_id went on the StaticBody while the player reads metadata off
+    /// the Area, and no code anywhere handled the "teleporter" kind. It has
+    /// been a coloured box you walk over since M3.</summary>
+    private void AddTeleportPad(string id, string label, Vector3 at)
+    {
+        var body = AddStaticBox(at + new Vector3(0, 0.1f, 0), new Vector3(3f, 0.2f, 3f),
+            new Color(0.35f, 0.7f, 0.85f), layer: 0);
+        var area = MakeArea("teleporter", new BoxShape3D { Size = new Vector3(3.2f, 2.5f, 3.2f) });
+        area.SetMeta("pad_id", id);
+        body.AddChild(area);
+        _teleportPads.Add(new TeleportPad(id, label, at, body));
+        SetPadArt(id, "idle");
+    }
+
+    /// <summary>Where the teleport network's pads are, in the order a picker
+    /// should list them.</summary>
+    public sealed record TeleportPad(string Id, string Label, Vector3 At, StaticBody3D Body);
+    private readonly List<TeleportPad> _teleportPads = new();
+    public IReadOnlyList<TeleportPad> TeleportPads => _teleportPads;
+
+    /// <summary>Swaps a pad between its three delivered states, the same way
+    /// RefreshSocketArt swaps a socket between empty and occupied.</summary>
+    public void SetPadArt(string id, string state)
+    {
+        var pad = _teleportPads.FirstOrDefault(p => p.Id == id);
+        if (pad is null || !IsInstanceValid(pad.Body)) return;
+        if (pad.Body.GetNodeOrNull<Node3D>("PadArt") is { } stale)
+        {
+            pad.Body.RemoveChild(stale);
+            stale.QueueFree();
+        }
+        if (!MapKit.Mount(pad.Body, $"shared_teleporter_pad_{state}", MapKit.GroundLocal(pad.Body))) return;
+        if (pad.Body.GetChild(pad.Body.GetChildCount() - 1) is Node3D art) art.Name = "PadArt";
+    }
+
     /// <summary>Masts under the air lane, standing on the ground, spaced along
     /// the strand. The mast is authored 9.66 m tall; the lane now climbs to 13
     /// or 15 across the middle of a map, so each one is stretched to meet the
@@ -3084,6 +3585,7 @@ public partial class GameRoot : Node3D
         const float spacing = 13f;
         for (int i = 0; i < route.Waypoints.Count - 1; i++)
         {
+            if (route.IsTeleportLeg(i)) continue;
             var a = ToGd(route.Waypoints[i]);
             var b = ToGd(route.Waypoints[i + 1]);
             float span = new Vector2(b.X - a.X, b.Z - a.Z).Length();
@@ -3130,11 +3632,26 @@ public partial class GameRoot : Node3D
         {
             if (route.Layer == EnemyLayer.Air) continue;
             for (int i = 0; i < route.Waypoints.Count - 1; i++)
+            {
+                // Nothing walks a warp leg, so nothing has to be kept off it.
+                // Treating the chord as lane sterilises a strip right across
+                // the map and leaves the fields with no scenery in them.
+                if (route.IsTeleportLeg(i)) continue;
                 if (DistanceToSegment(Flat(at), Flat(ToGd(route.Waypoints[i])),
                         Flat(ToGd(route.Waypoints[i + 1]))) < clearance) return true;
+            }
         }
+
+        // Buildings are registered as they are built; scenery and scatter stay
+        // out of them, which Blocked could not know from routes and sockets
+        // alone — nothing else on the map has an inside.
+        foreach (var footprint in _footprints)
+            if (footprint.HasPoint(new Vector2(at.X, at.Z))) return true;
         return false;
     }
+
+    /// <summary>Building footprints in XZ, with their margin already added.</summary>
+    private readonly List<Rect2> _footprints = new();
 
     private static Vector3 Flat(Vector3 v) => new(v.X, 0, v.Z);
 
@@ -3410,18 +3927,46 @@ public partial class GameRoot : Node3D
         Run(new Vector3(halfX, 0, -halfZ), new Vector3(halfX, 0, halfZ), -90f);
     }
 
+    /// <summary>An invisible wall at the edge of the playable field.
+    ///
+    /// The perimeter has always been decoration — boundary wall props with no
+    /// collision — so a player who walked past the slab fell out of the world
+    /// and nothing caught them. That was survivable on a yard you could see
+    /// the far side of. On a map three hundred metres across, with vehicles
+    /// that do twenty metres a second, it is not: the edge has to be a thing
+    /// you hit. Hidden rather than drawn, because what the player should see
+    /// there is the treeline.</summary>
+    private void BuildContainment(float halfX, float halfZ)
+    {
+        const float thickness = 1f, height = 8f;
+        foreach (var (at, size) in new (Vector3, Vector3)[]
+        {
+            (new Vector3(0, height * 0.5f, -halfZ), new Vector3(halfX * 2f + thickness, height, thickness)),
+            (new Vector3(0, height * 0.5f, halfZ), new Vector3(halfX * 2f + thickness, height, thickness)),
+            (new Vector3(-halfX, height * 0.5f, 0), new Vector3(thickness, height, halfZ * 2f + thickness)),
+            (new Vector3(halfX, height * 0.5f, 0), new Vector3(thickness, height, halfZ * 2f + thickness)),
+        })
+        {
+            MapKit.HideBox(AddStaticBox(at, size, new Color(0.3f, 0.3f, 0.3f), layer: 1));
+        }
+    }
+
     /// <summary>Ground clutter on a fixed lattice — deterministic placement so
     /// two clients render the same world without syncing anything.
     ///
     /// Kept to the outfield and refused anywhere near the lane, a socket or a
     /// gate. Scattering into the playable middle is what made the first pass
     /// look like litter rather than a working yard.</summary>
-    private void ScatterTerrain(string asset, float halfX, float halfZ)
+    private void ScatterTerrain(string asset, float halfX, float halfZ, int attempts = 22)
     {
         if (!AssetLibrary.Has(asset)) return;
         int placed = 0, refused = 0;
 
-        for (int i = 0; i < 22; i++)
+        // Twenty-two was the number for a 110 x 80 yard. A map six times the
+        // area with the same count is not sparse, it is empty, so the caller
+        // says how many — and the lattice below spreads whatever it is given
+        // across whatever field it is given.
+        for (int i = 0; i < attempts; i++)
         {
             // Fixed lattice, no RNG: the sim's streams stay untouched and every
             // client draws the identical world.
@@ -3516,18 +4061,8 @@ public partial class GameRoot : Node3D
 
         // Teleport pads: lobby to roof and back, for the rotation the lift is
         // too slow to serve. Paired, so using one is committing to the other end.
-        foreach (var (pos, id) in new[]
-        {
-            (new Vector3(-24f, 0.3f, -6f), "padGround"),
-            (new Vector3(-6f, 40.3f, 12f), "padRoof"),
-        })
-        {
-            var pad = AddStaticBox(pos, new Vector3(3f, 0.2f, 3f),
-                new Color(0.35f, 0.7f, 0.85f), layer: 0);
-            pad.AddChild(MakeArea("teleporter", new BoxShape3D { Size = new Vector3(3.2f, 2.5f, 3.2f) }));
-            pad.SetMeta("pad_id", id);
-            MapKit.Mount(pad, "shared_teleporter_pad", MapKit.GroundLocal(pad));
-        }
+        AddTeleportPad("padGround", "LOBBY", new Vector3(-24f, 0.2f, -6f));
+        AddTeleportPad("padRoof", "ROOF", new Vector3(-6f, 40.2f, 12f));
 
         // Sniper nests: reachable only by committing to the climb, and they see
         // the stair well the ground floor cannot. The plan's rule that every map
@@ -3560,8 +4095,12 @@ public partial class GameRoot : Node3D
         // spend the intermission walking.
         var anchor = AddStaticBox(new Vector3(6f, 40.5f, -14f), new Vector3(1f, 1.4f, 1f),
             new Color(0.55f, 0.5f, 0.35f), layer: 0);
-        anchor.AddChild(MakeArea("zipline", new BoxShape3D { Size = new Vector3(2.4f, 2.6f, 2.4f) }));
-        anchor.SetMeta("zip_to", new Vector3(-26f, 1f, -6f));
+        var spireZip = MakeArea("zipline", new BoxShape3D { Size = new Vector3(2.4f, 2.6f, 2.4f) });
+        // "zip_to" on the body, where nothing reads it. The player reads
+        // "zip_end" off the Area, so the one zipline down from a forty-metre
+        // roof has never carried anyone since the day it was written.
+        spireZip.SetMeta("zip_end", new Vector3(-26f, 1f, -6f));
+        anchor.AddChild(spireZip);
         MapKit.Mount(anchor, "shared_zipline_anchor", MapKit.GroundLocal(anchor));
     }
 
@@ -3912,22 +4451,21 @@ public partial class GameRoot : Node3D
 
     /// <summary>Samples every ground and air route at 4 m, which is the lane
     /// module's own repeat and fine enough that a hole in coverage cannot hide
-    /// between two samples.</summary>
-    private List<(RouteDef Route, Vector3 At)> RouteSamples()
+    /// between two samples.
+    ///
+    /// The sampler itself is the sim's — RouteDef.Samples — so the validator,
+    /// the harness and the map file agree on what a sample is. It skips
+    /// teleport legs, which nothing walks, and it carries the distance since
+    /// the route was entered, which resets at every warp pad. That number is
+    /// what the apron is measured against: a straight-line distance from the
+    /// spawn gate says nothing on a route that leaves the gate and comes back
+    /// past it two hundred metres later.</summary>
+    private List<(RouteDef Route, Vector3 At, float Since)> RouteSamples()
     {
-        var samples = new List<(RouteDef, Vector3)>();
+        var samples = new List<(RouteDef, Vector3, float)>();
         foreach (var route in _map.Routes)
-            for (int i = 0; i < route.Waypoints.Count - 1; i++)
-            {
-                var a = ToGd(route.Waypoints[i]);
-                var b = ToGd(route.Waypoints[i + 1]);
-                int steps = Mathf.Max(1, Mathf.FloorToInt((b - a).Length() / 4f));
-                // Skip the shared corner on every segment but the first, or
-                // each interior waypoint is measured twice and a thin corner
-                // is reported as two thin points.
-                for (int k = i == 0 ? 0 : 1; k <= steps; k++)
-                    samples.Add((route, a.Lerp(b, (float)k / steps)));
-            }
+            foreach (var sample in route.Samples(4f))
+                samples.Add((route, ToGd(sample.At), sample.MetersSinceEntry));
         return samples;
     }
 
@@ -4016,7 +4554,7 @@ public partial class GameRoot : Node3D
     /// <summary>§4.4 and §4.5 — every stretch of every lane is within reach of
     /// at least three build pads, so there is a choice about how to answer it
     /// rather than one forced tower.</summary>
-    private void RuleRoutesAreCovered(List<(RouteDef Route, Vector3 At)> samples,
+    private void RuleRoutesAreCovered(List<(RouteDef Route, Vector3 At, float Since)> samples,
         List<(SocketDef Def, Vector3 At)> sockets, List<string> report, List<string> failures)
     {
         const int Want = 3;
@@ -4032,11 +4570,10 @@ public partial class GameRoot : Node3D
             // there is a problem and being able to place a socket.
             var spans = new List<(Vector3 From, Vector3 To, int Worst)>();
             (Vector3 From, Vector3 To, int Worst)? open = null;
-            var mouth = ToGd(route.Waypoints[0]);
-            foreach (var (r, at) in samples)
+            foreach (var (r, at, since) in samples)
             {
                 if (r.Id != route.Id) continue;
-                if (at.DistanceTo(mouth) < SpawnApron) continue;
+                if (since < SpawnApron) continue;
                 count++;
                 int cover = sockets.Count(s => CanCover(s.At, at, layer));
                 if (cover < worst) { worst = cover; worstAt = at; }
@@ -4076,7 +4613,7 @@ public partial class GameRoot : Node3D
     ///
     /// §4.5 stays a pass/fail on total coverage; this is the breakdown that
     /// says whether a player who never climbs has an answer at all.</summary>
-    private void ReportAirAnswers(List<(RouteDef Route, Vector3 At)> samples,
+    private void ReportAirAnswers(List<(RouteDef Route, Vector3 At, float Since)> samples,
         List<(SocketDef Def, Vector3 At)> sockets, List<string> report)
     {
         var air = samples.Where(s => s.Route.Layer == EnemyLayer.Air).ToList();
@@ -4110,7 +4647,7 @@ public partial class GameRoot : Node3D
     /// <summary>§4.6 — a pad that reaches no lane at any point is a pad nobody
     /// will ever build on, and it is usually a sign the lane moved and the pad
     /// did not.</summary>
-    private void RuleNoSocketCoversNothing(List<(RouteDef Route, Vector3 At)> samples,
+    private void RuleNoSocketCoversNothing(List<(RouteDef Route, Vector3 At, float Since)> samples,
         List<(SocketDef Def, Vector3 At)> sockets, List<string> report, List<string> failures)
     {
         int dead = 0;
@@ -4126,7 +4663,7 @@ public partial class GameRoot : Node3D
     /// <summary>§4.7 — closing a shortcut must not hand the player a long way
     /// round that nothing covers. The gate is the map's central decision; it is
     /// only a decision if both answers are playable.</summary>
-    private void RuleFallbackIsCovered(List<(RouteDef Route, Vector3 At)> samples,
+    private void RuleFallbackIsCovered(List<(RouteDef Route, Vector3 At, float Since)> samples,
         List<(SocketDef Def, Vector3 At)> sockets, List<string> report, List<string> failures)
     {
         var gated = _map.Routes.Where(r => r.BarricadeGate is not null).ToList();
@@ -4142,11 +4679,10 @@ public partial class GameRoot : Node3D
                 continue;
             }
             int thin = 0, count = 0;
-            var mouth = ToGd(fallback.Waypoints[0]);
-            foreach (var (r, at) in samples)
+            foreach (var (r, at, since) in samples)
             {
                 if (r.Id != fallback.Id) continue;
-                if (at.DistanceTo(mouth) < SpawnApron) continue;
+                if (since < SpawnApron) continue;
                 count++;
                 if (sockets.Count(s => CanCover(s.At, at, fallback.Layer)) < 3) thin++;
             }
@@ -4197,7 +4733,7 @@ public partial class GameRoot : Node3D
     /// is. Solid geometry in a lane is worse — it is a wall enemies walk
     /// through, which is how the Switchyard retaining walls read before they
     /// were moved to the perimeter.</summary>
-    private void RuleLanesAreClear(List<(RouteDef Route, Vector3 At)> samples,
+    private void RuleLanesAreClear(List<(RouteDef Route, Vector3 At, float Since)> samples,
         List<string> report, List<string> failures)
     {
         var space = GetWorld3D().DirectSpaceState;
@@ -4208,7 +4744,7 @@ public partial class GameRoot : Node3D
         var box = new BoxShape3D { Size = new Vector3(3.4f, 1.6f, 3.4f) };
         var shape = new PhysicsShapeQueryParameters3D { Shape = box, CollisionMask = 1 };
         int blocked = 0, lowClearance = 0, count = 0;
-        foreach (var (route, at) in samples)
+        foreach (var (route, at, _) in samples)
         {
             if (route.Layer != EnemyLayer.Ground) continue;
             count++;
@@ -4255,6 +4791,7 @@ public partial class GameRoot : Node3D
             if (route.Layer != EnemyLayer.Ground || route.Id == exceptId) continue;
             for (int i = 0; i < route.Waypoints.Count - 1; i++)
             {
+                if (route.IsTeleportLeg(i)) continue;
                 var a = ToGd(route.Waypoints[i]);
                 var b = ToGd(route.Waypoints[i + 1]);
                 if (DistanceToSegment(Flat(at), Flat(a), Flat(b)) < radius) return true;
@@ -4331,7 +4868,26 @@ public partial class GameRoot : Node3D
 
     private void BuildEnvironment(MapDef map)
     {
-        var sun = new DirectionalLight3D { ShadowEnabled = true };
+        // Shadows, sized to the map rather than left at the default.
+        //
+        // Godot's default is four cascades out to a hundred metres, which is
+        // generous on a 110 x 80 yard and ruinous on a farm three hundred
+        // metres across: every cascade re-renders everything inside it, and
+        // this map has a treeline. Two splits, the near one sharp, and a
+        // distance that comes off the field — beyond which the ground is flat
+        // grass and a shadow on it says nothing.
+        float shadowRange = Mathf.Max(100f, Mathf.Max(map.FieldX, map.FieldZ) * 0.4f);
+        var sun = new DirectionalLight3D
+        {
+            ShadowEnabled = true,
+            DirectionalShadowMode = DirectionalLight3D.ShadowMode.Parallel2Splits,
+            DirectionalShadowMaxDistance = shadowRange,
+            DirectionalShadowSplit1 = 0.15f,
+            DirectionalShadowFadeStart = 0.85f,
+            DirectionalShadowBlendSplits = true,
+            ShadowBias = 0.04f,
+            ShadowNormalBias = 1.5f,
+        };
         sun.RotationDegrees = new Vector3(-55, -30, 0);
         AddChild(sun);
         AddChild(new WorldEnvironment
@@ -4508,6 +5064,8 @@ public partial class GameRoot : Node3D
 
         _wheel = new BuildWheel { Name = "BuildWheel" };
         _overlay.AddChild(_wheel);
+        _picker = new TeleportPicker { Name = "TeleportPicker" };
+        _overlay.AddChild(_picker);
 
         _upgrade = new UpgradePanel { Name = "UpgradePanel" };
         _overlay.AddChild(_upgrade);
@@ -4556,6 +5114,56 @@ public partial class GameRoot : Node3D
     public bool WheelOpen => _wheel.IsOpen;
     public bool UpgradeOpen => _upgrade.IsOpen;
 
+    /// <summary>Any radial is up, so mouse motion steers it instead of the
+    /// camera and a number key picks a wedge instead of doing nothing. Two of
+    /// these exist now; everything that used to ask about the build wheel
+    /// specifically meant this.</summary>
+    public bool RadialOpen => _wheel.IsOpen || _picker.IsOpen;
+    public bool PickerOpen => _picker.IsOpen;
+
+    /// <summary>Every pad but the one you are standing on, nearest first.</summary>
+    public void OpenTeleportPicker(string fromPadId)
+    {
+        var from = _teleportPads.FirstOrDefault(p => p.Id == fromPadId);
+        if (from is null) return;
+        _picker.Open(from.Label, _teleportPads
+            .Where(p => p.Id != fromPadId)
+            .Select(p => new TeleportPicker.Destination(p.Id, p.Label, from.At.DistanceTo(p.At)))
+            .OrderBy(d => d.Metres));
+    }
+
+    /// <summary>Release: start the charge toward the highlighted pad. The
+    /// player is not moved here — standing still on the pad for the charge is
+    /// the cost, and leaving it cancels.</summary>
+    public void ConfirmTeleportPicker()
+    {
+        var pick = _picker.Selection;
+        _picker.Close();
+        if (pick is null) return;
+        var destination = _teleportPads.FirstOrDefault(p => p.Id == pick.Id);
+        if (destination is null) return;
+        _player?.BeginTeleport(destination.Id, destination.At);
+    }
+
+    public void CancelTeleportPicker() => _picker.Close();
+
+    /// <summary>Every pad shows the cooldown, not just the one you used: the
+    /// cooldown is personal, so what the player needs to know is whether the
+    /// network is available at all, and four pads disagreeing about that is a
+    /// worse lie than all four being pessimistic.</summary>
+    public void RefreshPadArt(string chargingPadId, bool onCooldown)
+    {
+        foreach (var pad in _teleportPads)
+        {
+            string state = pad.Id == chargingPadId ? "charged" : onCooldown ? "cooldown" : "idle";
+            if (_padState.TryGetValue(pad.Id, out string? shown) && shown == state) continue;
+            _padState[pad.Id] = state;
+            SetPadArt(pad.Id, state);
+        }
+    }
+
+    private readonly Dictionary<string, string> _padState = new();
+
     public void OpenBuildWheel(string socketId)
     {
         var socket = _map.Sockets.FirstOrDefault(s => s.Id == socketId);
@@ -4565,12 +5173,14 @@ public partial class GameRoot : Node3D
 
     public void SteerWheel(Vector2 relative)
     {
+        if (_picker.IsOpen) { _picker.Steer(relative); return; }
         _wheel.Steer(relative);
         UpdateGhost();
     }
 
     public void WheelSelect(int index)
     {
+        if (_picker.IsOpen) { _picker.SelectIndex(index); return; }
         _wheel.SelectIndex(index);
         UpdateGhost();
     }

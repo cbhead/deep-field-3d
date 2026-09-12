@@ -263,5 +263,99 @@ public static class Waves
                     new WaveGroup("mote", 6, 9, 320, "escape"),
                 },
             },
+
+            // The Toaster. The teaching order is the map's idea: two waves that
+            // only use the drive, then a group that walks off a warp pad and is
+            // gone for three minutes, then a route that comes back at the core
+            // from the wrong side. Slow bodies never take the long way round —
+            // a Monolith on a 471 m route is seven minutes of nothing, which is
+            // not difficulty, it is a wave that has stopped happening.
+            ["toaster"] = new IReadOnlyList<WaveGroup>[]
+            {
+                // W1-2: the drive, and only the drive. Learn where the core is.
+                new[] { new WaveGroup("drifter", 6, 26, 0, "direct") },
+                new[]
+                {
+                    new WaveGroup("drifter", 8, 22, 0, "direct"),
+                    new WaveGroup("mote", 8, 8, 130, "direct"),
+                },
+                // W3: the first group to take a warp. Five drifters step onto
+                // the south pad and vanish; four more come down the drive while
+                // you work out what that meant.
+                new[]
+                {
+                    new WaveGroup("drifter", 5, 26, 0, "long"),
+                    new WaveGroup("drifter", 4, 24, 200, "direct"),
+                },
+                // W4: the strand, over the drive, low.
+                new[]
+                {
+                    new WaveGroup("skiff", 4, 40, 0, "air"),
+                    new WaveGroup("drifter", 6, 24, 60, "direct"),
+                },
+                // W5: the west route debuts carrying the Aegis — one warp, then
+                // in at the core's blind side, where the drive's guns point away.
+                new[]
+                {
+                    new WaveGroup("aegis", 2, 90, 0, "west"),
+                    new WaveGroup("drifter", 6, 22, 40, "direct"),
+                },
+                // W6: a Monolith down the drive with motes behind it, and a
+                // long group that will arrive after you have dealt with it.
+                new[]
+                {
+                    new WaveGroup("monolith", 1, 0, 0, "direct"),
+                    new WaveGroup("mote", 10, 10, 30, "direct"),
+                    new WaveGroup("drifter", 5, 24, 90, "long"),
+                },
+                new[]
+                {
+                    new WaveGroup("warden", 2, 80, 0, "west"),
+                    new WaveGroup("mole", 3, 50, 60, "direct"),
+                },
+                // W8 rides NIGHT: shades the back way, on a farm with no lights.
+                new[]
+                {
+                    new WaveGroup("shade", 2, 70, 0, "west"),
+                    new WaveGroup("drifter", 6, 22, 60, "long"),
+                    new WaveGroup("mote", 6, 9, 140, "direct"),
+                },
+                // W9: clusters take the long way and arrive at the house pad as
+                // a pack, because splitting is worth more where nothing is set up.
+                new[]
+                {
+                    new WaveGroup("cluster", 3, 60, 0, "long"),
+                    new WaveGroup("skiff", 4, 34, 40, "air"),
+                    new WaveGroup("drifter", 6, 20, 120, "direct"),
+                },
+                new[]
+                {
+                    new WaveGroup("mender", 1, 0, 0, "direct"),
+                    new WaveGroup("warden", 2, 80, 40, "direct"),
+                    new WaveGroup("aegis", 2, 90, 120, "west"),
+                },
+                // W11: the Ram comes straight down the drive at the kill-box it
+                // exists to take apart, while everything else is elsewhere.
+                new[]
+                {
+                    new WaveGroup("ram", 1, 0, 0, "direct"),
+                    new WaveGroup("cluster", 2, 60, 80, "west"),
+                    new WaveGroup("drifter", 8, 16, 120, "long"),
+                    new WaveGroup("skiff", 4, 30, 200, "air"),
+                },
+                // W12: every route at once, which on this map means four fights
+                // in four places and one of them is always the wrong one.
+                new[]
+                {
+                    new WaveGroup("monolith", 2, 180, 0, "direct"),
+                    new WaveGroup("aegis", 2, 90, 60, "west"),
+                    new WaveGroup("cluster", 3, 55, 100, "long"),
+                    new WaveGroup("warden", 2, 80, 140, "direct"),
+                    new WaveGroup("shade", 2, 70, 180, "west"),
+                    new WaveGroup("mender", 1, 0, 220, "direct"),
+                    new WaveGroup("skiff", 4, 28, 240, "air"),
+                    new WaveGroup("mote", 8, 9, 300, "direct"),
+                },
+            },
         };
 }

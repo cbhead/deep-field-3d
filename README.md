@@ -4,17 +4,40 @@ First-person co-op tower defense (1–4 players, self-hosted over Tailscale).
 The 3D rebuild of [deep-field-td](https://github.com/cbhead/deep-field-td):
 Bloons-depth counters and machine-swept balance, Sanctum-style build-and-shoot.
 
-**Status: M3 in progress.** Three maps, ten enemies, eight towers, five factions,
+**Status: M4 in progress.** Four maps, ten enemies, eight towers, five factions,
 and the full design system worn across all sixteen UI surfaces — Claude Design's
 427 models and 65 icons replacing the graybox everywhere the code reaches,
 turrets driven on design's yaw/pitch rigs.
 Information warfare has landed: stealth and healing enemies, the Detector and
 Filament towers, poison and detection channels, and Night/Fog conditions.
-41 harness gates + 19 unit tests green.
+The Toaster adds the three things a farm three fields wide needs: routes with
+warp gates that throw a wave across the property mid-walk, four drivable
+vehicles whose handling is read off the road under them, and a network of
+teleport pads for the player.
+48 harness gates + 90 unit tests green.
 
 Design's spec is the source of truth for colour ([docs/PALETTE.md](docs/PALETTE.md));
 the delivery contract and its gotchas are in
 [docs/ART-INTEGRATION.md](docs/ART-INTEGRATION.md).
+
+### For Claude Design — read this first
+
+**What to build next is always the open forward manifest.** One per outstanding
+piece of work, each a request list rather than a change log, each written
+against a thing that already runs so its numbers are measured rather than
+proposed:
+
+| | |
+|---|---|
+| **[docs/FORWARD-MANIFEST-toaster.md](docs/FORWARD-MANIFEST-toaster.md)** | **open — the whole kit for sector 4.** Terrain, roads and an instanced treeline with part budgets; four building shells with their openings at the offsets the volumes are built at; four vehicle rigs; a warp gate; the pond and the sky. The map is playable today and every piece of it is a grey box. |
+| [docs/FORWARD-MANIFEST-switchyard.md](docs/FORWARD-MANIFEST-switchyard.md) | open — separating what repeats from what punctuates, and the turnout, headwall, overbridge and portal that map still grayboxes |
+| [docs/FORWARD-MANIFEST-reload.md](docs/FORWARD-MANIFEST-reload.md) | open — magazines that exist off the gun, off-hand poses, and turret elevation |
+
+Before any of them, [docs/MAP-AUTHORING.md](docs/MAP-AUTHORING.md): what a map
+is allowed to be, what the sim can and cannot model, and the rules every map is
+measured against. `docs/DESIGN-BRIEF.md` §3 is the standing name list — a model
+is requested by the exact name it carries there, and a wrong name is a silent
+graybox rather than an error.
 
 ## Play
 
@@ -45,6 +68,8 @@ the core does.
 | **Q** faction ability · **hold R** revive | |
 | **Tab** | armory + gunsmith · **F** start wave early · **Esc** menu |
 | E on a zipline, W on a ladder | traversal |
+| **E** at a vehicle · **hold E** to take the passenger seat | drive with WASD, **Space** handbrake, **E** to get out |
+| **hold E** on a teleport pad | pick a destination from the network; stand still for the charge |
 
 ## What's in it
 

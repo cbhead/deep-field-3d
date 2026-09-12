@@ -15,7 +15,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 BASELINE=docs/map-validation-baseline.tsv
-MAPS=${MAPS:-"foundry switchyard spire"}
+MAPS=${MAPS:-"foundry switchyard spire toaster"}
 OUT=$(mktemp -d)
 status=0
 

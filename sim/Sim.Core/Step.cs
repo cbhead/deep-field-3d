@@ -71,6 +71,9 @@ public static class Step
                 case Command.CraftAttachment craft: ApplyCraftAttachment(w, craft); break;
                 case Command.SelectAmmo ammo: ApplySelectAmmo(w, ammo); break;
                 case Command.PackAPunch pack: ApplyPackAPunch(w, pack); break;
+                case Command.EnterVehicle enter: ApplyEnterVehicle(w, enter); break;
+                case Command.ExitVehicle exit: LeaveSeat(w, exit.PlayerId, "left"); break;
+                case Command.VehicleSync vsync: ApplyVehicleSync(w, vsync); break;
             }
         }
         w.PendingCommands.Clear();
@@ -160,12 +163,70 @@ public static class Step
         // wave boundary. The sim otherwise doesn't care.
         if (w.Players.TryGetValue(leave.PlayerId, out var player))
             player.Connected = false;
+        // Their vehicle seat is not held: the driver's client is what moved it,
+        // and a disconnected driver is a buggy nobody can ever get into again.
+        LeaveSeat(w, leave.PlayerId, "disconnected");
     }
 
     private static void ApplyPlayerSync(World w, Command.PlayerSync sync)
     {
         if (w.Players.TryGetValue(sync.PlayerId, out var player))
             player.Pos = sync.Pos;
+    }
+
+    // =====================================================================
+    // Vehicles
+    //
+    // The sim arbitrates seats and nothing else. Where a vehicle is comes from
+    // whoever is driving it, on the same trust that lets a client say where its
+    // own avatar is — but a seat is the one thing two clients can disagree
+    // about profitably, so that is decided here.
+    // =====================================================================
+
+    private static void ApplyEnterVehicle(World w, Command.EnterVehicle enter)
+    {
+        void Refuse(string reason) =>
+            w.Emit(new SimEvent.VehicleRejected(enter.PlayerId, enter.VehicleId, reason));
+
+        if (!w.Players.TryGetValue(enter.PlayerId, out var player)) return;
+        var vehicle = w.Vehicles.FirstOrDefault(v => v.Id == enter.VehicleId);
+        if (vehicle is null) { Refuse("unknownVehicle"); return; }
+        if (!player.Alive) { Refuse("downed"); return; }
+        if (enter.SeatIndex < 0 || enter.SeatIndex >= vehicle.Seats.Length) { Refuse("badSeat"); return; }
+        if (w.SeatOf(player.Id) is not null) { Refuse("alreadySeated"); return; }
+        if (vehicle.Seats[enter.SeatIndex] != 0) { Refuse("seatTaken"); return; }
+        // Reach, measured on the last position the player streamed. Without it
+        // a client could seat itself in a vehicle on the far side of the map.
+        if (player.Pos.DistanceTo(vehicle.Pos) > Vehicles.All[vehicle.DefId].BoardRadiusMeters)
+        {
+            Refuse("notNear");
+            return;
+        }
+
+        vehicle.Seats[enter.SeatIndex] = player.Id;
+        w.Emit(new SimEvent.VehicleEntered(player.Id, vehicle.Id, enter.SeatIndex));
+    }
+
+    /// <summary>Empty whatever seat this player is in, if any. Called by the
+    /// exit command and by every event that takes a player out of the world —
+    /// going down, disconnecting, respawning — because a seat held by someone
+    /// who is not there locks a vehicle for the rest of the match.</summary>
+    private static void LeaveSeat(World w, int playerId, string reason)
+    {
+        if (w.SeatOf(playerId) is not { } seated) return;
+        seated.Vehicle.Seats[seated.Seat] = 0;
+        w.Emit(new SimEvent.VehicleExited(playerId, seated.Vehicle.Id, seated.Seat, reason));
+    }
+
+    private static void ApplyVehicleSync(World w, Command.VehicleSync sync)
+    {
+        var vehicle = w.Vehicles.FirstOrDefault(v => v.Id == sync.VehicleId);
+        // Only the driver moves it. A passenger's client streams its own avatar
+        // and nothing else, and a stranger's sync is dropped the way an unknown
+        // PlayerSync is: silently, because it is a race, not an attack.
+        if (vehicle is null || vehicle.DriverId != sync.PlayerId) return;
+        vehicle.Pos = sync.Pos;
+        vehicle.YawDegrees = sync.YawDegrees;
     }
 
     private static void ApplyPlaceTower(World w, Command.PlaceTower place)
@@ -1036,12 +1097,30 @@ public static class Step
             if (def.Burrower)
                 enemy.Burrowed = enemy.TotalTraveled % Balance.BurrowCycleMeters < Balance.BurrowedMeters;
 
+            var route = w.Map.Routes[enemy.RouteIndex];
             var legs = w.RouteLegLengths[enemy.RouteIndex];
-            var waypoints = w.Map.Routes[enemy.RouteIndex].Waypoints;
+            var waypoints = route.Waypoints;
             float remaining = speed * Balance.Dt;
 
-            while (remaining > 0f && enemy.Leg < legs.Length)
+            while (enemy.Leg < legs.Length)
             {
+                // A teleport leg is crossed the instant it is reached, whatever
+                // the speed — a frozen, sieging or knocked-back enemy standing
+                // on a departure pad still goes. That is not generosity: a
+                // zero-length leg is the one position this movement model
+                // cannot represent (the lerp below would divide by it), so an
+                // enemy must never be parked on one between ticks.
+                if (route.IsTeleportLeg(enemy.Leg))
+                {
+                    int from = enemy.Leg;
+                    enemy.Leg++;
+                    enemy.LegProgress = 0f;
+                    var pad = waypoints[from + 1];
+                    w.Emit(new SimEvent.EnemyTeleported(enemy.Id, route.Id, from, pad.X, pad.Y, pad.Z));
+                    continue;
+                }
+                if (remaining <= 0f) break;
+
                 float legLeft = legs[enemy.Leg] - enemy.LegProgress;
                 if (remaining < legLeft)
                 {
@@ -1151,6 +1230,10 @@ public static class Step
                         player.ReviveProgress = 0f;
                     }
                     w.Emit(new SimEvent.PlayerDowned(player.Id));
+                    // Whatever they were driving stops being theirs. A body
+                    // bleeding out in the driver's seat is a vehicle nobody can
+                    // use and a teammate who cannot reach them.
+                    LeaveSeat(w, player.Id, "downed");
                 }
             }
             else
@@ -1170,6 +1253,10 @@ public static class Step
         player.ReviveProgress = 0f;
         player.Hp = Balance.PlayerMaxHp;
         player.Pos = w.Map.HeroSpawn;
+        // They are at the spawn now, so they are not in a seat wherever the
+        // vehicle happens to be. Normally the down already emptied it; this
+        // catches the paths that reach a respawn without one.
+        LeaveSeat(w, player.Id, "respawned");
         w.Emit(new SimEvent.PlayerRespawned(player.Id));
     }
 
@@ -1556,6 +1643,15 @@ public static class Step
             remaining -= enemy.LegProgress;
             enemy.TotalTraveled -= enemy.LegProgress;
             if (enemy.Leg == 0) { enemy.LegProgress = 0f; break; }
+            // Nothing pushes an enemy back through a teleporter. The arrival
+            // pad is as far back as a launcher gets it — the alternative is an
+            // enemy standing on a zero-length leg, or reappearing on the far
+            // side of the map because someone stood on a trap.
+            if (w.Map.Routes[enemy.RouteIndex].IsTeleportLeg(enemy.Leg - 1))
+            {
+                enemy.LegProgress = 0f;
+                break;
+            }
             enemy.Leg--;
             enemy.LegProgress = w.RouteLegLengths[enemy.RouteIndex][enemy.Leg];
         }

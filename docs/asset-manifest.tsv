@@ -3,11 +3,27 @@
 # wired=no   named for a later milestone; needs the milestone's code before it renders.
 # Regenerate the base list with tools/asset-report.sh --refresh.
 asset	folder	wired
+# Tower upgrade stage modules — chassis + one module per path, ten stages each.
+# M2 ships levels 1-5; s6-s10 open with endless at M4. Silhouette jumps at s4/s7/s10.
+# The * rows are counted by glob in the report.
+# Beyond the brief: extras Claude Design shipped in the first delivery.
+# wired=yes here means the integration already consumes them.
+# Beyond the brief: extras Claude Design shipped in the 2026-09-07 drop (state variants,
+# M4/M5 enemies, the two new factions' hands, status VFX). Same rule: wired=yes means the
+# integration already consumes them; the rest wait on the system named in ASSET-DELIVERY.md.
+# Hand poses: design authors three (rifle / pistol / tool) and the base file is the rifle;
+# the export emits the other two beside it. Requested by the viewmodel per platform.
+# M3 gunsmith content the code asks for and design has not modelled yet (not on the forward
+# manifest either): the shock and toxin rounds, their tracers, and the toxin feed infusion.
+
+
 ammo_ap	weapons	no
 ammo_cryo	weapons	no
 ammo_hollowpoint	weapons	no
 ammo_incendiary	weapons	no
+ammo_shock	weapons	yes
 ammo_standard	weapons	no
+ammo_toxin	weapons	yes
 attach_bracestock	weapons	no
 attach_compensator	weapons	no
 attach_cryocell	weapons	no
@@ -17,6 +33,7 @@ attach_longbarrel	weapons	no
 attach_rangefinder	weapons	no
 attach_shortbarrel	weapons	no
 attach_stabilizer	weapons	no
+attach_toxinfeed	weapons	yes
 attach_voltcap	weapons	no
 boss_frame01	enemies	no
 enemy_aegis	enemies	yes
@@ -26,6 +43,8 @@ enemy_carapace_plate	enemies	no
 enemy_cluster	enemies	yes
 enemy_drifter	enemies	yes
 enemy_leaper	enemies	no
+enemy_leaper_airborne	enemies	no
+enemy_leaper_windup	enemies	no
 enemy_mender	enemies	yes
 enemy_mole_burrowed	enemies	yes
 enemy_mole_surfaced	enemies	yes
@@ -33,6 +52,7 @@ enemy_monolith	enemies	yes
 enemy_mote	enemies	yes
 enemy_nullifier	enemies	no
 enemy_ram	enemies	yes
+enemy_ram_enraged	enemies	no
 enemy_shade	enemies	yes
 enemy_shade_shimmer	enemies	no
 enemy_skater	enemies	no
@@ -47,21 +67,45 @@ foundry_dress_lightrig	maps	yes
 foundry_dress_pipes	maps	yes
 foundry_dress_steamvent	maps	yes
 foundry_path_ground	maps	yes
-spire_path_ground	maps	no
-spire_skybox	maps	no
 foundry_pillar	maps	yes
+foundry_skybox	maps	yes
 foundry_terrain	maps	yes
+foundry_terrain_scatter	maps	yes
 foundry_vent_tunnel	maps	yes
 foundry_wall_boundary	maps	yes
 hands_ember	weapons	yes
+hands_ember_pistol	weapons	yes
+hands_ember_tool	weapons	yes
 hands_firstperson	weapons	no
+hands_firstperson_pistol	weapons	yes
+hands_firstperson_tool	weapons	yes
 hands_forge	weapons	no
+hands_forge_pistol	weapons	yes
+hands_forge_tool	weapons	yes
+hands_glacier	weapons	no
+hands_glacier_pistol	weapons	yes
+hands_glacier_tool	weapons	yes
+hands_specter	weapons	no
+hands_specter_pistol	weapons	yes
+hands_specter_tool	weapons	yes
 hands_tempest	weapons	no
+hands_tempest_pistol	weapons	yes
+hands_tempest_tool	weapons	yes
 hero_ember	heroes	yes
-hero_glacier	heroes	yes
+hero_ember_downed	heroes	yes
+hero_ember_revive	heroes	no
 hero_forge	heroes	yes
+hero_forge_downed	heroes	yes
+hero_forge_revive	heroes	no
+hero_glacier	heroes	yes
+hero_glacier_downed	heroes	yes
+hero_glacier_revive	heroes	no
 hero_specter	heroes	yes
+hero_specter_downed	heroes	yes
+hero_specter_revive	heroes	no
 hero_tempest	heroes	yes
+hero_tempest_downed	heroes	yes
+hero_tempest_revive	heroes	no
 pickup_alloy	economy	yes
 pickup_flux	economy	yes
 pickup_gravium	economy	yes
@@ -70,13 +114,20 @@ pickup_primecore	economy	yes
 proj_arc_beam	vfx	yes
 proj_filament_beam	vfx	yes
 proj_lance_bolt	vfx	yes
+proj_lance_bolt_t2	vfx	no
+proj_lance_bolt_t3	vfx	no
 proj_nova_shell	vfx	yes
+proj_nova_shell_t2	vfx	no
+proj_nova_shell_t3	vfx	no
 proj_skywatch_bolt	vfx	yes
+proj_skywatch_bolt_t2	vfx	no
+proj_skywatch_bolt_t3	vfx	no
 prop_barrel_explosive	maps	no
 prop_container_droppable	maps	no
 shared_airlane_pylon	maps	yes
 shared_armory_kiosk	maps	yes
 shared_cache_hidden	maps	no
+shared_cache_opened	maps	no
 shared_controlpoint_capturing	maps	no
 shared_controlpoint_held	maps	no
 shared_controlpoint_neutral	maps	yes
@@ -94,8 +145,15 @@ shared_launcher_idle	maps	yes
 shared_snipernest	maps	yes
 shared_spawn_portal	maps	yes
 shared_teleporter_pad	maps	no
+shared_teleporter_pad_charged	maps	no
+shared_teleporter_pad_cooldown	maps	no
+shared_teleporter_pad_idle	maps	no
 shared_vent_grate	maps	yes
 shared_wall_destructible	maps	no
+shared_wall_destructible_broken	maps	no
+shared_wall_destructible_debris	maps	no
+shared_warp_gate_active	maps	no
+shared_warp_gate_idle	maps	yes
 shared_zipline_anchor	maps	yes
 shared_zipline_cable	maps	yes
 shared_zipline_trolley	maps	yes
@@ -108,28 +166,77 @@ socket_wall_empty	structures	yes
 spire_facade	maps	no
 spire_fireescape	maps	no
 spire_floor	maps	no
+spire_path_ground	maps	no
 spire_roof	maps	no
+spire_skybox	maps	no
 switchyard_bridge_intact	maps	no
 switchyard_catwalk	maps	yes
+switchyard_column	maps	yes
 switchyard_cut_channel	maps	yes
 switchyard_dress_buffer	maps	yes
 switchyard_dress_container	maps	yes
 switchyard_dress_railcar	maps	yes
 switchyard_dress_signaltower	maps	yes
 switchyard_middeck	maps	yes
+switchyard_path_ground	maps	yes
 switchyard_retainingwall	maps	yes
+switchyard_skybox	maps	yes
 switchyard_terrain	maps	yes
+switchyard_terrain_scatter	maps	yes
+toaster_barn_roof	maps	yes
+toaster_barn_shell	maps	yes
+toaster_house_buggy_roof	maps	yes
+toaster_house_buggy_shell	maps	yes
+toaster_house_grnmchn_roof	maps	yes
+toaster_house_grnmchn_shell	maps	yes
+toaster_house_vehickle_roof	maps	yes
+toaster_house_vehickle_shell	maps	yes
+toaster_path_ground	maps	yes
+toaster_pond	maps	yes
+toaster_road_asphalt	maps	yes
+toaster_road_gravel	maps	yes
+toaster_skybox	maps	yes
+toaster_terrain	maps	yes
+toaster_terrain_scatter	maps	yes
+toaster_tree_maple	maps	yes
+toaster_tree_maple_lod1	maps	yes
+toaster_tree_oak	maps	yes
+toaster_tree_oak_lod1	maps	yes
+toaster_tree_pine	maps	yes
+toaster_tree_pine_lod1	maps	yes
 tower_arc_chassis	structures	yes
+tower_arc_damage_s*	structures	yes
+tower_arc_range_s*	structures	yes
+tower_arc_rate_s*	structures	yes
 tower_barricade	structures	yes
 tower_barricade_broken	structures	no
 tower_barricade_damaged	structures	no
+tower_detector_analysis_s*	structures	yes
 tower_detector_chassis	structures	yes
+tower_detector_field_s*	structures	yes
 tower_filament_chassis	structures	yes
+tower_filament_optics_s*	structures	yes
+tower_filament_peak_s*	structures	yes
+tower_filament_ramp_s*	structures	yes
 tower_lance_chassis	structures	yes
+tower_lance_damage_s*	structures	yes
+tower_lance_range_s*	structures	yes
+tower_lance_rate_s*	structures	yes
 tower_nova_chassis	structures	yes
+tower_nova_damage_s*	structures	yes
+tower_nova_range_s*	structures	yes
+tower_nova_rate_s*	structures	yes
 tower_overclock_chassis	structures	no
+tower_overclock_efficiency_s*	structures	no
+tower_overclock_network_s*	structures	no
+tower_overclock_potency_s*	structures	no
 tower_singularity_chassis	structures	yes
+tower_singularity_range_s*	structures	yes
+tower_singularity_rate_s*	structures	yes
 tower_skywatch_chassis	structures	yes
+tower_skywatch_damage_s*	structures	yes
+tower_skywatch_range_s*	structures	yes
+tower_skywatch_rate_s*	structures	yes
 trap_launcher_charged	structures	yes
 trap_launcher_fired	structures	yes
 trap_launcher_rearming	structures	yes
@@ -139,6 +246,10 @@ trap_spike_triggered	structures	yes
 trap_tar_depleted	structures	yes
 trap_tar_full	structures	yes
 ui_nameplate	ui	no
+vehicle_buggy	vehicles	yes
+vehicle_dagator	vehicles	yes
+vehicle_grnmchn	vehicles	yes
+vehicle_vehickle	vehicles	yes
 vfx_ability_chainsurge	vfx	no
 vfx_ability_ignitionwave	vfx	no
 vfx_ability_overdrive	vfx	no
@@ -147,6 +258,15 @@ vfx_cluster_split	vfx	no
 vfx_core_breach	vfx	no
 vfx_detector_pulse	vfx	no
 vfx_flashlight_cone	vfx	no
+vfx_impact_arc	vfx	no
+vfx_impact_lance	vfx	no
+vfx_impact_nova	vfx	no
+vfx_impact_skywatch	vfx	no
+vfx_lanewash	vfx	no
+vfx_muzzle_arc	vfx	no
+vfx_muzzle_lance	vfx	no
+vfx_muzzle_nova	vfx	no
+vfx_muzzle_skywatch	vfx	no
 vfx_nullifier_tether	vfx	no
 vfx_overclock_link	vfx	no
 vfx_reaction_flashfreeze	vfx	no
@@ -157,8 +277,11 @@ vfx_shield_regen	vfx	no
 vfx_status_burn	vfx	no
 vfx_status_chill	vfx	no
 vfx_status_mark	vfx	no
+vfx_status_poison	vfx	no
+vfx_status_reveal	vfx	no
 vfx_status_shock	vfx	no
 vfx_status_shred	vfx	no
+vfx_status_stun	vfx	no
 vfx_tower_place	vfx	no
 vfx_tower_sell	vfx	no
 vfx_tower_upgrade	vfx	no
@@ -166,7 +289,9 @@ vfx_tracer_ap	vfx	no
 vfx_tracer_cryo	vfx	no
 vfx_tracer_hollowpoint	vfx	no
 vfx_tracer_incendiary	vfx	no
+vfx_tracer_shock	vfx	yes
 vfx_tracer_standard	vfx	no
+vfx_tracer_toxin	vfx	yes
 vfx_wave_clear	vfx	no
 vfx_wave_start	vfx	no
 weapon_emberpistol_vm	weapons	no
@@ -178,101 +303,3 @@ weapon_scattergun_world	weapons	no
 weapon_sidearm_vm	weapons	yes
 weapon_sidearm_world	weapons	no
 weapon_wrench_vm	weapons	no
-
-# Tower upgrade stage modules — chassis + one module per path, ten stages each.
-# M2 ships levels 1-5; s6-s10 open with endless at M4. Silhouette jumps at s4/s7/s10.
-# The * rows are counted by glob in the report.
-tower_arc_damage_s*	structures	yes
-tower_arc_range_s*	structures	yes
-tower_arc_rate_s*	structures	yes
-tower_lance_damage_s*	structures	yes
-tower_lance_range_s*	structures	yes
-tower_lance_rate_s*	structures	yes
-tower_nova_damage_s*	structures	yes
-tower_nova_range_s*	structures	yes
-tower_nova_rate_s*	structures	yes
-tower_singularity_range_s*	structures	yes
-tower_singularity_rate_s*	structures	yes
-tower_skywatch_damage_s*	structures	yes
-tower_skywatch_range_s*	structures	yes
-tower_skywatch_rate_s*	structures	yes
-
-# Beyond the brief: extras Claude Design shipped in the first delivery.
-# wired=yes here means the integration already consumes them.
-foundry_skybox	maps	yes
-foundry_terrain_scatter	maps	yes
-hero_ember_downed	heroes	yes
-hero_glacier_downed	heroes	yes
-hero_glacier_revive	heroes	no
-hero_ember_revive	heroes	no
-hero_forge_downed	heroes	yes
-hero_forge_revive	heroes	no
-hero_specter_downed	heroes	yes
-hero_specter_revive	heroes	no
-hero_tempest_downed	heroes	yes
-hero_tempest_revive	heroes	no
-proj_lance_bolt_t2	vfx	no
-proj_lance_bolt_t3	vfx	no
-proj_nova_shell_t2	vfx	no
-proj_nova_shell_t3	vfx	no
-proj_skywatch_bolt_t2	vfx	no
-proj_skywatch_bolt_t3	vfx	no
-switchyard_column	maps	yes
-switchyard_path_ground	maps	yes
-switchyard_skybox	maps	yes
-switchyard_terrain_scatter	maps	yes
-tower_detector_analysis_s*	structures	yes
-tower_detector_field_s*	structures	yes
-tower_filament_optics_s*	structures	yes
-tower_filament_peak_s*	structures	yes
-tower_filament_ramp_s*	structures	yes
-tower_overclock_efficiency_s*	structures	no
-tower_overclock_network_s*	structures	no
-tower_overclock_potency_s*	structures	no
-vfx_impact_arc	vfx	no
-vfx_impact_lance	vfx	no
-vfx_impact_nova	vfx	no
-vfx_impact_skywatch	vfx	no
-vfx_muzzle_arc	vfx	no
-vfx_muzzle_lance	vfx	no
-vfx_muzzle_nova	vfx	no
-vfx_muzzle_skywatch	vfx	no
-# Beyond the brief: extras Claude Design shipped in the 2026-09-07 drop (state variants,
-# M4/M5 enemies, the two new factions' hands, status VFX). Same rule: wired=yes means the
-# integration already consumes them; the rest wait on the system named in ASSET-DELIVERY.md.
-enemy_leaper_airborne	enemies	no
-enemy_leaper_windup	enemies	no
-enemy_ram_enraged	enemies	no
-hands_glacier	weapons	no
-hands_specter	weapons	no
-shared_cache_opened	maps	no
-shared_teleporter_pad_charged	maps	no
-shared_teleporter_pad_cooldown	maps	no
-shared_teleporter_pad_idle	maps	no
-shared_wall_destructible_broken	maps	no
-shared_wall_destructible_debris	maps	no
-vfx_lanewash	vfx	no
-vfx_status_poison	vfx	no
-vfx_status_reveal	vfx	no
-vfx_status_stun	vfx	no
-# Hand poses: design authors three (rifle / pistol / tool) and the base file is the rifle;
-# the export emits the other two beside it. Requested by the viewmodel per platform.
-hands_firstperson_pistol	weapons	yes
-hands_firstperson_tool	weapons	yes
-hands_ember_pistol	weapons	yes
-hands_ember_tool	weapons	yes
-hands_forge_pistol	weapons	yes
-hands_forge_tool	weapons	yes
-hands_tempest_pistol	weapons	yes
-hands_tempest_tool	weapons	yes
-hands_glacier_pistol	weapons	yes
-hands_glacier_tool	weapons	yes
-hands_specter_pistol	weapons	yes
-hands_specter_tool	weapons	yes
-# M3 gunsmith content the code asks for and design has not modelled yet (not on the forward
-# manifest either): the shock and toxin rounds, their tracers, and the toxin feed infusion.
-ammo_shock	weapons	yes
-ammo_toxin	weapons	yes
-attach_toxinfeed	weapons	yes
-vfx_tracer_shock	vfx	yes
-vfx_tracer_toxin	vfx	yes

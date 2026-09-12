@@ -237,4 +237,33 @@ public abstract record SimEvent
     {
         public override string LogLine() => $"{Tick} playerRespawned {PlayerId}";
     }
+
+    // ---- M4: teleport legs and vehicles -------------------------------------
+
+    /// <summary>An enemy reached a departure pad and is already standing on the
+    /// far one. FromLeg is the teleport leg it crossed; X/Y/Z is where it
+    /// landed, so the client can snap the view there instead of streaking it
+    /// two hundred metres across the map at walking speed.</summary>
+    public sealed record EnemyTeleported(int EnemyId, string RouteId, int FromLeg, float X, float Y, float Z) : SimEvent
+    {
+        public override string LogLine() =>
+            $"{Tick} enemyTeleported {EnemyId} {RouteId} {FromLeg} {F(X)} {F(Y)} {F(Z)}";
+    }
+
+    public sealed record VehicleEntered(int PlayerId, string VehicleId, int SeatIndex) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} vehicleEntered {PlayerId} {VehicleId} {SeatIndex}";
+    }
+
+    /// <summary>Reason is why they are out: left, downed, disconnected,
+    /// respawned. The client shows the first differently from the rest.</summary>
+    public sealed record VehicleExited(int PlayerId, string VehicleId, int SeatIndex, string Reason) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} vehicleExited {PlayerId} {VehicleId} {SeatIndex} {Reason}";
+    }
+
+    public sealed record VehicleRejected(int PlayerId, string VehicleId, string Reason) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} vehicleRejected {PlayerId} {VehicleId} {Reason}";
+    }
 }

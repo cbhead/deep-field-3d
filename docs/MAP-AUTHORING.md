@@ -128,7 +128,8 @@ only exist in C#.
   "layer": "ground",               // "ground" | "air"
   "waypoints": [[-45,0,-10], [-20,0,-2], [5,0,0], [40,0,8]],
   "barricadeGate": "b1",           // optional: usable only while b1 is empty
-  "fallbackRouteId": "ground"      // required if barricadeGate is set
+  "fallbackRouteId": "ground",     // required if barricadeGate is set
+  "teleportLegs": [11, 20]         // optional: legs crossed, not walked
 }
 ```
 
@@ -140,6 +141,18 @@ A **gated route** is the shortcut/long-way decision that gives a map its
 tactical spine: while the barricade slot is empty, enemies take the short way;
 build a barricade and they take the fallback. Foundry and Switchyard each have
 exactly one. Design owns whether a map has one and where it bites.
+
+A **teleport leg** is not walked. Leg *i* runs `waypoints[i]` to
+`waypoints[i+1]`; naming it in `teleportLegs` means an enemy reaching the near
+pad is standing on the far one the same tick and carries on from there. The leg
+has length zero for every purpose — distance travelled, coverage sampling, lane
+geometry — so the two pads can be anywhere and nothing downstream has to know
+how far apart they are. Three rules, all gated in the harness: never the first
+or last leg, never two in a row, never on an air route. A warp gate is drawn at
+each end, and the eight metres after an arrival pad are spawn apron exactly as
+the eight after the gate are (§4). The Toaster's three ground routes take
+nought, one and two of them, which is the map's whole idea: the wave that takes
+the long way is gone for three minutes and comes back somewhere else.
 
 ### 2.2 Sockets — where players build
 
@@ -164,8 +177,26 @@ brief; renaming one is a breaking change.
   "heroSpawn": [0, 0, -26],
   "armory":    [6, 0, -26],
   "stations":  [["yard",[0,0,-22]], ["midDeck",[-6,5,-17]], ["catwalk",[2,10,3]]]
-}
+},
+"vehicles": [
+  ["buggy1", "buggy", [-120, 0, -14], -90]   // id, def, position, yaw degrees
+],
+"roads": [
+  { "kind": "asphalt", "width": 6, "points": [[-54,0,68], [-54,0,45]] }
+],
+"pond": { "at": [19, 0, -36], "radius": 17 }
 ```
+
+Vehicles are `buggy`, `dagator`, `grnmchn` and `vehickle`; a map may park any
+of them anywhere, and the yaw matters — a vehicle nosed at the wall it is
+parked against is one whose first press of W is a crash.
+
+`roads` and `pond` are how a vehicle knows what it is driving on. There is no
+physics query under the wheels: the surface is read from these lines, so where
+a road runs is gameplay and what it is drawn with is not. Asphalt, gravel,
+grass and water each bend a vehicle's grip, acceleration and top speed by its
+own factors — a saloon is quick on tarmac and hopeless in a field, a quad the
+other way round.
 
 Stations are the auto-hero traversal graph — the places a bot-controlled hero
 will stand. There should be one per fightable tier, and each should be
@@ -205,10 +236,17 @@ an eighth is a code change, and worth asking for if a map needs it.
 | `ladder` | box | hold to climb; **must top out level with a surface** |
 | `zipline` | box, `to: [x,y,z]` | hold to ride to the far anchor |
 | `launcher` | box, `velocity: [x,y,z]` | hop pad; arcs the player somewhere specific |
-| `teleporter` | box, `padId` | paired pads |
+| `teleporter` | box, `padId`, `label` | one pad in the map's network |
 | `elevator` | box | cargo lift between two levels |
 | `nest` | box | sniper perch marker |
 | `armory` | box | the gunsmith kiosk trigger |
+
+A `teleporter` is a **network**, not a pair: every pad on a map is a
+destination for every other, and a player holding E on one picks from a radial
+of the rest by name and distance. The charge is a second and a half of standing
+still, cancelled by stepping off, and the cooldown after it is twenty seconds
+and personal. Label each pad with somewhere a player can recognise — four pads
+inside four buildings are four identical rooms otherwise.
 
 The single most expensive bug this project has had was a ladder whose rungs
 ended against the **underside** of the deck it served. It looked correct from
@@ -273,18 +311,28 @@ modules tiled along a run; a spanned piece between two points (ziplines); a
   There are no hills, no true cuttings, no ramps that are not authored volumes.
   Switchyard's "freight cut" is a channel *drawn* at grade for exactly this
   reason, and design's own note says so.
-- **Curved routes or curved track.** Everything is straight segments.
-- **Per-map field size.** The ground slab is **110 × 80 m for every map**
-  (x ±55, z ±40), and terrain tiles cover x −50…50, z −30…30. Maps get taller,
-  not wider. If a map needs a bigger field, that is a code change — ask.
+- **Curved routes, track or road.** Everything is straight segments; an arc is
+  built from arc modules laid round a centre.
+
+### The client can now build, since the Toaster
+
+- **A field of any size.** `"field": [x, z]` is honoured: the slab, the terrain
+  grid, the boundary, the scatter and the shadow distance all read it, and the
+  edge of the playable area is an invisible wall rather than a drop. 110 × 80
+  stays the default, and the three maps that were that size are laid exactly as
+  they were. The Toaster is 320 × 160.
+- **Buildings with insides.** A floor, walls with openings, and a roof that is
+  a walkable surface rather than a lid — so a wall socket can sit on one and a
+  ladder can serve it. Openings only; a door that closes is a wall.
+- **Vehicles**, per §2.3.
 
 ### Fixed numbers to design against
 
 | | |
 |---|---|
-| Field | 110 × 80 m, y 0 at grade |
+| Field | per map; 110 × 80 m unless the level file says otherwise, y 0 at grade |
 | Ground lane width | 3.4 m |
-| Air lane ribbon | 1.2 m, typically y 8–15 |
+| Air lane ribbon | 1.2 m; y 8–15 over a map with decks, y 9 over one without |
 | Linear module repeat | 4 m |
 | Socket pad | 1.1 m radius visual, 1.2 m collision |
 | Tower range at L1 | 9–16 m depending on the tower |
@@ -328,7 +376,16 @@ is worse design than the hole it closes.
    says so. A strand answerable only from decks is a legitimate design — it is
    what Switchyard's catwalk is *for* — but it has to be a decision, not an
    accident, and §4.1 then carries the whole air layer on that climb being
-   reachable. The validator prints the ground/deck split per tower. Skywatch, Arc and Filament damage flyers; Detector and
+   reachable. The validator prints the ground/deck split per tower.
+
+   A map with no deck has to make the opposite decision, and the Toaster does:
+   its strand flies at 9 m, down the same line the walkers take, so the pads
+   that cover the road cover it too. That is a real cost — a mixed wave there
+   is a question of volume rather than of position, and the towers-only floor
+   holds two waves longer than it did when the strand had a line of its own —
+   and it is the right cost, because the alternative on flat ground is a lane
+   nothing in the game can shoot at. Height is how an air lane asks for a
+   second position; where there is no second position to ask for, do not ask. Skywatch, Arc and Filament damage flyers; Detector and
    Singularity affect them without damage; Lance, Nova and Barricade cannot
    touch them.
 6. No socket covers nothing. A pad that reaches no route segment at any upgrade
