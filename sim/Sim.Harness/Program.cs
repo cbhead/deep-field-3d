@@ -1288,33 +1288,42 @@ if (args.Contains("--baseline"))
 
 // --- Gate 22c: the map can be shaped and cannot be sealed.
 //
-// The rule the whole mutable layer rests on. Switchyard cannot demonstrate it
-// yet — closing its one gate still leaves the long way — so this asserts the
-// mechanism directly: WouldSeal is true exactly when closing an edge would
-// leave a spawn unable to reach any core, and a build that would do it is
-// refused out loud before the money moves.
+// The rule the whole mutable layer rests on, exercised the way a player would
+// find it: Switchyard has two doors out of its gate, and this shuts them both.
+// The first succeeds and the second is refused — named, and before the money
+// moves, so walking into the edge of the system costs nothing but the attempt.
+//
+// Order matters and is checked both ways round: whichever door you shut first,
+// the other one is the one you cannot have.
 {
-    var world = new World(Seed, Maps.Switchyard);
-    world.Money = 1000;
-    world.Enqueue(new Command.PlaceTower(0, "barricade", "b1"));
-    Step.Advance(world);
+    static (bool Built, bool Refused, string Reason, bool Paid) ShutBoth(string first, string second)
+    {
+        var world = new World(Seed, Maps.Switchyard);
+        world.Money = 1000;
+        world.Enqueue(new Command.PlaceTower(0, "barricade", first));
+        Step.Advance(world);
+        bool built = world.Towers.Any(t => t.SocketId == first);
 
-    int cut = world.Graph.EdgeIndexOf("westGate-cutMouth");
-    int longWay = world.Graph.EdgeIndexOf("westGate-switchbackNorth");
-    bool cutIsShut = !world.EdgeOpen[cut];
-    // With the cut already shut, shutting the only other way out of the gate
-    // would strand every spawn.
-    bool wouldSeal = world.WouldSeal(longWay);
-    // And the refusal is a real one: no money spent, reason named.
-    int moneyBefore = world.Money;
-    var refusals = new List<string>();
-    world.Enqueue(new Command.PlaceTower(0, "barricade", "b1"));
-    Step.Advance(world);
-    foreach (var e in world.Events.OfType<SimEvent.BuildRejected>()) refusals.Add(e.Reason);
+        int before = world.Money;
+        world.Enqueue(new Command.PlaceTower(0, "barricade", second));
+        Step.Advance(world);
+        var rejection = world.Events.OfType<SimEvent.BuildRejected>().FirstOrDefault();
 
-    Gate("barricade: closing the last way through is refused, not allowed",
-        cutIsShut && wouldSeal && world.Money == moneyBefore,
-        $"cut shut {cutIsShut}, sealing the long way would strand a spawn: {wouldSeal}");
+        return (built,
+                !world.Towers.Any(t => t.SocketId == second),
+                rejection?.Reason ?? "none",
+                world.Money != before);
+    }
+
+    var cutFirst = ShutBoth("b1", "b2");
+    var switchbackFirst = ShutBoth("b2", "b1");
+    bool ok = cutFirst.Built && cutFirst.Refused && cutFirst.Reason == "wouldSeal" && !cutFirst.Paid
+           && switchbackFirst.Built && switchbackFirst.Refused
+           && switchbackFirst.Reason == "wouldSeal" && !switchbackFirst.Paid;
+
+    Gate("barricade: you may shut either way through, and never both", ok,
+        $"cut then switchback: {cutFirst.Reason}; switchback then cut: {switchbackFirst.Reason}"
+        + $"; charged for the refusal: {cutFirst.Paid || switchbackFirst.Paid}");
 }
 
 // --- Gate 24 (M3): poison is the answer burn is not.

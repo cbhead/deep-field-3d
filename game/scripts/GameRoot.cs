@@ -1937,6 +1937,10 @@ public partial class GameRoot : Node3D
         "unknownTower" => "unknown structure",
         "wrongSocketTag" => "wrong socket type for that",
         "trapSocket" => "that plate takes traps",
+        // Not a failure the player did wrong — a rule of the map, stated as
+        // one. It is the only refusal that is about the shape of the level
+        // rather than about the thing being built.
+        "wouldSeal" => "that would leave the wave nowhere to walk",
         "maxLevel" => "already at max level",
         "unknownPath" => "no such upgrade path",
         "factionTaken" => "another player already has that faction",

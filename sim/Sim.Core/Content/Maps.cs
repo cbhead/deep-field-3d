@@ -310,7 +310,14 @@ public static class Maps
             new SocketDef("t11", new Vec3(15f, 0f, 6f), SocketTag.Trap),
             new SocketDef("t12", new Vec3(25f, 0f, 9.2f), SocketTag.Trap),
 
+            // Two doors out of the same gate, which is what makes the map's
+            // rule a lived one rather than a proof. `b1` shuts the freight cut,
+            // `b2` the switchback — and shutting both would leave the wave
+            // nowhere to walk, so the second one is refused. A player finds the
+            // edge of the system by walking into it, once, and the refusal says
+            // why.
             new SocketDef("b1", new Vec3(-8f, 0f, -1f), SocketTag.Barricade),
+            new SocketDef("b2", new Vec3(-30f, 0f, -10f), SocketTag.Barricade),
         },
         HeroSpawn: new Vec3(0f, 0f, -26f),
         ArmoryPos: new Vec3(6f, 0f, -26f),
@@ -365,6 +372,7 @@ public static class Maps
         LaneGatesOrNull: new[]
         {
             new LaneGateDef("westGate-cutMouth", "b1"),
+            new LaneGateDef("westGate-switchbackNorth", "b2"),
         });
 
     /// <summary>Sector 3. A tower block, and the only map where the core is at
