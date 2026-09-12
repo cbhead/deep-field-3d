@@ -105,10 +105,20 @@ if (args.Contains("--baseline"))
         $"# seed {Seed}",
         header,
     };
-    var outPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..",
-        "docs", "gate-baseline.tsv");
-    File.WriteAllLines(Path.GetFullPath(outPath), preamble.Concat(rows));
-    Console.WriteLine($"wrote {Path.GetFullPath(outPath)} — {rows.Count} scenarios");
+    // Walk up for the repo rather than counting "..": the depth from the build
+    // output depends on configuration and TFM, and a baseline written to the
+    // wrong place is a file nobody diffs.
+    var dir = new DirectoryInfo(AppContext.BaseDirectory);
+    while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, "docs")))
+        dir = dir.Parent;
+    if (dir is null)
+    {
+        Console.Error.WriteLine("--baseline: no docs/ directory above " + AppContext.BaseDirectory);
+        return 1;
+    }
+    var outPath = Path.Combine(dir.FullName, "docs", "gate-baseline.tsv");
+    File.WriteAllLines(outPath, preamble.Concat(rows));
+    Console.WriteLine($"wrote {outPath} — {rows.Count} scenarios");
     return 0;
 }
 

@@ -45,7 +45,24 @@ public sealed record EnemyDef(
     float StructureDps = 0f,       // Ram: hp/sec dealt to a structure in reach
     float StructureReach = 0f,     // how close it must be to start swinging
     float EnrageBelowHpFraction = 0f, // Ram: speeds up when hurt
-    float EnrageSpeedFactor = 1f);
+    float EnrageSpeedFactor = 1f)
+{
+    /// <summary>The front arc's half-angle as a cosine, and the 150° rear
+    /// threshold as one. Directional armour is a cone test, and a cone test is a
+    /// dot product against a cosine — but the tick was going the long way round,
+    /// taking `Acos` of the dot, converting to degrees, and comparing that. Two
+    /// transcendentals and a division per damage event, to answer a question the
+    /// dot already answered.
+    ///
+    /// Precomputed here, and the comparison inverts with them: cosine decreases
+    /// as the angle grows, so "inside the front arc" is `dot >= CosFrontArmorHalfArc`
+    /// and "from behind" is `dot <= CosRearThreshold`. See <see cref="DetMath"/>
+    /// for why a transcendental cannot stay in the tick.</summary>
+    public float CosFrontArmorHalfArc { get; } = DetMath.CosDegrees(FrontArmorArcDegrees / 2f);
+
+    /// <summary>cos(150°) — the angle past which a hit counts as from behind.</summary>
+    public static readonly float CosRearThreshold = DetMath.CosDegrees(150f);
+}
 
 /// <summary>One of a tower's upgrade paths, ten levels deep.
 ///

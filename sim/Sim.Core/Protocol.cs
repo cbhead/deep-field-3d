@@ -92,6 +92,13 @@ public static class Protocol
         return (tick, snaps);
     }
 
+    /// <summary>The one transcendental left in Sim.Core, and it is allowed to
+    /// stay: this quantises a facing to a single byte for the snapshot wire and
+    /// its result never enters world state, the event log, or any decision the
+    /// tick makes. A one-ulp difference between two machines' libm cannot even
+    /// change the byte in all but a vanishing set of cases, and if it did the
+    /// cost is a remote enemy drawn a degree and a half off. Everything that
+    /// *does* feed the log was moved off libm — see <see cref="DetMath"/>.</summary>
     private static byte PackYaw(Vec3 facing)
     {
         float yaw = MathF.Atan2(facing.X, facing.Z);            // [-π, π]

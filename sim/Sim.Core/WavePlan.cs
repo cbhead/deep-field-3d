@@ -21,7 +21,7 @@ public static class WavePlan
         var groups = tables[waveIndex % tables.Count];
 
         float countScale = (1f + Balance.CountScalePerExtraPlayer * (playerCount - 1))
-                           * MathF.Pow(Balance.EndlessCountGrowthPerLap, lap);
+                           * DetMath.PowInt(Balance.EndlessCountGrowthPerLap, lap);
         float hpScale = HpScale(map, waveIndex, playerCount);
 
         var entries = new List<SpawnEntry>();
@@ -57,13 +57,13 @@ public static class WavePlan
     /// enemy that takes four times as long to kill should not pay the same as
     /// the one on wave one.</summary>
     public static float BountyScale(int waveIndex) =>
-        Balance.BountyScale * MathF.Pow(Balance.BountyGrowth, waveIndex);
+        Balance.BountyScale * DetMath.PowInt(Balance.BountyGrowth, waveIndex);
 
     /// <summary>What a kill on this wave yields in scrap, as a multiple of the
     /// enemy's def yield. Same shape as <see cref="BountyScale"/>, and for the
     /// same reason.</summary>
     public static float ScrapScale(int waveIndex) =>
-        MathF.Pow(Balance.ScrapGrowth, waveIndex);
+        DetMath.PowInt(Balance.ScrapGrowth, waveIndex);
 
     /// <summary>The hp multiplier a wave spawns with, times the player-count
     /// factor. Exposed so the HUD's endless threat readout is the sim's
@@ -80,12 +80,12 @@ public static class WavePlan
         float player = 1f + Balance.HpScalePerExtraPlayer * (playerCount - 1);
         int lastAuthored = Waves.ByMap[map.Id].Count - 1;
         if (waveIndex <= lastAuthored)
-            return player * MathF.Pow(Balance.HpGrowth, waveIndex);
+            return player * DetMath.PowInt(Balance.HpGrowth, waveIndex);
 
         // Continuous at the join: the last authored wave keeps its campaign
         // value and endless grows from there.
-        return player * MathF.Pow(Balance.HpGrowth, lastAuthored)
-                      * MathF.Pow(Balance.EndlessHpGrowth, waveIndex - lastAuthored);
+        return player * DetMath.PowInt(Balance.HpGrowth, lastAuthored)
+                      * DetMath.PowInt(Balance.EndlessHpGrowth, waveIndex - lastAuthored);
     }
 
     /// <summary>Weather's contribution to a wave, appended after the authored

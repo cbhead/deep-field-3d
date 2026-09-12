@@ -10,6 +10,24 @@ namespace DeepField.Sim;
 /// Cleanup → CheckEndState.</summary>
 public static class Step
 {
+    /// <summary>Where a dropped pile of each scrap type lands relative to the
+    /// body, so a Monolith's three drops read as three things rather than one
+    /// pile. Golden angle (2.399963 rad), 0.6 m out, one per <see cref="ScrapType"/>
+    /// in declaration order.
+    ///
+    /// A table rather than the `Cos`/`Sin` pair it used to be: the angle is a
+    /// function of the type and nothing else, so there are exactly four answers
+    /// and a transcendental in the tick bought nothing. It was already
+    /// deliberately not RNG — this makes it deliberately not libm either. See
+    /// <see cref="DetMath"/>.</summary>
+    private static readonly Vec3[] ScrapDropOffsets =
+    {
+        new Vec3(0.600000000f, 0f, 0.000000000f),    // Alloy
+        new Vec3(-0.442421234f, 0f, 0.405294278f),   // Flux
+        new Vec3(0.052455160f, 0f, -0.597702649f),   // Plating
+        new Vec3(0.365063645f, 0f, 0.476160199f),    // Gravium
+    };
+
     public static void Advance(World w)
     {
         if (w.IsOver) return;
@@ -513,7 +531,7 @@ public static class Step
 
         float damage = def.Damage * build.DamageFactor();
         var applies = def.Applies.Concat(build.ExtraApplies()).ToList();
-        float cosArc = MathF.Cos(def.ArcDegrees * MathF.PI / 180f);
+        float cosArc = def.CosArc;
         bool connected = false;
 
         // Snapshot: a swing that kills a Cluster must not also hit the children
@@ -1481,7 +1499,7 @@ public static class Step
         for (int i = 0; i < def.UpgradePaths.Count; i++)
         {
             if (def.UpgradePaths[i].Id == pathId)
-                return MathF.Pow(def.UpgradePaths[i].PerLevelFactor, tower.PathLevels[i]);
+                return DetMath.PowInt(def.UpgradePaths[i].PerLevelFactor, tower.PathLevels[i]);
         }
         return 1f;
     }
@@ -1777,11 +1795,12 @@ public static class Step
         {
             var toSource = fromSource * (-1f / sourceDist);
             float dot = toSource.X * enemy.Facing.X + toSource.Y * enemy.Facing.Y + toSource.Z * enemy.Facing.Z;
-            float angleDegrees = MathF.Acos(System.Math.Clamp(dot, -1f, 1f)) * (180f / MathF.PI);
 
-            if (angleDegrees <= def.FrontArmorArcDegrees / 2f)
+            // Compared as cosines rather than as degrees — same test, no Acos.
+            // The inequalities flip because cosine decreases as the angle grows.
+            if (dot >= def.CosFrontArmorHalfArc)
                 amount *= def.FrontArmorFactor;
-            else if (angleDegrees >= 150f)
+            else if (dot <= EnemyDef.CosRearThreshold)
                 amount *= def.RearWeakFactor;
         }
 
@@ -1913,9 +1932,7 @@ public static class Step
                 // Spread by scrap type so a Monolith's three drops are three
                 // things rather than one pile. Deterministic: the offset comes
                 // from the type, never from an RNG stream.
-                int slot = (int)type;
-                float angle = slot * 2.399963f;      // golden angle, evenly spaced
-                var offset = new Vec3(MathF.Cos(angle) * 0.6f, 0f, MathF.Sin(angle) * 0.6f);
+                var offset = ScrapDropOffsets[(int)type];
                 var pickup = new ScrapPickup
                 {
                     Id = w.NextId(),
