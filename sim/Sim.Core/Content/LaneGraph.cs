@@ -51,6 +51,21 @@ public sealed record LaneNodeDef(string Id, Vec3 Pos, LaneNodeKind Kind);
 /// enough.</summary>
 public sealed record LaneNodeNameDef(string Id, Vec3 At);
 
+/// <summary>An edge a player can close, and the socket that closes it.
+///
+/// This is the barricade, promoted. It used to be RouteDef.BarricadeGate: a
+/// named slot that, while occupied, made *spawning* enemies pick a different
+/// polyline. Enemies already walking were unaffected, because there was nothing
+/// a route could do about a wall appearing on it — MAP-AUTHORING §3 records
+/// that as "the sim cannot model re-routing mid-walk".
+///
+/// On a graph it is a door. The edge closes, and everything that reaches the
+/// junction in front of it — spawning or already halfway down the map — goes
+/// the other way. The decision moves from "which polyline was I born on" to
+/// "what is open when I get to the fork", which is the same thing a player
+/// thinks is happening and never was.</summary>
+public sealed record LaneGateDef(string EdgeId, string SocketId);
+
 /// <summary>One authored span between two nodes. <see cref="Waypoints"/>
 /// includes both endpoints, so an edge carries its whole geometry and a walker
 /// needs nothing but the edge to know where it is.</summary>
@@ -111,6 +126,12 @@ public sealed class LaneGraph
         Edges = edges;
         Itineraries = itineraries;
         NearMisses = nearMisses;
+    }
+
+    public int EdgeIndexOf(string id)
+    {
+        for (int i = 0; i < Edges.Count; i++) if (Edges[i].Id == id) return i;
+        return -1;
     }
 
     public LaneEdgeDef Edge(string id) => Edges.First(e => e.Id == id);
@@ -325,11 +346,24 @@ public sealed class LaneGraph
     /// ordering two equal-distance nodes differently on two machines is exactly
     /// the class of thing <see cref="DetMath"/> exists to keep out of the tick.</summary>
     public float[] DistanceToCore(IReadOnlyList<bool>? edgeOpen = null)
+        => DistanceTo(n => n.Kind == LaneNodeKind.Core, edgeOpen);
+
+    /// <summary>Metres from every node to one named node, over open edges.
+    ///
+    /// The same relaxation as <see cref="DistanceToCore"/>, seeded somewhere
+    /// else. Enemies head for the next place their itinerary names, not for the
+    /// core — that is what makes "the long way round" survive an edge closing
+    /// rather than collapsing to the short way the moment routing becomes a
+    /// decision.</summary>
+    public float[] DistanceToNode(string nodeId, IReadOnlyList<bool>? edgeOpen = null)
+        => DistanceTo(n => n.Id == nodeId, edgeOpen);
+
+    private float[] DistanceTo(Func<LaneNodeDef, bool> isTarget, IReadOnlyList<bool>? edgeOpen)
     {
         var index = NodeIndex;
         var dist = new float[Nodes.Count];
         for (int i = 0; i < dist.Length; i++)
-            dist[i] = Nodes[i].Kind == LaneNodeKind.Core ? 0f : float.PositiveInfinity;
+            dist[i] = isTarget(Nodes[i]) ? 0f : float.PositiveInfinity;
 
         for (int pass = 0; pass < Nodes.Count; pass++)
         {

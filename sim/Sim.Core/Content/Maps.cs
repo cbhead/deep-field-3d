@@ -350,6 +350,21 @@ public static class Maps
             new LaneNodeNameDef("core", new Vec3(40f, 0f, 8f)),
             new LaneNodeNameDef("airWest", new Vec3(-45f, 9f, 4f)),
             new LaneNodeNameDef("airCore", new Vec3(40f, 9f, 6f)),
+        },
+        // The barricade, as a door. `b1` shuts the way *into* the cut rather
+        // than the stretch it stands on: close the far stretch and anything
+        // already past cutMouth has nowhere to go, and an enemy with nowhere to
+        // go is the one outcome this system must not produce. Shutting the
+        // entrance turns the wave at the fork instead, which is what a player
+        // watching it thinks is happening — and, unlike the spawn-time swap it
+        // replaces, it turns the ones already walking too.
+        //
+        // The Ram still comes down the cut: siege enemies route as if every gate
+        // were open, so it walks at `b1` and breaks it. Being blocked is what
+        // makes it choose the shortcut, not what stops it.
+        LaneGatesOrNull: new[]
+        {
+            new LaneGateDef("westGate-cutMouth", "b1"),
         });
 
     /// <summary>Sector 3. A tower block, and the only map where the core is at

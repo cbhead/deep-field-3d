@@ -267,10 +267,15 @@ public sealed record MapDef(
     // ("westGate-cutMouth") and, more importantly, *stable*: positional ids
     // renumber the moment a waypoint moves, and a fixture naming an edge and a
     // save file naming it back both need an id that survives a map edit.
-    IReadOnlyList<LaneNodeNameDef>? LaneNodeNamesOrNull = null)
+    IReadOnlyList<LaneNodeNameDef>? LaneNodeNamesOrNull = null,
+    // Which lane edges a player can shut, and with what.
+    IReadOnlyList<LaneGateDef>? LaneGatesOrNull = null)
 {
     public IReadOnlyList<LaneNodeNameDef> LaneNodeNames =>
         LaneNodeNamesOrNull ?? System.Array.Empty<LaneNodeNameDef>();
+
+    public IReadOnlyList<LaneGateDef> LaneGates =>
+        LaneGatesOrNull ?? System.Array.Empty<LaneGateDef>();
 
     public IReadOnlyDictionary<int, string> ConditionSchedule =>
         ConditionScheduleOrNull ?? EmptySchedule;

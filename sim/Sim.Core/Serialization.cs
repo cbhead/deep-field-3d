@@ -16,7 +16,8 @@ public static class Serialization
     // second source of truth waiting to disagree with the first.
     private sealed record EnemyState(
         int Id, string DefId, float Hp, float MaxHp,
-        int ItineraryIndex, int EdgeStep, int Segment, float SegmentProgress,
+        int ItineraryIndex, int EdgeIndex, int PrevEdgeIndex, int Segment,
+        float SegmentProgress, int ViaCursor, int LegCounter,
         float TotalTraveled, float LateralOffset, float FacingX, float FacingY, float FacingZ,
         int Bounty, int LeakDamage, int WaveIndex, List<StatusState> Statuses,
         float Shield, float ShieldTimer, float CcResist, bool Burrowed);
@@ -77,7 +78,8 @@ public static class Serialization
             (int)w.Phase, w.PhaseTimer, w.WaveIndex, w.WaveStartTick,
             w.Enemies.Select(e => new EnemyState(
                 e.Id, e.DefId, e.Hp, e.MaxHp,
-                e.ItineraryIndex, e.EdgeStep, e.Segment, e.SegmentProgress,
+                e.ItineraryIndex, e.EdgeIndex, e.PrevEdgeIndex, e.Segment,
+                e.SegmentProgress, e.ViaCursor, e.LegCounter,
                 e.TotalTraveled, e.LateralOffset, e.Facing.X, e.Facing.Y, e.Facing.Z,
                 e.Bounty, e.LeakDamage, e.WaveIndex, ActiveStatuses(e),
                 e.Shield, e.ShieldTimer, e.CcResist, e.Burrowed)).ToList(),
@@ -141,8 +143,10 @@ public static class Serialization
             var enemy = new Enemy
             {
                 Id = e.Id, DefId = e.DefId, Hp = e.Hp, MaxHp = e.MaxHp,
-                ItineraryIndex = e.ItineraryIndex, EdgeStep = e.EdgeStep,
-                Segment = e.Segment, SegmentProgress = e.SegmentProgress,
+                ItineraryIndex = e.ItineraryIndex, EdgeIndex = e.EdgeIndex,
+                PrevEdgeIndex = e.PrevEdgeIndex, Segment = e.Segment,
+                SegmentProgress = e.SegmentProgress, ViaCursor = e.ViaCursor,
+                LegCounter = e.LegCounter,
                 TotalTraveled = e.TotalTraveled, LateralOffset = e.LateralOffset,
                 Facing = new Vec3(e.FacingX, e.FacingY, e.FacingZ),
                 Bounty = e.Bounty, LeakDamage = e.LeakDamage, WaveIndex = e.WaveIndex,
@@ -280,10 +284,9 @@ public static class Serialization
 
     private static void RecomputePosition(World world, Enemy enemy)
     {
-        var edgeSteps = world.ItineraryEdges[enemy.ItineraryIndex];
-        int step = System.Math.Min(enemy.EdgeStep, edgeSteps.Length - 1);
-        var edge = world.Graph.Edges[edgeSteps[step]];
-        var segments = world.EdgeSegmentLengths[edgeSteps[step]];
+        if (enemy.EdgeIndex < 0) return;                  // leaked; nothing to place
+        var edge = world.Graph.Edges[enemy.EdgeIndex];
+        var segments = world.EdgeSegmentLengths[enemy.EdgeIndex];
         int segment = System.Math.Min(enemy.Segment, segments.Length - 1);
         float length = segments[segment];
         var a = edge.Waypoints[segment];

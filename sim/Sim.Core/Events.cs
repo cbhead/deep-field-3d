@@ -56,6 +56,18 @@ public abstract record SimEvent
         public override string LogLine() => $"{Tick} enemyLeaked {EnemyId} {DefId} {LivesLost}";
     }
 
+    /// <summary>An enemy reached a junction with no open way onward.
+    ///
+    /// This should be unreachable: no mutation is allowed to leave a spawn
+    /// unable to reach the core, and the validator proves it at author time.
+    /// It exists so that if the proof is ever wrong the sim says so loudly on
+    /// the tick it happens, instead of an enemy quietly standing still forever
+    /// and a wave that never ends reading as a hung match.</summary>
+    public sealed record EnemyStranded(int EnemyId, string AtNode) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} enemyStranded {EnemyId} {AtNode}";
+    }
+
     public sealed record TowerPlaced(int TowerId, string DefId, string SocketId, int PlayerId) : SimEvent
     {
         public override string LogLine() => $"{Tick} towerPlaced {TowerId} {DefId} {SocketId} {PlayerId}";

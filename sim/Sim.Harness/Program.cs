@@ -1231,7 +1231,13 @@ if (args.Contains("--baseline"))
                             : string.Join("; ", problems.Take(4)));
 }
 
-// --- Gate 22 (M2): a barricade on b1 reroutes shortcut spawns to the long way.
+// --- Gate 22: a barricade shuts the freight cut, for walkers as well as spawns.
+//
+// This used to assert that a barricade changed which *route index* spawns were
+// given — a claim about a data model that no longer exists. The barricade is a
+// door now, so the thing to assert is what a player would see: with it up,
+// nothing walks the cut. Wave 1 is authored entirely onto groundShort, so every
+// enemy keeps that itinerary and takes a different way to reach the same places.
 {
     var world = new World(Seed, Maps.Switchyard);
     world.Money = 1000;
@@ -1239,11 +1245,76 @@ if (args.Contains("--baseline"))
     world.Enqueue(new Command.StartWave(0));
     while (world.Enemies.Count == 0) Step.Advance(world);
 
-    // Wave 1 is authored entirely onto groundShort (route index 1); with the
-    // gate closed every spawn must walk route index 0 (the long way).
-    bool rerouted = world.Enemies.All(e => e.ItineraryIndex == 0);
-    Gate("barricade: gated shortcut spawns fall back to the long route", rerouted,
-        $"routes {string.Join(",", world.Enemies.Select(e => e.ItineraryIndex).Distinct())}");
+    int cut = world.Graph.EdgeIndexOf("westGate-cutMouth");
+    var walkers = world.Enemies.Where(e => Enemies.All[e.DefId].StructureDps <= 0f).ToList();
+    bool avoided = walkers.Count > 0 && walkers.All(e => e.EdgeIndex != cut);
+    bool keptItinerary = walkers.All(e => e.ItineraryIndex == 1);
+
+    Gate("barricade: a closed gate turns the wave at the fork", avoided && keptItinerary,
+        $"{walkers.Count} walkers, none on the cut: {avoided}; itinerary kept: {keptItinerary}");
+}
+
+// --- Gate 22b: the thing the old model could not do — turn a wave already walking.
+//
+// MAP-AUTHORING §3 lists "re-routing mid-walk" under what the sim cannot model,
+// and the barricade's own doc said a wall built while enemies were walking did
+// not redirect the ones already committed. Both are now false, and this is the
+// gate that says so: let the wave get properly into the cut, then shut it, and
+// watch them come back out and go the other way.
+{
+    var world = new World(Seed, Maps.Switchyard);
+    world.Money = 1000;
+    world.Enqueue(new Command.StartWave(0));
+    while (world.Enemies.Count == 0) Step.Advance(world);
+
+    int cut = world.Graph.EdgeIndexOf("westGate-cutMouth");
+    for (int i = 0; i < 120; i++) Step.Advance(world);       // four seconds down the cut
+    int onCutBefore = world.Enemies.Count(e => e.EdgeIndex == cut);
+
+    world.Enqueue(new Command.PlaceTower(0, "barricade", "b1"));
+    Step.Advance(world);
+    // They finish the span they are on — nothing rubber-bands — and decide at
+    // the far end, so give them time to reach it.
+    for (int i = 0; i < 900; i++) Step.Advance(world);
+    int onCutAfter = world.Enemies.Count(e => e.EdgeIndex == cut);
+    bool anyWentLong = world.Enemies.Any(e =>
+        world.Graph.Edges[e.EdgeIndex].From == "switchbackNorth"
+        || world.Graph.Edges[e.EdgeIndex].To == "switchbackNorth");
+
+    Gate("barricade: shutting the gate re-routes enemies already walking",
+        onCutBefore > 0 && onCutAfter == 0 && anyWentLong,
+        $"on the cut {onCutBefore} -> {onCutAfter}, some took the switchback: {anyWentLong}");
+}
+
+// --- Gate 22c: the map can be shaped and cannot be sealed.
+//
+// The rule the whole mutable layer rests on. Switchyard cannot demonstrate it
+// yet — closing its one gate still leaves the long way — so this asserts the
+// mechanism directly: WouldSeal is true exactly when closing an edge would
+// leave a spawn unable to reach any core, and a build that would do it is
+// refused out loud before the money moves.
+{
+    var world = new World(Seed, Maps.Switchyard);
+    world.Money = 1000;
+    world.Enqueue(new Command.PlaceTower(0, "barricade", "b1"));
+    Step.Advance(world);
+
+    int cut = world.Graph.EdgeIndexOf("westGate-cutMouth");
+    int longWay = world.Graph.EdgeIndexOf("westGate-switchbackNorth");
+    bool cutIsShut = !world.EdgeOpen[cut];
+    // With the cut already shut, shutting the only other way out of the gate
+    // would strand every spawn.
+    bool wouldSeal = world.WouldSeal(longWay);
+    // And the refusal is a real one: no money spent, reason named.
+    int moneyBefore = world.Money;
+    var refusals = new List<string>();
+    world.Enqueue(new Command.PlaceTower(0, "barricade", "b1"));
+    Step.Advance(world);
+    foreach (var e in world.Events.OfType<SimEvent.BuildRejected>()) refusals.Add(e.Reason);
+
+    Gate("barricade: closing the last way through is refused, not allowed",
+        cutIsShut && wouldSeal && world.Money == moneyBefore,
+        $"cut shut {cutIsShut}, sealing the long way would strand a spawn: {wouldSeal}");
 }
 
 // --- Gate 24 (M3): poison is the answer burn is not.
@@ -1891,6 +1962,30 @@ if (args.Contains("--baseline"))
             ? string.Join(", ", Campaign.Sectors.Select(id =>
                 $"{id} {Maps.All[id].LaneNodeNames.Count}"))
             : string.Join(" | ", problems.Take(6)));
+}
+
+// --- Gate 52: nothing is ever stranded, anywhere in the campaign.
+//
+// The runtime counterpart to the landlock refusal. WouldSeal stops a player
+// sealing the map; this checks the other half — that no combination of a
+// closed gate and an enemy's own itinerary leaves it at a junction with
+// nowhere open to go. The sim emits enemyStranded on the tick it happens
+// precisely so a proof that turns out to be wrong is loud instead of looking
+// like a wave that never ends.
+{
+    var stranded = new List<string>();
+    foreach (var id in Campaign.Sectors)
+    {
+        var r = MatchRunner.Run(Seed, Maps.All[id], MidBot());
+        int count = r.EventLog.Count(line => line.Contains("enemyStranded"));
+        if (count > 0) stranded.Add($"{id}: {count}");
+    }
+
+    Gate("routing: no enemy is ever left at a junction with nowhere to go",
+        stranded.Count == 0,
+        stranded.Count == 0
+            ? $"{Campaign.Sectors.Count} maps, full floor policies, none stranded"
+            : string.Join(" | ", stranded));
 }
 
 Console.WriteLine();
