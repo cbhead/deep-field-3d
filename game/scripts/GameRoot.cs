@@ -3449,20 +3449,29 @@ public partial class GameRoot : Node3D
             GD.Print($"[map] terrain: {tiles.Count} tiles in {drawn} multimesh(es)");
         }
 
-        // Lane surfaces.
-        foreach (var route in map.Routes)
+        // Lane surfaces, laid once per *edge* rather than once per route leg.
+        //
+        // Routes overlap, and the roadway used to be drawn once for each route
+        // that walks a stretch — the Toaster's `direct` shares every metre it
+        // has with `long`, so a third of that map's road was two or three
+        // boxes stacked in the same place, z-fighting with themselves and
+        // paying for the draw each time. The graph already knows a shared span
+        // is one lane; this is the client catching up with it.
+        var laneGraph = LaneGraph.FromRoutes(map);
+        foreach (var edge in laneGraph.Edges)
         {
-            bool air = route.Layer == EnemyLayer.Air;
+            // A warp is not walked, so there is no road to draw. Laying one
+            // would paint a two-hundred-metre diagonal of roadway across the
+            // fields, through the buildings, joining two pads that are
+            // deliberately nowhere near each other.
+            if (edge.Kind == LaneEdgeKind.Warp) continue;
+
+            bool air = edge.Layer == EnemyLayer.Air;
             var color = air ? new Color(0.5f, 0.6f, 0.9f, 0.25f) : new Color(0.2f, 0.22f, 0.27f);
-            for (int i = 0; i < route.Waypoints.Count - 1; i++)
+            for (int i = 0; i < edge.Waypoints.Count - 1; i++)
             {
-                // A warp leg is not walked, so there is no road to draw. Laying
-                // one would paint a two-hundred-metre diagonal of roadway
-                // across the fields, through the buildings, joining two pads
-                // that are deliberately nowhere near each other.
-                if (route.IsTeleportLeg(i)) continue;
-                var a = ToGd(route.Waypoints[i]);
-                var b = ToGd(route.Waypoints[i + 1]);
+                var a = ToGd(edge.Waypoints[i]);
+                var b = ToGd(edge.Waypoints[i + 1]);
                 var mid = (a + b) * 0.5f + new Vector3(0, air ? 0f : 0.06f, 0);
                 var box = AddStaticBox(mid, new Vector3((b - a).Length(), air ? 0.15f : 0.1f, air ? 1.2f : 3.4f), color, layer: 0, transparent: air);
                 var horizontal = b - a;
@@ -3485,10 +3494,16 @@ public partial class GameRoot : Node3D
                     // actual track is laid as track in BuildSwitchyardRailway.
                     if (map.Id == "switchyard") MapKit.HideNamed(box, "lane_track");
                 }
-            }
 
-            if (air) BuildAirLaneSupports(route);
+                if (!_laneBodies.TryGetValue(edge.Id, out var run))
+                    _laneBodies[edge.Id] = run = new List<Node3D>();
+                run.Add(box);
+            }
         }
+
+        // Air supports are per strand, and a strand is one edge.
+        foreach (var route in map.Routes)
+            if (route.Layer == EnemyLayer.Air) BuildAirLaneSupports(route);
 
         BuildLaneMouths(map);
         BuildWarpGates(map);
@@ -5022,6 +5037,10 @@ public partial class GameRoot : Node3D
             RefreshGateArt(lever.Id, shut: false);
         }
     }
+
+    /// <summary>The roadway of each lane edge, so a shut lane can stop looking
+    /// like an open road.</summary>
+    private readonly Dictionary<string, List<Node3D>> _laneBodies = new();
 
     private readonly Dictionary<string, StaticBody3D> _gateBodies = new();
     private readonly HashSet<string> _shutGates = new();
