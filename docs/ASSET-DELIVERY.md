@@ -84,9 +84,6 @@ Design has no source for these; they will keep drawing placeholders.
 2. `godot --headless --path game --import` (the working form — see ART-INTEGRATION.md).
 3. `./tools/prepare-icons.sh` — icons still use `currentColor`.
 4. `make assets && make usage` — expect the same counts as before this drop.
-
----
-
 ## Integration record — 2026-09-07 (code side)
 
 What actually landed when this drop was generated from the project sources
@@ -115,3 +112,43 @@ What actually landed when this drop was generated from the project sources
   broken below ⅓).
 - **Camera far planes** on the review-shot cameras were raised past the 700 m
   dome. The player camera already used Godot's default.
+
+---
+
+## Integration record — 2026-09-12 (code side)
+
+**`make design-export` had been failing outright, and silently.** The export page
+imported three kit modules that arrive with design's drops — `spire.js`,
+`toaster.js`, `vehicles.js` — as *static* imports. Only `spire.js` is vendored, so
+module resolution threw before a single line of the export ran, and the page
+produced **nothing at all, for every asset**, not just the missing kits. That is
+why `spire_*` had been absent since M3 while `spire.js` sat written and correct in
+`docs/design/models/`.
+
+The newest kits now load tolerantly (`tools/design-export/export.html`): a kit that
+will not load is named in the run's output and skipped, the rest of the pack still
+exports, and it starts exporting the day it is vendored with no code change. The
+failure text is reported verbatim rather than as "missing", because the same path
+would otherwise turn a syntax error inside a *delivered* kit into a silently empty
+one. Foundry, Switchyard, Shared and the Spire stay static on purpose — a break in
+a delivered kit should stop the run.
+
+What landed:
+
+- **The Spire kit, all 15 pieces** — `spire_floor`, `_facade`, `_lobby`, `_roof`,
+  `_roof_parapet`, `_fireescape`, `_fireescape_flight`, `_stairwell`, `_terrain`,
+  `_terrain_scatter`, `_path_ground`, `_skybox`, `_hvac`, `_watertank`, `_antenna`.
+  `spire_` was already registered in `AssetLibrary.Routes`, so they resolve on sight.
+- **454 GLBs re-exported.** Roughly ninety existing files show a byte-count change
+  of a few bytes with **identical `tris`, `parts` and `bounds`** in
+  `manifest.json` — GLTFExporter padding, not content. Committed anyway so the
+  manifest and the files on disk agree.
+- **Still not vendored:** `docs/design/models/toaster.js` and `vehicles.js`. Until
+  they are, `toaster_*` and `vehicle_*` resolve to nothing and those maps render
+  graybox with placeholder vehicles — now reported by name at the end of every run
+  instead of taking the whole export down with them.
+
+**Hazard for the next run:** the export PUTs `docs/ASSET-DELIVERY.md` from design's
+copy, which does not carry these code-side records — this section and the one above
+it were both clobbered by this run and restored by hand. Check the diff on this file
+after every export.

@@ -1,6 +1,6 @@
 # Asset usage
 
-**504 delivered · 375 consumed · 129 unused** — regenerate with `make usage`.
+**519 delivered · 383 consumed · 136 unused** — regenerate with `make usage`.
 
 `asset-report.sh` answers *has design shipped it*. This answers the question that
 rots silently: an asset can be delivered, imported, and never referenced by a
@@ -42,7 +42,9 @@ waits on the system it is for.
 | Overclock tower (chassis + 30 stage modules) | 31 | Overclock does not exist as a tower yet (M4). Delivered early on purpose — art lead time is the schedule risk. |
 | VFX | 27 | No status/ability/reaction VFX system yet: status particles, reaction bursts, ability effects, shield pop/regen, tower place/sell/upgrade, wave start/clear, the Detector pulse, Overclock link and lane wash. (Muzzle flashes, impacts and tracers are consumed now.) |
 | `_s1` stage modules | 19 | **Correct and intentional.** Design's chassis *is* the level-1 state and `_s1` is an empty root, so sim level N asks for stage N+1 and `_s1` is never requested. |
-| Map elements | 17 | Teleporter pad states, elevator, sniper nest, crusher, floodgate, operated gate, destructible wall, control-point and launcher-pad states, caches, physics props — M3/M4 map elements the sim does not drive yet (the pads and nest that *are* placed use the idle/neutral state). |
+| Map elements | 14 | Crusher, floodgate, operated gate, destructible wall (+ broken + debris), control-point capturing/held, caches, launcher charging/fired, physics props — M4 map elements the sim does not drive yet. The elevator and sniper nest *are* placed but inert: both have an `Area3D` and **no handler**, and the elevator is credited as a traversal exit by validator §4.1 without working. All of these are the subject of the M5 mutable-map work. |
+| Spire kit, unmounted pieces | 8 | `spire_antenna`, `_fireescape_flight`, `_hvac`, `_lobby`, `_roof_parapet`, `_stairwell`, `_terrain_scatter`, `_watertank`. The kit landed 2026-09-12 and `BuildSpireStructures` mounts 7 of its 15 pieces — the map was built as graybox before the kit existed and has never been authored against it. Belongs to the Spire redesign, not to patching. |
+| Teleporter pad charged/cooldown | 2 | **Requested by code** (`SetPadArt`/`RefreshPadArt` follow charge and cooldown) — the blind spot above: a solo match never stands on a pad long enough to charge one. |
 | M4/M5 enemies and states | 8 | Broodmother, Carapace (+ plate), Leaper (+ windup, airborne), the Ram's enraged state, the Shade's shimmer. Ram, Shade and Mender themselves are wired. |
 | Projectile tier variants (`_t2`, `_t3`) | 6 | No tier escalation wiring; projectiles use the base model at every level. |
 | Hero revive poses | 5 | Downed poses are wired; the revive-crouch pose is not. |

@@ -49,9 +49,35 @@ import { SWITCHYARD, makeSwitchyardMats } from './models/switchyard.js';
 // imported three map modules and stopped, so every spire_ name in the game
 // resolves to nothing and that map is forty metres of untinted boxes.
 import { SPIRE, makeSpireMats } from './models/spire.js';
-import { TOASTER, makeToasterMats } from './models/toaster.js';
-import { VEHICLES, makeVehicleMats } from './models/vehicles.js';
 import { VFX, makeVfxMats } from './models/vfx.js';
+
+// Kits arrive with design's drops, and a drop can be vendored before every kit
+// named on this page ships with it. A *static* import of a file design has not
+// delivered throws at module resolution — before a single line of the export
+// runs — so one absent kit produced zero assets for every other kit here. That
+// is how `toaster.js` and `vehicles.js` came to block the Spire, whose own kit
+// has been written since M3 and is imported on the line above this comment.
+//
+// So the newest kits load tolerantly: a missing one is named and skipped, the
+// rest of the pack still exports, and it starts exporting the day it lands with
+// no change here. Foundry, Switchyard, Shared and the Spire stay static on
+// purpose — those are delivered, and a break in one of them is a real failure
+// that should stop the run rather than quietly export a smaller pack.
+const MISSING_KITS = [];
+async function optionalKit(name, itemsKey, matsKey) {
+  try {
+    const mod = await import(`./models/${name}.js`);
+    return { items: mod[itemsKey] ?? [], mats: mod[matsKey] ?? (() => {}) };
+  } catch (err) {
+    // Reported verbatim rather than as "missing": this also catches a syntax
+    // error inside a kit that *is* delivered, and silently treating that as an
+    // absent file is how a broken kit ships as an empty one.
+    MISSING_KITS.push(`${name}.js — ${err.message}`);
+    return { items: [], mats: () => {} };
+  }
+}
+const { items: TOASTER, mats: makeToasterMats } = await optionalKit('toaster', 'TOASTER', 'makeToasterMats');
+const { items: VEHICLES, mats: makeVehicleMats } = await optionalKit('vehicles', 'VEHICLES', 'makeVehicleMats');
 const MODS = ['lance', 'nova', 'singularity', 'skywatch', 'arc', 'barricade', 'filament', 'detector', 'overclock'];
 const ICONS = [
   'icon_tower_lance', 'icon_tower_nova', 'icon_tower_arc', 'icon_tower_singularity', 'icon_tower_skywatch', 'icon_tower_barricade', 'icon_tower_detector', 'icon_tower_filament', 'icon_tower_overclock',
@@ -172,7 +198,8 @@ const HAND_POSES = ['pistol', 'tool'];
 const HAND_ITEMS = [...WEAPONS.filter((w) => w.id === 'hands'), ...HEROES.filter((h) => h.id.startsWith('hands_'))];
 const ONLY = new URLSearchParams(location.search).get('only');
 const TOTAL = ONLY === 'hands' ? HAND_ITEMS.length * HAND_POSES.length : FILES.length + EXTRA_COUNT + HAND_ITEMS.length * HAND_POSES.length;
-say(`Ready — ${TOTAL} GLB files; starting`);
+if (MISSING_KITS.length) say(`SKIPPED KITS — ${MISSING_KITS.join(' · ')}`);
+say(`Ready — ${TOTAL} GLB files; starting${MISSING_KITS.length ? ` (${MISSING_KITS.length} kit(s) skipped)` : ''}`);
 const manifest = { version: '1.0', generated: new Date().toISOString(), units: 'metres', up: '+Y', forward: '-Z', files: [] };
 let done = 0;
 const add = async (name, obj, meta) => {
@@ -230,7 +257,8 @@ try {
   for (const f of ['ui-kit.css', 'ui-screens.js', 'ui-branding.js', 'ui-weapon-view.js']) await put('docs/design-system/' + f, await text(f));
   await put('docs/design-system/ui-screens.html', new TextEncoder().encode((await (await fetch('Deep Field 3D - UI Screens.html')).text()).replaceAll('ds/tokens/', '')));
   }
-  say(`DONE — ${done} GLB files exported`);
+  say(`DONE — ${done} GLB files exported`
+    + (MISSING_KITS.length ? `\nWARNING — ${MISSING_KITS.length} kit(s) not exported: ${MISSING_KITS.join(' · ')}` : ''));
 } catch (err) {
   say('ERROR export failed: ' + (err.stack || err.message));
 }
