@@ -54,6 +54,22 @@ them, so they are ignored by git (`game/assets/**/*_[0-9]*.png`) and never
 committed. The 2026-09-12 drop would otherwise have added 447 of them at
 365 MB. The brand icons in `game/assets/brand/` are real files and stay tracked.
 
+One migration step for a checkout that pulled this change with the old tracked
+sidecars in place: the pull deletes those PNGs, but their gitignored
+`.png.import` files stay behind, and the importer takes an existing sidecar to
+mean the texture is already extracted — so it never rewrites the PNG and the
+Foundry and Switchyard ground load without their textures. Deleting the orphan
+sidecars alone is not enough either: extraction only runs when the model
+itself is re-imported, and its source has not changed. The fix that always
+works is the one a fresh clone gets — no import metadata at all:
+
+```sh
+find game/assets -name '*.import' -delete && make import
+```
+
+It takes a few minutes and rebuilds every cache entry. A fresh clone needs
+nothing.
+
 ## Where the models come from
 
 Design does not hand-model GLBs. The Claude Design project is three.js code —

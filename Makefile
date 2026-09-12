@@ -24,8 +24,12 @@ run: game
 	"$(GODOT)" --path game
 
 ## (Re)import Godot resources headlessly.
+##
+## --path game --import, not --import game: Godot 4.7 silently no-ops on the
+## latter and every asset stays unimported. CI already had this right; this
+## target did not, and a fresh pull of 547 models played as grey boxes.
 import:
-	"$(GODOT)" --headless --import game
+	"$(GODOT)" --headless --path game --import
 
 ## Art delivery status: what the design brief names vs what's in game/assets/.
 assets:

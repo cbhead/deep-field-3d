@@ -26,7 +26,7 @@ namespace DeepField.Game;
 /// platform with no viewmodel plays nothing; a faction whose poses have not
 /// been delivered still drops and reseats the magazine and cycles the
 /// action; a magazine prop that has not landed still gets the hands.</summary>
-public sealed class ReloadAnimation
+public sealed partial class ReloadAnimation
 {
     private readonly Node3D _rig;
     private readonly Node3D? _gun;
@@ -55,9 +55,8 @@ public sealed class ReloadAnimation
     private bool _done;
     private Node3D? _pose;                   // the off-hand currently shown
     private string _poseName = "";
-    private Node3D? _spent;                  // the magazine on its way to the floor
-    private Vector3 _spentVelocity;
-    private float _spentTravelled;
+    private FallingProp? _spent;             // the magazine on its way to the floor
+    private bool _dropped;                   // the drop is one beat, not a state
     private Node3D? _fresh;                  // the magazine (or shell) in the off-hand
     private Vector3 _poseRest;
     private int _shellsFed = -1;
@@ -140,7 +139,6 @@ public sealed class ReloadAnimation
 
         if (_tubeFed) TickTubeFed(u);
         else TickMagazineFed(u);
-        TickSpent(delta);
     }
 
     private void TickMagazineFed(float u)
@@ -155,9 +153,15 @@ public sealed class ReloadAnimation
         }
 
         if (u >= 0.05f && u < 0.35f) ShowPose("magout", withFresh: false);
-        if (u >= 0.10f && _magazine is not null && Valid(_magazine) && _magazine.Visible)
+        // One drop per reload. This used to be gated on the magazine being
+        // visible, and from 72% the step below shows it again — so every tick
+        // of the last quarter hid it, dropped another, and showed it, and a
+        // player walking through a reload left a trail of magazines that
+        // nothing ever freed.
+        if (u >= 0.10f && !_dropped)
         {
-            _magazine.Visible = false;
+            _dropped = true;
+            if (_magazine is not null && Valid(_magazine)) _magazine.Visible = false;
             DropSpent();
         }
         if (u >= 0.35f && u < 0.72f)
@@ -285,28 +289,48 @@ public sealed class ReloadAnimation
         var prop = AssetLibrary.TryInstantiate(_tubeFed ? "weapon_scattergun_shell" : $"weapon_{_id}_magazine");
         if (prop is null) return;
         MapKit.NoShadow(prop);
-        _world.AddChild(prop);
         var at = _feed is not null && Valid(_feed) ? _feed.GlobalTransform
             : (_magazine is not null && Valid(_magazine) ? _magazine.GlobalTransform : _rig.GlobalTransform);
-        prop.GlobalTransform = at;
-        _spent = prop;
-        _spentVelocity = at.Basis * _dropAxis * 0.6f;
-        _spentTravelled = 0f;
+        var falling = new FallingProp
+        {
+            Velocity = at.Basis * _dropAxis * 0.6f,
+            TipAxis = _dropTip,
+            Clear = _dropClear,
+        };
+        _world.AddChild(falling);
+        falling.GlobalTransform = at;
+        falling.AddChild(prop);
+        _spent = falling;
     }
 
-    private void TickSpent(float delta)
+    /// <summary>A dropped magazine is its own node with its own clock: it falls
+    /// under real gravity, tips once it is clear of the well, and frees itself
+    /// after a metre and a half or a second and a quarter, whichever first —
+    /// whatever the animation that dropped it is doing by then, including
+    /// being gone. Nothing about its life depends on anyone remembering it.</summary>
+    private sealed partial class FallingProp : Node3D
     {
-        if (_spent is null || !Valid(_spent)) { _spent = null; return; }
-        _spentVelocity += Vector3.Down * 9.8f * delta;
-        var step = _spentVelocity * delta;
-        _spent.GlobalPosition += step;
-        _spentTravelled += step.Length();
-        if (_spentTravelled > _dropClear)
+        public Vector3 Velocity;
+        public Vector3 TipAxis = Vector3.Right;
+        public float Clear = 0.015f;
+        private float _travelled;
+        private float _age;
+
+        public override void _PhysicsProcess(double delta)
         {
-            float tip = Mathf.Clamp((_spentTravelled - _dropClear) / 0.12f, 0f, 1f) * Mathf.DegToRad(30f);
-            _spent.Rotate(_spent.GlobalTransform.Basis * _dropTip, tip * delta * 8f);
+            float dt = (float)delta;
+            _age += dt;
+            Velocity += Vector3.Down * 9.8f * dt;
+            var step = Velocity * dt;
+            GlobalPosition += step;
+            _travelled += step.Length();
+            if (_travelled > Clear)
+            {
+                float tip = Mathf.Clamp((_travelled - Clear) / 0.12f, 0f, 1f) * Mathf.DegToRad(30f);
+                Rotate(GlobalTransform.Basis * TipAxis, tip * dt * 8f);
+            }
+            if (_travelled > 1.5f || _age > 1.25f) QueueFree();
         }
-        if (_spentTravelled > 1.5f || _t > _seconds * 0.6f + 0.4f) { _spent.QueueFree(); _spent = null; }
     }
 
     // =====================================================================
@@ -334,6 +358,12 @@ public sealed class ReloadAnimation
         if (_spent is not null && Valid(_spent)) _spent.QueueFree();
         _spent = null;
     }
+
+    /// <summary>For the probe: how many dropped magazines are still in the
+    /// world under <paramref name="world"/>. After a reload has ended and the
+    /// prop's own clock has run, the answer is zero or the trail is back.</summary>
+    public static int StrayProps(Node world)
+        => world.GetChildren().Count(c => c is FallingProp);
 
     // =====================================================================
     // Helpers
