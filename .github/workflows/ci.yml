@@ -54,6 +54,37 @@ jobs:
           grep -q '"app":"deepfield-3d"' info.json
           grep -q "\[client\] joined seat" client.log
 
+      # The info port is TCP while the game itself is ENet/UDP, so losing that
+      # one bind costs a server nothing it can feel: it hosts and plays
+      # perfectly while answering nothing, and the runbook's curl gets answered
+      # by whatever won the port instead — on a dev box, most likely one of the
+      # 2D checkouts confidently describing itself. It was silent for exactly
+      # that reason, so hold the TCP port with the UDP one left free and require
+      # a refusal rather than a blind server.
+      - name: A held info port refuses rather than serving blind
+        run: |
+          cat > /tmp/hold.py <<'PY'
+          import socket, time
+          s = socket.socket(socket.AF_INET6)
+          s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+          s.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)   # hold both families
+          s.bind(('::', 8792))
+          s.listen(1)
+          time.sleep(120)
+          PY
+          python3 /tmp/hold.py &
+          HOLD=$!
+          sleep 2
+          # --quit-after bounds the regression case: if this error is ever
+          # swallowed again, the server would otherwise sit here until the job
+          # timed out, which is the same "looks fine, does nothing" failure.
+          godot --headless --path game --quit-after 1800 -- --server --port 8792 \
+            > blind.log 2>&1 && rc=0 || rc=$?
+          kill $HOLD || true
+          cat blind.log
+          test "$rc" -ne 0
+          grep -q "cannot open the info port" blind.log
+
       # Builds one view of every enemy, tower, trap, upgrade stage, projectile
       # and hero, then checks that every asset name the code asks for is a name
       # the design brief actually gives design. Silent drift here means art

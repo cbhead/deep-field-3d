@@ -1121,6 +1121,14 @@ public partial class GameRoot : Node3D
         return Protocol.DefaultPort;
     }
 
+    /// <summary>The likely cause of a failed bind, in terms a host can act on.
+    /// Worth naming rather than printing an errno: both 2D Deep Field checkouts
+    /// default to this same port and are routinely running on the same
+    /// machine, so "in use" is the expected case, not the exotic one.</summary>
+    private static string PortAdvice(int port) =>
+        $"something already holds :{port} — most likely one of the 2D Deep Field " +
+        $"checkouts, which default to the same port. Free it, or pass --port <n>.";
+
     // =====================================================================
     // Mode startup
     // =====================================================================
@@ -1133,13 +1141,45 @@ public partial class GameRoot : Node3D
             if (args[i] == "--map" && Maps.All.TryGetValue(args[i + 1], out var chosen))
                 _map = chosen;
         _world = new SimWorld(FreshSeed(), _map) { WaitForPlayers = true };
-        _net.HostServer(port, _world);
+
+        var hosted = _net.HostServer(port, _world);
+        if (hosted != Error.Ok)
+        {
+            GD.PrintErr($"ERROR: cannot open the game port udp:{port} ({hosted}). {PortAdvice(port)}");
+            GetTree().Quit(1);
+            return;
+        }
         _net.ServerEnqueue = c => _world.Enqueue(c);
 
         _info = new InfoServer { Name = "Info" };
         AddChild(_info);
         _info.StatusProvider = ServerInfo;
-        _info.Start(port);
+
+        var served = _info.Start(port);
+        if (served != Error.Ok)
+        {
+            // Fatal on purpose, though the match would in fact run: ENet has
+            // its port and friends could join. Two reasons it must not.
+            //
+            // A dedicated server is headless. /info is the only way it has to
+            // say what it is, so losing the bind does not make it quiet — it
+            // makes whatever *did* win the TCP port answer in its place, and on
+            // this machine that is most likely a different Deep Field
+            // confidently describing itself. The runbook's curl-before-you-
+            // invite step would pass while naming the wrong game.
+            //
+            // And a headless process that looks healthy while being wrong is
+            // the exact shape of failure this repo keeps paying for — see the
+            // flag-ordering guard in ./play, which refuses rather than let a
+            // run spin for twenty hours looking fine.
+            GD.PrintErr($"ERROR: cannot open the info port tcp:{port} ({served}). {PortAdvice(port)}");
+            GD.PrintErr("       Refusing to start: a dedicated server nobody can identify is worse " +
+                        "than one that did not start, because the curl that checks it would answer " +
+                        "for whatever holds the port instead.");
+            GetTree().Quit(1);
+            return;
+        }
+
         GD.Print($"[server] deepfield-3d dedicated on udp:{port}, map {_map.Id}, protocol v{Protocol.Version}");
     }
 
@@ -1157,16 +1197,41 @@ public partial class GameRoot : Node3D
         // factions against each other's, and start together.
         BeginLocalWorld(faction, lobby: true);
         int port = ParsePort(OS.GetCmdlineUserArgs());
-        _net.HostServer(port, _world!);
+
+        // A window has somewhere to put bad news and someone to read it, so it
+        // says what went wrong and lets the player decide. Only the headless
+        // server, which has neither, refuses outright.
+        var hosted = _net.HostServer(port, _world!);
+        if (hosted != Error.Ok)
+        {
+            string why = $"cannot host on udp:{port} ({hosted}) — {PortAdvice(port)}";
+            GD.PrintErr($"ERROR: {why}");
+            Post($"not hosting — {why}");
+            _lobby.SetStatus($"not hosting — {why}");
+            return;
+        }
         _net.ServerEnqueue = c => _world!.Enqueue(c);
 
         _info = new InfoServer { Name = "Info" };
         AddChild(_info);
         _info.StatusProvider = ServerInfo;
-        _info.Start(port);
+        var served = _info.Start(port);
+
         string invite = _info.TailscaleIp is { } ip
             ? $"invite: {ip}:{port}"
             : "no tailscale ip found — friends need your LAN ip";
+
+        // Losing this one is not fatal here: ENet has its port, so friends can
+        // still join a party that works. What is lost is the machine-readable
+        // half — mission control and the runbook's curl cannot name this
+        // server, and may name another one instead. The host is told plainly,
+        // because they are the only one who can see it.
+        if (served != Error.Ok)
+        {
+            GD.PrintErr($"ERROR: info port tcp:{port} unavailable ({served}). {PortAdvice(port)}");
+            invite += " · no /info, so mission control cannot name this server";
+        }
+
         Post($"hosting — {invite}");
         _lobby.SetStatus($"hosting — {invite} — launch when everyone has picked");
         GD.Print($"[party] hosting on udp:{port}, holding in the lobby");

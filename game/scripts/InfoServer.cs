@@ -18,16 +18,42 @@ public partial class InfoServer : Node
     public string? TailscaleIp { get; private set; }
     private int _port;
 
-    public void Start(int port)
+    /// <summary>Whether the bind actually took. False means this server answers
+    /// nothing, which callers must decide what to do about.</summary>
+    public bool Listening { get; private set; }
+
+    /// <summary>Binds the info port, returning the bind result rather than
+    /// swallowing it.
+    ///
+    /// The return used to be discarded, and the success line printed either
+    /// way. That is a bad failure to hide: the info port is TCP while the game
+    /// is ENet/UDP, so losing this bind costs the server nothing it can feel —
+    /// it hosts and plays perfectly while answering nothing. The runbook's
+    /// "curl before you invite anyone" step then reports whatever *did* win the
+    /// port, and both 2D checkouts default to the same one, so the honest
+    /// answer is not "no reply" but a confident description of a different
+    /// game.</summary>
+    public Error Start(int port)
     {
         _port = port;
         TailscaleIp = DetectTailscaleIp();
-        _server.Listen((ushort)port);
+
+        var err = _server.Listen((ushort)port);
+        if (err != Error.Ok)
+        {
+            Listening = false;
+            return err;
+        }
+
+        Listening = true;
         GD.Print($"[info] http://{TailscaleIp ?? "localhost"}:{port}/info");
+        return Error.Ok;
     }
 
     public override void _Process(double delta)
     {
+        if (!Listening) return;
+
         while (_server.IsConnectionAvailable())
         {
             var conn = _server.TakeConnection();
