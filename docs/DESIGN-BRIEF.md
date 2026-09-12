@@ -135,6 +135,18 @@ Platforms — each needs a first-person viewmodel and a world model:
 `weapon_emberpistol_vm.glb` / `weapon_emberpistol_world.glb`
 `weapon_wrench_vm.glb` (starter melee / repair tool)
 `hands_firstperson.glb` (base arms; faction variants in §3.6)
+`hands_<set>_pistol.glb` / `hands_<set>_tool.glb` — the same arms in the grip
+each platform is held in, one file per pose, for all six sets.
+`hands_<set>_magout.glb` / `_magin.glb` / `_charge.glb` — the reload's
+off-hand poses (FORWARD-MANIFEST-reload Ask B): one posed left arm each,
+rooted at `hand_l`, with `hands_mount_magazine` where the fresh magazine
+rides. Measured against the Sidearm; the client offsets them to every other
+platform's `<w>_mount_magwell`.
+`weapon_sidearm_magazine.glb` · `weapon_rifle_magazine.glb` ·
+`weapon_emberpistol_magazine.glb` (the fuel canister) ·
+`weapon_scattergun_shell.glb` (a loaded hull — the gun is tube-fed; also
+shipped as `weapon_scattergun_magazine.glb` under the armoury's name) — the
+reload props, each with its pivot on the seated face and `extras.drop`.
 
 Attachments — visible modules mounted on viewmodels (the gun you built must
 be the gun you see):
@@ -190,6 +202,37 @@ set: `switchyard_dress_railcar.glb`, `switchyard_dress_container.glb`,
 strand) · socket markers: `socket_ground_empty.glb`, `socket_ground_base.glb`,
 `socket_wall_empty.glb`, `socket_wall_base.glb`, `socket_trap_empty.glb`,
 `socket_barricade_empty.glb`
+
+**The Toaster** (`game/assets/maps/`, rural property in late autumn,
+320 × 160 m; commissioned in `FORWARD-MANIFEST-toaster.md`, delivered
+2026-09-12): the instanced set `toaster_terrain.glb` (+ `_v1`…`_v3`, 20 m,
+one part), `toaster_road_asphalt.glb` (4 m, 6 wide), `toaster_road_gravel.glb`
+(4 m, 4 wide), `toaster_road_arc.glb` (30° of the circular drive, origin at the
+centre of curvature), `toaster_tree_oak.glb` · `_maple` · `_pine` (two parts
+each) with `_lod1` billboards, `toaster_understory.glb`,
+`toaster_terrain_scatter.glb`; four buildings as shell + roof —
+`toaster_barn_shell/_roof`, `toaster_house_buggy_shell/_roof`,
+`toaster_house_vehickle_shell/_roof`, `toaster_house_grnmchn_shell/_roof` —
+with the door openings at the offsets the client builds its colliders to;
+interiors `toaster_dress_workbench.glb`, `toaster_dress_shelving.glb`,
+`toaster_dress_furniture_living.glb`, `toaster_dress_furniture_kitchen.glb`;
+`toaster_pond.glb` (34 m, drawn up from flat ground) and `toaster_dock.glb`;
+`toaster_skybox.glb`; dressing `toaster_fence_wood.glb` (4 m run),
+`toaster_mailbox.glb`, `toaster_woodpile.glb`, `toaster_hay_bale.glb`,
+`toaster_propane_tank.glb`, `toaster_wreck_pickup.glb`,
+`toaster_leaf_pile.glb`. Shared additions for it: `shared_warp_gate_idle.glb`
+/ `shared_warp_gate_active.glb` (the enemy gate — a 4.5 m arch, deliberately
+not a pad; `_active` carries `warp_membrane`, which the code pulses) and
+`vfx_teleport_burst.glb`.
+
+**Vehicles** (`game/assets/vehicles/`, new prefix `vehicle_`):
+`vehicle_buggy.glb` · `vehicle_dagator.glb` · `vehicle_grnmchn.glb` ·
+`vehicle_vehickle.glb`. Origin at the ground under the chassis centre, nose
+along −Z. Named nodes the code moves: `seat_driver` (+ `seat_passenger` on
+the two-seaters), `wheel_fl/fr/rl/rr` (trike: `wheel_0/1/2`) pivoted at the
+axle, `steer_wheel` / `steer_bars` / `steer_fork` + `steer_lever_l/r`. The
+export's `vehicle` manifest block carries seats, wheel radii, hull and eye
+height.
 
 ### 3.7 VFX (`game/assets/vfx/`)
 `vfx_reaction_thermalshock.glb` · `vfx_reaction_flashfreeze.glb` ·

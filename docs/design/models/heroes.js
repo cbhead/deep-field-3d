@@ -301,23 +301,27 @@ export const HEROES = [
     const F = FACTIONS[fid];
     return {
       id: 'hands_' + fid, file: `hands_${fid}.glb`, label: `${F.label} hands`, swatch: F.swatch, size: 'viewmodel', stats: { Base: 'hands_firstperson', Swap: 'plates + accent' },
+      poses: WEAPONS.find((w) => w.id === 'hands').poses,
       note: 'Faction fork of the base first-person arms: knuckle, forearm and cuff plates in the faction plate colour, an accent lamp on each bracer' + (fid === 'ember' ? ', braided fuel hose along the right forearm' : fid === 'tempest' ? ', capacitor ring and arc electrodes on the right cuff' : fid === 'glacier' ? ', frosted coolant coil around the right cuff' : fid === 'specter' ? ', wrist scanner screen on the left cuff' : ', tool loop and brass bolts on the left cuff') + '.',
       build(K) {
         const g = WEAPONS.find((w) => w.id === 'hands').build(K);
         g.name = this.id;
         const { part, THREE, mats, cyl } = K, acc = mats[F.acc], fplate = mats[F.plate];
         g.traverse((o) => { if (o.isMesh && o.material === mats.skin_plate) o.material = fplate; });
+        // An off-hand pose file carries `hand_l` only, so dress whichever sides
+        // this build actually produced rather than assuming both.
         for (const side of ['l', 'r']) {
           const h = g.getObjectByName('hand_' + side);
+          if (!h) continue;
           h.add(part(`hand_${side}_lamp`, new THREE.BoxGeometry(.02, .004, .04), acc, [0, .04, .18]));
           h.add(part(`hand_${side}_cuff_plate`, new THREE.BoxGeometry(.05, .01, .04), fplate, [0, .032, .07]));
         }
         const r = g.getObjectByName('hand_r'), l = g.getObjectByName('hand_l');
-        if (fid === 'ember') r.add(K.cableRun('hand_r_hose', [[.03, 0, .28], [.04, -.01, .14], [.02, .0, .06]], .006));
-        if (fid === 'tempest') { r.add(part('hand_r_cap_ring', new THREE.TorusGeometry(.032, .005, 6, 14), acc, [0, 0, .09])); for (const x of [-.012, .012]) r.add(part('hand_r_electrode' + x, cyl(.003, .002, .03, 6), mats.chrome, [x, .02, -.03], [-.4, 0, 0])); }
-        if (fid === 'glacier') for (let i = 0; i < 3; i++) r.add(part('hand_r_coil' + i, new THREE.TorusGeometry(.034, .004, 6, 14), acc, [0, 0, .07 + i * .02]));
-        if (fid === 'specter') { l.add(part('hand_l_scanner', new THREE.BoxGeometry(.05, .015, .06), mats.armor_dark, [-.03, .0, .10])); l.add(part('hand_l_screen', new THREE.BoxGeometry(.04, .004, .05), acc, [-.03, .008, .10])); }
-        if (fid === 'forge') { l.add(part('hand_l_tool_loop', new THREE.TorusGeometry(.012, .003, 6, 10), mats.brass, [-.035, 0, .16], [0, Math.PI / 2, 0])); l.add(K.boltRing('hand_l_bolts', .03, 4, .036, mats.brass).translateZ(.07)); }
+        if (fid === 'ember' && r) r.add(K.cableRun('hand_r_hose', [[.03, 0, .28], [.04, -.01, .14], [.02, .0, .06]], .006));
+        if (fid === 'tempest' && r) { r.add(part('hand_r_cap_ring', new THREE.TorusGeometry(.032, .005, 6, 14), acc, [0, 0, .09])); for (const x of [-.012, .012]) r.add(part('hand_r_electrode' + x, cyl(.003, .002, .03, 6), mats.chrome, [x, .02, -.03], [-.4, 0, 0])); }
+        if (fid === 'glacier' && r) for (let i = 0; i < 3; i++) r.add(part('hand_r_coil' + i, new THREE.TorusGeometry(.034, .004, 6, 14), acc, [0, 0, .07 + i * .02]));
+        if (fid === 'specter' && l) { l.add(part('hand_l_scanner', new THREE.BoxGeometry(.05, .015, .06), mats.armor_dark, [-.03, .0, .10])); l.add(part('hand_l_screen', new THREE.BoxGeometry(.04, .004, .05), acc, [-.03, .008, .10])); }
+        if (fid === 'forge' && l) { l.add(part('hand_l_tool_loop', new THREE.TorusGeometry(.012, .003, 6, 10), mats.brass, [-.035, 0, .16], [0, Math.PI / 2, 0])); l.add(K.boltRing('hand_l_bolts', .03, 4, .036, mats.brass).translateZ(.07)); }
         return g;
       },
     };

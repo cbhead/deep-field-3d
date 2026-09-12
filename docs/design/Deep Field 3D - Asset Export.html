@@ -91,7 +91,7 @@
 <header>
   <div class="brand">
     <h1>Tower asset pack</h1>
-    <p>Deep Field 3D · DESIGN-BRIEF §3.1–3.8 · towers, enemies, heroes, traps, projectiles, weapons, Foundry + Switchyard + shared kits, VFX, icons → <code>game/assets/</code></p>
+    <p>Deep Field 3D · DESIGN-BRIEF §3.1–3.8 · towers, enemies, heroes, traps, projectiles, weapons, Foundry + Switchyard + Spire + Toaster + shared kits, vehicles, VFX, icons → <code>game/assets/</code></p>
   </div>
   <nav class="tabs" id="tabs"></nav>
 </header>
@@ -134,6 +134,9 @@ import { makeHeroKit, HEROES } from './models/heroes.js';
 import { FOUNDRY, makeFoundryMats } from './models/foundry.js';
 import { SHARED, PICKUPS } from './models/shared.js';
 import { SWITCHYARD, makeSwitchyardMats } from './models/switchyard.js';
+import { SPIRE, makeSpireMats } from './models/spire.js';
+import { TOASTER, makeToasterMats } from './models/toaster.js';
+import { VEHICLES, makeVehicleMats } from './models/vehicles.js';
 import { VFX, makeVfxMats } from './models/vfx.js';
 const MODS = ['lance', 'nova', 'singularity', 'skywatch', 'arc', 'barricade', 'filament', 'detector', 'overclock'];
 const MS = { lance: 'M1', nova: 'M1', singularity: 'M1', skywatch: 'M1', arc: 'M2', barricade: 'M2', filament: 'M3', detector: 'M3', overclock: 'M4' };
@@ -158,10 +161,27 @@ const ICONS = [
 const EXTRA = [
   { dir: 'enemies/', items: ENEMIES, kind: 'enemy' }, { dir: 'traps/', items: TRAPS, kind: 'trap' }, { dir: 'towers/', items: PROJECTILES, kind: 'projectile' },
   { dir: 'weapons/', items: WEAPONS, kind: 'weapon' }, { dir: 'weapons/', items: WEAPONS.filter((w) => w.worldFile).map((w) => ({ ...w, file: w.worldFile, id: w.id + '_world' })), kind: 'weapon_world' },
-  { dir: 'heroes/', items: HEROES, kind: 'hero' }, { dir: 'maps/foundry/', items: FOUNDRY, kind: 'map_foundry' }, { dir: 'maps/switchyard/', items: SWITCHYARD, kind: 'map_switchyard' }, { dir: 'shared/', items: SHARED, kind: 'shared' }, { dir: 'vfx/', items: VFX, kind: 'vfx' }, { dir: 'economy/', items: PICKUPS, kind: 'pickup' }, { dir: 'weapons/', items: ATTACHMENTS, kind: 'attachment' }, { dir: 'weapons/', items: AMMO, kind: 'ammo' }, { dir: 'weapons/', items: TRACERS, kind: 'tracer' }];
-const EXTRA_COUNT = EXTRA.reduce((a, c) => a + c.items.length, 0);
+  { dir: 'heroes/', items: HEROES, kind: 'hero' }, { dir: 'maps/foundry/', items: FOUNDRY, kind: 'map_foundry' }, { dir: 'maps/switchyard/', items: SWITCHYARD, kind: 'map_switchyard' }, { dir: 'maps/spire/', items: SPIRE, kind: 'map_spire' }, { dir: 'maps/toaster/', items: TOASTER, kind: 'map_toaster' }, { dir: 'vehicles/', items: VEHICLES, kind: 'vehicle' }, { dir: 'shared/', items: SHARED, kind: 'shared' }, { dir: 'vfx/', items: VFX, kind: 'vfx' }, { dir: 'economy/', items: PICKUPS, kind: 'pickup' }, { dir: 'weapons/', items: ATTACHMENTS, kind: 'attachment' }, { dir: 'weapons/', items: AMMO, kind: 'ammo' }, { dir: 'weapons/', items: TRACERS, kind: 'tracer' }];
+/* Reload props (FORWARD-MANIFEST-reload Ask A). Not new geometry: the feed part
+   already in each viewmodel, lifted out and exported on its own so a reload can
+   put one in the air as the spent mag and another in the off-hand as the fresh
+   one. Lifting it out is only correct because the part's pivot now sits on the
+   seated face (Ask C) — dropping it is a translation and a tip, not a swing
+   about the weapon origin.
+
+   The Scattergun is tube-fed, so its reload is shells through the loading port
+   and its prop is a LOADED hull, not a magazine. It ships under both the
+   requested name and the honest one; `_shell` is the one to keep. */
+const RELOAD_PROPS = [
+  ['sidearm', 'sidearm_magazine', 'weapon_sidearm_magazine.glb', 'Detachable box magazine exported on its own — the same node as `sidearm_magazine` in the viewmodel, origin on the seated top face, +Y up. Dropping it is a translate down plus a tip about X; `userData.drop` on the source group carries both axes.'],
+  ['rifle', 'rifle_magazine', 'weapon_rifle_magazine.glb', 'STANAG magazine on its own, origin on the magwell mouth plane (1.9 mm forward of the well centre, where the 25 mm curve crosses it). Feed lips and top round included — they are visible for the half second it is in the air.'],
+  ['emberpistol', 'emberpistol_magazine', 'weapon_emberpistol_magazine.glb', 'Fuel canister, not a magazine — the vessel is what this gun reloads, so it now carries the armoury’s `_magazine` name and exports under it. Origin on the forward dome, the face that meets the regulator; it pulls off rearward, so `userData.drop` is +Z rather than −Y.'],
+  ['scattergun', 'scattergun_shell', 'weapon_scattergun_magazine.glb', 'A loaded 12-gauge hull under the requested filename so nothing falls back to a placeholder. This gun has no detachable magazine; see `weapon_scattergun_shell.glb`, which is the same file under the name that tells the truth.'],
+  ['scattergun', 'scattergun_shell', 'weapon_scattergun_shell.glb', 'Loaded 12-gauge hull: brass head with rim and extractor groove, full-length body, folded six-point crimp cut into the dome as ridges. Origin at the rim face so a reload pushes it in along +Z at `scattergun_mount_loadport`. Distinct from `scattergun_case`, which is fired — open mouth, no crimp.'],
+];
+const EXTRA_COUNT = EXTRA.reduce((a, c) => a + c.items.reduce((n, it) => n + (it.buildVariant ? 4 : 1) + (it.poses ? it.poses.length - 1 : 0), 0), 0) + RELOAD_PROPS.length;
 // game/scripts/AssetLibrary.cs → Routes: the name prefix picks the folder under game/assets/. The zip unpacks straight onto the repo root.
-const ROUTES = [['enemy_', 'enemies'], ['boss_', 'enemies'], ['tower_', 'structures'], ['trap_', 'structures'], ['socket_', 'structures'], ['weapon_', 'weapons'], ['attach_', 'weapons'], ['ammo_', 'weapons'], ['hands_', 'weapons'], ['hero_', 'heroes'], ['proj_', 'vfx'], ['vfx_', 'vfx'], ['pickup_', 'economy'], ['foundry_', 'maps'], ['switchyard_', 'maps'], ['shared_', 'maps'], ['prop_', 'maps'], ['ui_', 'ui']];
+const ROUTES = [['enemy_', 'enemies'], ['boss_', 'enemies'], ['tower_', 'structures'], ['trap_', 'structures'], ['socket_', 'structures'], ['weapon_', 'weapons'], ['attach_', 'weapons'], ['ammo_', 'weapons'], ['hands_', 'weapons'], ['hero_', 'heroes'], ['proj_', 'vfx'], ['vfx_', 'vfx'], ['pickup_', 'economy'], ['foundry_', 'maps'], ['switchyard_', 'maps'], ['spire_', 'maps'], ['toaster_', 'maps'], ['vehicle_', 'vehicles'], ['shared_', 'maps'], ['prop_', 'maps'], ['ui_', 'ui']];
 const routeFor = (file) => 'game/assets/' + (ROUTES.find(([p]) => file.startsWith(p))?.[1] || 'misc') + '/' + file;
 const el = (id) => document.getElementById(id);
 const TOWERS = (await Promise.all(MODS.map((m) => import(`./models/${m}.js`)))).map((m) => m.TOWER);
@@ -172,7 +192,7 @@ el('icons').innerHTML = ICONS.map((n) => `<img src="game/assets/ui/${n}.svg" alt
 const stage = document.querySelector('three-d-stage');
 const { THREE } = await stage.ready;
 const kit = makeEnemyKit(THREE);
-Object.assign(kit.mats, makeWeaponKit(THREE).mats, makeHeroKit(THREE).mats); makeFoundryMats(THREE, kit.mats); makeSwitchyardMats(THREE, kit.mats); makeVfxMats(THREE, kit.mats); kit.mats.threat = kit.mats.weak;
+Object.assign(kit.mats, makeWeaponKit(THREE).mats, makeHeroKit(THREE).mats); makeFoundryMats(THREE, kit.mats); makeSwitchyardMats(THREE, kit.mats); makeSpireMats(THREE, kit.mats); makeToasterMats(THREE, kit.mats); makeVehicleMats(THREE, kit.mats); makeVfxMats(THREE, kit.mats); kit.mats.threat = kit.mats.weak;
 const { GLTFExporter } = await import('three/addons/exporters/GLTFExporter.js');
 const exporter = new GLTFExporter();
 
@@ -372,7 +392,56 @@ el('go').addEventListener('click', async () => {
     }
     for (const c of EXTRA) for (const it of c.items) {
       const m = it.build(kit);
-      await add(it.file, m, { kind: c.kind, id: it.id, note: it.note });
+      /* Linear modules carry their run axis, repeat length and width
+         (FORWARD-MANIFEST-switchyard, "Conventions we need stated on
+         delivery"). Neither `run` nor `repeat` is recoverable from the mesh,
+         and a cut channel placed with a +Z helper when it runs +X cost a
+         whole review pass — perfectly plausible art, placed perfectly wrongly. */
+      const lin = it.run ? { run: it.run, repeat: it.repeat, width: it.width } : null;
+      /* An arc is a linear module whose axis is a radius: `arcDeg`, `radius`
+         and `width`, with the origin at the CENTRE OF CURVATURE. Same reason
+         as `run`/`repeat` — none of it is recoverable from the mesh, and
+         twelve arcs placed from the road surface instead of the centre is a
+         dodecagon.
+
+         Budgets ship beside the measured counts so `make assets` can fail on
+         a file that is over, instead of the cost turning up as a frame rate
+         three weeks later; `instanced` marks the files meant for the
+         multimesh path; `lod1`/`lodSwitch` tie a tree to its billboard
+         (FORWARD-MANIFEST-toaster, "Conventions we need stated on
+         delivery", items 1–4). */
+      const arc = it.arcDeg ? { arcDeg: it.arcDeg, radius: it.radius, width: it.width } : null;
+      const budget = it.budgetTris ? { budgetTris: it.budgetTris, budgetParts: it.budgetParts } : null;
+      const inst = it.instanced ? { instanced: true } : null;
+      const lod = it.lod1 ? { lod1: it.lod1, lodSwitch: it.lodSwitch } : null;
+      const veh = m.userData && m.userData.vehicle ? { vehicle: m.userData.vehicle } : null;
+      await add(it.file, m, { kind: c.kind, id: it.id, note: it.note, ...lin, ...arc, ...budget, ...inst, ...lod, ...veh });
+      // A tile with variants ships all four. The exporter called build() only,
+      // so v0 was the sole GLB and one tile laid twenty-four times put the same
+      // puddle on a lattice — and the switch stand in v1 was never delivered at
+      // all (design-system README, “ships one variant of four”).
+      if (it.buildVariant) for (let v = 1; v <= 3; v++)
+        await add(it.file.replace(/\.glb$/, `_v${v}.glb`), it.buildVariant(kit, v), { kind: c.kind, id: `${it.id}_v${v}`, variant: v, note: it.note, ...lin, ...arc, ...budget, ...inst });
+      /* Hand sets ship one file per pose. poses[0] is the base build above; the
+         rest are the pistol and tool grips the viewmodel picks by platform, and
+         the three reload poses, which carry the OFF-HAND ALONE — the firing hand
+         never leaves the grip during a reload, so one set of three serves every
+         platform instead of one set per platform. */
+      if (it.poses) for (const p of it.poses.slice(1)) {
+        kit.__handsPose = p;
+        const pm = it.build(kit);
+        kit.__handsPose = null;
+        await add(it.file.replace(/\.glb$/, `_${p}.glb`), pm, { kind: c.kind, id: `${it.id}_${p}`, pose: p, offhandOnly: ['magout', 'magin', 'charge'].includes(p) || undefined, note: it.note });
+      }
+    }
+    for (const [wid, node, file, note] of RELOAD_PROPS) {
+      const src = WEAPONS.find((x) => x.id === wid).build(kit);
+      const n = src.getObjectByName(node);
+      if (!n) { console.warn('[reload prop] node missing:', node); continue; }
+      n.parent.remove(n);
+      n.position.set(0, 0, 0); n.rotation.set(0, 0, 0);
+      n.traverse((o) => { o.visible = true; });
+      await add(file, n, { kind: 'weapon_reload', id: file.replace(/\.glb$/, ''), weapon: wid, source: node, note });
     }
     status.textContent = 'Bundling palette, icons, manifest, design system…';
     entries.push({ name: 'game/assets/structures/manifest.json', data: new TextEncoder().encode(JSON.stringify(manifest, null, 2)) });
@@ -400,7 +469,7 @@ el('go').addEventListener('click', async () => {
   }
   el('go').disabled = false;
 });
-window.__pack = { TOWERS, FILES, chassis, pruneToPath, glb, kit, bakeSky, bakeSkies, routeFor, FOUNDRY, SWITCHYARD };
+window.__pack = { TOWERS, FILES, chassis, pruneToPath, glb, kit, bakeSky, bakeSkies, routeFor, FOUNDRY, SWITCHYARD, SPIRE, TOASTER, VEHICLES };
 </script>
 </body>
 </html>

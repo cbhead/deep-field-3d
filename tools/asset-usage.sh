@@ -18,7 +18,7 @@ cd "$(dirname "$0")/.."
 # a played match builds the level but only spawns what that match spawns.
 AUDIT=$(mktemp)
 ./play --headless -- --asset-audit >> "$AUDIT" 2>&1 || true
-for map in foundry switchyard spire; do
+for map in foundry switchyard spire toaster; do
   # --quit-after is an engine flag: it must precede the -- separator, or the
   # game receives it as a user arg and runs forever.
   ./play --headless --quit-after 1200 -- --solo "$map" --dump-assets >> "$AUDIT" 2>&1 || true

@@ -96,7 +96,8 @@
     <div class="slots" id="slots"></div>
     <hr>
     <dl class="stats" id="eff"></dl>
-    <div class="checks"><label><input type="checkbox" id="hands"> First-person hands</label><label><input type="checkbox" id="mounts"> Show mount nodes</label></div>
+    <div class="checks"><label><input type="checkbox" id="hands"> First-person hands</label><label><input type="checkbox" id="mounts"> Show mount nodes</label><label><input type="checkbox" id="autofire"> Auto cycle</label></div>
+    <button type="button" id="fire" style="margin-top:8px;width:100%;padding:8px 12px;background:var(--surface-raised,#1b2230);color:var(--text-primary,#e6ecf5);border:1px solid var(--border-accent,#2f3d55);border-radius:4px;font:inherit;font-size:12px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer">Fire — cycle the slide</button>
   </div></section>
 </main>
 <script src="./three-d-stage.js"></script>
@@ -109,7 +110,9 @@
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "finish": "factory",
   "stage": "bench",
-  "explode": 0
+  "explode": 0,
+  "autocycle": false,
+  "slide": 0
 }/*EDITMODE-END*/;
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
@@ -125,6 +128,10 @@ function App() {
       <TweakSection label="Presentation" />
       <TweakRadio label="Stage" value={t.stage} options={['bench', 'armory', 'range']} onChange={(v) => setTweak('stage', v)} />
       <TweakSlider label="Exploded view" value={t.explode} min={0} max={1} step={0.05} onChange={(v) => setTweak('explode', v)} />
+      <TweakSection label="Action" />
+      <TweakButton label="Fire once" onClick={() => window.__gunsmith?.fire()} />
+      <TweakToggle label="Auto cycle" value={t.autocycle} onChange={(v) => setTweak('autocycle', v)} />
+      <TweakSlider label="Slide (manual)" value={t.slide} min={0} max={1} step={0.05} onChange={(v) => setTweak('slide', v)} />
     </TweaksPanel>
   );
 }
@@ -138,9 +145,54 @@ import { applyStudio } from './models/studio.js';
 const SLOTS = ['barrel', 'muzzle', 'optic', 'magazine', 'stock', 'underbarrel', 'infusion'];
 const FACT = { longbarrel: [1.10, .92, 1.25], shortbarrel: [.95, 1.18, .8], compensator: [1.12, 1, 1], rangefinder: [1, 1, 1.2], drumfeed: [1, 1.15, 1], bracestock: [1, 1.08, 1.05], stabilizer: [1.18, .95, 1], embercoil: [1, 1, 1], cryocell: [1, 1, 1], voltcap: [1, 1, 1] };
 const APPLIES = { embercoil: 'burn', cryocell: 'chill', voltcap: 'shock' };
+/* Reload parts (FORWARD-MANIFEST-reload). Two kinds, both lifted out of work
+   that already exists: the feed part exported on its own, and the three
+   off-hand poses. Here so the pivots and the poses can be eyeballed before the
+   drop rather than after. `HANDS` is declared with the viewer state below. */
+const lift = (wid, node) => (K) => {
+  const src = WEAPONS.find((x) => x.id === wid).build(K);
+  const n = src.getObjectByName(node);
+  if (!n) return src;
+  n.parent.remove(n);
+  n.position.set(0, 0, 0); n.rotation.set(0, 0, 0);
+  n.traverse((o) => { o.visible = true; });
+  return n;
+};
+const posed = (p) => (K) => { K.__handsPose = p; const g = HANDS.build(K); K.__handsPose = null; return g; };
+const RELOAD = [
+  { id: 'prop_sidearm_mag', file: 'weapon_sidearm_magazine.glb', label: 'Sidearm magazine', swatch: '#14171d', size: 'viewmodel',
+    stats: { Origin: 'seated top face', Drop: '−Y + tip X', Source: 'sidearm_magazine' },
+    note: 'The same node as `sidearm_magazine` in the viewmodel, exported alone. Origin on the face that seats against the magwell, so a drop is a translate and a tip rather than a swing about the weapon origin.',
+    build: lift('sidearm', 'sidearm_magazine') },
+  { id: 'prop_rifle_mag', file: 'weapon_rifle_magazine.glb', label: 'Rifle magazine', swatch: '#7d6134', size: 'viewmodel',
+    stats: { Origin: 'magwell mouth', Drop: '−Y + tip X', Source: 'rifle_magazine' },
+    note: 'STANAG magazine alone. Origin on the mouth plane where the 25 mm curve crosses it — 1.9 mm forward of the well centre. Feed lips and top round kept: both are visible for the half second it is in the air.',
+    build: lift('rifle', 'rifle_magazine') },
+  { id: 'prop_ember_can', file: 'weapon_emberpistol_magazine.glb', label: 'Ember canister', swatch: '#e8622b', size: 'viewmodel',
+    stats: { Origin: 'forward dome', Drop: '+Z', Source: 'emberpistol_magazine' },
+    note: 'The fuel vessel is what this gun reloads, so it now carries the armoury’s `_magazine` name. Origin on the forward dome — the face that meets the regulator — and it pulls off rearward, so its drop axis is +Z, not −Y.',
+    build: lift('emberpistol', 'emberpistol_magazine') },
+  { id: 'prop_scatter_shell', file: 'weapon_scattergun_shell.glb', label: 'Scattergun shell', swatch: '#3a4250', size: 'viewmodel',
+    stats: { Origin: 'rim face', Feed: 'loadport +Z', Source: 'scattergun_shell' },
+    note: 'This gun is tube-fed: its reload is shells through the loading port, so the prop is a LOADED hull — brass head, full-length body, folded six-point crimp cut into the dome as ridges. Distinct from `scattergun_case`, which is fired and open-mouthed.',
+    build: lift('scattergun', 'scattergun_shell') },
+  { id: 'pose_magout', file: 'hands_firstperson_magout.glb', label: 'Off-hand — magout', swatch: '#3a3f4b', size: 'off-hand only',
+    stats: { Sets: '× 6', Carries: 'hands_mount_magazine', Replaces: 'hand_l' },
+    note: 'The off-hand clear of the gun, having just pulled the spent magazine — 7 cm left, 9 cm below and 13 cm behind the magwell. The firing hand never leaves the grip during a reload, so this file carries the off-hand alone and one set serves every platform.',
+    build: posed('magout') },
+  { id: 'pose_magin', file: 'hands_firstperson_magin.glb', label: 'Off-hand — magin', swatch: '#3a3f4b', size: 'off-hand only',
+    stats: { Sets: '× 6', Carries: 'hands_mount_magazine', Replaces: 'hand_l' },
+    note: 'At the magwell, seating the fresh magazine: `hands_mount_magazine` lands within 4 mm of `sidearm_mount_magwell`, so parenting the magazine prop there puts it where it belongs with no offset in code.',
+    build: posed('magin') },
+  { id: 'pose_charge', file: 'hands_firstperson_charge.glb', label: 'Off-hand — charge', swatch: '#3a3f4b', size: 'off-hand only',
+    stats: { Sets: '× 6', Pinch: 'thumb + index', Replaces: 'hand_l' },
+    note: 'On the charging handle or bolt handle: fingers closed to a pinch, palm over the receiver rear. Only the Rifle and Scattergun have a handle to work, but any faction can carry either, so it ships for all six sets.',
+    build: posed('charge') },
+];
 const CATS = [
   { id: 'weapons', label: 'Platforms', items: WEAPONS.filter((w) => w.worldFile), buildable: true },
   { id: 'tools', label: 'Tool & hands', items: WEAPONS.filter((w) => !w.worldFile), buildable: false },
+  { id: 'reload', label: 'Reload', items: RELOAD },
   { id: 'attachments', label: 'Attachments', items: ATTACHMENTS },
   { id: 'ammo', label: 'Ammo', items: AMMO },
   { id: 'tracers', label: 'Tracers', items: TRACERS },
@@ -197,7 +249,7 @@ function assemble() {
       if (!att) continue;
       const hide = (n) => { const o = model.getObjectByName(n); if (o) o.visible = false; };
       if (slot === 'barrel') hide(`${cur.id}_barrel`);
-      if (slot === 'magazine') hide(`${cur.id}_magazine`);
+      if (slot === 'magazine') { hide(`${cur.id}_magazine`); hide(`${cur.id}_mag_tube`); }
       if (slot === 'stock') hide(`${cur.id}_stock`);
       let mnt = model.getObjectByName(`${cur.id}_mount_${slot}`);
       if (slot === 'muzzle' && build.barrel) mnt = model.getObjectByName('attach_mount_muzzle') || mnt;
@@ -208,9 +260,11 @@ function assemble() {
   model.traverse((o) => { if (o.userData.slot) { const g = new THREE.Mesh(new THREE.OctahedronGeometry(.006, 0), new THREE.MeshBasicMaterial({ color: 0x65dce4, wireframe: true })); g.name = '__mount_' + o.name; g.userData.mountGizmo = true; g.userData.gizmo = true; g.visible = el('mounts').checked; o.add(g); } });
   stage.setAttribute('name', cur.file.replace(/\.glb$/, ''));
   stage.setObject(model);
-  // Weapons read best from the left three-quarter, slightly above.
+  // The hero Sidearm is pinned to a dead-profile hero angle; everything else
+  // still reads best from the left three-quarter, slightly above.
   const cam = stage._camera, ctl = stage._controls;
-  if (cam && ctl) { const d = cam.position.distanceTo(ctl.target); cam.position.copy(ctl.target).add(new THREE.Vector3(-1.4, .55, -.7).normalize().multiplyScalar(d)); ctl.update(); }
+  const view = cur.id === 'sidearm' ? new THREE.Vector3(-1, .06, 0) : new THREE.Vector3(-1.4, .55, -.7);
+  if (cam && ctl) { const d = cam.position.distanceTo(ctl.target); cam.position.copy(ctl.target).add(view.normalize().multiplyScalar(d)); ctl.update(); }
   const b = new THREE.Box3().setFromObject(model), s = b.getSize(new THREE.Vector3());
   el('stats').innerHTML = Object.entries({ ...cur.stats, Size: `${(s.x * 100).toFixed(0)}×${(s.y * 100).toFixed(0)}×${(s.z * 100).toFixed(0)} cm`, Tris: triCount(model).toLocaleString(), Parts: String(countMeshes(model)) })
     .map(([k, v]) => `<div><dt>${k}</dt><dd class="${k === 'Tris' || k === 'Parts' ? 'arcane' : ''}">${v}</dd></div>`).join('');
@@ -226,7 +280,7 @@ function assemble() {
 setCat(CATS[0]);
 
 /* ── Tweaks: finish set, stage mood, exploded view ───────────────────────────────── */
-const tweaks = { finish: 'factory', stage: 'bench', explode: 0 };
+const tweaks = { finish: 'factory', stage: 'bench', explode: 0, autocycle: false, slide: 0 };
 // Each finish rewrites the whole metal family so every gun, attachment and shell re-reads together.
 const FINISH = {
   factory: { gun_metal: [0x3a4250, .38, .85], gun_dark: [0x14171d, .42, .8], gun_pale: [0x9aa4b4, .28, .9], gun_bronze: [0x8a6b3a, .32, .9], polymer: [0x1c2029, .7], chrome: [0xc3ccd8, .2, .9], brass: [0xb08a3e, .3, .9], skin_plate: [0xc89b3c, .45, .5] },
@@ -234,10 +288,29 @@ const FINISH = {
   parade: { gun_metal: [0xb9c2cf, .12, 1], gun_dark: [0x2a2f3a, .18, .95], gun_pale: [0xe2e8f0, .08, 1], gun_bronze: [0xd8a13a, .15, 1], polymer: [0x12151c, .35], chrome: [0xf2f5f8, .06, 1], brass: [0xe0b34a, .12, 1], skin_plate: [0xe0b34a, .2, .8] },
   night: { gun_metal: [0x0f1116, .55, .6], gun_dark: [0x08090c, .6, .5], gun_pale: [0x1c1f26, .5, .6], gun_bronze: [0x141317, .5, .6], polymer: [0x0b0c10, .85], chrome: [0x2a2e36, .35, .8], brass: [0x3a3327, .45, .7], skin_plate: [0x4a3f22, .5, .5] },
 };
-const STAGE = { bench: { bg: '#0D1119', key: [0xffffff, 1.1], hemi: .3, exposure: 1.05, env: 1.0 }, armory: { bg: '#161008', key: [0xffc27a, 1.6], hemi: .22, exposure: 1.25, env: .8 }, range: { bg: '#03050a', key: [0x9fb4ff, .7], hemi: .12, exposure: .8, env: .45 } };
+const STAGE = { bench: { bg: '#0D1119', key: [0xffffff, 1.25], hemi: .26, exposure: 1.22, env: 1.15 }, armory: { bg: '#161008', key: [0xffc27a, 1.6], hemi: .22, exposure: 1.25, env: .8 }, range: { bg: '#03050a', key: [0x9fb4ff, .7], hemi: .12, exposure: .8, env: .45 } };
 const EXPLODE = { barrel: [0, 0, -1], muzzle: [0, 0, -1.6], optic: [0, 1, 0], magazine: [0, -1, 0], stock: [0, 0, 1], underbarrel: [0, -.8, 0], infusion: [-1, 0, 0] };
+const HERO_FINISH = {           // [tint, tintAmount, roughnessFactor, metalnessFactor]
+  factory: [0x000000, 0, 1, 1],
+  worn: [0x3a3a30, .26, 1, .82],
+  parade: [0x8fa0b4, .18, .45, 1],
+  night: [0x000000, .45, 1, .95],
+};
+let heroBase = null;
 function applyFinish() {
   for (const [n, [c, r, m]] of Object.entries(FINISH[tweaks.finish])) { const mat = K.mats[n]; if (!mat) continue; mat.color.setHex(c); mat.roughness = r; if (m !== undefined && 'metalness' in mat && !mat.isMeshPhysicalMaterial) mat.metalness = m; mat.needsUpdate = true; }
+  // hero_* materials carry procedural maps and authored values; derive each
+  // finish from that baseline instead of restating the colours here.
+  heroBase ??= Object.fromEntries(Object.entries(K.mats).filter(([n]) => n.startsWith('hero_')).map(([n, mat]) => [n, [mat.color.clone(), mat.roughness, mat.metalness]]));
+  const [tint, amt, rf, mf] = HERO_FINISH[tweaks.finish] || HERO_FINISH.factory;
+  const t = new THREE.Color(tint);
+  for (const [n, [c0, r0, m0]] of Object.entries(heroBase)) {
+    const mat = K.mats[n]; if (!mat) continue;
+    mat.color.copy(c0).lerp(t, amt);
+    mat.roughness = Math.min(1, r0 * rf);
+    if ('metalness' in mat) mat.metalness = Math.min(1, m0 * mf);
+    mat.needsUpdate = true;
+  }
 }
 function applyStage() {
   const S = STAGE[tweaks.stage]; stage.setAttribute('background', S.bg); stage.style.setProperty('--stage-bg', S.bg);
@@ -258,9 +331,114 @@ function applyExplode() {
     g.userData.basePos ??= g.position.clone(); g.position.copy(g.userData.basePos).add(new THREE.Vector3(...EXPLODE[slot]).multiplyScalar(k));
   }
 }
-function applyTweaks(t) { Object.assign(tweaks, t); applyFinish(); applyStage(); applyExplode(); }
-const _assemble = assemble; assemble = function () { _assemble(); applyExplode(); };
-window.__gunsmith = { CATS, K, build, get model() { return model; }, select, setCat, assemble: () => assemble(), applyTweaks, tweaks };
+/* ── firing cycle ───────────────────────────────────────────────────────────
+   Driven off the node the model declares, not off hard-coded part names: any
+   platform exposing <id>_slide_assembly with userData.recoil animates here.
+   Timings are real for a locked-breech pistol — ~45 ms rearward, a short dwell
+   at the rear, ~85 ms back into battery. The case leaves the port as the breech
+   clears the chamber, then flies ballistically with tumble. */
+const CYCLE = { back: .045, dwell: .022, fwd: .085 };
+const GRAV = new THREE.Vector3(0, -9.81, 0);
+const liveCases = [];
+let fireT = -1, ejected = false, autoFire = false, manualSlide = 0, _lastManual = 0;
+
+function slideNode() {
+  if (!model) return null;
+  if (model.userData.__recoilNode !== undefined) return model.userData.__recoilNode;
+  let found = null;
+  model.traverse((o) => { if (!found && o.userData && o.userData.recoil) found = o; });
+  return (model.userData.__recoilNode = found);
+}
+function ejectNode() {
+  if (!model) return null;
+  if (model.userData.__ejectNode !== undefined) return model.userData.__ejectNode;
+  let found = null;
+  model.traverse((o) => { if (!found && o.userData && o.userData.eject) found = o; });
+  return (model.userData.__ejectNode = found);
+}
+function fire() { if (!slideNode()) return; fireT = 0; ejected = false; }
+
+function throwCase() {
+  const tmpl = model.getObjectByName(`${cur.id}_case`), port = ejectNode();
+  if (!tmpl || !port) return;
+  const c = tmpl.clone(true);
+  c.visible = true; c.name = '__spent_case';
+  c.position.copy(port.position);
+  c.rotation.set(Math.PI / 2, .35, .2);          // case lying across the bore as it leaves
+  model.add(c);
+  const e = port.userData.eject, j = () => (Math.random() - .5) * .14;
+  liveCases.push({
+    o: c, t: 0,
+    v: new THREE.Vector3(e.dir[0] + j(), e.dir[1] + j(), e.dir[2] + j()).normalize().multiplyScalar(e.speed * (.9 + Math.random() * .2)),
+    w: new THREE.Vector3((Math.random() - .5) * e.spin, (Math.random() - .5) * e.spin * .7, (Math.random() - .5) * e.spin),
+  });
+}
+
+function tickFire(dt) {
+  const n = slideNode();
+  if (n) {
+    let travel = manualSlide;
+    if (fireT >= 0) {
+      fireT += dt;
+      const T = CYCLE.back + CYCLE.dwell + CYCLE.fwd;
+      travel = fireT < CYCLE.back ? fireT / CYCLE.back
+        : fireT < CYCLE.back + CYCLE.dwell ? 1
+        : 1 - (fireT - CYCLE.back - CYCLE.dwell) / CYCLE.fwd;
+      if (!ejected && fireT >= CYCLE.back * .75) { ejected = true; throwCase(); }
+      if (fireT >= T) { fireT = autoFire ? 0 : -1; ejected = false; travel = autoFire ? 0 : manualSlide; }
+    }
+    travel = Math.max(0, Math.min(1, travel));
+    const rc = n.userData.recoil;
+    n.userData.base ??= n.position.clone();
+    n.position.set(
+      n.userData.base.x + travel * rc.travel * rc.axis[0],
+      n.userData.base.y + travel * rc.travel * rc.axis[1],
+      n.userData.base.z + travel * rc.travel * rc.axis[2],
+    );
+  }
+  for (let i = liveCases.length - 1; i >= 0; i--) {
+    const c = liveCases[i];
+    c.t += dt;
+    c.v.addScaledVector(GRAV, dt);
+    c.o.position.addScaledVector(c.v, dt);
+    c.o.rotation.x += c.w.x * dt; c.o.rotation.y += c.w.y * dt; c.o.rotation.z += c.w.z * dt;
+    if (c.t > 1.6 || c.o.position.y < -.40) { model.remove(c.o); liveCases.splice(i, 1); }
+  }
+}
+function clearCases() { for (const c of liveCases) c.o.parent?.remove(c.o); liveCases.length = 0; fireT = -1; ejected = false; }
+
+/* Timer-driven rather than requestAnimationFrame: the viewer can be mounted in
+   an offscreen or occluded frame, where rAF is throttled to nothing and the
+   cycle silently never advances. A 16 ms interval keeps running, and we only
+   pay for a render while something is actually moving. */
+let _last = performance.now(), _ticks = 0;
+setInterval(() => {
+  _ticks++;
+  const now = performance.now(), dt = Math.min(.05, (now - _last) / 1000); _last = now;
+  const moving = fireT >= 0 || liveCases.length > 0 || manualSlide !== _lastManual;
+  _lastManual = manualSlide;
+  tickFire(dt);
+  if (moving) stage._renderer.render(stage._scene, stage._camera);
+}, 16);
+
+el('fire').addEventListener('click', fire);
+el('autofire').addEventListener('change', (e) => { autoFire = e.target.checked; autoFire ? fire() : (fireT = -1); });
+
+function applyTweaks(t) {
+  Object.assign(tweaks, t);
+  autoFire = !!tweaks.autocycle; manualSlide = tweaks.slide ?? 0;
+  const cb = el('autofire'); if (cb) cb.checked = autoFire;
+  if (autoFire && fireT < 0) fire();
+  applyFinish(); applyStage(); applyExplode();
+}
+const _assemble = assemble; assemble = function () {
+  clearCases(); _assemble(); applyExplode();
+  // Newly built geometry has to opt into the shadow pass or the contact
+  // darkening the studio sets up never reaches the weapon itself.
+  model?.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+};
+window.__gunsmith = { CATS, K, build, get model() { return model; }, select, setCat, assemble: () => assemble(), applyTweaks, tweaks, fire, clearCases,
+  debug: () => ({ ticks: _ticks, fireT, manualSlide, node: !!slideNode(), curId: cur && cur.id, cases: liveCases.length }) };
 window.dispatchEvent(new Event('gunsmith-ready'));
 </script>
 </body>

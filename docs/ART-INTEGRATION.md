@@ -26,8 +26,12 @@ Always the open **forward manifest**. Each one is a request list for a specific
 piece of work, written against something that already runs in the game, so
 every dimension in it is measured off the built thing rather than proposed:
 
-- **[FORWARD-MANIFEST-toaster.md](FORWARD-MANIFEST-toaster.md)** — sector 4's
-  whole kit, and the largest outstanding ask. It carries the one rule the rest
+- **[FORWARD-MANIFEST-hero.md](FORWARD-MANIFEST-hero.md)** — what the
+  2026-09-12 drop taught us: the hero texture set is embedded in every file
+  that uses it, the world weapons are the viewmodels under another name, and
+  two hand poses are still on the old rig.
+- [FORWARD-MANIFEST-toaster.md](FORWARD-MANIFEST-toaster.md) — sector 4's
+  whole kit, delivered 2026-09-12 and kept as the record of the ask. It carries the one rule the rest
   of this document does not: anything that repeats on that map is drawn as a
   single instanced mesh, so a file's **part count is its draw-call count** and
   its triangles are multiplied by every placement. That is why those entries
@@ -40,6 +44,15 @@ every dimension in it is measured off the built thing rather than proposed:
 is being asked for *now*, and anything in one should appear in
 `docs/forward-manifest.json` on the next drop. `MAP-AUTHORING.md` is the rules a
 map has to satisfy before any of its art is worth drawing.
+
+## Textures the importer writes beside a model
+
+A hero-standard GLB carries its texture set embedded, and Godot's importer
+extracts each one as `<model>_<n>.png` next to the file before importing it.
+Those PNGs are build output: every `--import` (CI runs one first) regenerates
+them, so they are ignored by git (`game/assets/**/*_[0-9]*.png`) and never
+committed. The 2026-09-12 drop would otherwise have added 447 of them at
+365 MB. The brand icons in `game/assets/brand/` are real files and stay tracked.
 
 ## Where the models come from
 

@@ -145,6 +145,50 @@ function bakeSwitchyard(THREE) {
   return { map: tex(THREE, a, true), roughnessMap: tex(THREE, r), normalMap: tex(THREE, normalFromHeight(h, 2.2)), emissiveMap: tex(THREE, e, true) };
 }
 
+/* ── Spire: plaza paving ─────────────────────────────────────────────── */
+/* 1024² = 20 × 20 m: a 10 × 10 grid of 2 m concrete pavers, 4 px expansion
+   joints, grime gathered along the joints, tyre scuff off the service road,
+   gum specks, a faded keep-clear box and wet patches that read near-mirror. */
+function bakeSpire(THREE) {
+  const N = 1024, R = rng(7717), C = N / 10, J = 4;
+  const a = cv(N), ax = a.getContext('2d'), r = cv(N), rx = r.getContext('2d'), h = cv(N), hx = h.getContext('2d'), e = cv(N), ex = e.getContext('2d');
+  ax.fillStyle = '#3e4046'; ax.fillRect(0, 0, N, N);            // joint sand
+  rx.fillStyle = '#ececec'; rx.fillRect(0, 0, N, N);
+  hx.fillStyle = '#3a3a3a'; hx.fillRect(0, 0, N, N);
+  ex.fillStyle = '#000'; ex.fillRect(0, 0, N, N);
+  for (let iy = 0; iy < 10; iy++) for (let ix = 0; ix < 10; ix++) {
+    const x0 = ix * C + J / 2, y0 = iy * C + J / 2, w = C - J, hh = C - J, k = .88 + R() * .24;
+    const base = [108 * k, 111 * k, 116 * k];
+    ax.fillStyle = rgba(...base, 1); ax.fillRect(x0, y0, w, hh);
+    for (let i = 0; i < 34; i++) blot(ax, x0 + R() * w, y0 + R() * hh, 8 + R() * 26, rgba(base[0] * (.82 + R() * .4), base[1] * (.82 + R() * .4), base[2] * (.82 + R() * .4), 1), .3);
+    // Cast-in bevel: lit top edge, shaded bottom, and the paver proud in height.
+    ax.fillStyle = rgba(220, 224, 230, .12); ax.fillRect(x0, y0, w, 2); ax.fillStyle = rgba(0, 0, 0, .3); ax.fillRect(x0, y0 + hh - 2, w, 2);
+    const lv = 158 + R() * 30; hx.fillStyle = rgba(lv, lv, lv, 1); hx.fillRect(x0, y0, w, hh);
+    rx.fillStyle = rgba(196 + R() * 40, 196 + R() * 40, 196 + R() * 40, 1); rx.fillRect(x0, y0, w, hh);
+    if (R() < .1) { ax.strokeStyle = rgba(46, 46, 50, .55); ax.lineWidth = 1.4; jag(ax, x0 + R() * w, y0, x0 + R() * w, y0 + hh, 9, 6, rng(iy * 11 + ix)); } // hairline crack
+  }
+  // Grime gathered along every joint line, heavier where feet cut the corners.
+  for (let i = 0; i <= 10; i++) { const p = i * C; ax.fillStyle = rgba(26, 27, 30, .3); ax.fillRect(p - 3, 0, 6, N); ax.fillRect(0, p - 3, N, 6); }
+  for (let i = 0; i < 26; i++) blot(ax, Math.round(R() * 10) * C, R() * N, 26 + R() * 46, 'rgba(24,25,28,1)', .3);
+  // Tyre scuff arcs off the service road, and dropped-oil dots.
+  ax.lineCap = 'round';
+  for (let i = 0; i < 9; i++) { const cx = R() * N, cy = R() * N, rad = 60 + R() * 150, a0 = R() * Math.PI * 2; ax.strokeStyle = rgba(30, 30, 32, .3); ax.lineWidth = 5 + R() * 7; ax.beginPath(); ax.arc(cx, cy, rad, a0, a0 + .5 + R() * .7); ax.stroke(); }
+  for (let i = 0; i < 10; i++) { const x = R() * N, y = R() * N; blot(ax, x, y, 12 + R() * 26, 'rgba(14,13,14,1)', .6, .15); blot(rx, x, y, 12 + R() * 26, 'rgba(96,96,96,1)', .8, .2); }
+  // Chewing gum: pale flattened specks, always on the paver face.
+  for (let i = 0; i < 90; i++) { const x = R() * N, y = R() * N, rad = 2 + R() * 3.5; ax.fillStyle = rgba(190 + R() * 30, 188 + R() * 30, 182 + R() * 26, .5); ax.beginPath(); ax.ellipse(x, y, rad, rad * (.7 + R() * .4), R() * Math.PI, 0, Math.PI * 2); ax.fill(); }
+  // Painted markings: a faded keep-clear box by the service door, edge line.
+  ax.strokeStyle = rgba(216, 176, 74, .22); ax.lineWidth = 7; ax.setLineDash([30, 18]); ax.strokeRect(N * .58, N * .12, N * .3, N * .22); ax.setLineDash([]);
+  ax.fillStyle = rgba(214, 216, 220, .14); ax.fillRect(0, N * .5 - 3, N, 6);
+  // Wet patches: flat, dark and near-mirror, with a silt rim.
+  for (let i = 0; i < 6; i++) {
+    const x = R() * N, y = R() * N, rad = 34 + R() * 80, sy = .45 + R() * .45, an = R() * Math.PI;
+    for (const [ctx, col, al, inner] of [[ax, 'rgba(150,146,138,1)', .3, .9], [ax, 'rgba(16,20,26,1)', .85, .82], [rx, 'rgba(28,28,28,1)', 1, .82], [hx, 'rgba(96,96,96,1)', .85, .8]]) { ctx.save(); ctx.translate(x, y); ctx.rotate(an); ctx.scale(1, sy); blot(ctx, 0, 0, rad * (al === .3 ? 1.14 : 1), col, al, inner); ctx.restore(); }
+  }
+  // Recessed uplights along one paver line — the plaza's own light, emissive only.
+  for (let i = 0; i < 5; i++) { const x = (i * 2 + 1) * C, y = N * .74; ax.fillStyle = rgba(40, 42, 46, .9); ax.fillRect(x - 9, y - 5, 18, 10); blot(ex, x, y, 22, 'rgba(255,214,150,1)', .85, .1); }
+  return { map: tex(THREE, a, true), roughnessMap: tex(THREE, r), normalMap: tex(THREE, normalFromHeight(h, 2.6)), emissiveMap: tex(THREE, e, true) };
+}
+
 /* ── Foundry: refractory brick (boundary wall, buttresses) ───────────── */
 /* 1024² = 2.5 × 2.5 m: 10 stretcher courses of 250 × 75 mm brick, 8 px mortar, half-brick stagger. */
 function bakeBrick(THREE) {
@@ -179,13 +223,90 @@ function bakeBrick(THREE) {
   return { map: tex(THREE, a, true), roughnessMap: tex(THREE, r), normalMap: tex(THREE, normalFromHeight(h, 2.4)) };
 }
 
+/* ── Toaster: dry autumn grass, country asphalt, gravel drive ────────── */
+/* 1024² = 12.5 × 12.5 m at the kit's 0.08 repeats/m. Everything that reads as
+   detail on this map is in these three canvases rather than in geometry: a
+   20 m tile is 128 placements and a road module is ninety, so a tuft of grass
+   modelled here would be fifty thousand parts. */
+function bakeGrass(THREE) {
+  const N = 1024, R = rng(2211);
+  const a = cv(N), ax = a.getContext('2d'), r = cv(N), rx = r.getContext('2d'), h = cv(N), hx = h.getContext('2d');
+  ax.fillStyle = rgba(146, 132, 78); ax.fillRect(0, 0, N, N);
+  rx.fillStyle = rgba(238, 238, 238); rx.fillRect(0, 0, N, N);
+  hx.fillStyle = rgba(128, 128, 128); hx.fillRect(0, 0, N, N);
+  // Broad drifts — sun-bleached, still-green and dead-thatch, so the field is
+  // not one flat hue at distance. This is the read that matters most: 128
+  // copies of an even tile is wallpaper however good the blades are.
+  for (let i = 0; i < 90; i++) {
+    const t = R(), c = t < .4 ? [168, 154, 88] : t < .75 ? [116, 118, 66] : [138, 106, 58];
+    blot(ax, R() * N, R() * N, 60 + R() * 180, rgba(c[0], c[1], c[2], 1), .30);
+  }
+  // Blades: short strokes on the drift colours, leaning one way as wind does.
+  for (let i = 0; i < 26000; i++) {
+    const x = R() * N, y = R() * N, len = 3 + R() * 7, lean = .5 + R() * .9, v = R();
+    ax.strokeStyle = v < .5 ? rgba(176, 160, 92, .5) : v < .8 ? rgba(126, 128, 72, .45) : rgba(198, 182, 120, .4);
+    ax.lineWidth = 1; ax.beginPath(); ax.moveTo(x, y); ax.lineTo(x + len * lean, y - len); ax.stroke();
+    hx.strokeStyle = rgba(150, 150, 150, .25); hx.beginPath(); hx.moveTo(x, y); hx.lineTo(x + len * lean, y - len); hx.stroke();
+  }
+  // Fallen leaves, a few small stones, and the bare scrapes stock wear in.
+  for (let i = 0; i < 420; i++) { const x = R() * N, y = R() * N, s = 3 + R() * 5, c = [[186, 96, 44], [158, 118, 48], [140, 62, 38]][(R() * 3) | 0]; ax.fillStyle = rgba(c[0], c[1], c[2], .55); ax.beginPath(); ax.ellipse(x, y, s, s * .6, R() * 3.14, 0, 6.283); ax.fill(); }
+  for (let i = 0; i < 60; i++) { const x = R() * N, y = R() * N, s = 2 + R() * 4; ax.fillStyle = rgba(150, 146, 136, .7); ax.beginPath(); ax.arc(x, y, s, 0, 6.283); ax.fill(); blot(hx, x, y, s * 1.6, 'rgba(210,210,210,1)', .5); rx.fillStyle = rgba(200, 200, 200, .6); rx.beginPath(); rx.arc(x, y, s, 0, 6.283); rx.fill(); }
+  for (let i = 0; i < 14; i++) { const x = R() * N, y = R() * N, s = 18 + R() * 46; blot(ax, x, y, s, 'rgba(122,100,72,1)', .5, .2); blot(rx, x, y, s, 'rgba(210,210,210,1)', .4, .2); }
+  return { map: tex(THREE, a, true), roughnessMap: tex(THREE, r), normalMap: tex(THREE, normalFromHeight(h, 1.6)) };
+}
+
+/* 1024² spans 4 m of length × the full 6 m width, so V is ACROSS the road and
+   the faded centre line can live at v 0.5 where the module needs it. */
+function bakeAsphalt(THREE) {
+  const N = 1024, R = rng(5150);
+  const a = cv(N), ax = a.getContext('2d'), r = cv(N), rx = r.getContext('2d'), h = cv(N), hx = h.getContext('2d');
+  ax.fillStyle = rgba(58, 58, 62); ax.fillRect(0, 0, N, N);
+  rx.fillStyle = rgba(224, 224, 224); rx.fillRect(0, 0, N, N);
+  hx.fillStyle = rgba(128, 128, 128); hx.fillRect(0, 0, N, N);
+  grain(ax, N, 60000, 30, 96, .5, R);
+  grain(hx, N, 40000, 96, 170, .35, R);
+  // Two burnished wheel tracks either side of the crown — smoother and darker
+  // than the aggregate between them, which is most of what says "driven on".
+  for (const v of [.26, .74]) { const y = v * N; blot(ax, N * .5, y, N * .5, 'rgba(30,30,33,1)', .45, .1); rx.globalAlpha = .5; rx.fillStyle = rgba(150, 150, 150); rx.fillRect(0, y - N * .08, N, N * .16); rx.globalAlpha = 1; }
+  // Faded centre line, broken, worn thin in the middle of each dash.
+  for (let x = 0; x < N; x += 150) { ax.fillStyle = rgba(196, 188, 150, .34); ax.fillRect(x, N * .5 - 5, 96, 10); ax.fillStyle = rgba(196, 188, 150, .18); ax.fillRect(x + 20, N * .5 - 5, 56, 10); }
+  // Edges break up before the grass does — country asphalt has no kerb.
+  for (let i = 0; i < 260; i++) { const x = R() * N, e = R() < .5 ? 0 : N, y = e + (R() < .5 ? 1 : -1) * R() * N * .07; ax.fillStyle = rgba(96, 88, 68, .5); ax.beginPath(); ax.arc(x, y, 3 + R() * 9, 0, 6.283); ax.fill(); }
+  for (let i = 0; i < 22; i++) { ax.strokeStyle = rgba(26, 26, 28, .55); ax.lineWidth = 2 + R() * 2; jag(ax, R() * N, R() * N, R() * N, R() * N, 26, 9, R); }
+  return { map: tex(THREE, a, true), roughnessMap: tex(THREE, r), normalMap: tex(THREE, normalFromHeight(h, 2)) };
+}
+
+function bakeGravel(THREE) {
+  const N = 1024, R = rng(8080);
+  const a = cv(N), ax = a.getContext('2d'), r = cv(N), rx = r.getContext('2d'), h = cv(N), hx = h.getContext('2d');
+  ax.fillStyle = rgba(132, 124, 106); ax.fillRect(0, 0, N, N);
+  rx.fillStyle = rgba(246, 246, 246); rx.fillRect(0, 0, N, N);
+  hx.fillStyle = rgba(110, 110, 110); hx.fillRect(0, 0, N, N);
+  for (let i = 0; i < 9000; i++) {
+    const x = R() * N, y = R() * N, s = 2 + R() * 7, v = 120 + R() * 90;
+    ax.fillStyle = rgba(v, v * .96, v * .86, .85); ax.beginPath(); ax.ellipse(x, y, s, s * (.6 + R() * .4), R() * 3.14, 0, 6.283); ax.fill();
+    blot(hx, x, y, s * 1.3, 'rgba(220,220,220,1)', .6);
+  }
+  // Two ruts and the weedy crown between them — a farm drive is never even.
+  for (const v of [.28, .72]) { const y = v * N; blot(ax, N * .5, y, N * .52, 'rgba(96,90,78,1)', .5, .1); blot(hx, N * .5, y, N * .52, 'rgba(70,70,70,1)', .5, .1); }
+  for (let i = 0; i < 900; i++) { const x = R() * N, y = N * .5 + (R() - .5) * N * .16, len = 3 + R() * 6; ax.strokeStyle = rgba(118, 122, 70, .5); ax.lineWidth = 1; ax.beginPath(); ax.moveTo(x, y); ax.lineTo(x + len * .6, y - len); ax.stroke(); }
+  return { map: tex(THREE, a, true), roughnessMap: tex(THREE, r), normalMap: tex(THREE, normalFromHeight(h, 2.6)) };
+}
+
 export function floorMaterials(THREE) {
   if (cache.has(THREE)) return cache.get(THREE);
-  const f = bakeFoundry(THREE), s = bakeSwitchyard(THREE), b = bakeBrick(THREE);
+  const f = bakeFoundry(THREE), s = bakeSwitchyard(THREE), b = bakeBrick(THREE), p = bakeSpire(THREE);
   const brick = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, metalness: 0, ...b, normalScale: new THREE.Vector2(1, 1) }); brick.name = 'refractory_brick';
   const foundry = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, metalness: .2, ...f, emissive: new THREE.Color(0xff6a00), emissiveIntensity: 1.2, normalScale: new THREE.Vector2(.9, .9) }); foundry.name = 'floor_foundry';
   const switchyard = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, metalness: .05, ...s, emissive: new THREE.Color(0xffb060), emissiveIntensity: .8, normalScale: new THREE.Vector2(.7, .7) }); switchyard.name = 'floor_switchyard';
   const puddle = new THREE.MeshStandardMaterial({ color: 0x0c1119, roughness: .08, metalness: .3 }); puddle.name = 'puddle';
   const slag_glass = new THREE.MeshStandardMaterial({ color: 0x0a0a0d, roughness: .12, metalness: .2, emissive: new THREE.Color(0x3a1206), emissiveIntensity: .5 }); slag_glass.name = 'slag_glass';
-  const out = { foundry, switchyard, puddle, slag_glass, brick }; cache.set(THREE, out); return out;
+  const spire = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, metalness: .04, ...p, emissive: new THREE.Color(0xffc98a), emissiveIntensity: .9, normalScale: new THREE.Vector2(.8, .8) }); spire.name = 'floor_spire';
+  /* Matte outdoor dielectrics: envMapIntensity stays low or the studio box
+     shows up in them at glancing angles (CLAUDE.md rule 5). */
+  const gr = bakeGrass(THREE), asf = bakeAsphalt(THREE), gv = bakeGravel(THREE);
+  const grass = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, metalness: 0, vertexColors: true, ...gr, envMapIntensity: .06, normalScale: new THREE.Vector2(.8, .8) }); grass.name = 'toa_grass';
+  const asphalt = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, metalness: .02, vertexColors: true, ...asf, envMapIntensity: .18, normalScale: new THREE.Vector2(.9, .9) }); asphalt.name = 'toa_asphalt';
+  const gravel = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, metalness: 0, vertexColors: true, ...gv, envMapIntensity: .08, normalScale: new THREE.Vector2(1, 1) }); gravel.name = 'toa_gravel';
+  const out = { foundry, switchyard, spire, puddle, slag_glass, brick, grass, asphalt, gravel }; cache.set(THREE, out); return out;
 }

@@ -29,7 +29,12 @@
 /* The same export as docs/design/"Deep Field 3D - Asset Export.html" — the page Claude Design ships — with two
    changes: every file is PUT to tools/design-export/server.mjs at /out/<repo path> instead of being zipped for
    download, and the run starts on load. The build / prune / bake logic is verbatim; when design's page changes,
-   port the change here. Served at http://127.0.0.1:8765/export.html by tools/design-export.sh. */
+   port the change here. Served at http://127.0.0.1:8765/export.html by tools/design-export.sh.
+
+   Ported 2026-09-12 from the drop of the same day: per-item manifest fields (run/repeat/width, arcDeg/radius,
+   budgetTris/budgetParts, instanced, lod1/lodSwitch, the vehicle block), all four variants of a tile that has
+   them, one file per hand pose from the item's own `poses` list, and the five reload props lifted out of the
+   weapon viewmodels. */
 const post = (s) => fetch('/log', { method: 'POST', body: s }).catch(() => {});
 const status = document.getElementById('status');
 const say = (s) => { status.textContent = s; post(s); };
@@ -68,7 +73,24 @@ const EXTRA = [
   { dir: 'enemies/', items: ENEMIES, kind: 'enemy' }, { dir: 'traps/', items: TRAPS, kind: 'trap' }, { dir: 'towers/', items: PROJECTILES, kind: 'projectile' },
   { dir: 'weapons/', items: WEAPONS, kind: 'weapon' }, { dir: 'weapons/', items: WEAPONS.filter((w) => w.worldFile).map((w) => ({ ...w, file: w.worldFile, id: w.id + '_world' })), kind: 'weapon_world' },
   { dir: 'heroes/', items: HEROES, kind: 'hero' }, { dir: 'maps/foundry/', items: FOUNDRY, kind: 'map_foundry' }, { dir: 'maps/switchyard/', items: SWITCHYARD, kind: 'map_switchyard' }, { dir: 'maps/spire/', items: SPIRE, kind: 'map_spire' }, { dir: 'maps/toaster/', items: TOASTER, kind: 'map_toaster' }, { dir: 'vehicles/', items: VEHICLES, kind: 'vehicle' }, { dir: 'shared/', items: SHARED, kind: 'shared' }, { dir: 'vfx/', items: VFX, kind: 'vfx' }, { dir: 'economy/', items: PICKUPS, kind: 'pickup' }, { dir: 'weapons/', items: ATTACHMENTS, kind: 'attachment' }, { dir: 'weapons/', items: AMMO, kind: 'ammo' }, { dir: 'weapons/', items: TRACERS, kind: 'tracer' }];
-const EXTRA_COUNT = EXTRA.reduce((a, c) => a + c.items.length, 0);
+/* Reload props (FORWARD-MANIFEST-reload Ask A). Not new geometry: the feed part
+   already in each viewmodel, lifted out and exported on its own so a reload can
+   put one in the air as the spent mag and another in the off-hand as the fresh
+   one. Lifting it out is only correct because the part's pivot now sits on the
+   seated face (Ask C) — dropping it is a translation and a tip, not a swing
+   about the weapon origin.
+
+   The Scattergun is tube-fed, so its reload is shells through the loading port
+   and its prop is a LOADED hull, not a magazine. It ships under both the
+   requested name and the honest one; `_shell` is the one to keep. */
+const RELOAD_PROPS = [
+  ['sidearm', 'sidearm_magazine', 'weapon_sidearm_magazine.glb', 'Detachable box magazine exported on its own — the same node as `sidearm_magazine` in the viewmodel, origin on the seated top face, +Y up. Dropping it is a translate down plus a tip about X; `userData.drop` on the source group carries both axes.'],
+  ['rifle', 'rifle_magazine', 'weapon_rifle_magazine.glb', 'STANAG magazine on its own, origin on the magwell mouth plane (1.9 mm forward of the well centre, where the 25 mm curve crosses it). Feed lips and top round included — they are visible for the half second it is in the air.'],
+  ['emberpistol', 'emberpistol_magazine', 'weapon_emberpistol_magazine.glb', 'Fuel canister, not a magazine — the vessel is what this gun reloads, so it now carries the armoury’s `_magazine` name and exports under it. Origin on the forward dome, the face that meets the regulator; it pulls off rearward, so `userData.drop` is +Z rather than −Y.'],
+  ['scattergun', 'scattergun_shell', 'weapon_scattergun_magazine.glb', 'A loaded 12-gauge hull under the requested filename so nothing falls back to a placeholder. This gun has no detachable magazine; see `weapon_scattergun_shell.glb`, which is the same file under the name that tells the truth.'],
+  ['scattergun', 'scattergun_shell', 'weapon_scattergun_shell.glb', 'Loaded 12-gauge hull: brass head with rim and extractor groove, full-length body, folded six-point crimp cut into the dome as ridges. Origin at the rim face so a reload pushes it in along +Z at `scattergun_mount_loadport`. Distinct from `scattergun_case`, which is fired — open mouth, no crimp.'],
+];
+const EXTRA_COUNT = EXTRA.reduce((a, c) => a + c.items.reduce((n, it) => n + (it.buildVariant ? 4 : 1) + (it.poses ? it.poses.length - 1 : 0), 0), 0) + RELOAD_PROPS.length;
 const ROUTES = [['enemy_', 'enemies'], ['boss_', 'enemies'], ['tower_', 'structures'], ['trap_', 'structures'], ['socket_', 'structures'], ['weapon_', 'weapons'], ['attach_', 'weapons'], ['ammo_', 'weapons'], ['hands_', 'weapons'], ['hero_', 'heroes'], ['proj_', 'vfx'], ['vfx_', 'vfx'], ['pickup_', 'economy'], ['foundry_', 'maps'], ['switchyard_', 'maps'], ['spire_', 'maps'], ['toaster_', 'maps'], ['vehicle_', 'vehicles'], ['shared_', 'maps'], ['prop_', 'maps'], ['ui_', 'ui']];
 const routeFor = (file) => 'game/assets/' + (ROUTES.find(([p]) => file.startsWith(p))?.[1] || 'misc') + '/' + file;
 const TOWERS = (await Promise.all(MODS.map((m) => import(`./models/${m}.js`)))).map((m) => m.TOWER);
@@ -165,13 +187,7 @@ const put = async (name, data) => {
   if (!r.ok) throw new Error(`PUT ${name}: ${r.status}`);
 };
 
-/* Hands come in three poses in the source (weapon.handsPose: rifle / pistol / tool) and the base export ships
-   only the default. The game holds pistols and the wrench too, so the other two are exported as
-   hands_<id>_pistol / hands_<id>_tool beside the rifle-posed hands_<id>. `?only=hands` exports just these. */
-const HAND_POSES = ['pistol', 'tool'];
-const HAND_ITEMS = [...WEAPONS.filter((w) => w.id === 'hands'), ...HEROES.filter((h) => h.id.startsWith('hands_'))];
-const ONLY = new URLSearchParams(location.search).get('only');
-const TOTAL = ONLY === 'hands' ? HAND_ITEMS.length * HAND_POSES.length : FILES.length + EXTRA_COUNT + HAND_ITEMS.length * HAND_POSES.length;
+const TOTAL = FILES.length + EXTRA_COUNT;
 say(`Ready — ${TOTAL} GLB files; starting`);
 const manifest = { version: '1.0', generated: new Date().toISOString(), units: 'metres', up: '+Y', forward: '-Z', files: [] };
 let done = 0;
@@ -185,16 +201,8 @@ const add = async (name, obj, meta) => {
   say(`${done} / ${TOTAL} · ${name} · ${data.length} bytes`);
   await tick();
 };
-async function exportHandPoses() {
-  for (const pose of HAND_POSES) for (const it of HAND_ITEMS) {
-    kit.__handsPose = pose;
-    const m = it.build(kit);
-    await add(it.file.replace(/\.glb$/, `_${pose}.glb`), m, { kind: 'hands', id: `${it.id}_${pose}`, pose, note: it.note });
-  }
-  delete kit.__handsPose;
-}
 try {
-  for (const t of ONLY === 'hands' ? [] : TOWERS) {
+  for (const t of TOWERS) {
     const rigMeta = t.rig ? { rig: { yaw: t.id + '_yaw', pitch: t.id + '_pitch', muzzle: t.id + '_muzzle', yawLimits: t.rig.yaw, pitchLimits: t.rig.pitch, traverseDegPerSec: t.rig.traverse, elevateDegPerSec: t.rig.elevate, pitchSign: -1 } } : { spin: t.id + '_spin' };
     if (t.id === 'barricade') {
       for (const [file, v] of [['tower_barricade.glb', null], ['tower_barricade_damaged.glb', 'damaged'], ['tower_barricade_broken.glb', 'broken']])
@@ -211,12 +219,54 @@ try {
       await add(`tower_${t.id}_${p.id}_s${s}.glb`, staged, { tower: t.id, kind: 'module', path: p.id, stage: s, breakpoint: [4, 7, 10].includes(s), adds: p.steps[s] || null, increments: Array.from({ length: s - 1 }, (_, i) => `${t.id}_up_${p.id}_l${i + 2}`) });
     }
   }
-  for (const c of ONLY === 'hands' ? [] : EXTRA) for (const it of c.items) {
+  for (const c of EXTRA) for (const it of c.items) {
     const m = it.build(kit);
-    await add(it.file, m, { kind: c.kind, id: it.id, note: it.note });
+    /* Linear modules carry their run axis, repeat length and width
+       (FORWARD-MANIFEST-switchyard, "Conventions we need stated on
+       delivery"). Neither `run` nor `repeat` is recoverable from the mesh,
+       and a cut channel placed with a +Z helper when it runs +X cost a
+       whole review pass — perfectly plausible art, placed perfectly wrongly. */
+    const lin = it.run ? { run: it.run, repeat: it.repeat, width: it.width } : null;
+    /* An arc is a linear module whose axis is a radius: `arcDeg`, `radius`
+       and `width`, with the origin at the CENTRE OF CURVATURE. Budgets ship
+       beside the measured counts so `make assets` can fail on a file that is
+       over, instead of the cost turning up as a frame rate three weeks later;
+       `instanced` marks the files meant for the multimesh path; `lod1` /
+       `lodSwitch` tie a tree to its billboard (FORWARD-MANIFEST-toaster,
+       "Conventions we need stated on delivery", items 1–4). */
+    const arc = it.arcDeg ? { arcDeg: it.arcDeg, radius: it.radius, width: it.width } : null;
+    const budget = it.budgetTris ? { budgetTris: it.budgetTris, budgetParts: it.budgetParts } : null;
+    const inst = it.instanced ? { instanced: true } : null;
+    const lod = it.lod1 ? { lod1: it.lod1, lodSwitch: it.lodSwitch } : null;
+    const veh = m.userData && m.userData.vehicle ? { vehicle: m.userData.vehicle } : null;
+    await add(it.file, m, { kind: c.kind, id: it.id, note: it.note, ...lin, ...arc, ...budget, ...inst, ...lod, ...veh });
+    // A tile with variants ships all four. The exporter called build() only,
+    // so v0 was the sole GLB and one tile laid twenty-four times put the same
+    // puddle on a lattice — and the switch stand in v1 was never delivered at
+    // all (design-system README, “ships one variant of four”).
+    if (it.buildVariant) for (let v = 1; v <= 3; v++)
+      await add(it.file.replace(/\.glb$/, `_v${v}.glb`), it.buildVariant(kit, v), { kind: c.kind, id: `${it.id}_v${v}`, variant: v, note: it.note, ...lin, ...arc, ...budget, ...inst });
+    /* Hand sets ship one file per pose. poses[0] is the base build above; the
+       rest are the pistol and tool grips the viewmodel picks by platform, and
+       the three reload poses, which carry the OFF-HAND ALONE — the firing hand
+       never leaves the grip during a reload, so one set of three serves every
+       platform instead of one set per platform. */
+    if (it.poses) for (const p of it.poses.slice(1)) {
+      kit.__handsPose = p;
+      const pm = it.build(kit);
+      kit.__handsPose = null;
+      await add(it.file.replace(/\.glb$/, `_${p}.glb`), pm, { kind: c.kind, id: `${it.id}_${p}`, pose: p, offhandOnly: ['magout', 'magin', 'charge'].includes(p) || undefined, note: it.note });
+    }
   }
-  await exportHandPoses();
-  if (ONLY !== 'hands') {
+  for (const [wid, node, file, note] of RELOAD_PROPS) {
+    const src = WEAPONS.find((x) => x.id === wid).build(kit);
+    const n = src.getObjectByName(node);
+    if (!n) { say(`WARN reload prop node missing: ${node}`); continue; }
+    n.parent.remove(n);
+    n.position.set(0, 0, 0); n.rotation.set(0, 0, 0);
+    n.traverse((o) => { o.visible = true; });
+    await add(file, n, { kind: 'weapon_reload', id: file.replace(/\.glb$/, ''), weapon: wid, source: node, note });
+  }
   say('Bundling palette, icons, manifest, design system…');
   await put('game/assets/structures/manifest.json', new TextEncoder().encode(JSON.stringify(manifest, null, 2)));
   await put('docs/forward-manifest.json', await text('game/assets/forward-manifest.json'));
@@ -227,9 +277,9 @@ try {
     await put(n, await text(p));
   for (const i of ICONS) await put(`game/assets/ui/${i}.svg`, await text(`game/assets/ui/${i}.svg`));
   for (const t of ['base', 'colors', 'effects', 'fonts', 'spacing', 'typography']) await put(`docs/design-system/${t}.css`, await text(`ds/tokens/${t}.css`));
-  for (const f of ['ui-kit.css', 'ui-screens.js', 'ui-branding.js', 'ui-weapon-view.js']) await put('docs/design-system/' + f, await text(f));
+  // ui-screens.html imports ui-screens-v2.js since the 2026-09-12 drop; a viewer copied without it is a blank page.
+  for (const f of ['ui-kit.css', 'ui-screens.js', 'ui-screens-v2.js', 'ui-branding.js', 'ui-weapon-view.js']) await put('docs/design-system/' + f, await text(f));
   await put('docs/design-system/ui-screens.html', new TextEncoder().encode((await (await fetch('Deep Field 3D - UI Screens.html')).text()).replaceAll('ds/tokens/', '')));
-  }
   say(`DONE — ${done} GLB files exported`);
 } catch (err) {
   say('ERROR export failed: ' + (err.stack || err.message));
