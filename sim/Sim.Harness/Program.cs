@@ -1754,6 +1754,97 @@ if (args.Contains("--baseline"))
             : string.Join(" | ", problems.Take(6)));
 }
 
+// --- Gate 49: the lane graph derived from the routes is lossless.
+//
+// The first step of the M5 mutable-map work is a decomposition, not a change:
+// Maps.cs stores a list of polylines, and where two routes overlap it stores the
+// overlap twice. LaneGraph.FromRoutes turns that into nodes and the spans
+// between them. Nothing reads it yet, and nothing may until this holds — the
+// whole safety argument for switching movement onto the graph is that the graph
+// *is* the routes, proven rather than assumed.
+//
+// Exact equality throughout. A rebuild that matched "closely enough" would be a
+// derivation quietly moving a lane, which is the one thing this step must not do.
+{
+    var problems = new List<string>();
+    var shape = new List<string>();
+
+    foreach (var map in Maps.All.Values)
+    {
+        var graph = LaneGraph.FromRoutes(map);
+
+        foreach (var route in map.Routes)
+        {
+            var rebuilt = graph.Rebuild(route.Id);
+            if (rebuilt.Count != route.Waypoints.Count)
+            {
+                problems.Add($"{map.Id}/{route.Id}: rebuilt {rebuilt.Count} waypoints, authored {route.Waypoints.Count}");
+                continue;
+            }
+            for (int i = 0; i < rebuilt.Count; i++)
+                if (!rebuilt[i].Equals(route.Waypoints[i]))
+                    problems.Add($"{map.Id}/{route.Id}: waypoint {i} rebuilt as "
+                        + $"({rebuilt[i].X},{rebuilt[i].Y},{rebuilt[i].Z}), authored "
+                        + $"({route.Waypoints[i].X},{route.Waypoints[i].Y},{route.Waypoints[i].Z})");
+
+            // Walked length has to survive too: it is what the run cap, the
+            // coverage sampler and the burrow cycle are all denominated in.
+            float authored = 0f;
+            for (int leg = 0; leg < route.LegCount; leg++)
+                if (!route.IsTeleportLeg(leg))
+                    authored += route.Waypoints[leg].DistanceTo(route.Waypoints[leg + 1]);
+
+            var itinerary = graph.Itineraries.First(i => i.Id == route.Id);
+            float walked = 0f;
+            for (int i = 0; i < itinerary.Via.Count - 1; i++)
+                walked += graph.Edges
+                    .First(e => e.From == itinerary.Via[i] && e.To == itinerary.Via[i + 1]
+                        && e.Layer == itinerary.Layer)
+                    .WalkedLength;
+
+            if (MathF.Abs(walked - authored) > 0.001f)
+                problems.Add($"{map.Id}/{route.Id}: walked {walked:0.###} m, authored {authored:0.###} m");
+        }
+
+        // Every warp leg must have become exactly one zero-length Warp edge.
+        int authoredWarps = map.Routes.Sum(r => r.TeleportLegs?.Count ?? 0);
+        int warpEdges = graph.Edges.Count(e => e.Kind == LaneEdgeKind.Warp);
+        if (warpEdges > authoredWarps)
+            problems.Add($"{map.Id}: {warpEdges} warp edges for {authoredWarps} authored warp legs");
+        foreach (var warp in graph.Edges.Where(e => e.Kind == LaneEdgeKind.Warp))
+            if (warp.WalkedLength != 0f)
+                problems.Add($"{map.Id}/{warp.Id}: warp edge has length {warp.WalkedLength}");
+
+        if (map.Id != "testlane")
+            shape.Add($"{map.Id} {graph.Nodes.Count}n/{graph.Edges.Count}e"
+                + (graph.NearMisses.Count > 0 ? $" ({graph.NearMisses.Count} near-miss)" : ""));
+    }
+
+    Gate("lane graph: the decomposition of every route is lossless",
+        problems.Count == 0,
+        problems.Count == 0 ? string.Join(", ", shape) : string.Join(" | ", problems.Take(6)));
+}
+
+// --- Gate 50: near-miss waypoints are reported, never merged.
+//
+// Coalescing is exact equality with no epsilon, on purpose: two waypoints a
+// centimetre apart are two places, and merging on a tolerance would be a
+// derivation performing a content edit. So points that look like typos get
+// named here and fixed as content — before movement reads the graph, which is
+// the only window in which fixing them is free.
+{
+    var found = new List<string>();
+    foreach (var map in Maps.All.Values)
+        foreach (var miss in LaneGraph.FromRoutes(map).NearMisses)
+            found.Add($"{map.Id}: {miss}");
+
+    Gate("lane graph: no two waypoints are within half a metre of each other",
+        found.Count == 0,
+        found.Count == 0
+            ? $"exact-equality coalescing is safe on all {Maps.All.Count} maps"
+            : string.Join(" | ", found.Take(6)));
+}
+
 Console.WriteLine();
 Console.WriteLine(failures == 0 ? "ALL GATES GREEN" : $"{failures} GATE(S) FAILED");
 return failures == 0 ? 0 : 1;
