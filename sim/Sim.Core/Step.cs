@@ -1120,64 +1120,33 @@ public static class Step
     {
         var itinerary = w.Graph.Itineraries[enemy.ItineraryIndex];
 
-        // Step past vias we have reached, and past any that are now unreachable.
-        while (enemy.ViaCursor < itinerary.Via.Count)
-        {
-            string via = itinerary.Via[enemy.ViaCursor];
-            if (via == atNode) { enemy.ViaCursor++; continue; }
-            if (float.IsPositiveInfinity(w.DistToNode[w.Graph.NodeIndex[via]][w.Graph.NodeIndex[atNode]]))
-            {
-                enemy.ViaCursor++;
-                continue;
-            }
-            break;
-        }
-
-        int target = enemy.ViaCursor < itinerary.Via.Count
-            ? w.Graph.NodeIndex[itinerary.Via[enemy.ViaCursor]]
-            : -1;
-
-        int best = -1;
-        float bestCost = float.MaxValue;
         // A siege enemy is not turned away by a barricade — it can choose to go
         // through. But "always ignore walls" is not a decision, it is a
-        // hard-coded preference, so the wall is *priced* instead: chewing
-        // through costs hp / StructureDps seconds, which at this enemy's speed
-        // is that many metres it could have walked instead. Add it to the edge
-        // and run the same shortest path everything else runs.
+        // hard-coded preference, so the wall is *priced*: chewing through costs
+        // hp / StructureDps seconds, which at this enemy's speed is that many
+        // metres it could have walked instead.
         //
-        // Three things fall out of that and none of them are special cases. The
-        // Ram breaches when breaking is cheaper than walking round, so a wall
-        // in front of a short detour is worth going around and one in front of
-        // a long detour is not. The player's own barricade is what makes the
+        // Three things fall out and none of them are special cases. The Ram
+        // breaches when breaking is cheaper than walking round, so a wall in
+        // front of a short detour is worth going around and one in front of a
+        // long detour is not. The player's own barricade is what makes the
         // detour long, so shutting a gate is what sends the Ram at your wall —
-        // a chain the player can read. And the whole thing tunes on one dial:
-        // raise a barricade's StructureHp and it stops being worth breaking.
-        var selfDef = Enemies.All[enemy.DefId];
-        bool sieges = selfDef.StructureDps > 0f;
+        // a chain the player can read. And the whole thing tunes on one dial.
+        var def = Enemies.All[enemy.DefId];
+        if (def.StructureDps <= 0f)
+            return w.Graph.ChooseEdge(itinerary, ref enemy.ViaCursor, atNode,
+                w.EdgeOpen, w.DistToNode, w.DistToCore);
 
-        for (int e = 0; e < w.Graph.Edges.Count; e++)
-        {
-            if (!w.EdgeOpen[e] && !sieges) continue;
-            var edge = w.Graph.Edges[e];
-            if (edge.From != atNode) continue;
-            if (edge.Layer != itinerary.Layer) continue;
-
-            float ahead = target >= 0
-                ? (sieges ? w.DistToNodeOpen[target] : w.DistToNode[target])[w.Graph.NodeIndex[edge.To]]
-                : (sieges ? w.DistToCoreOpen : w.DistToCore)[w.Graph.NodeIndex[edge.To]];
-            if (float.IsPositiveInfinity(ahead)) continue;
-
-            // What the wall in front of this edge costs, in metres-not-walked.
-            float breach = 0f;
-            if (sieges && !w.EdgeOpen[e])
-                breach = w.BlockingHp(e) / selfDef.StructureDps * selfDef.SpeedMetersPerSec
-                       * Balance.SiegeBreachBias;
-
-            float cost = edge.WalkedLength * edge.CostFactor + breach + ahead;
-            if (cost < bestCost) { bestCost = cost; best = e; }
-        }
-        return best;
+        // Siege routing sees through gates, so it has to be costed against
+        // tables that do too — otherwise the far side of a shut edge reads as
+        // unreachable and the wall it is standing in front of is invisible.
+        return w.Graph.ChooseEdge(itinerary, ref enemy.ViaCursor, atNode,
+            w.EdgeOpen, w.DistToNodeOpen, w.DistToCoreOpen,
+            e => w.EdgeOpen[e]
+                ? 0f
+                : w.BlockingHp(e) / def.StructureDps * def.SpeedMetersPerSec
+                  * Balance.SiegeBreachBias,
+            distToNodeForVias: w.DistToNode);
     }
 
     /// <summary>Say so, once, when a siege enemy takes a blocked edge. The

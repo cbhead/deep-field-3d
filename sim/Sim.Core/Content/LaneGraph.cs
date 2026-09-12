@@ -348,6 +348,119 @@ public sealed class LaneGraph
     public float[] DistanceToCore(IReadOnlyList<bool>? edgeOpen = null)
         => DistanceTo(n => n.Kind == LaneNodeKind.Core, edgeOpen);
 
+    /// <summary>Which edge to take out of a node, following an itinerary.
+    ///
+    /// The routing rule, in one place, because it has two callers that must not
+    /// drift: the tick, and the author-time check that asks what each itinerary
+    /// would do in each configuration a map allows. The first version of that
+    /// check compared shortest *distances* instead and reported Switchyard's
+    /// switchback gate as inert — closing it changes nothing about the distance
+    /// from the gate to the core, because the cut was already the shorter way,
+    /// while changing entirely which lane half the waves walk down. Paths are
+    /// the question; distance is only how a path gets chosen.
+    ///
+    /// The enemy heads for the next via it can still reach, falling through to
+    /// the core when it has run out or the rest are cut off, and takes the
+    /// cheapest open edge that gets there. <paramref name="extraCost"/> is what
+    /// a siege enemy pays to come through a wall; everything else passes null.</summary>
+    public int ChooseEdge(
+        ItineraryDef itinerary,
+        ref int viaCursor,
+        string atNode,
+        IReadOnlyList<bool> edgeOpen,
+        float[][] distToNode,
+        float[] distToCore,
+        Func<int, float>? extraCost = null,
+        float[][]? distToNodeForVias = null)
+    {
+        // Whether a via is still worth heading for is asked of the map as it
+        // *is*, not as a siege enemy could make it. An itinerary is a plan made
+        // for an open map; a wall makes one of its stops unreachable-as-planned,
+        // and the enemy re-plans. A Ram may then still choose to come through
+        // the wall — but that has to be a decision it makes on cost at the edge,
+        // and if the via kept insisting on the blocked stop there would be
+        // nothing to decide: only one edge leads there, so it would break
+        // through any wall of any thickness, which is the preference the
+        // pricing exists to replace.
+        var viaReach = distToNodeForVias ?? distToNode;
+        while (viaCursor < itinerary.Via.Count)
+        {
+            string via = itinerary.Via[viaCursor];
+            if (via == atNode) { viaCursor++; continue; }
+            if (float.IsPositiveInfinity(viaReach[NodeIndex[via]][NodeIndex[atNode]]))
+            {
+                viaCursor++;
+                continue;
+            }
+            break;
+        }
+
+        int target = viaCursor < itinerary.Via.Count ? NodeIndex[itinerary.Via[viaCursor]] : -1;
+
+        int best = -1;
+        float bestCost = float.MaxValue;
+        for (int e = 0; e < Edges.Count; e++)
+        {
+            var edge = Edges[e];
+            if (edge.From != atNode || edge.Layer != itinerary.Layer) continue;
+
+            float extra = extraCost?.Invoke(e) ?? 0f;
+            if (!edgeOpen[e] && extraCost is null) continue;
+            if (float.IsPositiveInfinity(extra)) continue;
+
+            float ahead = target >= 0 ? distToNode[target][NodeIndex[edge.To]]
+                                      : distToCore[NodeIndex[edge.To]];
+            if (float.IsPositiveInfinity(ahead)) continue;
+
+            float cost = edge.WalkedLength * edge.CostFactor + extra + ahead;
+            if (cost < bestCost) { bestCost = cost; best = e; }
+        }
+        return best;
+    }
+
+    /// <summary>The edges an itinerary's walkers would take, end to end, in a
+    /// given configuration. Author-time only — the tick walks it one node at a
+    /// time — and it is what "does this gate change anything" is asked of.</summary>
+    public IReadOnlyList<int> PathFor(ItineraryDef itinerary, IReadOnlyList<bool> edgeOpen)
+    {
+        var distToCore = DistanceToCore(edgeOpen);
+        var distToNode = new float[Nodes.Count][];
+        for (int i = 0; i < Nodes.Count; i++)
+            distToNode[i] = DistanceToNode(Nodes[i].Id, edgeOpen);
+
+        var path = new List<int>();
+        int cursor = 1;
+        string at = itinerary.Via[0];
+        for (int guard = 0; guard < Edges.Count + 1; guard++)
+        {
+            int e = ChooseEdge(itinerary, ref cursor, at, edgeOpen, distToNode, distToCore);
+            if (e < 0) break;
+            path.Add(e);
+            at = Edges[e].To;
+            if (Node(at).Kind == LaneNodeKind.Core) break;
+        }
+        return path;
+    }
+
+    /// <summary>Whether every spawn can still reach a core over these edges.
+    ///
+    /// The rule the mutable layer rests on, as one function. The runtime asks it
+    /// before allowing a closure and the harness asks it of every configuration
+    /// a map allows; two implementations of the same predicate is exactly how a
+    /// runtime and a validator come to disagree about what is legal.
+    ///
+    /// Asked of *every* spawn, not only the ones a wave is currently using.
+    /// Making a content invariant depend on match state is how it stops being
+    /// provable before the match starts.</summary>
+    public bool EverySpawnReachesCore(IReadOnlyList<bool>? edgeOpen = null)
+    {
+        var dist = DistanceToCore(edgeOpen);
+        for (int n = 0; n < Nodes.Count; n++)
+            if (Nodes[n].Kind == LaneNodeKind.Spawn && float.IsPositiveInfinity(dist[n]))
+                return false;
+        return true;
+    }
+
     /// <summary>Metres from every node to one named node, over open edges.
     ///
     /// The same relaxation as <see cref="DistanceToCore"/>, seeded somewhere

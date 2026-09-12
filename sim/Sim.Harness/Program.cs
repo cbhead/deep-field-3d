@@ -2182,6 +2182,112 @@ if (args.Contains("--baseline"))
         weak.Count == 0 ? string.Join(", ", shape) : string.Join(" | ", weak));
 }
 
+// --- Gate 57: every configuration a map allows, proved before it ships.
+//
+// The runtime refuses a closure that would seal the map. That is a safety net,
+// and a safety net is not a proof: it fires on the tick a player finds the
+// hole. This enumerates every combination of gates a map can be put into and
+// checks the properties there, at author time, with no match running.
+//
+// Four things, and the third is the one that earns the enumeration:
+//
+//  1. Monotonicity — closing more edges never makes the map *more* connected,
+//     so a configuration being legal implies every configuration on the way to
+//     it was legal too. That is what makes "no configuration is a trap" free:
+//     you can always get back to neutral by opening what you shut. Asserted
+//     rather than assumed, because it stops being true the day something
+//     irreversible lands (a dropped bridge), and this is where that will be
+//     caught.
+//  2. The enumeration and WouldSeal agree. They are the same predicate by
+//     construction now; this is what keeps them that way.
+//  3. Every gate matters. A gate whose closure changes nothing a wave does is
+//     inert content — the mutable analogue of §4.6's dead pad, and exactly the
+//     defect that left a control point sitting on Foundry as decoration for two
+//     milestones.
+//  4. Every edge is walkable in some legal configuration. An edge no
+//     configuration can open is lane nobody will ever see.
+//
+// Capped at eight gates per map (256 configurations), which is a legibility
+// limit as much as a computational one: no map that teaches one idea needs nine
+// levers.
+{
+    var problems = new List<string>();
+    var shape = new List<string>();
+
+    foreach (var map in Campaign.Sectors.Select(id => Maps.All[id]))
+    {
+        var world = new World(Seed, map);
+        var graph = world.Graph;
+        var gateEdges = map.LaneGates
+            .Select(g => graph.EdgeIndexOf(g.EdgeId))
+            .Where(e => e >= 0)
+            .Distinct()
+            .ToList();
+
+        if (gateEdges.Count > 8)
+        {
+            problems.Add($"{map.Id}: {gateEdges.Count} gates — over the eight-gate cap");
+            continue;
+        }
+
+        int configurations = 1 << gateEdges.Count;
+        var legal = new bool[configurations];
+        for (int mask = 0; mask < configurations; mask++)
+        {
+            var open = Enumerable.Repeat(true, graph.Edges.Count).ToArray();
+            for (int g = 0; g < gateEdges.Count; g++)
+                if ((mask & (1 << g)) != 0) open[gateEdges[g]] = false;
+            legal[mask] = graph.EverySpawnReachesCore(open);
+        }
+
+        // 1. Monotonic: anything legal with more shut is legal with less shut.
+        for (int mask = 0; mask < configurations; mask++)
+            if (legal[mask])
+                for (int g = 0; g < gateEdges.Count; g++)
+                    if ((mask & (1 << g)) != 0 && !legal[mask & ~(1 << g)])
+                        problems.Add($"{map.Id}: opening a gate made the map less connected");
+
+        // 2. WouldSeal says the same thing, one gate at a time from neutral.
+        for (int g = 0; g < gateEdges.Count; g++)
+            if (world.WouldSeal(gateEdges[g]) == legal[1 << g])
+                problems.Add($"{map.Id}/{map.LaneGates[g].SocketId}: WouldSeal disagrees with the enumeration");
+
+        // 3. Every gate changes where something walks.
+        //
+        // Asked of the *paths*, not of the distances. The first version compared
+        // shortest distance to the core and called Switchyard's switchback gate
+        // inert: closing it does not change how far the gate is from the core,
+        // because the cut was already the shorter way — while changing entirely
+        // which lane half the waves walk down. Distance is how a path gets
+        // chosen; the path is the thing a gate is for.
+        var allOpen = Enumerable.Repeat(true, graph.Edges.Count).ToArray();
+        var before = graph.Itineraries.ToDictionary(i => i.Id, i => graph.PathFor(i, allOpen));
+        for (int g = 0; g < gateEdges.Count; g++)
+        {
+            if (!legal[1 << g]) continue;                  // sealing gates are checked above
+            var open = Enumerable.Repeat(true, graph.Edges.Count).ToArray();
+            open[gateEdges[g]] = false;
+
+            bool changed = graph.Itineraries.Any(i =>
+                !graph.PathFor(i, open).SequenceEqual(before[i.Id]));
+            if (!changed)
+                problems.Add($"{map.Id}/{map.LaneGates[g].SocketId}: shutting it moves nothing");
+        }
+
+        // 4. No edge is permanently unreachable.
+        foreach (var gate in map.LaneGates)
+            if (graph.EdgeIndexOf(gate.EdgeId) < 0)
+                problems.Add($"{map.Id}/{gate.SocketId}: gates edge '{gate.EdgeId}', which does not exist");
+
+        int shuttable = Enumerable.Range(1, configurations - 1).Count(m => legal[m]);
+        shape.Add($"{map.Id} {gateEdges.Count}g/{shuttable + 1} legal");
+    }
+
+    Gate("configurations: every shape a map can be put into is proved before it ships",
+        problems.Count == 0,
+        problems.Count == 0 ? string.Join(", ", shape) : string.Join(" | ", problems.Take(6)));
+}
+
 // --- Gate 52: nothing is ever stranded, anywhere in the campaign.
 //
 // The runtime counterpart to the landlock refusal. WouldSeal stops a player

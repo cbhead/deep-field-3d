@@ -521,13 +521,9 @@ public sealed class World
     {
         if (!EdgeOpen[edgeIndex]) return false;          // already shut
         EdgeOpen[edgeIndex] = false;
-        var dist = Graph.DistanceToCore(EdgeOpen);
+        bool sealed_ = !Graph.EverySpawnReachesCore(EdgeOpen);
         EdgeOpen[edgeIndex] = true;
-
-        for (int n = 0; n < Graph.Nodes.Count; n++)
-            if (Graph.Nodes[n].Kind == LaneNodeKind.Spawn && float.IsPositiveInfinity(dist[n]))
-                return true;
-        return false;
+        return sealed_;
     }
 
     /// <summary>Recompute the routing tables. Called once at construction and
