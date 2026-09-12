@@ -497,6 +497,9 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
         new Command.CraftMeleeAttachment(1, "maul", "cryoCore"),
         new Command.UpgradeMelee(1, "maul"),
         new Command.PackAPunch(1, "rifle"),
+        new Command.EnterVehicle(1, "buggy1", 1),
+        new Command.ExitVehicle(1),
+        new Command.VehicleSync(1, "buggy1", new Vec3(1.5f, 0f, -2.25f), 90f),
     };
 
     var broken = new List<string>();
@@ -803,12 +806,19 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
                     bool Sees(float r)
                     {
                         for (int i = 0; i + 1 < route.Waypoints.Count; i++)
+                        {
+                            // Nobody walks a teleport leg, so a socket beside
+                            // the two-hundred-metre chord between its pads
+                            // covers nothing. Counting it would let a map pass
+                            // this gate on lane that does not exist.
+                            if (route.IsTeleportLeg(i)) continue;
                             for (int k = 0; k < 20; k++)
                             {
                                 var pt = route.Waypoints[i]
                                     + (route.Waypoints[i + 1] - route.Waypoints[i]) * (k / 20f);
                                 if ((pt - socket.Pos).Length() <= r) return true;
                             }
+                        }
                         return false;
                     }
                     // A socket counts as covering if any legal defender reaches
@@ -928,6 +938,177 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
         mid.Victory && floor.WavesCleared >= 10,
         $"mid waves {mid.WavesCleared}/{Maps.Spire.TotalWaves} lives {mid.LivesLeft} | "
         + $"floor waves {floor.WavesCleared} lives {floor.LivesLeft} leaks {string.Join(",", leaks)}");
+}
+
+// --- Gate 21c (M4): the Toaster clears for the mid-band bot; the floor holds deep.
+//
+// Same contract as the other three sectors, on a map four times as long. The
+// bot teleports between hero stations at a flat cost regardless of distance,
+// so read the mid-band result here as more optimistic than a human's — what
+// this gate is really guarding is that a map made of four separate fights can
+// be won at all, and that towers alone still hold most of it.
+{
+    var mid = MatchRunner.Run(Seed, Maps.Toaster, MidBot());
+    var floor = MatchRunner.Run(Seed, Maps.Toaster);
+    var leaks = floor.EventLog.Where(l => l.Contains(" enemyLeaked "))
+        .GroupBy(l => l.Split(' ')[3]).Select(g => $"{g.Key}:{g.Count()}");
+
+    Gate("toaster: mid-band clears; towers-only holds \u226510 waves",
+        mid.Victory && floor.WavesCleared >= 10,
+        $"mid waves {mid.WavesCleared}/{Maps.Toaster.TotalWaves} lives {mid.LivesLeft} | "
+        + $"floor waves {floor.WavesCleared} lives {floor.LivesLeft} leaks {string.Join(",", leaks)}");
+}
+
+// --- Gate 35 (M4): teleport legs are well-formed, and only the map that wants
+// them has any.
+//
+// The movement code's whole invariant is that an enemy's Leg never points at a
+// teleport leg between ticks, and it holds because such a leg is never first,
+// never last, and never adjacent to another. Those are three conditions on a
+// content literal that nothing else checks, and getting any of them wrong is a
+// divide by a zero-length leg rather than a compile error.
+{
+    var wrong = new List<string>();
+    foreach (var map in Maps.All.Values)
+        foreach (var route in map.Routes)
+        {
+            if (!route.HasTeleportLegs)
+            {
+                // And the legs of a route without them are still true lengths:
+                // the proof that three shipped maps behave exactly as before.
+                var world = new World(1, map);
+                int r = map.Routes.ToList().IndexOf(route);
+                for (int i = 0; i < route.LegCount; i++)
+                {
+                    float expected = route.Waypoints[i].DistanceTo(route.Waypoints[i + 1]);
+                    if (MathF.Abs(world.RouteLegLengths[r][i] - expected) > 0.001f)
+                        wrong.Add($"{map.Id}/{route.Id} leg {i} measured {world.RouteLegLengths[r][i]} not {expected}");
+                }
+                continue;
+            }
+            if (route.Layer == EnemyLayer.Air)
+                wrong.Add($"{map.Id}/{route.Id}: a flyer does not need a gate");
+            foreach (int leg in route.TeleportLegs!)
+            {
+                if (leg < 1 || leg > route.LegCount - 2)
+                    wrong.Add($"{map.Id}/{route.Id}: leg {leg} is not interior (0..{route.LegCount - 1})");
+                if (route.IsTeleportLeg(leg + 1))
+                    wrong.Add($"{map.Id}/{route.Id}: legs {leg} and {leg + 1} both teleport");
+            }
+        }
+
+    int gated = Maps.All.Values.Sum(m => m.Routes.Count(r => r.HasTeleportLegs));
+    Gate("routes: every teleport leg is interior, alone, and on the ground",
+        wrong.Count == 0,
+        wrong.Count == 0 ? $"{gated} gated routes across {Maps.All.Count} maps"
+                         : string.Join("; ", wrong.Take(4)));
+}
+
+// --- Gate 36 (M4): a wave that takes a warp takes exactly the warps its route
+// has, and one that does not takes none.
+//
+// The interesting failure is silent: a teleport leg that is skipped leaves the
+// enemy walking the chord at two metres a second, arriving four minutes late
+// through a field nobody is defending, and every other gate stays green.
+{
+    var world = new World(Seed, Maps.Toaster);
+    var expected = new Dictionary<string, int>();
+    for (int r = 0; r < world.Map.Routes.Count; r++)
+        expected[world.Map.Routes[r].Id] = world.Map.Routes[r].TeleportLegs?.Count ?? 0;
+
+    var routeOf = new Dictionary<int, string>();
+    var jumps = new Dictionary<int, int>();
+    // Wave 12: every route at once, which is the only wave that exercises all
+    // three counts in one run.
+    world.WaveIndex = 10;
+    world.PhaseTimer = 0f;
+    while (world.WaveIndex < 12 && world.Tick < Balance.TickHz * 2400)
+    {
+        // Advance is a no-op once the match is decided, so the tick never
+        // moves again and a loop bounded only by the tick count spins forever.
+        if (world.IsOver) break;
+        Step.Advance(world);
+        foreach (var e in world.Events)
+        {
+            if (e is SimEvent.EnemySpawned spawned)
+            {
+                var enemy = world.Enemies.First(x => x.Id == spawned.EnemyId);
+                routeOf[spawned.EnemyId] = world.Map.Routes[enemy.RouteIndex].Id;
+            }
+            if (e is SimEvent.EnemyTeleported jump)
+                jumps[jump.EnemyId] = jumps.GetValueOrDefault(jump.EnemyId) + 1;
+        }
+        if (world.Phase == MatchPhase.Wave && world.Enemies.All(e => e.Dead)
+            && world.PendingSpawns.Count == 0) break;
+    }
+
+    var miscounted = routeOf
+        .Where(kv => jumps.GetValueOrDefault(kv.Key) != expected[kv.Value])
+        .Select(kv => $"{kv.Value} enemy took {jumps.GetValueOrDefault(kv.Key)} warps, not {expected[kv.Value]}")
+        .Distinct().ToList();
+
+    Gate("toaster: each route takes exactly the warps it declares",
+        routeOf.Count > 0 && miscounted.Count == 0,
+        miscounted.Count == 0
+            ? $"{routeOf.Count} enemies, {jumps.Values.Sum()} warps across "
+              + string.Join(", ", expected.Where(kv => kv.Value > 0).Select(kv => $"{kv.Key}x{kv.Value}"))
+            : string.Join("; ", miscounted.Take(4)));
+}
+
+// --- Gate 37 (M4): a map's vehicles are real, unique, and not parked in a lane.
+//
+// A vehicle is a solid object the client drops on the map from a content
+// literal, and the one placement mistake that matters is the same one the
+// socket gate exists for: standing in the road. The other two are typos that
+// would throw at world construction on whichever map nobody ran that week.
+{
+    // Its own copy of the measure the socket gate uses, teleport chords
+    // excluded: the two gates live in separate blocks and a shared helper
+    // between them would have to be a method on a file nobody else reads.
+    static float ToLane(Vec3 p, MapDef map)
+    {
+        float best = float.MaxValue;
+        foreach (var route in map.Routes)
+        {
+            if (route.Layer != EnemyLayer.Ground) continue;
+            for (int i = 0; i < route.LegCount; i++)
+            {
+                if (route.IsTeleportLeg(i)) continue;
+                var a = route.Waypoints[i];
+                var b = route.Waypoints[i + 1];
+                float abx = b.X - a.X, abz = b.Z - a.Z;
+                float lengthSq = abx * abx + abz * abz;
+                float t = lengthSq < 0.001f ? 0f
+                    : Math.Clamp(((p.X - a.X) * abx + (p.Z - a.Z) * abz) / lengthSq, 0f, 1f);
+                float cx = a.X + abx * t, cz = a.Z + abz * t;
+                best = MathF.Min(best, MathF.Sqrt((p.X - cx) * (p.X - cx) + (p.Z - cz) * (p.Z - cz)));
+            }
+        }
+        return best;
+    }
+
+    var problems = new List<string>();
+    foreach (var map in Maps.All.Values)
+    {
+        if (map.Vehicles.Select(v => v.Id).Distinct().Count() != map.Vehicles.Count)
+            problems.Add($"{map.Id}: duplicate vehicle id");
+        foreach (var spawn in map.Vehicles)
+        {
+            if (!Vehicles.All.ContainsKey(spawn.DefId))
+            { problems.Add($"{map.Id}/{spawn.Id}: no such vehicle {spawn.DefId}"); continue; }
+            float toLane = ToLane(spawn.Pos, map);
+            if (toLane < 3.5f)
+                problems.Add($"{map.Id}/{spawn.Id}: parked {toLane:0.0}m from the lane centre");
+            if (MathF.Abs(spawn.Pos.X) > map.HalfX || MathF.Abs(spawn.Pos.Z) > map.HalfZ)
+                problems.Add($"{map.Id}/{spawn.Id}: parked outside the field");
+        }
+    }
+
+    int parked = Maps.All.Values.Sum(m => m.Vehicles.Count);
+    Gate("vehicles: every one is a known def, uniquely named, and off the road",
+        problems.Count == 0,
+        problems.Count == 0 ? $"{parked} parked across {Maps.All.Count} maps"
+                            : string.Join("; ", problems.Take(4)));
 }
 
 // --- Gate 22 (M2): a barricade on b1 reroutes shortcut spawns to the long way.
@@ -1375,7 +1556,13 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
         {
             if (route.Layer != EnemyLayer.Ground) continue;
             for (int i = 0; i < route.Waypoints.Count - 1; i++)
+            {
+                // A teleport leg is a chord, not a lane: a pad near it is not
+                // "standing in the road", and a pad rescued from "stranded" by
+                // it would be rescued by a line nothing ever walks.
+                if (route.IsTeleportLeg(i)) continue;
                 best = MathF.Min(best, PointToSegment(point, route.Waypoints[i], route.Waypoints[i + 1]));
+            }
         }
         return best;
     }

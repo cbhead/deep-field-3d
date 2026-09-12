@@ -87,4 +87,22 @@ public abstract record Command
     /// <summary>Held-interaction revive; progress accrues sim-side while both
     /// players stay in range.</summary>
     public sealed record Revive(int PlayerId, int TargetPlayerId) : Command;
+
+    // ---- Vehicles ----------------------------------------------------------
+
+    /// <summary>Take a seat. Refused out loud — seatTaken, alreadySeated,
+    /// notNear, downed, badSeat, unknownVehicle — because the client shows the
+    /// reason, and because "nothing happened" is the worst possible answer to a
+    /// keypress.</summary>
+    public sealed record EnterVehicle(int PlayerId, string VehicleId, int SeatIndex) : Command;
+
+    /// <summary>Get out. Never refused: a player not in a seat has already got
+    /// what they asked for.</summary>
+    public sealed record ExitVehicle(int PlayerId) : Command;
+
+    /// <summary>The driver's client-authoritative vehicle transform, streamed
+    /// exactly as PlayerSync streams an avatar. Accepted only from whoever is
+    /// in seat 0; anyone else's is dropped without a word, which is what
+    /// PlayerSync does with a seat that does not exist.</summary>
+    public sealed record VehicleSync(int PlayerId, string VehicleId, Vec3 Pos, float YawDegrees) : Command;
 }

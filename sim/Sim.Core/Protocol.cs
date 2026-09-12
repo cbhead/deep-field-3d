@@ -9,12 +9,13 @@ namespace DeepField.Sim;
 /// Lives in Sim.Core so packing round-trips are fast-lane testable.</summary>
 public static class Protocol
 {
-    /// <summary>Bumped to 2 when melee joined the command vocabulary. An older
-    /// client cannot send a swing and a newer one would send four verbs the old
-    /// server parses as null — silently dropping every melee action rather than
-    /// refusing the connection, which is exactly the failure this number
-    /// exists to make loud.</summary>
-    public const int Version = 2;
+    /// <summary>Bumped to 2 when melee joined the command vocabulary, and to 3
+    /// when vehicles did. An older client cannot send a swing and a newer one
+    /// would send verbs the old server parses as null — silently dropping every
+    /// melee action, or leaving a player apparently sitting in a vehicle that
+    /// never moves, rather than refusing the connection, which is exactly the
+    /// failure this number exists to make loud.</summary>
+    public const int Version = 3;
 
     /// <summary>Human-readable build identity, sent alongside the protocol
     /// number. The number decides compatibility — determinism requires an exact
@@ -137,6 +138,9 @@ public static class Protocol
         Command.BuyMelee c => $"buyMelee|{c.PlayerId}|{c.MeleeId}",
         Command.CraftMeleeAttachment c => $"craftMelee|{c.PlayerId}|{c.MeleeId}|{c.AttachmentId}",
         Command.UpgradeMelee c => $"upMelee|{c.PlayerId}|{c.MeleeId}",
+        Command.EnterVehicle c => $"enterVehicle|{c.PlayerId}|{c.VehicleId}|{c.SeatIndex}",
+        Command.ExitVehicle c => $"exitVehicle|{c.PlayerId}",
+        Command.VehicleSync c => $"vsync|{c.PlayerId}|{c.VehicleId}|{F(c.Pos.X)}|{F(c.Pos.Y)}|{F(c.Pos.Z)}|{F(c.YawDegrees)}",
         _ => throw new InvalidOperationException($"unwired command {command.GetType().Name}"),
     };
 
@@ -170,6 +174,10 @@ public static class Protocol
                 "buyMelee" => new Command.BuyMelee(int.Parse(p[1]), p[2]),
                 "craftMelee" => new Command.CraftMeleeAttachment(int.Parse(p[1]), p[2], p[3]),
                 "upMelee" => new Command.UpgradeMelee(int.Parse(p[1]), p[2]),
+                "enterVehicle" => new Command.EnterVehicle(int.Parse(p[1]), p[2], int.Parse(p[3])),
+                "exitVehicle" => new Command.ExitVehicle(int.Parse(p[1])),
+                "vsync" => new Command.VehicleSync(int.Parse(p[1]), p[2],
+                    new Vec3(Pf(p[3]), Pf(p[4]), Pf(p[5])), Pf(p[6])),
                 _ => null,
             };
         }
@@ -204,6 +212,9 @@ public static class Protocol
         Command.BuyMelee c => c.PlayerId == seatPlayerId,
         Command.CraftMeleeAttachment c => c.PlayerId == seatPlayerId,
         Command.UpgradeMelee c => c.PlayerId == seatPlayerId,
+        Command.EnterVehicle c => c.PlayerId == seatPlayerId,
+        Command.ExitVehicle c => c.PlayerId == seatPlayerId,
+        Command.VehicleSync c => c.PlayerId == seatPlayerId,
         // Deliberately closed rather than defaulting to true: an unknown
         // command from a client should be refused, not trusted. The cost is
         // that a new command forgotten here is silently rejected for network

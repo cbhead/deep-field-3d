@@ -76,11 +76,17 @@ public class AirDefenceTests
         // The finding this file exists for. A tower on a ground pad sits at
         // y 0, so its whole range budget is spent climbing: Arc's 11 m and
         // Filament's 12 m are less than the height the strand cruises at on
-        // every map in the campaign. They are deck weapons against air, and
-        // the def table does not say so anywhere.
+        // the three maps built around a deck. They are deck weapons against
+        // air there, and the def table does not say so anywhere.
         //
-        // If a map is ever authored with a strand low enough for them, this
-        // test fails and the honest thing is to delete it.
+        // The Toaster is the exception and it is deliberate: a farm is flat,
+        // there is no deck to put anything on, and a strand at 15 m would have
+        // been answerable from nowhere. It flies at 9 m instead, which is
+        // under every air tower's reach from the ground. So the claim is not
+        // "Arc and Filament never answer air" — it is that a map with a deck
+        // puts the strand above them, and a map without one has to put it
+        // below them. A map that does neither is the bug.
+        var deckless = new[] { "toaster" };
         foreach (var map in Maps.All.Values)
         {
             var air = map.Routes.FirstOrDefault(r => r.Layer == EnemyLayer.Air);
@@ -88,8 +94,15 @@ public class AirDefenceTests
             float peak = air.Waypoints.Max(p => p.Y);
 
             foreach (string id in new[] { "arc", "filament" })
-                Assert.True(Towers.All[id].RangeMeters < peak,
-                    $"{map.Id}: {id} can now reach the strand's peak at {peak} m from the ground");
+            {
+                bool reaches = Towers.All[id].RangeMeters >= peak;
+                Assert.True(reaches == deckless.Contains(map.Id),
+                    reaches
+                        ? $"{map.Id}: {id} can now reach the strand's peak at {peak} m from the "
+                          + "ground. If that is the design, say so in the deckless list above."
+                        : $"{map.Id}: has no deck, and its strand at {peak} m is over {id}'s head "
+                          + "from the only tier it has.");
+            }
         }
     }
 

@@ -150,19 +150,81 @@ public enum SocketTag
 
 public sealed record SocketDef(string Id, Vec3 Pos, SocketTag Tag);
 
+/// <summary>One sample taken along a route's walked length: which leg it is on,
+/// where it is, and how far the walk has come since the route was entered — at
+/// the spawn gate, or at the last teleport arrival pad. Coverage rules exempt
+/// the first metres of each of those, so the distance has to reset.</summary>
+public readonly record struct RouteSample(int Leg, Vec3 At, float MetersSinceEntry);
+
 /// <summary>A route with a BarricadeGate is a shortcut: usable only while no
 /// living barricade occupies that slot. Enemies pick their route at spawn
 /// (never mid-walk), so pathing stays deterministic and sweep-enumerable.
-/// FallbackRouteId names the long way around.</summary>
+/// FallbackRouteId names the long way around.
+///
+/// TeleportLegs names legs that are not walked. Leg i runs Waypoints[i] to
+/// Waypoints[i+1]; if it is a teleport leg, an enemy arriving at Waypoints[i]
+/// is standing on Waypoints[i+1] the same tick and carries on from there. Such
+/// a leg has length zero for every purpose — TotalTraveled, RouteLegLengths,
+/// coverage sampling, lane geometry — so nothing downstream has to know the two
+/// pads are two hundred metres apart. A teleport leg is never the first or last
+/// leg and never adjacent to another; the harness gates both, because the
+/// movement code's invariant is that an enemy's Leg never points at one between
+/// ticks.</summary>
 public sealed record RouteDef(
     string Id,
     EnemyLayer Layer,
     IReadOnlyList<Vec3> Waypoints,
     string? BarricadeGate = null,
-    string? FallbackRouteId = null);
+    string? FallbackRouteId = null,
+    IReadOnlyList<int>? TeleportLegs = null)
+{
+    public int LegCount => Waypoints.Count - 1;
+
+    public bool HasTeleportLegs => TeleportLegs is { Count: > 0 };
+
+    public bool IsTeleportLeg(int leg) =>
+        TeleportLegs is { } legs && legs.Contains(leg);
+
+    /// <summary>The first walked leg after a teleport: its start is an arrival
+    /// pad, which is an entrance to this route exactly as the spawn gate is.</summary>
+    public bool StartsAtArrivalPad(int leg) => leg > 0 && IsTeleportLeg(leg - 1);
+
+    /// <summary>Points along the walked route, every <paramref name="stepMeters"/>
+    /// or so, carrying the distance since the last entrance. One sampler for the
+    /// validator, the harness and the client, so "apron" means the same thing in
+    /// all three — which it did not when each of them walked the waypoints
+    /// itself.</summary>
+    public IEnumerable<RouteSample> Samples(float stepMeters)
+    {
+        float since = 0f;
+        for (int i = 0; i < LegCount; i++)
+        {
+            if (IsTeleportLeg(i)) continue;
+            if (StartsAtArrivalPad(i)) since = 0f;
+
+            var a = Waypoints[i];
+            var b = Waypoints[i + 1];
+            float length = a.DistanceTo(b);
+            int steps = System.Math.Max(1, (int)MathF.Floor(length / stepMeters));
+            // The corner between two walked legs belongs to the leg that ended
+            // on it; sampling it twice double-counts it in every coverage total.
+            int first = (i == 0 || StartsAtArrivalPad(i)) ? 0 : 1;
+            for (int k = first; k <= steps; k++)
+            {
+                float t = (float)k / steps;
+                yield return new RouteSample(i, Vec3.Lerp(a, b, t), since + length * t);
+            }
+            since += length;
+        }
+    }
+}
 
 /// <summary>Auto-hero anchor points with travel-time edges (the traversal graph).</summary>
 public sealed record HeroStationDef(string Id, Vec3 Pos);
+
+/// <summary>A vehicle the map parks somewhere at match start. The sim owns who
+/// is sitting in it; the driver's client owns where it is.</summary>
+public sealed record VehicleSpawnDef(string Id, string DefId, Vec3 Pos, float YawDegrees);
 
 public sealed record MapDef(
     string Id,
@@ -175,11 +237,25 @@ public sealed record MapDef(
     // Wave index -> condition id. Authored rather than rolled so the sweep can
     // run a column per condition, and so the intermission panel can announce
     // next wave's weather one wave ahead.
-    IReadOnlyDictionary<int, string>? ConditionScheduleOrNull = null)
+    IReadOnlyDictionary<int, string>? ConditionScheduleOrNull = null,
+    // Playable extent in metres. Every map up to the Toaster was 110 x 80 and
+    // the client hard-coded that in four places; a map is now allowed to say,
+    // and the default is what those maps already are.
+    float FieldX = 110f,
+    float FieldZ = 80f,
+    IReadOnlyList<VehicleSpawnDef>? VehiclesOrNull = null)
 {
     public IReadOnlyDictionary<int, string> ConditionSchedule =>
         ConditionScheduleOrNull ?? EmptySchedule;
 
     private static readonly IReadOnlyDictionary<int, string> EmptySchedule =
         new Dictionary<int, string>();
+
+    public float HalfX => FieldX * 0.5f;
+    public float HalfZ => FieldZ * 0.5f;
+
+    public IReadOnlyList<VehicleSpawnDef> Vehicles => VehiclesOrNull ?? EmptyVehicles;
+
+    private static readonly IReadOnlyList<VehicleSpawnDef> EmptyVehicles =
+        System.Array.Empty<VehicleSpawnDef>();
 }

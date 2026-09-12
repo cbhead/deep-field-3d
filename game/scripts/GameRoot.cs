@@ -708,6 +708,7 @@ public partial class GameRoot : Node3D
                 if (route.Layer != EnemyLayer.Ground) continue;
                 for (int i = 0; i < route.Waypoints.Count - 1; i++)
                 {
+                    if (route.IsTeleportLeg(i)) continue;
                     var a = ToGd(route.Waypoints[i]);
                     var b = ToGd(route.Waypoints[i + 1]);
                     for (int k = 0; k <= 10; k++)
@@ -2896,12 +2897,18 @@ public partial class GameRoot : Node3D
         // Ground slab — one collider, dressed with the 20 m terrain tiles.
         // Tiles are laid symmetrically so the slab is covered edge to edge;
         // an off-centre run leaves bare collider showing at one end.
-        var ground = AddStaticBox(new Vector3(0, -0.5f, 0), new Vector3(110, 1, 80), new Color(0.35f, 0.38f, 0.4f), layer: 1);
+        var ground = AddStaticBox(new Vector3(0, -0.5f, 0),
+            new Vector3(map.FieldX, 1, map.FieldZ), new Color(0.35f, 0.38f, 0.4f), layer: 1);
         if (AssetLibrary.Has($"{map.Id}_terrain"))
         {
             MapKit.HideBox(ground);
-            for (float x = -50f; x <= 50f; x += 20f)
-                for (float z = -30f; z <= 30f; z += 20f)
+            // Tile centres from the field rather than from a literal. The old
+            // -50..50 by -30..30 is what this produces for a 110 x 80 map, so
+            // the three maps that were that size are laid exactly as before.
+            float lastX = Mathf.Ceil(map.HalfX / 20f) * 20f - 10f;
+            float lastZ = Mathf.Ceil(map.HalfZ / 20f) * 20f - 10f;
+            for (float x = -lastX; x <= lastX + 0.01f; x += 20f)
+                for (float z = -lastZ; z <= lastZ + 0.01f; z += 20f)
                 {
                     var tile = MapKit.Prop(ground, $"{map.Id}_terrain", new Vector3(x, MapKit.GroundLocal(ground), z));
                     // One variant of Switchyard's tile carries a switch stand —
@@ -2948,6 +2955,11 @@ public partial class GameRoot : Node3D
             var color = air ? new Color(0.5f, 0.6f, 0.9f, 0.25f) : new Color(0.2f, 0.22f, 0.27f);
             for (int i = 0; i < route.Waypoints.Count - 1; i++)
             {
+                // A warp leg is not walked, so there is no road to draw. Laying
+                // one would paint a two-hundred-metre diagonal of roadway
+                // across the fields, through the buildings, joining two pads
+                // that are deliberately nowhere near each other.
+                if (route.IsTeleportLeg(i)) continue;
                 var a = ToGd(route.Waypoints[i]);
                 var b = ToGd(route.Waypoints[i + 1]);
                 var mid = (a + b) * 0.5f + new Vector3(0, air ? 0f : 0.06f, 0);
@@ -3080,6 +3092,7 @@ public partial class GameRoot : Node3D
         const float spacing = 13f;
         for (int i = 0; i < route.Waypoints.Count - 1; i++)
         {
+            if (route.IsTeleportLeg(i)) continue;
             var a = ToGd(route.Waypoints[i]);
             var b = ToGd(route.Waypoints[i + 1]);
             float span = new Vector2(b.X - a.X, b.Z - a.Z).Length();
@@ -3126,11 +3139,26 @@ public partial class GameRoot : Node3D
         {
             if (route.Layer == EnemyLayer.Air) continue;
             for (int i = 0; i < route.Waypoints.Count - 1; i++)
+            {
+                // Nothing walks a warp leg, so nothing has to be kept off it.
+                // Treating the chord as lane sterilises a strip right across
+                // the map and leaves the fields with no scenery in them.
+                if (route.IsTeleportLeg(i)) continue;
                 if (DistanceToSegment(Flat(at), Flat(ToGd(route.Waypoints[i])),
                         Flat(ToGd(route.Waypoints[i + 1]))) < clearance) return true;
+            }
         }
+
+        // Buildings are registered as they are built; scenery and scatter stay
+        // out of them, which Blocked could not know from routes and sockets
+        // alone — nothing else on the map has an inside.
+        foreach (var footprint in _footprints)
+            if (footprint.HasPoint(new Vector2(at.X, at.Z))) return true;
         return false;
     }
+
+    /// <summary>Building footprints in XZ, with their margin already added.</summary>
+    private readonly List<Rect2> _footprints = new();
 
     private static Vector3 Flat(Vector3 v) => new(v.X, 0, v.Z);
 
@@ -3406,18 +3434,46 @@ public partial class GameRoot : Node3D
         Run(new Vector3(halfX, 0, -halfZ), new Vector3(halfX, 0, halfZ), -90f);
     }
 
+    /// <summary>An invisible wall at the edge of the playable field.
+    ///
+    /// The perimeter has always been decoration — boundary wall props with no
+    /// collision — so a player who walked past the slab fell out of the world
+    /// and nothing caught them. That was survivable on a yard you could see
+    /// the far side of. On a map three hundred metres across, with vehicles
+    /// that do twenty metres a second, it is not: the edge has to be a thing
+    /// you hit. Hidden rather than drawn, because what the player should see
+    /// there is the treeline.</summary>
+    private void BuildContainment(float halfX, float halfZ)
+    {
+        const float thickness = 1f, height = 8f;
+        foreach (var (at, size) in new (Vector3, Vector3)[]
+        {
+            (new Vector3(0, height * 0.5f, -halfZ), new Vector3(halfX * 2f + thickness, height, thickness)),
+            (new Vector3(0, height * 0.5f, halfZ), new Vector3(halfX * 2f + thickness, height, thickness)),
+            (new Vector3(-halfX, height * 0.5f, 0), new Vector3(thickness, height, halfZ * 2f + thickness)),
+            (new Vector3(halfX, height * 0.5f, 0), new Vector3(thickness, height, halfZ * 2f + thickness)),
+        })
+        {
+            MapKit.HideBox(AddStaticBox(at, size, new Color(0.3f, 0.3f, 0.3f), layer: 1));
+        }
+    }
+
     /// <summary>Ground clutter on a fixed lattice — deterministic placement so
     /// two clients render the same world without syncing anything.
     ///
     /// Kept to the outfield and refused anywhere near the lane, a socket or a
     /// gate. Scattering into the playable middle is what made the first pass
     /// look like litter rather than a working yard.</summary>
-    private void ScatterTerrain(string asset, float halfX, float halfZ)
+    private void ScatterTerrain(string asset, float halfX, float halfZ, int attempts = 22)
     {
         if (!AssetLibrary.Has(asset)) return;
         int placed = 0, refused = 0;
 
-        for (int i = 0; i < 22; i++)
+        // Twenty-two was the number for a 110 x 80 yard. A map six times the
+        // area with the same count is not sparse, it is empty, so the caller
+        // says how many — and the lattice below spreads whatever it is given
+        // across whatever field it is given.
+        for (int i = 0; i < attempts; i++)
         {
             // Fixed lattice, no RNG: the sim's streams stay untouched and every
             // client draws the identical world.
@@ -3908,22 +3964,21 @@ public partial class GameRoot : Node3D
 
     /// <summary>Samples every ground and air route at 4 m, which is the lane
     /// module's own repeat and fine enough that a hole in coverage cannot hide
-    /// between two samples.</summary>
-    private List<(RouteDef Route, Vector3 At)> RouteSamples()
+    /// between two samples.
+    ///
+    /// The sampler itself is the sim's — RouteDef.Samples — so the validator,
+    /// the harness and the map file agree on what a sample is. It skips
+    /// teleport legs, which nothing walks, and it carries the distance since
+    /// the route was entered, which resets at every warp pad. That number is
+    /// what the apron is measured against: a straight-line distance from the
+    /// spawn gate says nothing on a route that leaves the gate and comes back
+    /// past it two hundred metres later.</summary>
+    private List<(RouteDef Route, Vector3 At, float Since)> RouteSamples()
     {
-        var samples = new List<(RouteDef, Vector3)>();
+        var samples = new List<(RouteDef, Vector3, float)>();
         foreach (var route in _map.Routes)
-            for (int i = 0; i < route.Waypoints.Count - 1; i++)
-            {
-                var a = ToGd(route.Waypoints[i]);
-                var b = ToGd(route.Waypoints[i + 1]);
-                int steps = Mathf.Max(1, Mathf.FloorToInt((b - a).Length() / 4f));
-                // Skip the shared corner on every segment but the first, or
-                // each interior waypoint is measured twice and a thin corner
-                // is reported as two thin points.
-                for (int k = i == 0 ? 0 : 1; k <= steps; k++)
-                    samples.Add((route, a.Lerp(b, (float)k / steps)));
-            }
+            foreach (var sample in route.Samples(4f))
+                samples.Add((route, ToGd(sample.At), sample.MetersSinceEntry));
         return samples;
     }
 
@@ -4012,7 +4067,7 @@ public partial class GameRoot : Node3D
     /// <summary>§4.4 and §4.5 — every stretch of every lane is within reach of
     /// at least three build pads, so there is a choice about how to answer it
     /// rather than one forced tower.</summary>
-    private void RuleRoutesAreCovered(List<(RouteDef Route, Vector3 At)> samples,
+    private void RuleRoutesAreCovered(List<(RouteDef Route, Vector3 At, float Since)> samples,
         List<(SocketDef Def, Vector3 At)> sockets, List<string> report, List<string> failures)
     {
         const int Want = 3;
@@ -4028,11 +4083,10 @@ public partial class GameRoot : Node3D
             // there is a problem and being able to place a socket.
             var spans = new List<(Vector3 From, Vector3 To, int Worst)>();
             (Vector3 From, Vector3 To, int Worst)? open = null;
-            var mouth = ToGd(route.Waypoints[0]);
-            foreach (var (r, at) in samples)
+            foreach (var (r, at, since) in samples)
             {
                 if (r.Id != route.Id) continue;
-                if (at.DistanceTo(mouth) < SpawnApron) continue;
+                if (since < SpawnApron) continue;
                 count++;
                 int cover = sockets.Count(s => CanCover(s.At, at, layer));
                 if (cover < worst) { worst = cover; worstAt = at; }
@@ -4072,7 +4126,7 @@ public partial class GameRoot : Node3D
     ///
     /// §4.5 stays a pass/fail on total coverage; this is the breakdown that
     /// says whether a player who never climbs has an answer at all.</summary>
-    private void ReportAirAnswers(List<(RouteDef Route, Vector3 At)> samples,
+    private void ReportAirAnswers(List<(RouteDef Route, Vector3 At, float Since)> samples,
         List<(SocketDef Def, Vector3 At)> sockets, List<string> report)
     {
         var air = samples.Where(s => s.Route.Layer == EnemyLayer.Air).ToList();
@@ -4106,7 +4160,7 @@ public partial class GameRoot : Node3D
     /// <summary>§4.6 — a pad that reaches no lane at any point is a pad nobody
     /// will ever build on, and it is usually a sign the lane moved and the pad
     /// did not.</summary>
-    private void RuleNoSocketCoversNothing(List<(RouteDef Route, Vector3 At)> samples,
+    private void RuleNoSocketCoversNothing(List<(RouteDef Route, Vector3 At, float Since)> samples,
         List<(SocketDef Def, Vector3 At)> sockets, List<string> report, List<string> failures)
     {
         int dead = 0;
@@ -4122,7 +4176,7 @@ public partial class GameRoot : Node3D
     /// <summary>§4.7 — closing a shortcut must not hand the player a long way
     /// round that nothing covers. The gate is the map's central decision; it is
     /// only a decision if both answers are playable.</summary>
-    private void RuleFallbackIsCovered(List<(RouteDef Route, Vector3 At)> samples,
+    private void RuleFallbackIsCovered(List<(RouteDef Route, Vector3 At, float Since)> samples,
         List<(SocketDef Def, Vector3 At)> sockets, List<string> report, List<string> failures)
     {
         var gated = _map.Routes.Where(r => r.BarricadeGate is not null).ToList();
@@ -4138,11 +4192,10 @@ public partial class GameRoot : Node3D
                 continue;
             }
             int thin = 0, count = 0;
-            var mouth = ToGd(fallback.Waypoints[0]);
-            foreach (var (r, at) in samples)
+            foreach (var (r, at, since) in samples)
             {
                 if (r.Id != fallback.Id) continue;
-                if (at.DistanceTo(mouth) < SpawnApron) continue;
+                if (since < SpawnApron) continue;
                 count++;
                 if (sockets.Count(s => CanCover(s.At, at, fallback.Layer)) < 3) thin++;
             }
@@ -4193,7 +4246,7 @@ public partial class GameRoot : Node3D
     /// is. Solid geometry in a lane is worse — it is a wall enemies walk
     /// through, which is how the Switchyard retaining walls read before they
     /// were moved to the perimeter.</summary>
-    private void RuleLanesAreClear(List<(RouteDef Route, Vector3 At)> samples,
+    private void RuleLanesAreClear(List<(RouteDef Route, Vector3 At, float Since)> samples,
         List<string> report, List<string> failures)
     {
         var space = GetWorld3D().DirectSpaceState;
@@ -4204,7 +4257,7 @@ public partial class GameRoot : Node3D
         var box = new BoxShape3D { Size = new Vector3(3.4f, 1.6f, 3.4f) };
         var shape = new PhysicsShapeQueryParameters3D { Shape = box, CollisionMask = 1 };
         int blocked = 0, lowClearance = 0, count = 0;
-        foreach (var (route, at) in samples)
+        foreach (var (route, at, _) in samples)
         {
             if (route.Layer != EnemyLayer.Ground) continue;
             count++;
@@ -4251,6 +4304,7 @@ public partial class GameRoot : Node3D
             if (route.Layer != EnemyLayer.Ground || route.Id == exceptId) continue;
             for (int i = 0; i < route.Waypoints.Count - 1; i++)
             {
+                if (route.IsTeleportLeg(i)) continue;
                 var a = ToGd(route.Waypoints[i]);
                 var b = ToGd(route.Waypoints[i + 1]);
                 if (DistanceToSegment(Flat(at), Flat(a), Flat(b)) < radius) return true;
