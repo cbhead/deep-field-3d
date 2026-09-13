@@ -69,6 +69,22 @@ public partial class Vfx : Node3D
 
         internal float SinceTouched;
 
+        /// <summary>Per-instance copies of the emissive materials under a
+        /// named group, so one instance can be driven without every other
+        /// copy of the same model changing with it. Duplicated once, on the
+        /// frame the effect is created — the thing worth avoiding is a
+        /// duplicate per frame, not a duplicate per effect.</summary>
+        internal List<StandardMaterial3D>? Glow;
+
+        /// <summary>0..1 into <see cref="Glow"/>'s emissive range.</summary>
+        public float Heat;
+
+        /// <summary>A group to roll about its own −Z. The Filament's three
+        /// helix strands are authored as a coil around the beam and design
+        /// asks for them to turn while it fires; rolling about the axis the
+        /// beam is stretched along is the one rotation that cannot shear it.</summary>
+        internal Node3D? Roll;
+
         /// <summary>0..1 to drive <c>_pulse</c> as a gauge that grows with it;
         /// null to let it breathe. Design asks for the revive ring's *arc* to
         /// be the progress, which would mean rebuilding the torus every frame
@@ -89,6 +105,11 @@ public partial class Vfx : Node3D
     /// evidence that a burn on an enemy is a burn on that enemy — the count
     /// alone cannot tell one held effect from another.</summary>
     public IEnumerable<string> HeldKeys => _held.Keys;
+
+    /// <summary>The hottest any beam has got, 0..1. The live probe's evidence
+    /// that the ramp is driven rather than merely wired: a beam that draws and
+    /// never brightens looks exactly like one whose heat is stuck at zero.</summary>
+    public float PeakBeamHeat { get; private set; }
 
     /// <summary>Palette per ammo type, from design's tracer set: the round's
     /// hue is what tells a cryo streak from a standard one across the map.</summary>
@@ -173,7 +194,7 @@ public partial class Vfx : Node3D
     /// this every sim tick for as long as it holds a target, and a burst per
     /// tick would stack four deep at 60 fps while a zero-linger held effect
     /// would strobe on the frames between ticks.</summary>
-    public void TowerBeam(string key, string towerDefId, Vector3 from, Vector3 to)
+    public void TowerBeam(string key, string towerDefId, Vector3 from, Vector3 to, float heat = 0f)
     {
         string asset = towerDefId switch
         {
@@ -187,14 +208,59 @@ public partial class Vfx : Node3D
         float length = along.Length();
         if (length < 0.05f) return;
 
+        bool fresh = !_held.ContainsKey(key);
         if (Hold(key, asset, from) is not { } beam) return;
         beam.LingerSeconds = 0.12f;         // three sim ticks: no gap, no stack
+        if (fresh)
+        {
+            // The ramp group is the sheath and the helix coil: the part design
+            // says to brighten with the beam's heat, and the part it says
+            // should turn while it fires.
+            beam.Roll = FindNamed(beam.Node, $"{towerDefId}_beam_ramp");
+            if (beam.Roll is not null) beam.Glow = OwnMaterials(beam.Roll);
+        }
+        beam.Heat = Mathf.Clamp(heat, 0f, 1f);
         beam.Node.Position = from;
         beam.Node.LookAt(to, Mathf.Abs(along.Normalized().Dot(Vector3.Up)) > 0.99f
             ? Vector3.Forward : Vector3.Up);
         // Unit length along −Z; only Z is stretched, or the beam fattens with
         // the distance it crosses.
         beam.Node.Scale = new Vector3(1f, 1f, length);
+    }
+
+    /// <summary>How bright a beam's sheath goes, cold to capped. Design's
+    /// numbers: "drive <c>filament_beam_ramp</c> emissive 0.3 → 2.0".</summary>
+    private const float BeamGlowCold = 0.3f, BeamGlowHot = 2.0f;
+
+    /// <summary>Gives a subtree its own copies of every emissive material it
+    /// uses, and hands them back to be driven.
+    ///
+    /// A glTF's materials are shared across every instance of that scene, so
+    /// writing to one would brighten every Filament on the map at once — and
+    /// the resource is cached, so it would stay bright for the next one built.
+    /// The copies are made once per effect, which is the cost worth paying;
+    /// the one worth avoiding is a copy per frame.</summary>
+    private static List<StandardMaterial3D> OwnMaterials(Node root)
+    {
+        var owned = new List<StandardMaterial3D>();
+        Walk(root);
+        return owned;
+
+        void Walk(Node node)
+        {
+            if (node is MeshInstance3D mesh)
+            {
+                for (int i = 0; i < mesh.Mesh?.GetSurfaceCount(); i++)
+                {
+                    if (mesh.GetActiveMaterial(i) is not StandardMaterial3D material
+                        || !material.EmissionEnabled) continue;
+                    var copy = (StandardMaterial3D)material.Duplicate();
+                    mesh.SetSurfaceOverrideMaterial(i, copy);
+                    owned.Add(copy);
+                }
+            }
+            foreach (var child in node.GetChildren()) Walk(child);
+        }
     }
 
     /// <summary>Where a tower's round stopped existing. The sim removes a
@@ -575,6 +641,7 @@ public partial class Vfx : Node3D
         _live.Clear();
         foreach (var held in _held.Values) if (IsInstanceValid(held.Node)) held.Node.QueueFree();
         _held.Clear();
+        PeakBeamHeat = 0f;
     }
 
     private static Node3D? FindSuffix(Node root, string suffix)
@@ -669,6 +736,18 @@ public partial class Vfx : Node3D
             }
             if (h.Fade is not null)
                 h.Fade.Scale = Vector3.One * (0.85f + 0.15f * Mathf.Sin(h.Age * Mathf.Pi));
+            // Heat: the ramp is a damage multiplier climbing toward its cap,
+            // and the only tell a player has for it is this. A beam that looks
+            // identical at 1x and at 3x hides the whole reason to leave the
+            // Filament on one target.
+            if (h.Glow is not null)
+            {
+                float energy = Mathf.Lerp(BeamGlowCold, BeamGlowHot, h.Heat);
+                foreach (var material in h.Glow) material.EmissionEnergyMultiplier = energy;
+                PeakBeamHeat = Mathf.Max(PeakBeamHeat, h.Heat);
+            }
+            // Faster the hotter it is, so the coil reads as spinning up.
+            if (h.Roll is not null) h.Roll.RotateZ((float)delta * (2f + 6f * h.Heat));
             h.SinceTouched += (float)delta;
         }
     }

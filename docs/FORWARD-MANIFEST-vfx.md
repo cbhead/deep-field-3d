@@ -40,13 +40,19 @@ at all — not because of anything wrong with the models, but because neither
 tower creates a projectile in the sim and the client only drew projectiles.
 Both now follow their own notes: a unit-length streak along −Z, turned at the
 target and stretched in Z to the distance. The Arc's second copy for the hop is
-there too. Two nodes design named on them are **not** driven yet and are worth
-knowing about rather than being quietly ignored: `filament_beam_ramp` is
-supposed to brighten from 0.3 to 2.0 emissive as the beam's heat ramps, and the
-sim tracks exactly that number (`Tower.RampSeconds`) — it is not wired because
-driving emissive means duplicating the material per instance, which is the same
-call recorded under `_fade` below. If the ramp is worth seeing, say so and it
-is a small change on this side.
+there too, and **`filament_beam_ramp` is driven** — emissive 0.3 → 2.0 as the
+beam's heat climbs, exactly as its note asks, with the helix coil spinning
+faster the hotter it gets. That one effect does duplicate its materials per
+instance, because a shared glTF material written to would brighten every
+Filament on the map at once and stay bright for the next one built; it is
+duplicated once when the beam appears, not once a frame, and there is at most
+one per tower.
+
+Worth knowing, because it is the difference between the ask and what a player
+sees: the ramp caps at 3.3 seconds on a single target, and most things that
+walk past a Filament die before then. Against a Foundry drifter the sheath
+reaches about 60% of its brightness range. The full 2.0 is what a Monolith
+looks like, which is the tower working as intended.
 
 ## 2. What is asked for
 
@@ -131,6 +137,7 @@ actually driven, which it was not before:
 | `_pulse` | breathes ±18%, **or** is scaled 0 → 1 as a gauge when the client has a progress to show — the revive ring grows with the revive clock. Design's note asks for the ring's *arc* to be the progress; the client scales the group instead, because a swept arc means rebuilding the geometry per frame. If a future effect wants a true sweep, name the segments and they can be culled the way the upgrade chevrons are |
 | `_rise` | lifts; **loops** on a held effect so a burn keeps licking upward instead of walking off the top of the enemy, and is driven **downward** for `vfx_status_poison`, whose beads fall |
 | `_fade` | scales out over the life of a burst — not alpha, because alpha means a material duplicated per instance and a shell shrinking into its own burst reads the same at the speed these live at |
+| `<tower>_beam_ramp` | the Filament's sheath and coil: emissive driven 0.3 → 2.0 by the beam's heat, and rolled about the beam axis faster the hotter it is. The one group that does get its own materials, because the number behind it is worth the copy |
 
 Three conventions beyond that are worth keeping, because the client relies on
 all three:
@@ -145,6 +152,10 @@ all three:
   and `proj_filament_beam` both say so in their notes and both work exactly
   that way now — the client turns the model at the target and stretches Z to
   the distance, leaving X and Y alone so the beam does not fatten with range.
+- **A named group can be driven, not only placed.** `filament_beam_ramp` is
+  brightened and spun by the beam's heat. The same door is open to any other
+  effect with a number behind it: name the group, say what the range is, and
+  the client can drive it.
 
 - **A named sub-group can be lifted out on its own.** `overdrive_tower_crown`
   is instanced separately onto every tower an Overdrive reached. If an effect

@@ -2121,12 +2121,51 @@ public partial class GameRoot : Node3D
             && def.Kind is TowerKind.Beam or TowerKind.Tesla
             && EnemyAimPoint(targetId) is { } struck)
         {
-            Vfx.TowerBeam($"beam:{towerId}", defId, origin, struck);
+            Vfx.TowerBeam($"beam:{towerId}", defId, origin, struck, BeamHeat(towerId, defId, def, targetId));
             if (def.Kind == TowerKind.Tesla) DrawChainHops(towerId, defId, def, targetId);
         }
 
         if (rig.Muzzle is null || !IsInstanceValid(rig.Muzzle)) return;
         Vfx.TowerFired(defId, rig.Muzzle.GlobalPosition, rig.Forward);
+    }
+
+    /// <summary>How hot a beam is, 0 cold to 1 capped.
+    ///
+    /// The Filament's damage climbs the longer it holds one target and resets
+    /// the moment it switches, and until this there was no way to see that: a
+    /// beam at 3x looked exactly like a beam at 1x, which hides the entire
+    /// reason to leave the tower on one thing. Design drew the tell — a sheath
+    /// on <c>filament_beam_ramp</c> to brighten and a helix coil to spin — and
+    /// this is the number behind it.
+    ///
+    /// Counted rather than sent. The sim adds one tick to its ramp clock per
+    /// tick it holds the target and emits exactly one TowerFired for that
+    /// tick, so adding a tick per event and resetting when the target changes
+    /// is not an approximation of <c>Tower.RampSeconds</c> — it is the same
+    /// arithmetic driven by the same signal, and it works identically on a
+    /// client, which has no tower state at all. The path factors come from
+    /// <see cref="TowerMath"/>, which exists so the client and the sim answer
+    /// this kind of question the same way.</summary>
+    private readonly Dictionary<int, (int TargetId, float Seconds, double LastSeen)> _beamRamp = new();
+
+    private float BeamHeat(int towerId, string defId, TowerDef def, int targetId)
+    {
+        if (def.Kind != TowerKind.Beam) return 0f;
+
+        var was = _beamRamp.GetValueOrDefault(towerId, (TargetId: -1, Seconds: 0f, LastSeen: 0d));
+        // Switching costs the ramp, and so does dropping the beam entirely:
+        // the sim bleeds the charge off rather than letting it persist, or a
+        // beam would be free burst on the next target.
+        bool continued = was.TargetId == targetId && _effectClock - was.LastSeen < 0.25;
+        float seconds = (continued ? was.Seconds : 0f) + Balance.Dt;
+        _beamRamp[towerId] = (targetId, seconds, _effectClock);
+
+        var levels = _view.Structures.FirstOrDefault(st => st.Id == towerId)?.PathLevels
+            ?? System.Array.Empty<int>();
+        float rate = Balance.BeamRampPerSecond * TowerMath.PathFactor(def, levels, "ramp");
+        float cap = Balance.BeamRampCap * TowerMath.PathFactor(def, levels, "peak");
+        float ramp = Mathf.Min(cap, 1f + rate * seconds);
+        return cap <= 1f ? 0f : Mathf.Clamp((ramp - 1f) / (cap - 1f), 0f, 1f);
     }
 
     /// <summary>The rest of an Arc's chain, drawn hop by hop.
@@ -2990,11 +3029,21 @@ public partial class GameRoot : Node3D
         {
             _statusReport.Add($"{_statusElapsed:0}s enemies={_world.Enemies.Count} "
                 + $"afflicted at once, most so far={_statusPeak} "
-                + $"beams from {string.Join("/", _beamsSeen)}");
+                + $"beams from {string.Join("/", _beamsSeen)} "
+                + $"ramp {Vfx.PeakBeamHeat:0%}");
             if (_world.Enemies.Count == 0) Submit(new Command.StartWave(LocalPlayerId));
         }
 
-        bool done = _statusSeen.Count > 0 && _beamsSeen.Count > 0;
+        // A quarter of the cap, and deliberately not more. The ramp needs
+        // 3.3 seconds on one target to cap, and a Foundry drifter has 20 hp —
+        // it dies to the beam in about two, taking the ramp back to nothing
+        // with it. That is the Filament working as designed ("the answer to
+        // one big thing and actively bad against a swarm"), so a threshold
+        // that expects the cap here would be asserting the tower is broken.
+        // A quarter is about a second of held beam: enough to tell a ramp that
+        // climbs from one that is wired and stuck at zero, which is the thing
+        // this cannot see any other way — both draw an identical beam.
+        bool done = _statusSeen.Count > 0 && _beamsSeen.Count > 0 && Vfx.PeakBeamHeat >= 0.25f;
         if (!done && _statusElapsed < 90f) return;
 
         var report = _statusReport;
@@ -3008,12 +3057,15 @@ public partial class GameRoot : Node3D
         // requiring both would make this fail whenever the wave dies before it
         // reaches the third socket.
         report.Add($"beams drawn by: {(_beamsSeen.Count > 0 ? string.Join(", ", _beamsSeen) : "nothing")}");
+        report.Add($"hottest the Filament's ramp got: {Vfx.PeakBeamHeat:0%} of its cap");
         WriteProbe(report, _statusReportPath, done,
             done
-                ? $"PASS: statuses and beams both drawn on live enemies by {_statusElapsed:0}s"
+                ? $"PASS: statuses, beams and the beam ramp all drawn on live enemies by {_statusElapsed:0}s"
                 : _statusSeen.Count == 0
                     ? "FAIL: a wave walked through a Singularity and no status was ever held"
-                    : "FAIL: a Filament and an Arc fired and no beam was ever drawn");
+                    : _beamsSeen.Count == 0
+                        ? "FAIL: a Filament and an Arc fired and no beam was ever drawn"
+                        : "FAIL: a beam was drawn and its ramp never brightened");
     }
 
     /// <summary>The Detector's reveal sweep, on design's two-second period.
@@ -3041,6 +3093,8 @@ public partial class GameRoot : Node3D
 
         foreach (int id in _detectorNext.Keys.Where(k => !_towerViews.ContainsKey(k)).ToList())
             _detectorNext.Remove(id);
+        foreach (int id in _beamRamp.Keys.Where(k => !_towerViews.ContainsKey(k)).ToList())
+            _beamRamp.Remove(id);
     }
 
     /// <summary>The revive column over anyone who is being picked up.
@@ -4325,6 +4379,7 @@ public partial class GameRoot : Node3D
         _enemyStatuses.Clear();
         _lastSnapshotBits.Clear();
         _detectorNext.Clear();
+        _beamRamp.Clear();
         BuildEnvironment(map);
 
         // Ground slab — one collider, dressed with the 20 m terrain tiles.

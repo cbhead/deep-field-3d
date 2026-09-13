@@ -115,7 +115,13 @@ seen one: an Arc and a Filament dealt damage in silence. They are drawn now
 from `TowerFired`, as a unit-length streak scaled to the hit — design's own
 contract for them, and the same one the tracers use. The Arc's chain hop is
 drawn too, the client mirroring the sim's nearest-other-target search the way
-the turret aim already mirrors `PickTarget`.
+the turret aim already mirrors `PickTarget`. `filament_beam_ramp` is driven as
+its note asks — emissive 0.3 → 2.0 as the beam's heat climbs — from a ramp
+clock the client counts for itself: the sim adds one tick per tick it holds the
+target and emits exactly one `TowerFired` for that tick, so counting events is
+the same arithmetic rather than an approximation of it, and it works on a
+client, which has no tower state at all. It is the only tell the Filament's
+damage multiplier has ever had.
 
 **Half the effects were being laid on their backs.** `Spawn` turned a model's
 −Z toward a direction, and passing `Vector3.Up` to mean "this one points

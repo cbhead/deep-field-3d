@@ -217,7 +217,7 @@ jobs:
       # and never once on screen. Neither path is reached by a solo match,
       # because nothing in one pulls a trigger — and none of these three
       # towers needs anyone to.
-      - name: Live effects probe (statuses and beams on real enemies)
+      - name: Live effects probe (statuses, beams and the beam ramp)
         run: |
           godot --headless --path game --quit-after 9000 -- \
             --shot foundry /tmp/statuses.txt statuses > statuses.log 2>&1 || true
