@@ -17,7 +17,11 @@ teleport pads for the player — and its kit has landed: instanced terrain,
 roads and treeline, four enterable houses, the four vehicle rigs, the warp
 gate. The weapons were rebuilt to the hero standard in the same drop, and
 reloads now play on the delivered magazines and off-hand poses.
-48 harness gates + 90 unit tests green.
+The effects layer landed with it: every status, reaction, ability, wave beat
+and tower moment in design's VFX set is drawn now, on the enemy or the pad or
+the portal it belongs to, and the only two files left on the shelf are waiting
+on a tower and a map element that do not exist yet.
+61 harness gates + 112 unit tests green.
 
 Design's spec is the source of truth for colour ([docs/PALETTE.md](docs/PALETTE.md));
 the delivery contract and its gotchas are in
@@ -36,6 +40,7 @@ proposed:
 | [docs/FORWARD-MANIFEST-toaster.md](docs/FORWARD-MANIFEST-toaster.md) | **delivered 2026-09-12** — the whole kit for sector 4 landed and the map runs on it; kept as the record of what was asked and why |
 | [docs/FORWARD-MANIFEST-switchyard.md](docs/FORWARD-MANIFEST-switchyard.md) | open — separating what repeats from what punctuates, and the turnout, headwall, overbridge and portal that map still grayboxes |
 | [docs/FORWARD-MANIFEST-reload.md](docs/FORWARD-MANIFEST-reload.md) | open — magazines that exist off the gun, off-hand poses, and turret elevation |
+| [docs/FORWARD-MANIFEST-vfx.md](docs/FORWARD-MANIFEST-vfx.md) | open — three effects the code calls by name and gets nothing back for: the third reaction, and the two factions whose abilities were never drawn |
 
 Before any of them, [docs/MAP-AUTHORING.md](docs/MAP-AUTHORING.md): what a map
 is allowed to be, what the sim can and cannot model, and the rules every map is

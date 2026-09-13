@@ -195,6 +195,33 @@ jobs:
           tail -4 /tmp/siege.txt
           grep -q "^PASS" /tmp/siege.txt
 
+      # An effect can be delivered, imported, named correctly in the manifest
+      # and still never appear, because the code path that would draw it is
+      # unreachable or because design renamed the sub-group the client drives.
+      # Both failures are invisible from a file listing and from the usage
+      # count, and both look exactly like "we have not got to that yet". This
+      # fires one of everything through the real entry points.
+      - name: VFX probe (every effect the client can draw, draws)
+        run: |
+          godot --headless --path game --quit-after 3000 -- \
+            --shot foundry /tmp/vfx.txt vfx > vfx.log 2>&1 || true
+          cat /tmp/vfx.txt
+          grep -q "^PASS" /tmp/vfx.txt
+          ! grep -qiE "^ERROR|SCRIPT ERROR" vfx.log
+
+      # The half the probe above cannot prove: a status effect is held on an
+      # enemy by three things agreeing — the sim applying it, the snapshot's
+      # channel byte still saying so, and the view sync asking for it again
+      # every frame. Nothing else exercises that chain, and a solo match never
+      # applies a status because nothing in one pulls a trigger. A Singularity
+      # does not need one.
+      - name: Status probe (a status is drawn on a live enemy)
+        run: |
+          godot --headless --path game --quit-after 9000 -- \
+            --shot foundry /tmp/statuses.txt statuses > statuses.log 2>&1 || true
+          tail -4 /tmp/statuses.txt
+          grep -q "^PASS" /tmp/statuses.txt
+
       # A ladder that stops against the underside of the deck it serves looks
       # completely correct in the map file and from every angle in game, and
       # takes a whole tier out of play — on Switchyard it took the air lane

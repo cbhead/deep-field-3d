@@ -856,7 +856,8 @@ public static class Step
         player.AbilityCooldown = faction.CooldownSeconds * Factions.CooldownFactor(level);
         float radius = faction.RadiusMeters * Factions.RadiusFactor(level);
         float magnitude = faction.Magnitude * Factions.MagnitudeFactor(level);
-        w.Emit(new SimEvent.AbilityUsed(ability.PlayerId, faction.AbilityId));
+        w.Emit(new SimEvent.AbilityUsed(ability.PlayerId, faction.AbilityId,
+            ability.TargetPos.X, ability.TargetPos.Y, ability.TargetPos.Z));
 
         switch (faction.AbilityId)
         {

@@ -88,6 +88,13 @@ public partial class GameRoot : Node3D
     private string _shotView = "eye";
     private int _shotCountdown;
     private List<Vector3> _laneMouths = new();
+
+    /// <summary>The two ends of the map, kept apart from <see cref="_laneMouths"/>
+    /// because the wave beats play at one each: the portal opening is at the
+    /// gate the wave comes out of, the all-clear is at the thing it failed to
+    /// reach. Merged, they are the list scenery keeps clear of.</summary>
+    private List<(Vector3 Pos, Vector3 DownLane)> _spawnPortals = new();
+    private List<Vector3> _corePositions = new();
     private Node3D? _coreView;
     private Node3D? _coreHitView;
     private double _coreHitTimer;
@@ -151,7 +158,11 @@ public partial class GameRoot : Node3D
     private string _hint = "";
 
     /// <summary>Client-side aim feedback source (the sim isn't here to ask).</summary>
-    private readonly Dictionary<int, (bool Burrowed, bool Shielded)> _lastSnapshotBits = new();
+    /// <summary>What each enemy looked like last frame, on either side of the
+    /// wire. Two readers: the crosshair, which has no world to ask on a
+    /// client, and the effects layer, which needs a previous value to tell a
+    /// shield popping from a shield that was never there.</summary>
+    private readonly Dictionary<int, (bool Burrowed, float Shield)> _lastSnapshotBits = new();
 
     public int LocalPlayerId => _net.LocalPlayerId;
     public GameView View => _view;
@@ -831,6 +842,38 @@ public partial class GameRoot : Node3D
             return;
         }
 
+        // Statuses on a real enemy in a real match, which is the half the
+        // effect catalogue cannot prove: every other check here either
+        // instantiates a name or calls an entry point directly, and neither
+        // touches the path a burn actually arrives by — the sim applies a
+        // status, the snapshot's channel byte says it is still there, and the
+        // view sync holds an effect on the body for as long as both agree.
+        // A Singularity chills everything that walks past it and needs nobody
+        // to pull a trigger, which is what makes it the tower to build here.
+        if (_shotView == "statuses" && _world is not null)
+        {
+            _shotView = "eye";
+            _statusReportPath = path;
+            _statusReport = new List<string> { $"status probe on {_map.Id}" };
+            string socket = BuildableSocket().Id;
+            _world.Money = 5000;
+            Submit(new Command.PlaceTower(LocalPlayerId, "singularity", socket));
+            Submit(new Command.StartWave(LocalPlayerId));
+            _statusReport.Add($"singularity on {socket}");
+            return;
+        }
+
+        // Every effect the client can draw, drawn. Not a re-run of the asset
+        // audit: the audit instantiates names, this calls the real entry
+        // points, which is the only thing that catches an effect wired to a
+        // method nobody reaches or a sub-group design renamed.
+        if (_shotView == "vfx" && _world is not null)
+        {
+            _shotView = "eye";
+            RunVfxProbe(path);
+            return;
+        }
+
         if (_shotView == "teleport")
         {
             _shotView = "eye";
@@ -1107,7 +1150,14 @@ public partial class GameRoot : Node3D
                 for (int p = 0; p < levels.Length; p++) levels[p] = level;
                 built.Add(SpawnStructureView(def.Id, Vector3.Zero, levels));
             }
-            built.Add(SpawnProjectileView(def.Id));
+            // Every tier of round, which no audit would otherwise see: tier
+            // follows the damage path and nothing in an audit buys one.
+            for (int level = 0; level <= 9; level += 3)
+            {
+                var levels = new int[def.UpgradePaths.Count];
+                for (int p = 0; p < levels.Length; p++) levels[p] = level;
+                built.Add(SpawnProjectileView(def.Id, levels));
+            }
         }
 
         foreach (var def in Traps.All.Values)
@@ -1136,6 +1186,13 @@ public partial class GameRoot : Node3D
             built.Add(AssetLibrary.Instantiate($"vfx_tracer_{def.Id}", () => new Node3D()));
         }
         foreach (string effect in new[] { "vfx_muzzle_lance", "vfx_impact_lance", "vfx_muzzle_nova", "vfx_impact_nova", "vfx_muzzle_arc", "vfx_impact_arc", "vfx_muzzle_skywatch", "vfx_impact_skywatch" })
+            built.Add(AssetLibrary.Instantiate(effect, () => new Node3D()));
+        // Every effect the client can ask for. The measurement is honest and
+        // therefore blind in one direction — a solo run never sells a tower,
+        // never triggers a reaction, never gets anything frozen — so the names
+        // are enumerated rather than waiting for a match that does all three
+        // (docs/ASSET-USAGE.md, "One blind spot").
+        foreach (string effect in Vfx.Catalogue())
             built.Add(AssetLibrary.Instantiate(effect, () => new Node3D()));
         foreach (var def in Factions.All.Values)
         {
@@ -1526,6 +1583,7 @@ public partial class GameRoot : Node3D
             AimTowers(delta);
             SyncProjectileViews();
             SyncAvatarsFromWorld();
+            SyncWorldEffects(delta);
         }
     }
 
@@ -1595,6 +1653,7 @@ public partial class GameRoot : Node3D
         SyncVehicles();
         SyncEnemyViewsRemote(delta);
         SyncAvatarsFromMeta();
+        SyncWorldEffects(delta);
     }
 
     // =====================================================================
@@ -1691,11 +1750,14 @@ public partial class GameRoot : Node3D
             {
                 case SimEvent.TowerPlaced placed:
                     OnTowerPlaced(placed.TowerId, placed.DefId, placed.SocketId);
+                    OnStructureBuilt(placed.TowerId);
                     break;
                 case SimEvent.TowerUpgraded upgraded:
                     OnTowerUpgraded(upgraded.TowerId, upgraded.PathId, upgraded.NewLevel);
+                    OnStructureUpgraded(upgraded.TowerId, upgraded.NewLevel);
                     break;
                 case SimEvent.TowerSold sold:
+                    OnStructureSold(sold.TowerId);
                     ReleaseStructureView(sold.TowerId);
                     break;
                 case SimEvent.TowerFired fired:
@@ -1763,6 +1825,7 @@ public partial class GameRoot : Node3D
                     break;
 
                 case SimEvent.WaveStarted started:
+                    OnWaveStarted();
                     _screens.HideIntermission();
                     _lastWaveLeaks = 0;
                     SnapshotKills();
@@ -1770,6 +1833,7 @@ public partial class GameRoot : Node3D
                     Post($"wave {started.WaveIndex + 1} — {started.EnemyCount} inbound");
                     break;
                 case SimEvent.WaveCleared cleared:
+                    OnWaveCleared();
                     Post($"wave {cleared.WaveIndex + 1} cleared", UiTheme.Good);
                     break;
                 case SimEvent.EnemyLeaked leaked:
@@ -1815,7 +1879,20 @@ public partial class GameRoot : Node3D
                     OnEnemyDamaged(damaged.EnemyId, damaged.Amount, damaged.Source);
                     break;
                 case SimEvent.EnemyDied died:
-                    OnEnemyDied(died.EnemyId, died.Bounty, died.Source);
+                    OnEnemyDied(died.EnemyId, died.DefId, died.Bounty, died.Source);
+                    break;
+
+                // What is on an enemy, as opposed to whether anything is. The
+                // snapshot's status byte says which channels are busy; only
+                // this says which of the channel's statuses is the one busy
+                // with it, and shock and freeze share a channel.
+                case SimEvent.StatusApplied status:
+                    OnStatusApplied(status.EnemyId, status.StatusId);
+                    break;
+
+                case SimEvent.AbilityUsed ability:
+                    OnAbilityUsed(ability.PlayerId, ability.AbilityId,
+                        new Vector3(ability.X, ability.Y, ability.Z));
                     break;
             }
         }
@@ -1842,9 +1919,16 @@ public partial class GameRoot : Node3D
         if (p.Length < 2) return;
         switch (p[1])
         {
-            case "towerPlaced": OnTowerPlaced(int.Parse(p[2]), p[3], p[4]); break;
-            case "towerUpgraded": OnTowerUpgraded(int.Parse(p[2]), p[3], int.Parse(p[4])); break;
+            case "towerPlaced":
+                OnTowerPlaced(int.Parse(p[2]), p[3], p[4]);
+                OnStructureBuilt(int.Parse(p[2]));
+                break;
+            case "towerUpgraded":
+                OnTowerUpgraded(int.Parse(p[2]), p[3], int.Parse(p[4]));
+                OnStructureUpgraded(int.Parse(p[2]), int.Parse(p[4]));
+                break;
             case "towerSold":
+                OnStructureSold(int.Parse(p[2]));
                 ReleaseStructureView(int.Parse(p[2]));
                 break;
             case "structureDestroyed":
@@ -1863,13 +1947,17 @@ public partial class GameRoot : Node3D
                 _armory.ShowNotice(Explain(p[4]));
                 break;
             case "waveStarted":
+                OnWaveStarted();
                 _screens.HideIntermission();
                 _lastWaveLeaks = 0;
                 SnapshotKills();
                 _lastWaveEnemyCount = int.Parse(p[3]);
                 Post($"wave {int.Parse(p[2]) + 1} — {p[3]} inbound");
                 break;
-            case "waveCleared": Post($"wave {int.Parse(p[2]) + 1} cleared", UiTheme.Good); break;
+            case "waveCleared":
+                OnWaveCleared();
+                Post($"wave {int.Parse(p[2]) + 1} cleared", UiTheme.Good);
+                break;
             case "enemyLeaked":
                 _lastWaveLeaks++;
                 Post("BREACH — core hit", UiTheme.Danger);
@@ -1944,7 +2032,14 @@ public partial class GameRoot : Node3D
                 OnEnemyDamaged(int.Parse(p[2]), float.Parse(p[3],
                     System.Globalization.CultureInfo.InvariantCulture), p[4]);
                 break;
-            case "enemyDied": OnEnemyDied(int.Parse(p[2]), int.Parse(p[4]), p[5]); break;
+            case "enemyDied": OnEnemyDied(int.Parse(p[2]), p[3], int.Parse(p[4]), p[5]); break;
+            case "statusApplied": OnStatusApplied(int.Parse(p[2]), p[3]); break;
+            case "abilityUsed":
+                OnAbilityUsed(int.Parse(p[2]), p[3], new Vector3(
+                    float.Parse(p[4], System.Globalization.CultureInfo.InvariantCulture),
+                    float.Parse(p[5], System.Globalization.CultureInfo.InvariantCulture),
+                    float.Parse(p[6], System.Globalization.CultureInfo.InvariantCulture)));
+                break;
             case "enemyTeleported":
                 OnEnemyTeleported(int.Parse(p[2]), new Vector3(
                     float.Parse(p[5], System.Globalization.CultureInfo.InvariantCulture),
@@ -2009,7 +2104,7 @@ public partial class GameRoot : Node3D
         }
     }
 
-    private void OnEnemyDied(int enemyId, int bounty, string source)
+    private void OnEnemyDied(int enemyId, string defId, int bounty, string source)
     {
         if (source.StartsWith("player") && int.TryParse(source[6..], out int killer))
         {
@@ -2020,8 +2115,17 @@ public partial class GameRoot : Node3D
                 Post($"+{bounty}c", UiTheme.Warn);
             }
         }
+
+        // A Cluster does not die so much as open. The Motes it spawns arrive
+        // as their own enemies a tick later and walk out of the burst, so this
+        // is drawn on the death rather than on the spawns — five separate
+        // little effects would read as five things, which is the opposite of
+        // what just happened.
+        if (defId == "cluster" && EnemyWorldPos(enemyId) is { } burst) Vfx.ClusterSplit(burst);
+
         _overheads.Remove(enemyId);
         _lastSnapshotBits.Remove(enemyId);
+        _enemyStatuses.Remove(enemyId);
     }
 
     private void OnReaction(int enemyId, string reactionId)
@@ -2030,11 +2134,102 @@ public partial class GameRoot : Node3D
         {
             "thermalShock" => "THERMAL SHOCK",
             "flashFreeze" => "FLASH FREEZE",
+            "corrode" => "CORRODE",
             _ => reactionId.ToUpperInvariant(),
         };
         var color = reactionId == "flashFreeze" ? UiTheme.Status("freeze") : UiTheme.Status("burn");
         if (EnemyWorldPos(enemyId) is { } pos) _markers.Callout(pos, label, color);
+        if (_enemyViews.TryGetValue(enemyId, out var view) && IsInstanceValid(view))
+            Vfx.Reaction(reactionId, view);
         Post(label, color);
+    }
+
+    /// <summary>Which status is sitting in each of an enemy's channels.
+    ///
+    /// The snapshot byte says a channel is occupied and nothing more, which is
+    /// enough to tint a silhouette and not enough to draw one: shock and
+    /// freeze are both hard control and they are a stagger and a lock. The
+    /// event says which; the byte says for how long. Neither half alone can
+    /// draw a status, and this is the half that has to be remembered.</summary>
+    private readonly Dictionary<int, string[]> _enemyStatuses = new();
+
+    private void OnStatusApplied(int enemyId, string statusId)
+    {
+        if (!Statuses.All.TryGetValue(statusId, out var def)) return;
+        if (!_enemyStatuses.TryGetValue(enemyId, out var channels))
+            _enemyStatuses[enemyId] = channels = new string[8];
+        channels[(int)def.Channel] = statusId;
+    }
+
+    /// <summary>A faction ability going off, wherever it went off.
+    ///
+    /// Overdrive is the one that needs a second reading of the world: the sim
+    /// buffs every tower inside the radius and says nothing about which, so
+    /// the client asks the same question with the same numbers and puts
+    /// design's crown on each answer. A tower that quietly got faster and does
+    /// not look it is a purchase the player cannot see.</summary>
+    private void OnAbilityUsed(int playerId, string abilityId, Vector3 aimPoint)
+    {
+        var hero = PlayerWorldPos(playerId) ?? aimPoint;
+        Vfx.Ability(abilityId, hero, aimPoint);
+        if (abilityId != "overdrive") return;
+
+        var faction = Factions.All.Values.FirstOrDefault(f => f.AbilityId == abilityId);
+        if (faction is null) return;
+        float radius = faction.RadiusMeters * Factions.RadiusFactor(FactionLevelOf(playerId));
+        foreach (var view in _towerViews.Values)
+        {
+            if (!IsInstanceValid(view)) continue;
+            if (Flat(view.Position).DistanceTo(Flat(hero)) > radius) continue;
+            Vfx.OverdriveCrown(view.Position, faction.DurationSeconds);
+        }
+    }
+
+    /// <summary>Where a player is, whichever side of the wire is asking.</summary>
+    private Vector3? PlayerWorldPos(int playerId)
+    {
+        if (playerId == LocalPlayerId && _player is not null) return _player.GlobalPosition;
+        if (_avatarViews.TryGetValue(playerId, out var avatar) && IsInstanceValid(avatar)) return avatar.Position;
+        return _view.Players.FirstOrDefault(p => p.Id == playerId)?.Pos;
+    }
+
+    private int FactionLevelOf(int playerId) =>
+        _view.Players.FirstOrDefault(p => p.Id == playerId)?.FactionLevel ?? 1;
+
+    /// <summary>Construction, refund and level-up, at the pad they happened on.
+    /// Three effects rather than one because they are three different pieces of
+    /// news, and design drew them in three different colours for that reason:
+    /// green going up, brass coming back, teal climbing.</summary>
+    private void OnStructureBuilt(int towerId)
+    {
+        if (StructurePos(towerId) is { } at) Vfx.TowerPlaced(at);
+    }
+
+    private void OnStructureSold(int towerId)
+    {
+        if (StructurePos(towerId) is { } at) Vfx.TowerSold(at);
+    }
+
+    private void OnStructureUpgraded(int towerId, int newLevel)
+    {
+        if (StructurePos(towerId) is { } at) Vfx.TowerUpgraded(at, newLevel);
+    }
+
+    private Vector3? StructurePos(int towerId) =>
+        _towerViews.TryGetValue(towerId, out var view) && IsInstanceValid(view) ? view.Position : null;
+
+    /// <summary>The two beats that bracket a wave, at the two ends of the map.
+    /// Both are played on every gate and every core the map has — Switchyard's
+    /// two ground routes share a mouth, so these are the deduplicated lists
+    /// the portals themselves were placed from.</summary>
+    private void OnWaveStarted()
+    {
+        foreach (var (pos, downLane) in _spawnPortals) Vfx.WaveStart(pos, downLane);
+    }
+
+    private void OnWaveCleared()
+    {
+        foreach (var core in _corePositions) Vfx.WaveClear(core);
     }
 
     private void OnMatchEnded(bool victory)
@@ -2086,6 +2281,13 @@ public partial class GameRoot : Node3D
         var where = EnemyWorldPos(enemyId)
             ?? ToGd(_map.Routes[0].Waypoints[^1]);
         _hud.FlagBreach(where, GetViewport().GetCamera3D());
+
+        // The alarm goes off at the core, not at the enemy: a life is gone
+        // wherever it happened, and the player has to be able to find the
+        // thing that lost it. The nearest core to the leak is the one it
+        // reached — Switchyard has two and they are 90 m apart.
+        if (_corePositions.Count > 0)
+            Vfx.CoreBreach(_corePositions.OrderBy(c => c.DistanceTo(where)).First());
     }
 
     private Vector3? EnemyWorldPos(int enemyId) =>
@@ -2273,17 +2475,82 @@ public partial class GameRoot : Node3D
             byte bits = Protocol.PackStatusBits(enemy);
             TintEnemy(view, enemy.Hp / enemy.MaxHp, bits);
 
-            float maxShield = Enemies.All[enemy.DefId].Shield;
-            float shieldFraction = maxShield > 0f
-                ? enemy.Shield / (maxShield * (enemy.MaxHp / Enemies.All[enemy.DefId].Hp))
-                : 0f;
+            float shieldFraction = Protocol.ShieldFraction(enemy);
             UpdateEnemyStates(view, enemy.Burrowed, shieldFraction);
             UpdateOverhead(enemy.Id, view, enemy.Hp / enemy.MaxHp, shieldFraction,
                 bits, enemy.Burrowed);
+            SyncEnemyEffects(enemy.Id, view, bits, shieldFraction, enemy.Burrowed);
         }
         SweepViews(_enemyViews, _world.Enemies.Select(e => e.Id));
         SweepOverheads(_world.Enemies.Select(e => e.Id));
     }
+
+    /// <summary>The effects that belong to an enemy rather than to a moment:
+    /// what is burning it, what is left of its shield, whether it is under the
+    /// ground. Driven from the same three numbers on both sides of the wire —
+    /// the host reads them off the world, a client off the snapshot — so a
+    /// co-op party is looking at the same enemy.
+    ///
+    /// Held effects are asked for again every frame they should exist and
+    /// swept at the end of the frame; the transitions (a shield popping, a
+    /// Mole breaking ground) are one-shots fired off the change. Both need the
+    /// previous frame, which is what <see cref="_lastSnapshotBits"/> is.</summary>
+    private void SyncEnemyEffects(int enemyId, Node3D view, byte statusBits,
+        float shieldFraction, bool burrowed)
+    {
+        var last = _lastSnapshotBits.GetValueOrDefault(enemyId, (Burrowed: burrowed, Shield: shieldFraction));
+        _lastSnapshotBits[enemyId] = (burrowed, shieldFraction);
+
+        // Design authors every status effect around a 1.8 m body. A Monolith
+        // is two and a half times that and a Mote about half, and a flame
+        // tongue the size of the thing it is on reads as a different effect.
+        float scale = Mathf.Clamp(
+            (view.HasMeta("head_height") ? (float)view.GetMeta("head_height") : 1.9f) / 1.9f,
+            0.5f, 2.4f);
+
+        // Nothing is drawn on something that is underground: the Mole's whole
+        // window is that you cannot touch it, and a burn still licking up out
+        // of a dirt mound says the opposite.
+        if (!burrowed)
+        {
+            var channels = _enemyStatuses.GetValueOrDefault(enemyId);
+            for (int c = 0; c < 8; c++)
+            {
+                if ((statusBits & (1 << c)) == 0) continue;
+                string statusId = channels?[c] ?? DefaultStatusFor((Channel)c);
+                if (statusId.Length == 0) continue;
+                Vfx.StatusHeld($"status:{enemyId}:{c}", view, statusId, scale);
+            }
+        }
+
+        // The shield: gone is a burst, growing back is held for as long as it
+        // grows. A Warden whose bubble is climbing is a window closing, and
+        // that is the half a player can still do something about.
+        if (last.Shield > 0.02f && shieldFraction <= 0.02f) Vfx.ShieldPopped(view);
+        else if (shieldFraction > last.Shield + 0.0005f && shieldFraction < 0.999f)
+            Vfx.ShieldRegen($"shield:{enemyId}", view);
+
+        if (burrowed != last.Burrowed) Vfx.BurrowSpray(view.Position);
+    }
+
+    /// <summary>What to draw for a channel nobody told us the status of.
+    ///
+    /// A client that joined mid-burn has the bit and not the event, and every
+    /// channel but one holds exactly one status, so the channel names it. The
+    /// exception is Control, which is a 0.25 s stagger or a 1.2 s lock; a
+    /// stagger is the safer guess because it is the one that ends before
+    /// anyone reads it wrong.</summary>
+    private static string DefaultStatusFor(Channel channel) => channel switch
+    {
+        Channel.Movement => "chill",
+        Channel.Thermal => "burn",
+        Channel.Toxin => "poison",
+        Channel.Defense => "shred",
+        Channel.Vulnerability => "mark",
+        Channel.Control => "shock",
+        Channel.Detection => "reveal",
+        _ => "",
+    };
 
     /// <summary>Attaches (once) and updates the billboarded bar/status cluster
     /// above an enemy. Overheads live under the enemy view so they follow it and
@@ -2304,9 +2571,16 @@ public partial class GameRoot : Node3D
         overhead.Set(hpFraction, shieldFraction, statusBits, burrowed, distance);
     }
 
+    /// <summary>Drops the per-enemy bookkeeping for anything no longer in the
+    /// world. Death is evented and a leak is not, so this rather than the
+    /// event is what keeps the tables the size of the wave.</summary>
     private void SweepOverheads(IEnumerable<int> liveIds)
     {
         var live = new HashSet<int>(liveIds);
+        foreach (int id in _enemyStatuses.Keys.Where(id => !live.Contains(id)).ToList())
+            _enemyStatuses.Remove(id);
+        foreach (int id in _lastSnapshotBits.Keys.Where(id => !live.Contains(id)).ToList())
+            _lastSnapshotBits.Remove(id);
         foreach (int id in _overheads.Keys.Where(id => !live.Contains(id)).ToList())
             _overheads.Remove(id);
     }
@@ -2554,16 +2828,124 @@ public partial class GameRoot : Node3D
             else TurnTowards(view, GodotYaw(snap.Yaw), delta);
             TintEnemy(view, snap.HpFraction, snap.StatusBits);
 
-            // Snapshots carry no shield channel of their own; a Warden that
-            // still has shield reads as full hp with the shield bit unset, so
-            // the client shows hp only and lets the crosshair report shielded.
-            bool burrowed = snap.HpFraction <= 0f;
-            UpdateEnemyStates(view, burrowed, 0f);
-            UpdateOverhead(snap.Id, view, snap.HpFraction, 0f, snap.StatusBits, burrowed);
-            _lastSnapshotBits[snap.Id] = (burrowed, Shielded: false);
+            // Shield and burrow ride the snapshot from protocol 5 on. Before
+            // that a client drew no bubble at all and inferred "underground"
+            // from hp reaching zero, which is the reading for "dead".
+            UpdateEnemyStates(view, snap.Burrowed, snap.ShieldFraction);
+            UpdateOverhead(snap.Id, view, snap.HpFraction, snap.ShieldFraction,
+                snap.StatusBits, snap.Burrowed);
+            SyncEnemyEffects(snap.Id, view, snap.StatusBits, snap.ShieldFraction, snap.Burrowed);
         }
         SweepViews(_enemyViews, newest.Enemies.Select(s => s.Id));
         SweepOverheads(newest.Enemies.Select(s => s.Id));
+    }
+
+    // =====================================================================
+    // Effects the world drives, as opposed to the ones an event fires
+    // =====================================================================
+
+    private double _effectClock;
+    private readonly Dictionary<int, double> _detectorNext = new();
+
+    /// <summary>The per-frame half of the effects layer, run in every mode
+    /// that draws. Everything here is a standing fact rather than a moment: a
+    /// Detector is sweeping, someone is being picked up. The sweep at the end
+    /// is what makes held effects safe — anything that stopped being true this
+    /// frame stops being drawn.</summary>
+    private void SyncWorldEffects(double delta)
+    {
+        _effectClock += delta;
+        TickDetectorPulses();
+        TickReviveBeams();
+        Vfx.SweepHeld();
+        TickStatusProbe(delta);
+    }
+
+    private List<string>? _statusReport;
+    private string _statusReportPath = "";
+    private float _statusElapsed;
+    private int _statusPeak;
+    private readonly SortedSet<string> _statusSeen = new();
+
+    /// <summary>Watches for status effects appearing on live enemies and says
+    /// which ones did. Stops itself either way — a verification run that can
+    /// outlive the thing it verifies is how eight Godot processes once ran for
+    /// a day.</summary>
+    private void TickStatusProbe(double delta)
+    {
+        if (_statusReport is null || _world is null) return;
+
+        foreach (string key in Vfx.HeldKeys)
+            if (key.StartsWith("status:")) _statusSeen.Add(key.Split(':')[^1]);
+
+        // The peak, not this frame's count: an enemy is inside a 9 m aura for
+        // about a second of a minute-long walk, and a per-second sample that
+        // catches none of them reads as a contradiction next to a pass.
+        _statusPeak = Mathf.Max(_statusPeak,
+            _world.Enemies.Count(e => e.Statuses[(int)Channel.Movement].Active));
+
+        float was = _statusElapsed;
+        _statusElapsed += (float)delta;
+        if (Mathf.FloorToInt(_statusElapsed / 5f) > Mathf.FloorToInt(was / 5f))
+        {
+            _statusReport.Add($"{_statusElapsed:0}s enemies={_world.Enemies.Count} "
+                + $"chilled at once, most so far={_statusPeak}");
+            if (_world.Enemies.Count == 0) Submit(new Command.StartWave(LocalPlayerId));
+        }
+
+        if (_statusSeen.Count == 0 && _statusElapsed < 60f) return;
+
+        var report = _statusReport;
+        _statusReport = null;
+        string drew = string.Join(", ",
+            _statusSeen.Select(c => DefaultStatusFor((Channel)int.Parse(c))));
+        WriteProbe(report, _statusReportPath, _statusSeen.Count > 0,
+            _statusSeen.Count > 0
+                ? $"PASS: held on a live enemy at {_statusElapsed:0}s — {drew}"
+                : "FAIL: a minute of Singularity aura and no status effect was ever held");
+    }
+
+    /// <summary>The Detector's reveal sweep, on design's two-second period.
+    ///
+    /// Not an event, because the sim does not emit one: an aura tower reapplies
+    /// its status every tick, thirty times a second, and a pulse per tick is
+    /// not a pulse. Staggered per tower id so a pair covering the same junction
+    /// sweeps rather than strobes.</summary>
+    private void TickDetectorPulses()
+    {
+        const double Period = 2.0;
+        foreach (var (id, view) in _towerViews)
+        {
+            if (!IsInstanceValid(view) || (string)view.GetMeta("def_id", "") != "detector") continue;
+            if (!_detectorNext.TryGetValue(id, out double next))
+                _detectorNext[id] = next = _effectClock + Period * (id * 0.37 % 1.0);
+            if (_effectClock < next) continue;
+
+            _detectorNext[id] = _effectClock + Period;
+            var levels = _view.Structures.FirstOrDefault(st => st.Id == id)?.PathLevels
+                ?? System.Array.Empty<int>();
+            Vfx.DetectorPulse(view.Position,
+                TowerMath.Range(Towers.Detector, levels, _map, _view.Wave), (float)Period);
+        }
+
+        foreach (int id in _detectorNext.Keys.Where(k => !_towerViews.ContainsKey(k)).ToList())
+            _detectorNext.Remove(id);
+    }
+
+    /// <summary>The revive column over anyone who is being picked up.
+    ///
+    /// Driven off progress rather than off someone holding a key, which is
+    /// what makes it work for the whole party: the sim's revive clock rides
+    /// the meta channel, so the teammate covering the door sees the same ring
+    /// filling as the one crouched over the body. It also decays on its own
+    /// when the hold stops, so the column fades instead of blinking out.</summary>
+    private void TickReviveBeams()
+    {
+        foreach (var player in _view.Players)
+        {
+            if (!player.Downed || !player.Connected || player.ReviveProgress <= 0.002f) continue;
+            Vfx.ReviveBeam($"revive:{player.Id}", player.Pos + Vector3.Up * 0.1f, player.ReviveProgress);
+        }
     }
 
     private void SyncProjectileViews()
@@ -2572,8 +2954,8 @@ public partial class GameRoot : Node3D
         {
             if (!_projectileViews.TryGetValue(projectile.Id, out var view))
             {
-                string firedBy = _world.Towers.FirstOrDefault(t => t.Id == projectile.FiredBy)?.DefId ?? "lance";
-                view = SpawnProjectileView(firedBy);
+                var firedBy = _world.Towers.FirstOrDefault(t => t.Id == projectile.FiredBy);
+                view = SpawnProjectileView(firedBy?.DefId ?? "lance", firedBy?.PathLevels);
                 _projectileViews[projectile.Id] = view;
             }
             view.Position = ToGd(projectile.Pos);
@@ -3661,6 +4043,139 @@ public partial class GameRoot : Node3D
         _traversalTimer = 0f;
     }
 
+    /// <summary>Fires one of everything and says what showed up.
+    ///
+    /// The thing this catches that nothing else does: an effect can be
+    /// delivered, imported, named correctly in the manifest and still never
+    /// appear, because the code path that would draw it is unreachable or
+    /// because design renamed the sub-group the client drives. Both failures
+    /// are invisible from a file listing and from the usage count, and both
+    /// look exactly like "we have not got to that yet".</summary>
+    private void RunVfxProbe(string path)
+    {
+        // Two frames apart on purpose. Everything is fired on the first and
+        // counted on the second, so what the report counts is what survived a
+        // frame of _Process rather than what was handed to AddChild — a burst
+        // whose life is shorter than a frame is not an effect.
+        // The wave has to be running before anything is fired: a fresh match
+        // sits in intermission, that panel rides the phase rather than an
+        // event, and it draws over exactly the middle of the screen the
+        // effects are in. Every other review preset starts a wave for the
+        // same reason.
+        Stage(0, () => Submit(new Command.StartWave(LocalPlayerId)));
+        Stage(4, () => FireEveryEffect());
+        Stage(3, () => ReportEveryEffect(path));
+    }
+
+    private Node3D? _vfxAnchor;
+    private int _vfxLiveBefore;
+
+    private void FireEveryEffect()
+    {
+        // On a build socket, not in front of the hero: the hero spawns on the
+        // Foundry's gantry, and a set of 6-13 m ground rings fired up there is
+        // a set of ground rings on the other side of a wall. A socket is open
+        // ground beside the lane by definition, which is the same reason every
+        // other review preset aims at one.
+        var socket = BuildableSocket();
+        var anchor = new Node3D { Position = ToGd(socket.Pos) };
+        AddChild(anchor);
+        _vfxAnchor = anchor;
+        var at = anchor.Position;
+        // Far enough back and high enough up that the ground rings read as
+        // rings: several of these are authored at 6-13 m and seen from eye
+        // height at four paces they are a horizon line.
+        AimAt(new Vec3(at.X, at.Y, at.Z), back: 12f, height: 5f);
+
+        _vfxLiveBefore = Vfx.LiveCount;
+        foreach (var status in Statuses.All.Values)
+            Vfx.StatusHeld($"probe:{status.Id}", anchor, status.Id, 1f);
+        foreach (var reaction in Reactions.All) Vfx.Reaction(reaction.Id, anchor);
+        foreach (var faction in Factions.All.Values)
+            Vfx.Ability(faction.AbilityId, at, at + new Vector3(3f, 0f, 0f));
+        Vfx.OverdriveCrown(at, 4f);
+
+        Vfx.TowerPlaced(at);
+        Vfx.TowerSold(at);
+        for (int level = 1; level <= 10; level += 3) Vfx.TowerUpgraded(at, level);
+        Vfx.DetectorPulse(at, Towers.Detector.RangeMeters, 2f);
+
+        Vfx.WaveStart(at, Vector3.Forward);
+        Vfx.WaveClear(at);
+        Vfx.CoreBreach(at);
+
+        Vfx.ShieldPopped(anchor);
+        Vfx.ShieldRegen("probe:regen", anchor);
+        Vfx.BurrowSpray(at);
+        Vfx.ClusterSplit(at);
+        Vfx.ReviveBeam("probe:revive", at, 0.5f);
+        Vfx.Teleport(at);
+        Vfx.EnemyWarp(at);
+
+        foreach (var def in Towers.All.Values)
+        {
+            Vfx.TowerFired(def.Id, at + Vector3.Up, Vector3.Forward);
+            Vfx.ProjectileLanded(def.Id, at);
+        }
+        foreach (var ammo in Ammo.All.Values)
+            Vfx.GunShot(at + Vector3.Up, at + Vector3.Up + Vector3.Forward * 6f, ammo.Id, true);
+    }
+
+    private void ReportEveryEffect(string path)
+    {
+        var report = new List<string> { $"vfx probe on {_map.Id}" };
+        report.Add($"{Vfx.LiveCount - _vfxLiveBefore} effect node(s) live a frame after one of everything");
+
+        // Which names came back with design's model behind them, and which
+        // fell through. A name that is on disk and did not resolve is the
+        // expensive case — it means the drop landed and Godot never imported
+        // it, which is silent and renders as nothing at all.
+        // Only towers that actually fire something have a flash and an
+        // impact: an aura has no muzzle, and reporting one missing for the
+        // Singularity every run is how a report stops being read. Ammo ids
+        // are camelCase and design's filenames are not — the lower-casing is
+        // the same one AssetLibrary does, and leaving it out here reported
+        // hollowPoint missing while the game was drawing it.
+        var wanted = Vfx.Catalogue()
+            .Concat(Towers.All.Values
+                .Where(d => d.ProjectileSpeed > 0f || d.Kind == TowerKind.Tesla)
+                .SelectMany(d => new[] { $"vfx_muzzle_{d.Id}", $"vfx_impact_{d.Id}" }))
+            .Concat(Ammo.All.Values.Select(a => $"vfx_tracer_{a.Id}"))
+            .Select(n => n.ToLowerInvariant())
+            .Distinct().OrderBy(n => n, System.StringComparer.Ordinal).ToList();
+
+        var resolved = new HashSet<string>(AssetLibrary.Resolved);
+        var undelivered = new List<string>();
+        foreach (string name in wanted)
+        {
+            if (resolved.Contains(name)) continue;
+            undelivered.Add(name);
+            report.Add($"  no model: {name} -> {AssetLibrary.PathFor(name)}");
+        }
+        report.Add($"{wanted.Count - undelivered.Count}/{wanted.Count} effect names drew design's model");
+
+        // A picture of the whole set, for the review this document exists for.
+        // Headless has no framebuffer and says so rather than logging an
+        // engine ERROR, which CI reads as a failed build.
+        if (DisplayServer.GetName() == "headless")
+        {
+            report.Add($"headless run — no frame to write for {path}.png");
+        }
+        else
+        {
+            var image = GetViewport().GetTexture().GetImage();
+            image.SavePng(path + ".png");
+            report.Add($"wrote {path}.png ({image.GetWidth()}x{image.GetHeight()})");
+        }
+
+        bool drew = Vfx.LiveCount > _vfxLiveBefore;
+        _vfxAnchor?.QueueFree();
+        WriteProbe(report, path, drew,
+            drew
+                ? $"PASS: every effect entry point draws, {undelivered.Count} name(s) still to be modelled"
+                : "FAIL: the effects layer drew nothing at all");
+    }
+
     private void WriteProbe(List<string> report, string path, bool pass, string verdict)
     {
         report.Add(verdict);
@@ -3685,6 +4200,14 @@ public partial class GameRoot : Node3D
     private void BuildLevel(MapDef map)
     {
         int nodesBefore = GetTree().GetNodeCount();
+        // Effects belong to the match that was running, and half of them are
+        // keyed by enemy id — a loaded save reuses those ids, so a burn left
+        // over from the previous world would reattach itself to a different
+        // enemy on a different map.
+        Vfx.Clear();
+        _enemyStatuses.Clear();
+        _lastSnapshotBits.Clear();
+        _detectorNext.Clear();
         BuildEnvironment(map);
 
         // Ground slab — one collider, dressed with the 20 m terrain tiles.
@@ -3958,6 +4481,7 @@ public partial class GameRoot : Node3D
     {
         var gates = new List<Vector3>();
         var cores = new List<Vector3>();
+        _spawnPortals.Clear();
 
         foreach (var route in map.Routes)
         {
@@ -3969,6 +4493,7 @@ public partial class GameRoot : Node3D
             if (!gates.Any(p => p.DistanceTo(start) < 4f))
             {
                 gates.Add(start);
+                _spawnPortals.Add((start, outbound));
                 MapKit.Prop(this, "shared_spawn_portal", start, MapKit.YawTowards(outbound));
             }
 
@@ -3985,6 +4510,7 @@ public partial class GameRoot : Node3D
                 if (struck is not null) { struck.Name = "CoreHit"; struck.Visible = false; _coreHitView = struck; }
             }
         }
+        _corePositions = cores;
         _laneMouths = gates.Concat(cores).ToList();
     }
 
@@ -6132,10 +6658,23 @@ public partial class GameRoot : Node3D
     }
 
     /// <summary>Each tower's round is its own asset (proj_lance_bolt,
-    /// proj_nova_shell, …) so a Nova shell never reads as a Lance bolt.</summary>
-    private Node3D SpawnProjectileView(string towerDefId)
+    /// proj_nova_shell, …) so a Nova shell never reads as a Lance bolt — and
+    /// its own tier, so a maxed Lance does not fire the round it fired at
+    /// level one.</summary>
+    private Node3D SpawnProjectileView(string towerDefId, IReadOnlyList<int>? pathLevels = null)
     {
-        string asset = towerDefId switch
+        string asset = ProjectileAsset(towerDefId, ProjectileTier(towerDefId, pathLevels));
+
+        var root = new Node3D();
+        root.SetMeta("def_id", towerDefId);
+        root.AddChild(AssetLibrary.Instantiate(asset, () => Placeholders.Projectile(towerDefId)));
+        AddChild(root);
+        return root;
+    }
+
+    private static string ProjectileAsset(string towerDefId, int tier)
+    {
+        string stem = towerDefId switch
         {
             "nova" => "proj_nova_shell",
             "arc" => "proj_arc_beam",
@@ -6143,12 +6682,28 @@ public partial class GameRoot : Node3D
             "filament" => "proj_filament_beam",
             _ => "proj_lance_bolt",
         };
+        if (tier <= 1) return stem;
+        string tiered = $"{stem}_t{tier}";
+        return AssetLibrary.Has(tiered) ? tiered : stem;
+    }
 
-        var root = new Node3D();
-        root.SetMeta("def_id", towerDefId);
-        root.AddChild(AssetLibrary.Instantiate(asset, () => Placeholders.Projectile(towerDefId)));
-        AddChild(root);
-        return root;
+    /// <summary>Which round this tower is firing now.
+    ///
+    /// Design's rule, from projectiles.js: the tier follows the damage path,
+    /// level 7 buys T2 and level 10 buys T3. Sim path levels count purchases
+    /// rather than levels — a tower at PathLevels 0 is level 1, which is why
+    /// stage modules ask for level+1 — so the thresholds are 6 and 9 here.
+    /// Towers whose paths are not called "damage" (the Detector, the Filament)
+    /// have no tiered rounds and never leave tier 1.</summary>
+    private static int ProjectileTier(string towerDefId, IReadOnlyList<int>? pathLevels)
+    {
+        if (pathLevels is null || !Towers.All.TryGetValue(towerDefId, out var def)) return 1;
+        for (int i = 0; i < def.UpgradePaths.Count && i < pathLevels.Count; i++)
+        {
+            if (def.UpgradePaths[i].Id != "damage") continue;
+            return pathLevels[i] >= 9 ? 3 : pathLevels[i] >= 6 ? 2 : 1;
+        }
+        return 1;
     }
 
     // =====================================================================
@@ -6462,11 +7017,11 @@ public partial class GameRoot : Node3D
             return;
         }
 
-        // Client: the snapshot's status bits are what we have.
+        // Client: the snapshot's state bits are what we have.
         if (_lastSnapshotBits.TryGetValue(enemyId, out var snap))
         {
             if (snap.Burrowed) _hud.SetCrosshair(CrosshairState.Burrowed);
-            else if (snap.Shielded) _hud.SetCrosshair(CrosshairState.Shielded);
+            else if (snap.Shield > 0.02f) _hud.SetCrosshair(CrosshairState.Shielded);
             else _hud.SetCrosshair(CrosshairState.Neutral);
         }
     }

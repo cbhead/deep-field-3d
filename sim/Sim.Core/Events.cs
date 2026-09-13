@@ -255,9 +255,19 @@ public abstract record SimEvent
         public override string LogLine() => $"{Tick} craftRejected {PlayerId} {ItemId} {Reason}";
     }
 
-    public sealed record AbilityUsed(int PlayerId, string AbilityId) : SimEvent
+    /// <summary>A faction ability went off, and where it was aimed.
+    ///
+    /// The aim point is on the event rather than left to the client because
+    /// three of the five abilities happen somewhere other than at the hero —
+    /// Ignition Wave and Chain Surge land on the aim point, not on the person
+    /// who pressed Q — and only the player who pressed it knows where they
+    /// were looking. Without it a teammate's ability is a noise with no
+    /// location, which in a co-op game reads as nothing having happened.
+    /// Overdrive and Reveal Pulse ignore it; the command still carries one.</summary>
+    public sealed record AbilityUsed(int PlayerId, string AbilityId, float X, float Y, float Z) : SimEvent
     {
-        public override string LogLine() => $"{Tick} abilityUsed {PlayerId} {AbilityId}";
+        public override string LogLine() =>
+            $"{Tick} abilityUsed {PlayerId} {AbilityId} {F(X)} {F(Y)} {F(Z)}";
     }
 
     public sealed record PlayerDamaged(int PlayerId, float Amount, string Source) : SimEvent

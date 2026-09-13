@@ -1,6 +1,6 @@
 # Asset usage
 
-**612 delivered · 454 consumed · 158 unused** — regenerate with `make usage`.
+**612 delivered · 486 consumed · 126 unused** — regenerate with `make usage`.
 
 `asset-report.sh` answers *has design shipped it*. This answers the question that
 rots silently: an asset can be delivered, imported, and never referenced by a
@@ -26,6 +26,92 @@ One blind spot, recorded rather than papered over: a solo match builds nothing
 and nothing gets hurt, so state variants the code *does* request — a spent trap
 plate, a half-demolished barricade — never come up in the measurement. They are
 marked `wired=yes` in the manifest by reading the code, and show as unused here.
+
+The effects layer would have fallen into that blind spot whole — a solo run
+never sells a tower, never triggers a reaction, never gets anything frozen — so
+`Vfx.Catalogue()` enumerates every name the client can ask for and the audit
+asks for all of them. That keeps the measurement honest in the direction that
+matters: the list is built from the switch statements that draw the effects, so
+an effect that loses its caller stops being counted.
+
+There is a second check for the half a name list cannot answer — whether the
+code path that would draw an effect is reachable at all:
+
+```sh
+./play --headless -- --shot foundry /tmp/vfx.txt vfx        # one of everything
+./play --headless -- --shot foundry /tmp/statuses.txt statuses   # on a live enemy
+```
+
+The first fires one of everything through the real entry points and reports how
+many drew design's model. It catches what neither the delivery report nor this
+measurement can: an effect correctly delivered, correctly imported, correctly
+named, and wired to a method nothing calls.
+
+The second covers the half that cannot: a status effect is held by three things
+agreeing — the sim applying it, the snapshot's channel byte still saying so,
+and the view sync asking for it again every frame. It builds a Singularity,
+walks a wave past it, and passes when chill is actually drawn on a body. Both
+run in CI.
+
+## What the effects layer took off it (2026-09-13)
+
+Thirty-one names in `game/assets/vfx/` came off this list in one change, and
+all but two of the folder is now drawn. The old row read *"No status/ability/
+reaction VFX system yet"*; there is one now
+(`game/scripts/Vfx.cs`, `docs/FORWARD-MANIFEST-vfx.md`).
+
+Three things were needed beyond calling `Spawn` in more places, and each is
+worth recording because none is visible from a file listing:
+
+**Half the set has no fixed lifetime.** A muzzle flash lasts 70 ms and an
+impact 220; a burn lasts until the burn ends and a revive column until the key
+is let go, and nothing can know that in advance. Those are held rather than
+fired: the frame that still wants one asks for it again by key, and anything
+that went unasked-for is dropped at the end of the frame. The bookkeeping
+inverts in the only direction that cannot leak — a status whose end the client
+never hears about stops being drawn on the first frame the enemy's status bits
+come back clear.
+
+**A channel is not a status.** The snapshot's status byte says a channel is
+occupied, which is enough to tint a silhouette and not enough to draw one:
+Control holds either a 0.25 s stagger or a 1.2 s hard lock, and those are two
+different pictures. `statusApplied` says which, the byte says for how long, and
+both halves are needed. A client that joined mid-burn has the byte and not the
+event, so each channel also has a default — the one status that channel holds,
+except Control, where a stagger is the guess that ends before anyone reads it
+wrong.
+
+**Two facts about an enemy were never on the wire.** Shield and burrow are not
+statuses and had no channel, so a networked Warden never showed its bubble *or*
+its shield bar, and a burrowed Mole was inferred from hp reaching zero — which
+is the reading for "dead". Protocol 5 adds a shield fraction and a state byte.
+A fraction rather than a flag because the effect that matters is the one in
+between: `vfx_shield_regen` is a window closing, and a bit cannot say that.
+
+| came off the list | how it is driven |
+|---|---|
+| 8 `vfx_status_*` | held on the enemy while its channel is occupied, scaled to the body's own height — design authors for 1.8 m and a Monolith is two and a half times that |
+| `vfx_reaction_thermalshock` · `_flashfreeze` | the reaction event, on the enemy it happened to |
+| 3 `vfx_ability_*` | `abilityUsed`, which now carries the aim point — three of the five abilities happen somewhere other than at the hero, and only the player who pressed Q knew where they were looking |
+| `vfx_tower_place` · `_sell` · `_upgrade` | their events, at the pad. Upgrade culls design's chevron tiers by level, which its note asks for |
+| `vfx_wave_start` · `_clear` · `vfx_core_breach` | the wave beats, at the map's own gates and cores rather than at one of them |
+| `vfx_shield_pop` · `_regen` · `vfx_burrow_spray` | transitions in the new snapshot fields, identical on both sides of the wire |
+| `vfx_cluster_split` | the Cluster's death, not its five Motes' spawns — one thing happened, not five |
+| `vfx_detector_pulse` | a 2 s sweep per Detector, staggered by tower id so a pair covering a junction sweeps rather than strobes. Not an event: an aura tower reapplies its status thirty times a second, and a pulse per tick is not a pulse |
+| `vfx_revive_beam` | the sim's revive clock, now on the meta channel — so the teammate covering the door sees the same ring fill as the one crouched over the body |
+| 6 `proj_*_t2` / `_t3` | design's rule from projectiles.js: the tier follows the damage path, L7 → T2, L10 → T3 |
+
+Two are left, and neither is art:
+
+| still unused | why |
+|---|---|
+| `vfx_overclock_link` | the Overclock tower does not exist in the sim. It is the conduit from the pylon to each fed tower, and it waits with the chassis and thirty stage modules already delivered for it |
+| `vfx_lanewash` | the floodgate's panic button. `shared_floodgate` is one of the M5 mutable-map elements the sim does not drive |
+
+Three names the code now asks for and design has not drawn —
+`vfx_reaction_corrode`, `vfx_ability_cryofield`, `vfx_ability_revealpulse` —
+are in the manifest as requested-and-missing, the same way the M3 tracers are,
+and [FORWARD-MANIFEST-vfx.md](FORWARD-MANIFEST-vfx.md) is the ask.
 
 ## What the 2026-09-12 drop added to the unused list
 
@@ -59,13 +145,13 @@ waits on the system it is for.
 | Group | Count | Why |
 |---|---|---|
 | Overclock tower (chassis + 30 stage modules) | 31 | Overclock does not exist as a tower yet (M4). Delivered early on purpose — art lead time is the schedule risk. |
-| VFX | 27 | No status/ability/reaction VFX system yet: status particles, reaction bursts, ability effects, shield pop/regen, tower place/sell/upgrade, wave start/clear, the Detector pulse, Overclock link and lane wash. (Muzzle flashes, impacts and tracers are consumed now.) |
+| ~~VFX~~ | ~~27~~ **2** | **The effects layer landed on 2026-09-13 and draws 25 of the 27** — see the section above. The two left are the Overclock link and the lane wash, and both wait on a system rather than on art. |
 | `_s1` stage modules | 19 | **Correct and intentional.** Design's chassis *is* the level-1 state and `_s1` is an empty root, so sim level N asks for stage N+1 and `_s1` is never requested. |
 | Map elements | 13 | Crusher, floodgate, destructible wall (+ broken + debris), control-point capturing/held, caches, launcher charging/fired, physics props — M4 map elements the sim does not drive yet. **`shared_gate_operated` came off this list on 2026-09-12**: it is the lane lever, and Switchyard places two. The elevator and sniper nest *are* placed but inert: both have an `Area3D` and **no handler**, and the elevator is credited as a traversal exit by validator §4.1 without working. All of these are the subject of the M5 mutable-map work. |
 | ~~Spire kit, unmounted pieces~~ | ~~8~~ **0** | All eight are placed by the Spire redesign: the antenna, HVAC and water tank as roof plant, the fire-escape flight and stairwell as the flights the routes actually climb, the lobby as the two doorways the kit names by z coordinate, the parapet on the roof's X ends and the scatter at the plaza margins. |
 | Teleporter pad charged/cooldown | 2 | **Requested by code** (`SetPadArt`/`RefreshPadArt` follow charge and cooldown) — the blind spot above: a solo match never stands on a pad long enough to charge one. |
 | M4/M5 enemies and states | 8 | Broodmother, Carapace (+ plate), Leaper (+ windup, airborne), the Ram's enraged state, the Shade's shimmer. Ram, Shade and Mender themselves are wired. |
-| Projectile tier variants (`_t2`, `_t3`) | 6 | No tier escalation wiring; projectiles use the base model at every level. |
+| ~~Projectile tier variants (`_t2`, `_t3`)~~ | ~~6~~ **0** | **All six are drawn.** The rule is design's own, from projectiles.js: the tier follows the damage path, level 7 buys T2 and level 10 buys T3. Sim path levels count purchases rather than levels, so the thresholds in the client are 6 and 9 — the same off-by-one that makes a stage module ask for level+1. |
 | Hero revive poses | 5 | Downed poses are wired; the revive-crouch pose is not. |
 | Trap spent/triggered/rearming states | 5 | **Requested by code** (`RefreshTrapArt` follows `ChargesLeft`) — the blind spot above. |
 | Faction-neutral hands, wrench viewmodel | 4 | Every player has a faction, so `hands_firstperson` (all three poses) is only a fallback; the wrench has no first-person view yet. |
