@@ -16,25 +16,46 @@ into `game/assets/`** — no code change, no ordering, partial batches fine.
 
 ## 1. Art direction
 
-- **Stylized flat-shaded kitbash.** Bold readable forms, minimal texture
-  detail, strong silhouettes. Think low-poly-plus, not realism.
+- **Build it as convincingly as the subject deserves.** Real proportions,
+  real construction logic, surface detail that survives a close look — a
+  barn is boards and a sagging ridge, a rifle is machined parts that fit
+  together. Fidelity is the goal, and the only ceilings are the ones the
+  runtime actually imposes: the per-file triangle and part budgets in the
+  open forward manifest and [ART-INTEGRATION.md](ART-INTEGRATION.md), which
+  exist because instanced map pieces multiply by every placement. Inside
+  those, spend everything you have; nothing here asks for a stylized or
+  simplified look.
+- **Full PBR is wanted, not merely tolerated.** `StandardMaterial3D` with
+  albedo, normal, roughness, metallic, AO and emissive maps imports and
+  renders as authored, and the runtime never replaces a texture. Bevels,
+  panel lines, wear, dirt, material breaks — all fair game.
 - **Design owns the palette.** Color, materials, and visual identity are
   Claude Design's decisions — designs already in flight define the language.
   Deliver a short palette spec alongside the first batch (faction accents,
   scrap types, status effects, danger/success semantics) and the code adopts
   it: the runtime tint table in `GameRoot.TintEnemy` and all UI theme colors
   will be updated to match design, not the other way around.
-- **One engine constraint on materials** (mechanism, not palette): the engine
-  applies status/hp/elite state at runtime by modulating albedo and toggling
-  emissive. Deliver albedo that tolerates modulation — no baked lighting, and
-  state indication should come from the palette spec rather than being painted
-  into base textures.
+- **One engine constraint on materials** (a mechanism, not a cap on
+  fidelity): the engine applies status/hp/elite state at runtime by
+  *multiplying* albedo and toggling emissive — `TintableView.cs` duplicates
+  the material a model shipped with and blends over its base, so authored
+  maps ride through untouched. What that asks for is albedo that tolerates
+  modulation: keep **lighting** out of the base colour (no painted-in
+  shadows or highlights), and let state indication come from the palette
+  spec rather than being baked into the textures. Baked *detail* — an AO
+  map, curvature, grime, edge wear — is fine and welcome; it is baked
+  *lighting* that fights the blend.
 - **The hard rule: no mechanic ships without a readable silhouette.** If two
   enemies behave differently they must be distinguishable at 40 m in motion.
-  Every upgrade breakpoint (L4/L7/L10) must read at 30 m.
-- **Procedural animation.** Models arrive static or with simple pivot
-  hierarchies (turret yaw pivot, wing flap pivot); motion is added in code.
-  No skeletal rigs required in v1.
+  Every upgrade breakpoint (L4/L7/L10) must read at 30 m. This is a demand on
+  *form* — outline, mass, contrast — and never a reason to hold back detail:
+  a model can be as richly built as you like as long as its shape still
+  announces what it does across the arena.
+- **Procedural animation.** Motion is added in code, so what a model owes the
+  engine is the named pivots the code drives (turret yaw, wing flap) — static
+  plus pivots is enough to ship. Skeletal rigs are not required in v1 and are
+  not discouraged either; the client just will not be playing their clips yet,
+  so nothing should depend on one to read correctly.
 
 ## 2. Integration contract
 
