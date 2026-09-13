@@ -886,6 +886,18 @@ public partial class GameRoot : Node3D
             return;
         }
 
+        // Can a player leave the map? Walked rather than reasoned about: the
+        // perimeter is drawn by one routine, made solid by another, and until
+        // this the two did not agree on any map — three of the four had no
+        // solid edge at all while docs/MAP-AUTHORING.md said the edge of the
+        // playable area is an invisible wall rather than a drop.
+        if (_shotView == "containment")
+        {
+            _shotView = "eye";
+            RunContainmentProbe(path);
+            return;
+        }
+
         // A round in flight, which is neither an effect nor a status and had
         // two things wrong with it that a screenshot showed instantly and
         // nothing automated could see: every round in the game flew sideways,
@@ -1527,6 +1539,7 @@ public partial class GameRoot : Node3D
         TickIntermissionShot();
         TickWarpGates(delta);
         if (_traversalReport is not null) TickTraversalProbe(delta);
+        if (_containReport is not null) TickContainmentWalk(delta);
         if (_reloadReport is not null) TickReloadProbe(delta);
         if (_teleportReport is not null) TickTeleportProbe(delta);
         if (_vehicleReport is not null) TickVehicleProbe(delta);
@@ -4570,6 +4583,155 @@ public partial class GameRoot : Node3D
                 : "FAIL: the effects layer drew nothing at all");
     }
 
+    /// <summary>Walks the inside of the map's perimeter and asks, at every
+    /// step, whether a player standing there could keep walking outward.
+    ///
+    /// Cast outward from just inside the edge rather than outward from the
+    /// middle: a ray from the centre stops at the first crate it meets and
+    /// reports a contained map that a player can stroll out of ten metres
+    /// further on. Starting at the edge is the same question the player asks
+    /// with their feet.</summary>
+    private void RunContainmentProbe(string path)
+    {
+        const float inset = 1.0f, reach = 5f, step = 2f;
+        var report = new List<string>
+        {
+            $"containment probe on {_map.Id}, {_map.FieldX:0} x {_map.FieldZ:0} m field",
+        };
+
+        if (_containment.HalfX <= 0f)
+        {
+            WriteProbe(report, path, false,
+                "FAIL: this map built no containment at all — a player walks off the edge");
+            return;
+        }
+        report.Add($"tightest containment ring: {_containment.HalfX * 2:0} x {_containment.HalfZ * 2:0} m");
+
+        var space = GetWorld3D().DirectSpaceState;
+        bool Solid(Vector3 from, Vector3 outward)
+        {
+            var query = PhysicsRayQueryParameters3D.Create(from, from + outward * reach, 1);
+            query.CollideWithAreas = false;
+            query.CollideWithBodies = true;
+            return space.IntersectRay(query).Count > 0;
+        }
+
+        int open = 0, total = 0;
+        float worstRun = 0f, run = 0f;
+        var worstAt = Vector3.Zero;
+
+        // Three heights, because the edge has to hold at every level a player
+        // can stand at. An eight-metre box is a solid wall from the deck and a
+        // kerb from the Spire's fortieth metre, and only the third of these
+        // can tell the difference.
+        float[] heights = { 1.0f, 11.0f, 41.0f };
+
+        void Side(Vector3 from, Vector3 to, Vector3 outward)
+        {
+            int count = Mathf.Max(1, Mathf.RoundToInt(from.DistanceTo(to) / step));
+            for (int i = 0; i <= count; i++)
+            {
+                var foot = from.Lerp(to, (float)i / count);
+                foreach (float h in heights)
+                {
+                    total++;
+                    if (Solid(foot + Vector3.Up * h, outward)) { run = 0f; continue; }
+                    open++;
+                    run += step;
+                    if (run > worstRun) { worstRun = run; worstAt = foot + Vector3.Up * h; }
+                }
+            }
+        }
+
+        float x = _containment.HalfX - inset, z = _containment.HalfZ - inset;
+        Side(new Vector3(-x, 0, -z), new Vector3(x, 0, -z), Vector3.Forward);
+        Side(new Vector3(-x, 0, z), new Vector3(x, 0, z), Vector3.Back);
+        Side(new Vector3(-x, 0, -z), new Vector3(-x, 0, z), Vector3.Left);
+        Side(new Vector3(x, 0, -z), new Vector3(x, 0, z), Vector3.Right);
+
+        report.Add($"{total - open}/{total} steps around the perimeter are blocked");
+        if (open > 0)
+        {
+            report.Add($"longest way out: {worstRun:0} m of open edge "
+                + $"around ({worstAt.X:0}, {worstAt.Z:0}) at {worstAt.Y:0} m up");
+            WriteProbe(report, path, false,
+                $"FAIL: {open} of {total} rays around the edge found nothing to stop a player");
+            return;
+        }
+        report.Add($"every one of {total} rays at 1, 11 and 41 m up hits something");
+
+        // And now with feet. A ray proves a body is there; it does not prove a
+        // capsule cannot squeeze past a corner, ride a slope over the top, or
+        // slip through the seam where two boxes meet. Walking is the question
+        // the player asks, so the probe asks it the same way.
+        _containReport = report;
+        _containReportPath = path;
+        _containIndex = 0;
+        _containTimer = 0f;
+        _containWorst = 0f;
+    }
+
+    private List<string>? _containReport;
+    private string _containReportPath = "";
+    private int _containIndex = -1;
+    private float _containTimer, _containWorst;
+    private Vector3 _containWorstAt;
+
+    /// <summary>Walks a player into the edge at eight points around it and
+    /// measures how far past it they get. Zero is the only passing answer;
+    /// what this is here to catch is a metre, which is a corner seam, and
+    /// twenty, which is no wall at all.</summary>
+    private void TickContainmentWalk(double delta)
+    {
+        if (_containReport is null || _player is null) return;
+
+        const int points = 8;
+        const float startInset = 4f, walkSeconds = 1.2f;
+
+        if (_containIndex >= points)
+        {
+            var report = _containReport;
+            _containReport = null;
+            _player.WalkHeld = Vector3.Zero;
+            report.Add($"walked into the edge at {points} points; furthest anyone got past it: "
+                + $"{_containWorst:0.00} m at ({_containWorstAt.X:0}, {_containWorstAt.Z:0})");
+            bool held = _containWorst < 0.5f;
+            WriteProbe(report, _containReportPath, held,
+                held
+                    ? $"PASS: the edge is solid the whole way round and nobody walked through it"
+                    : $"FAIL: a player walked {_containWorst:0.00} m past the edge "
+                        + $"at ({_containWorstAt.X:0}, {_containWorstAt.Z:0})");
+            return;
+        }
+
+        // Eight points: the four side midpoints and the four corners, which is
+        // where a box ring is weakest — two faces meeting is a seam, and a
+        // seam is where a capsule gets through if anywhere.
+        float a = _containIndex / (float)points * Mathf.Tau;
+        var outward = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)).Normalized();
+        var on = new Vector3(
+            Mathf.Clamp(outward.X * _containment.HalfX * 2f, -_containment.HalfX, _containment.HalfX),
+            0f,
+            Mathf.Clamp(outward.Z * _containment.HalfZ * 2f, -_containment.HalfZ, _containment.HalfZ));
+
+        if (_containTimer <= 0f)
+        {
+            _player.GlobalPosition = on - outward * startInset + Vector3.Up * 1.2f;
+            _player.WalkHeld = outward;
+        }
+        _containTimer += (float)delta;
+
+        var p = _player.GlobalPosition;
+        float past = Mathf.Max(
+            Mathf.Abs(p.X) - _containment.HalfX,
+            Mathf.Abs(p.Z) - _containment.HalfZ);
+        if (past > _containWorst) { _containWorst = past; _containWorstAt = p; }
+
+        if (_containTimer < walkSeconds) return;
+        _containTimer = 0f;
+        _containIndex++;
+    }
+
     private void WriteProbe(List<string> report, string path, bool pass, string verdict)
     {
         report.Add(verdict);
@@ -4599,6 +4761,7 @@ public partial class GameRoot : Node3D
         // over from the previous world would reattach itself to a different
         // enemy on a different map.
         Vfx.Clear();
+        _containment = default;
         _enemyStatuses.Clear();
         _lastSnapshotBits.Clear();
         _detectorNext.Clear();
@@ -4843,6 +5006,13 @@ public partial class GameRoot : Node3D
         if (map.Id == "switchyard") BuildSwitchyardStructures();
         if (map.Id == "spire") BuildSpireStructures();
         if (map.Id == "toaster") BuildToasterStructures(map);
+
+        // Every map, not just the one this was written for. A map may add a
+        // tighter ring of its own — the Toaster stops you at the inside of its
+        // treeline rather than letting you wander into it — but the field's
+        // own edge is always solid, so no map can ship without one by
+        // forgetting to ask.
+        BuildContainment(map.HalfX, map.HalfZ);
         BuildOperatedGates(map);
 
         BuildVehicles(map);
@@ -5329,10 +5499,13 @@ public partial class GameRoot : Node3D
         controlPad.AddChild(MakeArea("controlPoint", new BoxShape3D { Size = new Vector3(3f, 1.5f, 3f) }));
         MapKit.Mount(controlPad, "shared_controlpoint_neutral", MapKit.GroundLocal(controlPad));
 
-        // Perimeter sized to the lane: the ground route runs x −40 → +36, so
-        // the wall stands two metres past each mouth and the gates read as
-        // openings in it. Everything else is dressing at layer 0.
-        BuildBoundary("foundry_wall_boundary", 42f, 30f);
+        // The perimeter is the edge of the map, not a ring drawn near the
+        // middle of it. It used to be sized to the lane — 42 x 30 inside a
+        // 110 x 80 field — which left a thirteen-metre band of bare deck
+        // outside the wall on each side and a wall that plainly did not
+        // enclose the yard. The gates lose their openings in it and stand in
+        // the yard instead, which is how every other map's gate already reads.
+        BuildBoundary("foundry_wall_boundary", _map.HalfX, _map.HalfZ);
 
         // Dressing clusters where the theme wants it — the melt floor west, the
         // gantry over the yard, pipe runs hugging the walls — and every piece
@@ -5412,6 +5585,11 @@ public partial class GameRoot : Node3D
         Run(new Vector3(halfX, 0, -halfZ), new Vector3(halfX, 0, halfZ), -90f);
     }
 
+    /// <summary>The tightest containment ring this level built, for the probe
+    /// that checks there is one. Zero means nothing was built, which is what
+    /// three of the four maps were.</summary>
+    private (float HalfX, float HalfZ) _containment;
+
     /// <summary>An invisible wall at the edge of the playable field.
     ///
     /// The perimeter has always been decoration — boundary wall props with no
@@ -5420,20 +5598,41 @@ public partial class GameRoot : Node3D
     /// the far side of. On a map three hundred metres across, with vehicles
     /// that do twenty metres a second, it is not: the edge has to be a thing
     /// you hit. Hidden rather than drawn, because what the player should see
-    /// there is the treeline.</summary>
+    /// there is the treeline, or the boundary wall, or whatever that map puts
+    /// at its edge.
+    ///
+    /// It was written for the Toaster and only the Toaster ever called it, so
+    /// the other three maps had no solid edge at all while MAP-AUTHORING §"can
+    /// now build" said every map's edge was an invisible wall. Every map gets
+    /// one now, from <see cref="BuildLevel"/>.</summary>
     private void BuildContainment(float halfX, float halfZ)
     {
-        const float thickness = 1f, height = 8f;
+        // Tall enough to stand on the highest thing the map has. Eight metres
+        // was written against a farm whose roofs are three: on the Spire,
+        // whose decks go to forty, it was a knee-high kerb you stepped over on
+        // your way off the building. The box is invisible and static, so its
+        // height costs a number in a struct — there is no reason to be mean
+        // with it. It starts below grade too, so nothing slips under.
+        const float thickness = 1f, top = 120f, bottom = -4f;
+        const float height = top - bottom;
+        float y = (top + bottom) * 0.5f;
+
         foreach (var (at, size) in new (Vector3, Vector3)[]
         {
-            (new Vector3(0, height * 0.5f, -halfZ), new Vector3(halfX * 2f + thickness, height, thickness)),
-            (new Vector3(0, height * 0.5f, halfZ), new Vector3(halfX * 2f + thickness, height, thickness)),
-            (new Vector3(-halfX, height * 0.5f, 0), new Vector3(thickness, height, halfZ * 2f + thickness)),
-            (new Vector3(halfX, height * 0.5f, 0), new Vector3(thickness, height, halfZ * 2f + thickness)),
+            (new Vector3(0, y, -halfZ), new Vector3(halfX * 2f + thickness, height, thickness)),
+            (new Vector3(0, y, halfZ), new Vector3(halfX * 2f + thickness, height, thickness)),
+            (new Vector3(-halfX, y, 0), new Vector3(thickness, height, halfZ * 2f + thickness)),
+            (new Vector3(halfX, y, 0), new Vector3(thickness, height, halfZ * 2f + thickness)),
         })
         {
             MapKit.HideBox(AddStaticBox(at, size, new Color(0.3f, 0.3f, 0.3f), layer: 1));
         }
+
+        // The innermost ring is the one a player actually stops at, and the
+        // one the probe has to sample just inside of.
+        _containment = _containment.HalfX <= 0f
+            ? (halfX, halfZ)
+            : (Mathf.Min(_containment.HalfX, halfX), Mathf.Min(_containment.HalfZ, halfZ));
     }
 
     /// <summary>Ground clutter on a fixed lattice — deterministic placement so
@@ -5587,7 +5786,7 @@ public partial class GameRoot : Node3D
 
         // The city block the plaza sits in, and its street furniture. Both
         // shipped with the kit and neither had ever been placed.
-        BuildBoundary("spire_wall_boundary", 46f, 34f);
+        BuildBoundary("spire_wall_boundary", _map.HalfX, _map.HalfZ);
         ScatterTerrain("spire_terrain_scatter", 46f, 34f);
         BuildSpireStreet();
     }

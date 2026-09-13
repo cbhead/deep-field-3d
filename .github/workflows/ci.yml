@@ -238,6 +238,22 @@ jobs:
           tail -4 /tmp/rounds.txt
           grep -q "^PASS" /tmp/rounds.txt
 
+      # The perimeter is drawn by one routine and made solid by another, and
+      # until this they did not agree on any map: three of the four had no
+      # solid edge at all, while MAP-AUTHORING said every map's edge was an
+      # invisible wall rather than a drop. A ray sweep at three heights, and
+      # then a player actually walked into the edge at eight points, because a
+      # ray proves a body is there and not that a capsule cannot squeeze past
+      # the seam where two of them meet.
+      - name: Containment probe (you cannot walk off any map)
+        run: |
+          for MAP in foundry switchyard spire toaster; do
+            godot --headless --path game --quit-after 3000 -- \
+              --shot $MAP /tmp/cont-$MAP.txt containment > cont-$MAP.log 2>&1 || true
+            cat /tmp/cont-$MAP.txt
+            grep -q "^PASS" /tmp/cont-$MAP.txt
+          done
+
       # A ladder that stops against the underside of the deck it serves looks
       # completely correct in the map file and from every angle in game, and
       # takes a whole tier out of play — on Switchyard it took the air lane
