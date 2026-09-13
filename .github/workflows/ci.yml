@@ -224,6 +224,20 @@ jobs:
           tail -4 /tmp/statuses.txt
           grep -q "^PASS" /tmp/statuses.txt
 
+      # Two things were wrong with every round in the game for four
+      # milestones and neither could be seen by anything automated: they all
+      # flew sideways, because design authors a round along -Z and nothing
+      # turned one, and they all came out of the middle of their tower rather
+      # than the barrel, because the sim has no barrel to spawn one at. Both
+      # are instant in a screenshot and invisible everywhere else. With the
+      # fixes reverted this reports 60 degrees and 0.93 m and fails.
+      - name: Rounds probe (a round points where it is going, and leaves the barrel)
+        run: |
+          godot --headless --path game --quit-after 20000 -- \
+            --shot foundry /tmp/rounds.txt rounds > rounds.log 2>&1 || true
+          tail -4 /tmp/rounds.txt
+          grep -q "^PASS" /tmp/rounds.txt
+
       # A ladder that stops against the underside of the deck it serves looks
       # completely correct in the map file and from every angle in game, and
       # takes a whole tier out of play — on Switchyard it took the air lane

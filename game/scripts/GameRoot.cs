@@ -877,6 +877,57 @@ public partial class GameRoot : Node3D
                 Submit(new Command.PlaceTower(LocalPlayerId, defId, socket.Id));
                 _statusReport.Add($"{defId} on {socket.Id}");
             }
+
+            // Deliberately no shooting tower here. A Nova alongside these three
+            // kills what the Filament was heating, and the ramp — which needs
+            // one target held for seconds — stops reaching its threshold. The
+            // rounds get their own probe rather than a softer gate on this one.
+            Submit(new Command.StartWave(LocalPlayerId));
+            return;
+        }
+
+        // A round in flight, which is neither an effect nor a status and had
+        // two things wrong with it that a screenshot showed instantly and
+        // nothing automated could see: every round in the game flew sideways,
+        // and every one of them came out of the middle of its tower rather
+        // than out of the barrel. A Lance for a guaranteed shooter and a Nova
+        // because the mortar shell is the model both faults are unmistakable
+        // on — a brass shell has a nose and a lit fuse cap, and a thin bolt
+        // can fly backwards for four milestones without anyone noticing.
+        if (_shotView == "rounds" && _world is not null)
+        {
+            _shotView = "eye";
+            _roundReportPath = path;
+            _roundReport = new List<string> { $"rounds probe on {_map.Id}" };
+            _world.Money = 9000;
+
+            float ToRoute(SocketDef so) => _map.Routes
+                .Where(r => r.Layer == EnemyLayer.Ground)
+                .SelectMany(r => r.Waypoints)
+                .Min(w => so.Pos.DistanceTo(w));
+            var ground = _map.Sockets.Where(so => so.Tag == SocketTag.Ground).ToList();
+
+            // A mortar has a five-metre dead zone, so one built on top of the
+            // lane cannot shoot anything walking down it. Stand it off at ten:
+            // inside the sixteen it reaches, well outside the five it cannot.
+            var standOff = ground.OrderBy(so => Mathf.Abs(10f - ToRoute(so))).First();
+            Submit(new Command.PlaceTower(LocalPlayerId, "nova", standOff.Id));
+            _roundReport.Add($"nova on {standOff.Id}, {ToRoute(standOff):0.0} m from the route");
+
+            // The Lance goes *upstream* of it. Placed on the socket nearest
+            // the lane, as everything else here does, it got nothing to shoot:
+            // a Nova reaching sixteen metres clears the wave well before it
+            // walks into a Lance's twelve, and the probe sat for two minutes
+            // sampling one tower and calling it two.
+            var spawn = _map.Routes.First(r => r.Layer == EnemyLayer.Ground).Waypoints[0];
+            var upstream = ground
+                .Where(so => so != standOff && ToRoute(so) < 8f)
+                .OrderBy(so => so.Pos.DistanceTo(spawn))
+                .FirstOrDefault() ?? ground.First(so => so != standOff);
+            Submit(new Command.PlaceTower(LocalPlayerId, "lance", upstream.Id));
+            _roundReport.Add($"lance on {upstream.Id}, {ToRoute(upstream):0.0} m from the route, "
+                + $"{upstream.Pos.DistanceTo(spawn):0.0} m from the gate");
+
             Submit(new Command.StartWave(LocalPlayerId));
             return;
         }
@@ -1599,7 +1650,7 @@ public partial class GameRoot : Node3D
             SyncVehicles();
             SyncEnemyViewsLocal(delta);
             AimTowers(delta);
-            SyncProjectileViews();
+            SyncProjectileViews(delta);
             SyncAvatarsFromWorld();
             SyncWorldEffects(delta);
         }
@@ -2990,6 +3041,94 @@ public partial class GameRoot : Node3D
         TickReviveBeams();
         Vfx.SweepHeld();
         TickStatusProbe(delta);
+        TickRoundProbe(delta);
+    }
+
+    private int _roundAimed;
+
+    /// <summary>Where a round is, if one is far enough from the tower that
+    /// fired it to be worth photographing.</summary>
+    private Vector3? MidFlightRound()
+    {
+        foreach (var projectile in _world!.Projectiles)
+        {
+            if (projectile.Dead) continue;
+            if (!_projectileViews.TryGetValue(projectile.Id, out var view) || !IsInstanceValid(view)) continue;
+            if (!_towerViews.TryGetValue(projectile.FiredBy, out var tower) || !IsInstanceValid(tower)) continue;
+            if (view.Position.DistanceTo(tower.Position) > 2.5f) return view.Position;
+        }
+        return null;
+    }
+
+    private List<string>? _roundReport;
+    private string _roundReportPath = "";
+    private float _roundElapsed;
+
+    private void TickRoundProbe(double delta)
+    {
+        if (_roundReport is null || _world is null) return;
+
+        SampleRounds();
+        float was = _roundElapsed;
+        _roundElapsed += (float)delta;
+        if (Mathf.FloorToInt(_roundElapsed / 5f) > Mathf.FloorToInt(was / 5f))
+        {
+            _roundReport.Add($"{_roundElapsed:0}s enemies={_world.Enemies.Count} "
+                + $"rounds sampled={_roundSamples} from {string.Join("/", _roundTowers)}");
+            if (_world.Enemies.Count == 0) Submit(new Command.StartWave(LocalPlayerId));
+        }
+
+        // Both towers, or the Nova could quietly stop firing and a Lance's
+        // thin bolt would carry the verdict for the shell the report is about.
+        bool enough = _roundTowers.Count >= 2 && _roundSamples > 60;
+        if (!enough && _roundElapsed < 120f) return;
+
+        // Windowed, hold on for a frame with a shell actually in the air and
+        // the camera pointed at it: the picture this probe is for is a round
+        // mid-flight, and the numbers below are equally true of a frame that
+        // happens to have none in it. Aiming the frame before capturing
+        // matters — a camera moved this frame is pointed somewhere else in the
+        // frame that gets photographed. Bounded, so a run that never catches
+        // one still writes its verdict.
+        if (enough && _roundElapsed < 125f && DisplayServer.GetName() != "headless")
+        {
+            if (MidFlightRound() is not { } shell) { _roundAimed = 0; return; }
+            AimAt(new Vec3(shell.X, shell.Y, shell.Z), back: 7f, height: 2.5f);
+            if (_roundAimed++ < 2) return;
+        }
+
+        var report = _roundReport;
+        _roundReport = null;
+        report.Add($"{_roundSamples} sample(s) from {string.Join(", ", _roundTowers)}");
+        report.Add($"worst heading error: {_roundWorstHeading:0.0} deg off what the round was flying at");
+        report.Add($"closest a round got to the muzzle it left: {_roundNearestMuzzle:0.00} m");
+        if (DisplayServer.GetName() == "headless")
+        {
+            report.Add($"headless run — no frame to write for {_roundReportPath}.png");
+        }
+        else
+        {
+            var image = GetViewport().GetTexture().GetImage();
+            image.SavePng(_roundReportPath + ".png");
+            report.Add($"wrote {_roundReportPath}.png ({image.GetWidth()}x{image.GetHeight()})");
+        }
+
+        // Twenty degrees is generous for a round that should be pointing at
+        // the thing it is about to hit, and two orders of magnitude away from
+        // the ninety this was written to catch. A third of a metre is the same
+        // margin on the muzzle: a shell launched from the barrel is touching
+        // it, one launched from the chassis centre is a metre below it.
+        bool aimed = _roundWorstHeading < 20f;
+        bool fromBarrel = _roundNearestMuzzle < 0.35f;
+        WriteProbe(report, _roundReportPath, enough && aimed && fromBarrel,
+            !enough
+                ? $"FAIL: only {_roundSamples} round sample(s) from {_roundTowers.Count} tower(s) in two minutes"
+                : !aimed
+                    ? $"FAIL: a round flew {_roundWorstHeading:0} deg off what it was aimed at"
+                    : !fromBarrel
+                        ? $"FAIL: no round got closer than {_roundNearestMuzzle:0.00} m to the muzzle it left"
+                        : $"PASS: rounds point where they are going ({_roundWorstHeading:0.0} deg worst) "
+                            + $"and leave the barrel ({_roundNearestMuzzle:0.00} m)");
     }
 
     private List<string>? _statusReport;
@@ -2998,6 +3137,53 @@ public partial class GameRoot : Node3D
     private int _statusPeak;
     private readonly SortedSet<string> _statusSeen = new();
     private readonly SortedSet<string> _beamsSeen = new();
+    private float _roundWorstHeading;
+    private float _roundNearestMuzzle = float.MaxValue;
+    private int _roundSamples;
+    private readonly SortedSet<string> _roundTowers = new();
+
+    /// <summary>Measures the two things that were wrong about a round in
+    /// flight, both of which a screenshot shows instantly and nothing
+    /// automated could see.
+    ///
+    /// **Where it starts.** The sim spawns a round at the tower's centre,
+    /// because it has no barrel to spawn it at, so a Nova shell appeared out
+    /// of the middle of the chassis a metre below the muzzle flash. The
+    /// nearest a round ever gets to the muzzle it came out of is the
+    /// measurement: one launched from the barrel is touching it, one launched
+    /// from the chassis centre never gets closer than the offset between them.
+    ///
+    /// **Which way it points.** Design authors every round along −Z and
+    /// nothing turned one, so all of them flew sideways. Unmistakable on a
+    /// brass mortar shell with a lit fuse on the back; on a thin bolt it read
+    /// as a slightly odd streak, which is how it survived four milestones.
+    /// The angle between where a round points and what it is flying at is the
+    /// measurement, sampled only once it has caught up with itself — during
+    /// the lead the drawn position is deliberately not the real one.</summary>
+    private void SampleRounds()
+    {
+        foreach (var projectile in _world!.Projectiles)
+        {
+            if (projectile.Dead) continue;
+            if (!_projectileViews.TryGetValue(projectile.Id, out var view) || !IsInstanceValid(view)) continue;
+
+            if (_towerViews.TryGetValue(projectile.FiredBy, out var tower) && IsInstanceValid(tower)
+                && RigFor(projectile.FiredBy, tower, (string)tower.GetMeta("def_id", "")).Muzzle is { } muzzle
+                && IsInstanceValid(muzzle))
+                _roundNearestMuzzle = Mathf.Min(_roundNearestMuzzle, view.Position.DistanceTo(muzzle.GlobalPosition));
+            _roundTowers.Add((string)view.GetMeta("def_id", "?"));
+
+            if ((float)view.GetMeta("muzzle_lead", 0f) > 0f) continue;
+            var target = _world.Enemies.FirstOrDefault(e => e.Id == projectile.TargetId && !e.Dead);
+            if (target is null) continue;
+
+            var aim = ToGd(target.Pos) + new Vector3(0f, 0.8f, 0f) - view.Position;
+            if (aim.LengthSquared() < 1e-4f) continue;
+            float off = Mathf.RadToDeg((-view.GlobalTransform.Basis.Z).AngleTo(aim));
+            _roundWorstHeading = Mathf.Max(_roundWorstHeading, off);
+            _roundSamples++;
+        }
+    }
 
     /// <summary>Watches for status effects appearing on live enemies and says
     /// which ones did. Stops itself either way — a verification run that can
@@ -3113,24 +3299,61 @@ public partial class GameRoot : Node3D
         }
     }
 
-    private void SyncProjectileViews()
+    private void SyncProjectileViews(double delta)
     {
         foreach (var projectile in _world!.Projectiles)
         {
+            var here = ToGd(projectile.Pos);
             if (!_projectileViews.TryGetValue(projectile.Id, out var view))
             {
                 var firedBy = _world.Towers.FirstOrDefault(t => t.Id == projectile.FiredBy);
                 view = SpawnProjectileView(firedBy?.DefId ?? "lance", firedBy?.PathLevels);
                 _projectileViews[projectile.Id] = view;
+                LaunchFromMuzzle(view, projectile.FiredBy, here);
             }
-            view.Position = ToGd(projectile.Pos);
+
+            // Point it where it is going. Design authors every round along −Z
+            // — the Nova shell's nose and the Lance slug's tip are both at the
+            // −Z end — and nothing here had ever turned one, so every round in
+            // the game flew sideways. On a brass mortar shell with a lit fuse
+            // cap on the back that is unmistakable; on a thin blue bolt it
+            // read as a slightly odd streak, which is why it survived.
+            var travelled = here - (Vector3)view.GetMeta("last_pos", here);
+            if (travelled.LengthSquared() > 1e-6f)
+                view.LookAt(here + travelled, Mathf.Abs(travelled.Normalized().Dot(Vector3.Up)) > 0.99f
+                    ? Vector3.Forward : Vector3.Up);
+            view.SetMeta("last_pos", here);
+
+            // The sim starts a round at the tower's centre because it has no
+            // barrel to start it at: where the muzzle is depends on the rig's
+            // yaw and pitch, which are a client animation the sim knows
+            // nothing about. So the view launches from the barrel and closes
+            // the gap over the first fraction of its flight. It is the same
+            // place the muzzle flash already happens, so the round now comes
+            // out of the flash instead of out of the middle of the tower.
+            float lead = (float)view.GetMeta("muzzle_lead", 0f);
+            if (lead > 0f)
+            {
+                lead = Mathf.Max(0f, lead - (float)delta / MuzzleLeadSeconds);
+                view.SetMeta("muzzle_lead", lead);
+                var offset = (Vector3)view.GetMeta("muzzle_offset", Vector3.Zero);
+                // Eased out, so the round is quickest to rejoin its own round
+                // at the start and imperceptible by the end.
+                here += offset * (lead * lead);
+            }
+            view.Position = here;
         }
         // A round that is no longer in the sim landed this tick; its view's
         // last position is the hit, and design's impact goes there.
         var live = new HashSet<int>(_world.Projectiles.Select(p => p.Id));
         foreach (var (id, view) in _projectileViews)
             if (!live.Contains(id) && IsInstanceValid(view))
-                Vfx.ProjectileLanded((string)view.GetMeta("def_id", "lance"), view.Position);
+                // The sim's last position, not the view's: for the fifth of a
+                // second a round is still catching up with itself out of the
+                // barrel, those are not the same point, and the splash belongs
+                // where the round actually was.
+                Vfx.ProjectileLanded((string)view.GetMeta("def_id", "lance"),
+                    (Vector3)view.GetMeta("last_pos", view.Position));
         SweepViews(_projectileViews, _world.Projectiles.Select(p => p.Id));
 
         foreach (var trap in _world.Traps)
@@ -6827,6 +7050,43 @@ public partial class GameRoot : Node3D
             Position = new Vector3(0, 0.2f * scale, 0),
         });
         return root;
+    }
+
+    /// <summary>How long a round takes to rejoin the sim's own round after
+    /// leaving the barrel. A Nova shell travels 14 m/s and the gap between the
+    /// chassis centre and the barrel tip is about a metre, so a fifth of a
+    /// second closes it inside the first three metres of flight — long enough
+    /// to read as coming out of the barrel, short enough that nothing about
+    /// where the round actually is has visibly moved.</summary>
+    private const float MuzzleLeadSeconds = 0.2f;
+
+    /// <summary>Starts a round's view at the barrel it came out of.</summary>
+    private void LaunchFromMuzzle(Node3D view, int towerId, Vector3 simPos)
+    {
+        if (!_towerViews.TryGetValue(towerId, out var tower) || !IsInstanceValid(tower)) return;
+        string defId = (string)tower.GetMeta("def_id", "");
+        if (defId.Length == 0) return;
+
+        var rig = RigFor(towerId, tower, defId);
+        if (rig.Muzzle is null || !IsInstanceValid(rig.Muzzle)) return;
+
+        var offset = rig.Muzzle.GlobalPosition - simPos;
+        // A graybox tower has no muzzle node and resolves to the view itself,
+        // which would fling the round at the tower's foot. Anything further
+        // out than a tower is wide is not a barrel tip.
+        if (offset.LengthSquared() > 9f) return;
+
+        view.SetMeta("muzzle_offset", offset);
+        view.SetMeta("muzzle_lead", 1f);
+        view.Position = simPos + offset;
+
+        // Pointed down the barrel for its first frame. The heading otherwise
+        // comes from how far the round moved since last frame, and on the
+        // frame it is created there is no last frame — seeding it from the
+        // muzzle offset instead would point a fresh round backwards.
+        if (rig.Forward.LengthSquared() > 1e-6f)
+            view.LookAt(view.Position + rig.Forward,
+                Mathf.Abs(rig.Forward.Normalized().Dot(Vector3.Up)) > 0.99f ? Vector3.Forward : Vector3.Up);
     }
 
     /// <summary>Each tower's round is its own asset (proj_lance_bolt,

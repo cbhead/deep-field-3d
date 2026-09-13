@@ -49,9 +49,23 @@ named, and wired to a method nothing calls.
 
 The second covers the half that cannot: a status effect is held by three things
 agreeing — the sim applying it, the snapshot's channel byte still saying so,
-and the view sync asking for it again every frame. It builds a Singularity,
-walks a wave past it, and passes when chill is actually drawn on a body. Both
-run in CI.
+and the view sync asking for it again every frame; a beam is drawn by a tower
+that never creates a projectile; a ramp brightens or it does not. It builds a
+Filament, an Arc and a Singularity, walks a wave past them, and passes when all
+three are true of a live enemy.
+
+```sh
+./play --headless -- --shot foundry /tmp/rounds.txt rounds
+```
+
+The third is about a round in flight rather than an effect, and measures the
+two things a screenshot shows instantly and nothing else can: the angle between
+where a round points and what it is flying at, and the nearest any round gets
+to the muzzle it left. A Lance upstream of a Nova, because the mortar shell is
+the model both faults are unmistakable on and a Nova reaching sixteen metres
+clears the wave before it ever walks into a Lance's twelve. Run windowed it
+waits for a frame with a shell actually in the air, aims at it, and writes the
+picture. All three run in CI.
 
 ## What the effects layer took off it (2026-09-13)
 
@@ -122,6 +136,19 @@ target and emits exactly one `TowerFired` for that tick, so counting events is
 the same arithmetic rather than an approximation of it, and it works on a
 client, which has no tower state at all. It is the only tell the Filament's
 damage multiplier has ever had.
+
+**Every round in the game flew sideways, and none of them came out of a
+barrel.** Design authors each round along −Z — the Nova shell's nose and the
+Lance slug's tip are both at the −Z end, with the shell's lit fuse cap on the
+back — and nothing in the client had ever turned a projectile view. Unmistakable
+on a brass mortar shell; on a thin blue bolt it read as a slightly odd streak,
+which is how it survived four milestones. Separately, the sim spawns a round at
+the tower's centre because it has no barrel to spawn one at: where the muzzle is
+depends on the rig's yaw and pitch, which are a client animation the sim knows
+nothing about. So the view launches from the barrel — the same place the muzzle
+flash already happens — and closes the gap over the first fifth of a second.
+Measured by the rounds probe below: **60° and 0.93 m before, 3° and 0.07 m
+after.**
 
 **Half the effects were being laid on their backs.** `Spawn` turned a model's
 −Z toward a direction, and passing `Vector3.Up` to mean "this one points
