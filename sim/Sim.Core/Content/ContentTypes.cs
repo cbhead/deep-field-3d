@@ -45,7 +45,24 @@ public sealed record EnemyDef(
     float StructureDps = 0f,       // Ram: hp/sec dealt to a structure in reach
     float StructureReach = 0f,     // how close it must be to start swinging
     float EnrageBelowHpFraction = 0f, // Ram: speeds up when hurt
-    float EnrageSpeedFactor = 1f);
+    float EnrageSpeedFactor = 1f)
+{
+    /// <summary>The front arc's half-angle as a cosine, and the 150° rear
+    /// threshold as one. Directional armour is a cone test, and a cone test is a
+    /// dot product against a cosine — but the tick was going the long way round,
+    /// taking `Acos` of the dot, converting to degrees, and comparing that. Two
+    /// transcendentals and a division per damage event, to answer a question the
+    /// dot already answered.
+    ///
+    /// Precomputed here, and the comparison inverts with them: cosine decreases
+    /// as the angle grows, so "inside the front arc" is `dot >= CosFrontArmorHalfArc`
+    /// and "from behind" is `dot <= CosRearThreshold`. See <see cref="DetMath"/>
+    /// for why a transcendental cannot stay in the tick.</summary>
+    public float CosFrontArmorHalfArc { get; } = DetMath.CosDegrees(FrontArmorArcDegrees / 2f);
+
+    /// <summary>cos(150°) — the angle past which a hit counts as from behind.</summary>
+    public static readonly float CosRearThreshold = DetMath.CosDegrees(150f);
+}
 
 /// <summary>One of a tower's upgrade paths, ten levels deep.
 ///
@@ -243,8 +260,28 @@ public sealed record MapDef(
     // and the default is what those maps already are.
     float FieldX = 110f,
     float FieldZ = 80f,
-    IReadOnlyList<VehicleSpawnDef>? VehiclesOrNull = null)
+    IReadOnlyList<VehicleSpawnDef>? VehiclesOrNull = null,
+    // Names for the junctions the lane graph derives from Routes. The
+    // derivation can find them; it cannot know that (-20, 0, -2) is the mouth
+    // of the freight cut. Naming them here makes an edge id readable
+    // ("westGate-cutMouth") and, more importantly, *stable*: positional ids
+    // renumber the moment a waypoint moves, and a fixture naming an edge and a
+    // save file naming it back both need an id that survives a map edit.
+    IReadOnlyList<LaneNodeNameDef>? LaneNodeNamesOrNull = null,
+    // Which lane edges a player can shut, and with what.
+    IReadOnlyList<LaneGateDef>? LaneGatesOrNull = null,
+    // Levers: lanes a player shuts by hand rather than by building.
+    IReadOnlyList<OperatedGateDef>? OperatedGatesOrNull = null)
 {
+    public IReadOnlyList<OperatedGateDef> OperatedGates =>
+        OperatedGatesOrNull ?? System.Array.Empty<OperatedGateDef>();
+
+    public IReadOnlyList<LaneNodeNameDef> LaneNodeNames =>
+        LaneNodeNamesOrNull ?? System.Array.Empty<LaneNodeNameDef>();
+
+    public IReadOnlyList<LaneGateDef> LaneGates =>
+        LaneGatesOrNull ?? System.Array.Empty<LaneGateDef>();
+
     public IReadOnlyDictionary<int, string> ConditionSchedule =>
         ConditionScheduleOrNull ?? EmptySchedule;
 

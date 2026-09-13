@@ -47,6 +47,12 @@ public static class MatchRunner
     /// <summary>The switchyard floor policy with its Detector removed, for the
     /// conditions gate. Same list, same order, one tower missing — so any
     /// difference in outcome is attributable to that tower and nothing else.</summary>
+    /// <summary>The floor policy for a map, for gates that need to vary one
+    /// pick and hold the rest still. Read-only: the lists themselves are the
+    /// reference builds and a gate that edited one would change every other
+    /// gate's meaning.</summary>
+    public static IReadOnlyList<string> FloorPolicy(string mapId) => BuildOrders[mapId];
+
     public static string[] SwitchyardWithoutDetector =>
         BuildOrders["switchyard"].Where(e => !e.StartsWith("detector:")).ToArray();
 
@@ -83,24 +89,23 @@ public static class MatchRunner
         // the last entries matter most — anything that leaks arrives at the
         // thing you are defending. Roof anti-air is not optional here because
         // the air route skips every floor between the street and the core.
-        // Derived by measurement, not taste: a greedy pass picks whichever
-        // free socket adds the most previously-uncovered lane, ground towers
-        // against the two climbing routes and Skywatch against the spiral.
-        // That reaches 99% of the ground lanes and 54% of the air one — the
-        // air figure is low because the spiral only comes within reach of the
-        // building near the top, which is the map's point rather than a gap.
         //
-        // The two Detectors are placed by a different measure and that mattered:
-        // scoring them on new coverage put one somewhere useless, because a
-        // Detector's job is not covering lane, it is seeing the stair the
-        // Shades climb. Picked on stair coverage instead, w19 and w3 reveal
-        // half of it between them, and shade leaks went from eight to nothing.
+        // **This one is generated, not hand-tuned, and the fixture comparison
+        // for this map is therefore vacuous — say so rather than let a row of
+        // near-identical percentages imply agreement.** Every other map's list
+        // is a human's build that `FloorPolicy` is measured against. The Spire
+        // was re-authored in M5 and not one of its sockets survived, so there
+        // was no human build left to compare with: this is `FloorPolicy.Build`
+        // taken as authored. It earns a place here as the map's floor and as a
+        // regression fixture against the *generator* changing, and it will
+        // become a real fixture the first time someone plays this map and
+        // beats it by hand.
         ["spire"] = new[]
         {
-            "lance:w21", "skywatch:w44", "lance:w34", "arc:w1",
-            "nova:g9", "skywatch:w41", "detector:w19", "lance:g13",
-            "skywatch:g2", "detector:w3", "singularity:w15", "lance:w23",
-            "nova:g10", "lance:g1", "tar:t2", "spike:t6",
+            "nova:w5", "nova:w6", "lance:g7", "skywatch:w25",
+            "skywatch:w37", "lance:w19", "lance:w20", "lance:w21",
+            "lance:w30", "skywatch:w10", "nova:w31", "lance:g9",
+            "nova:g13", "nova:w24", "skywatch:g2", "nova:w18",
         },
         // The Toaster: three ground routes, and the only ground all three
         // share is the last 140 m of drive into the core. So the floor policy

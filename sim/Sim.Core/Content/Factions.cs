@@ -78,7 +78,7 @@ public static class Factions
 
     /// <summary>Per-level improvements, uniform across factions for M2:
     /// shorter cooldown, wider radius, stronger magnitude. Swept dials.</summary>
-    public static float CooldownFactor(int level) => MathF.Pow(0.94f, level - 1);
+    public static float CooldownFactor(int level) => DetMath.PowInt(0.94f, level - 1);
     public static float RadiusFactor(int level) => 1f + 0.06f * (level - 1);
     public static float MagnitudeFactor(int level) => 1f + 0.05f * (level - 1);
 }

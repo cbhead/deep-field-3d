@@ -10,6 +10,24 @@ namespace DeepField.Sim;
 /// Cleanup → CheckEndState.</summary>
 public static class Step
 {
+    /// <summary>Where a dropped pile of each scrap type lands relative to the
+    /// body, so a Monolith's three drops read as three things rather than one
+    /// pile. Golden angle (2.399963 rad), 0.6 m out, one per <see cref="ScrapType"/>
+    /// in declaration order.
+    ///
+    /// A table rather than the `Cos`/`Sin` pair it used to be: the angle is a
+    /// function of the type and nothing else, so there are exactly four answers
+    /// and a transcendental in the tick bought nothing. It was already
+    /// deliberately not RNG — this makes it deliberately not libm either. See
+    /// <see cref="DetMath"/>.</summary>
+    private static readonly Vec3[] ScrapDropOffsets =
+    {
+        new Vec3(0.600000000f, 0f, 0.000000000f),    // Alloy
+        new Vec3(-0.442421234f, 0f, 0.405294278f),   // Flux
+        new Vec3(0.052455160f, 0f, -0.597702649f),   // Plating
+        new Vec3(0.365063645f, 0f, 0.476160199f),    // Gravium
+    };
+
     public static void Advance(World w)
     {
         if (w.IsOver) return;
@@ -49,6 +67,7 @@ public static class Step
                 case Command.SetFaction pick: ApplySetFaction(w, pick); break;
                 case Command.Launch launch: ApplyLaunch(w, launch); break;
                 case Command.PlayerSync sync: ApplyPlayerSync(w, sync); break;
+                case Command.OperateGate gate: ApplyOperateGate(w, gate); break;
                 case Command.PlaceTower place: ApplyPlaceTower(w, place); break;
                 case Command.SellTower sell: ApplySellTower(w, sell); break;
                 case Command.UpgradeTower upgrade: ApplyUpgradeTower(w, upgrade); break;
@@ -229,6 +248,75 @@ public static class Step
         vehicle.YawDegrees = sync.YawDegrees;
     }
 
+    /// <summary>How close you have to stand to flip a lever. The same reach the
+    /// client's interaction ray uses, so what the prompt offers is what the sim
+    /// will accept.</summary>
+    private const float GateReachMeters = 9f;
+
+    /// <summary>Seconds before a lever can be flipped again. The only cost a
+    /// free, instant, reversible verb has, and the thing that stops a lane
+    /// being toggled once per tower volley.</summary>
+    private const float GateCooldownSeconds = 6f;
+
+    /// <summary>How close an enemy has to be to the gateway to deny the close.
+    /// Scoped to the gate rather than the whole edge on purpose: one Mote forty
+    /// metres down a lane should not hold a door open, and one standing in the
+    /// doorway absolutely should.</summary>
+    private const float GateBlockRadiusMeters = 4f;
+
+    private static void ApplyOperateGate(World w, Command.OperateGate operate)
+    {
+        var lever = w.Map.OperatedGates.FirstOrDefault(g => g.Id == operate.GateId);
+        if (lever is null)
+        {
+            w.Emit(new SimEvent.GateRejected(operate.PlayerId, operate.GateId, "unknownGate"));
+            return;
+        }
+
+        void Refuse(string reason) =>
+            w.Emit(new SimEvent.GateRejected(operate.PlayerId, operate.GateId, reason));
+
+        if (!w.Players.TryGetValue(operate.PlayerId, out var player) || !player.Alive)
+        {
+            Refuse("downed");
+            return;
+        }
+        if (player.Pos.DistanceTo(lever.At) > GateReachMeters) { Refuse("notNear"); return; }
+        if (w.GateCooldowns.TryGetValue(lever.Id, out float left) && left > 0f)
+        {
+            Refuse("cooldown");
+            return;
+        }
+
+        int edge = w.Graph.EdgeIndexOf(lever.EdgeId);
+        if (edge < 0) { Refuse("unknownEdge"); return; }
+
+        bool shutting = !w.ShutGates.Contains(lever.Id);
+        if (shutting)
+        {
+            // It will not shut on a body. This is what a free verb costs: chaff
+            // in the doorway is the attacker using your own mutation against
+            // you, and it is legible in a way a cooldown alone is not.
+            foreach (var enemy in w.Enemies)
+            {
+                if (enemy.Dead) continue;
+                if (enemy.Pos.DistanceTo(lever.At) > GateBlockRadiusMeters) continue;
+                Refuse("blocked");
+                return;
+            }
+            if (w.WouldSeal(edge)) { Refuse("wouldSeal"); return; }
+            w.ShutGates.Add(lever.Id);
+        }
+        else
+        {
+            w.ShutGates.Remove(lever.Id);
+        }
+
+        w.GateCooldowns[lever.Id] = GateCooldownSeconds;
+        w.RefreshEdgeState("lever");
+        w.Emit(new SimEvent.GateOperated(operate.PlayerId, lever.Id, shutting));
+    }
+
     private static void ApplyPlaceTower(World w, Command.PlaceTower place)
     {
         var socket = w.Map.Sockets.FirstOrDefault(s => s.Id == place.SocketId);
@@ -267,6 +355,22 @@ public static class Step
             return;
         }
 
+        // The rule the whole mutable layer rests on: the map can be shaped and
+        // cannot be sealed. Checked before the money moves, so a refusal costs
+        // nothing, and refused out loud like every other build rejection.
+        if (def.Kind == TowerKind.Barricade)
+            foreach (var gate in w.Map.LaneGates)
+            {
+                if (gate.SocketId != socket.Id) continue;
+                int edge = w.Graph.EdgeIndexOf(gate.EdgeId);
+                if (edge >= 0 && w.WouldSeal(edge))
+                {
+                    w.Emit(new SimEvent.BuildRejected(
+                        place.PlayerId, place.TowerId, place.SocketId, "wouldSeal"));
+                    return;
+                }
+            }
+
         int cost = def.Cost;
         if (w.Players.TryGetValue(place.PlayerId, out var placer) && placer.FactionId == Factions.Forge.Id)
             cost = (int)(cost * Balance.ForgeBuildDiscount);
@@ -289,6 +393,7 @@ public static class Step
             Hp = def.StructureHp,
         };
         w.Towers.Add(tower);
+        if (def.Kind == TowerKind.Barricade) w.RefreshEdgeState();
         if (w.Players.TryGetValue(place.PlayerId, out var builder)) builder.TowersBuilt += 1;
         w.Emit(new SimEvent.TowerPlaced(tower.Id, def.Id, socket.Id, place.PlayerId));
     }
@@ -343,6 +448,7 @@ public static class Step
         int refund = tower.Spent * Balance.SellRefundPercent / 100;
         w.Money += refund;
         w.Towers.Remove(tower);
+        if (Towers.All[tower.DefId].Kind == TowerKind.Barricade) w.RefreshEdgeState("sold");
         w.Emit(new SimEvent.TowerSold(tower.Id, refund));
     }
 
@@ -513,7 +619,7 @@ public static class Step
 
         float damage = def.Damage * build.DamageFactor();
         var applies = def.Applies.Concat(build.ExtraApplies()).ToList();
-        float cosArc = MathF.Cos(def.ArcDegrees * MathF.PI / 180f);
+        float cosArc = def.CosArc;
         bool connected = false;
 
         // Snapshot: a swing that kills a Cluster must not also hit the children
@@ -833,6 +939,10 @@ public static class Step
 
     private static void UpdateWaves(World w)
     {
+        if (w.GateCooldowns.Count > 0)
+            foreach (var id in w.GateCooldowns.Keys.OrderBy(k => k, StringComparer.Ordinal).ToList())
+                w.GateCooldowns[id] = MathF.Max(0f, w.GateCooldowns[id] - Balance.Dt);
+
         if (w.Phase == MatchPhase.Intermission)
         {
             if (w.Lobby) return;
@@ -872,19 +982,10 @@ public static class Step
             // fallback route instead.
             int routeIndex = entry.RouteIndex;
             var routeDef = w.Map.Routes[routeIndex];
-            // Siege enemies are not turned away by a barricade — they walk at
-            // it. Without this exemption a Ram can never reach the one thing it
-            // exists to break: the barricade reroutes it, so it takes the long
-            // way round and arrives as an expensive walker. The block is what
-            // makes it choose the shortcut, not what stops it.
-            if (routeDef.BarricadeGate is { } gate
-                && def.StructureDps <= 0f
-                && w.Towers.Any(t => t.SocketId == gate && Towers.All[t.DefId].Kind == TowerKind.Barricade)
-                && routeDef.FallbackRouteId is { } fallback)
-            {
-                for (int r = 0; r < w.Map.Routes.Count; r++)
-                    if (w.Map.Routes[r].Id == fallback) { routeIndex = r; break; }
-            }
+            // The barricade's reroute used to happen here, once, at spawn.
+            // It is a closed edge now and the routing does it — at the fork,
+            // for everything that reaches the fork, whether it was born before
+            // or after the wall went up.
 
             var route = w.Map.Routes[routeIndex];
             var enemy = new Enemy
@@ -894,7 +995,8 @@ public static class Step
                 Hp = def.Hp * entry.HpFactor,
                 MaxHp = def.Hp * entry.HpFactor,
                 Shield = def.Shield * entry.HpFactor,
-                RouteIndex = routeIndex,
+                ItineraryIndex = routeIndex,
+                ViaCursor = 1,          // via[0] is the gate it is standing on
                 LateralOffset = entry.LateralOffset,
                 Pos = route.Waypoints[0],
                 Facing = (route.Waypoints[1] - route.Waypoints[0]).Normalized(),
@@ -902,6 +1004,11 @@ public static class Step
                 LeakDamage = def.LeakDamage,
                 WaveIndex = w.WaveIndex,
             };
+            // Its first edge is chosen the same way every later one is, so a
+            // route that is already blocked at the gate is handled by the same
+            // code as one blocked halfway down.
+            enemy.EdgeIndex = NextEdge(w, enemy, w.Graph.Itineraries[routeIndex].Via[0]);
+            AnnounceBreach(w, enemy, enemy.EdgeIndex);
             w.Enemies.Add(enemy);
             w.Emit(new SimEvent.EnemySpawned(enemy.Id, def.Id, w.WaveIndex));
             w.PendingSpawns.RemoveAt(i);
@@ -1059,6 +1166,81 @@ public static class Step
         }
     }
 
+    /// <summary>Which leg of the underlying route this enemy is on.
+    ///
+    /// Only the wire needs this: <see cref="SimEvent.EnemyTeleported"/> carries
+    /// a leg index, it is in the hashed event log, and the client snaps a view
+    /// on it. Route legs map one-to-one onto the itinerary's segments in order,
+    /// so this is a translation rather than a second source of truth.</summary>
+    /// <summary>Which edge an enemy takes out of a node, or -1 if it is stuck.
+    ///
+    /// Routing decisions happen **here and nowhere else** — on arriving at a
+    /// node. An edge closing does not move anyone; enemies already on it finish
+    /// it and decide at the far end. That is what keeps "a route is a
+    /// commitment" true at the granularity a player can read, and it is why a
+    /// gate cannot be used to teleport a wave backwards.
+    ///
+    /// The enemy heads for the next place its itinerary names that it can still
+    /// reach, falling through to the core when it has run out of vias or the
+    /// remaining ones are cut off. Among the open edges leaving this node it
+    /// takes the one that gets there cheapest, ties broken by edge index so two
+    /// equal options resolve the same way on any machine.
+    ///
+    /// With every edge open this reproduces the itinerary exactly — the via
+    /// list for a route is its junction sequence, and the cheapest way to the
+    /// next junction is the edge the route already walked. That is what lets
+    /// routing become a decision without the event log noticing.</summary>
+    private static int NextEdge(World w, Enemy enemy, string atNode)
+    {
+        var itinerary = w.Graph.Itineraries[enemy.ItineraryIndex];
+
+        // A siege enemy is not turned away by a barricade — it can choose to go
+        // through. But "always ignore walls" is not a decision, it is a
+        // hard-coded preference, so the wall is *priced*: chewing through costs
+        // hp / StructureDps seconds, which at this enemy's speed is that many
+        // metres it could have walked instead.
+        //
+        // Three things fall out and none of them are special cases. The Ram
+        // breaches when breaking is cheaper than walking round, so a wall in
+        // front of a short detour is worth going around and one in front of a
+        // long detour is not. The player's own barricade is what makes the
+        // detour long, so shutting a gate is what sends the Ram at your wall —
+        // a chain the player can read. And the whole thing tunes on one dial.
+        var def = Enemies.All[enemy.DefId];
+        if (def.StructureDps <= 0f)
+            return w.Graph.ChooseEdge(itinerary, ref enemy.ViaCursor, atNode,
+                w.EdgeOpen, w.DistToNode, w.DistToCore);
+
+        // Siege routing sees through gates, so it has to be costed against
+        // tables that do too — otherwise the far side of a shut edge reads as
+        // unreachable and the wall it is standing in front of is invisible.
+        return w.Graph.ChooseEdge(itinerary, ref enemy.ViaCursor, atNode,
+            w.EdgeOpen, w.DistToNodeOpen, w.DistToCoreOpen,
+            e => w.EdgeOpen[e]
+                ? 0f
+                : w.BlockingHp(e) / def.StructureDps * def.SpeedMetersPerSec
+                  * Balance.SiegeBreachBias,
+            distToNodeForVias: w.DistToNode);
+    }
+
+    /// <summary>Say so, once, when a siege enemy takes a blocked edge. The
+    /// player gets the enemy, the wall and a countdown — long before the lane
+    /// opens somewhere they were not looking.</summary>
+    private static void AnnounceBreach(World w, Enemy enemy, int edgeIndex)
+    {
+        if (edgeIndex < 0 || w.EdgeOpen[edgeIndex]) { enemy.BreachTargetIndex = -1; return; }
+        if (enemy.BreachTargetIndex == edgeIndex) return;
+
+        var def = Enemies.All[enemy.DefId];
+        if (def.StructureDps <= 0f) return;
+
+        enemy.BreachTargetIndex = edgeIndex;
+        w.Emit(new SimEvent.BreachTargeted(enemy.Id, w.Graph.Edges[edgeIndex].Id,
+            w.BlockingHp(edgeIndex) / def.StructureDps));
+    }
+
+    private static int LegOf(World w, Enemy enemy) => enemy.LegCounter;
+
     private static void MoveEnemies(World w)
     {
         foreach (var enemy in w.Enemies)
@@ -1097,47 +1279,88 @@ public static class Step
             if (def.Burrower)
                 enemy.Burrowed = enemy.TotalTraveled % Balance.BurrowCycleMeters < Balance.BurrowedMeters;
 
-            var route = w.Map.Routes[enemy.RouteIndex];
-            var legs = w.RouteLegLengths[enemy.RouteIndex];
-            var waypoints = route.Waypoints;
+            var itinerary = w.Graph.Itineraries[enemy.ItineraryIndex];
             float remaining = speed * Balance.Dt;
 
-            while (enemy.Leg < legs.Length)
+            while (enemy.EdgeIndex >= 0)
             {
-                // A teleport leg is crossed the instant it is reached, whatever
-                // the speed — a frozen, sieging or knocked-back enemy standing
-                // on a departure pad still goes. That is not generosity: a
-                // zero-length leg is the one position this movement model
-                // cannot represent (the lerp below would divide by it), so an
-                // enemy must never be parked on one between ticks.
-                if (route.IsTeleportLeg(enemy.Leg))
+                var edge = w.Graph.Edges[enemy.EdgeIndex];
+                var lengths = w.EdgeSegmentLengths[enemy.EdgeIndex];
+
+                // A warp is crossed the instant it is reached, whatever the
+                // speed — a frozen, sieging or knocked-back enemy standing on a
+                // departure pad still goes. That is not generosity: a
+                // zero-length span is the one position this model cannot
+                // represent (the lerp below would divide by it), so an enemy
+                // must never be parked on one between ticks. Under the graph
+                // that stops being a rule three gates enforce and becomes
+                // structural: a warp is a whole edge, and an edge boundary is a
+                // node, which is not a place anyone stands.
+                if (edge.Kind == LaneEdgeKind.Warp)
                 {
-                    int from = enemy.Leg;
-                    enemy.Leg++;
-                    enemy.LegProgress = 0f;
-                    var pad = waypoints[from + 1];
-                    w.Emit(new SimEvent.EnemyTeleported(enemy.Id, route.Id, from, pad.X, pad.Y, pad.Z));
+                    var pad = edge.Waypoints[^1];
+                    w.Emit(new SimEvent.EnemyTeleported(
+                        enemy.Id, itinerary.Id, enemy.LegCounter, pad.X, pad.Y, pad.Z));
+                    enemy.LegCounter++;
+                    enemy.PrevEdgeIndex = enemy.EdgeIndex;
+                    enemy.EdgeIndex = NextEdge(w, enemy, edge.To);
+                    enemy.Segment = 0;
+                    enemy.SegmentProgress = 0f;
+                    AnnounceBreach(w, enemy, enemy.EdgeIndex);
                     continue;
                 }
                 if (remaining <= 0f) break;
 
-                float legLeft = legs[enemy.Leg] - enemy.LegProgress;
-                if (remaining < legLeft)
+                float segmentLeft = lengths[enemy.Segment] - enemy.SegmentProgress;
+                if (remaining < segmentLeft)
                 {
-                    enemy.LegProgress += remaining;
+                    enemy.SegmentProgress += remaining;
                     enemy.TotalTraveled += remaining;
                     remaining = 0f;
                 }
                 else
                 {
-                    enemy.TotalTraveled += legLeft;
-                    remaining -= legLeft;
-                    enemy.Leg++;
-                    enemy.LegProgress = 0f;
+                    enemy.TotalTraveled += segmentLeft;
+                    remaining -= segmentLeft;
+                    enemy.Segment++;
+                    enemy.SegmentProgress = 0f;
+                    enemy.LegCounter++;
+                    if (enemy.Segment >= lengths.Length)
+                    {
+                        // At a node: the one place routing is decided.
+                        if (w.Graph.Node(edge.To).Kind == LaneNodeKind.Core)
+                        {
+                            enemy.EdgeIndex = -1;
+                            break;
+                        }
+                        int next = NextEdge(w, enemy, edge.To);
+                        if (next < 0)
+                        {
+                            // Nowhere open to go. The landlock rule is meant to
+                            // make this unreachable, so it stops at the node and
+                            // says so once, rather than leaking or vanishing — a
+                            // silent fallback here is how a deadlock ships. It
+                            // stays on the edge it just finished so it still has
+                            // a position to be shot at.
+                            enemy.Segment = lengths.Length - 1;
+                            enemy.SegmentProgress = lengths[enemy.Segment];
+                            if (!enemy.Stranded)
+                            {
+                                enemy.Stranded = true;
+                                w.Emit(new SimEvent.EnemyStranded(enemy.Id, edge.To));
+                            }
+                            break;
+                        }
+                        enemy.Stranded = false;
+                        enemy.PrevEdgeIndex = enemy.EdgeIndex;
+                        enemy.EdgeIndex = next;
+                        enemy.Segment = 0;
+                        AnnounceBreach(w, enemy, next);
+                    }
                 }
             }
 
-            if (enemy.Leg >= legs.Length)
+            if (enemy.EdgeIndex < 0)
             {
                 enemy.Dead = true;
                 w.Lives -= enemy.LeakDamage;
@@ -1145,10 +1368,12 @@ public static class Step
                 continue;
             }
 
-            var a = waypoints[enemy.Leg];
-            var b = waypoints[enemy.Leg + 1];
+            var current = w.Graph.Edges[enemy.EdgeIndex];
+            var segments = w.EdgeSegmentLengths[enemy.EdgeIndex];
+            var a = current.Waypoints[enemy.Segment];
+            var b = current.Waypoints[enemy.Segment + 1];
             enemy.Facing = (b - a).Normalized();
-            var spine = Vec3.Lerp(a, b, enemy.LegProgress / legs[enemy.Leg]);
+            var spine = Vec3.Lerp(a, b, enemy.SegmentProgress / segments[enemy.Segment]);
 
             // Lateral scatter: offset perpendicular to travel on the XZ plane.
             var perp = new Vec3(-enemy.Facing.Z, 0f, enemy.Facing.X);
@@ -1396,8 +1621,12 @@ public static class Step
     private static Enemy? PickTarget(World w, Tower tower, TowerDef def)
     {
         float range = EffectiveRange(w, tower, def);
-        Enemy? best = null;
-        float bestTraveled = -1f;
+        // "First" is now whichever is closest to hurting you, measured as metres
+        // still to walk. It used to be metres *walked*, which is not comparable
+        // between routes of different lengths and actively wrong after a warp —
+        // see Enemy.RemainingToCore.
+        Enemy? bestEnemy = null;
+        float bestRemaining = float.MaxValue;
 
         foreach (var enemy in w.Enemies)
         {
@@ -1415,13 +1644,14 @@ public static class Step
             if (distance > range || distance < def.MinRangeMeters) continue;
             if (SightBlocked(w, tower.Pos, enemy)) continue;
 
-            if (enemy.TotalTraveled > bestTraveled)
+            float remaining = enemy.RemainingToCore(w);
+            if (remaining < bestRemaining)
             {
-                bestTraveled = enemy.TotalTraveled;
-                best = enemy;
+                bestRemaining = remaining;
+                bestEnemy = enemy;
             }
         }
-        return best;
+        return bestEnemy;
     }
 
     /// <summary>Monolith is living cover: a sight-blocker standing between the
@@ -1481,7 +1711,7 @@ public static class Step
         for (int i = 0; i < def.UpgradePaths.Count; i++)
         {
             if (def.UpgradePaths[i].Id == pathId)
-                return MathF.Pow(def.UpgradePaths[i].PerLevelFactor, tower.PathLevels[i]);
+                return DetMath.PowInt(def.UpgradePaths[i].PerLevelFactor, tower.PathLevels[i]);
         }
         return 1f;
     }
@@ -1581,6 +1811,9 @@ public static class Step
         foreach (var tower in destroyed)
         {
             w.Towers.Remove(tower);
+            // A Ram breaking a barricade reopens the lane it shut, which is the
+            // whole point of sending one at it.
+            if (Towers.All[tower.DefId].Kind == TowerKind.Barricade) w.RefreshEdgeState("breached");
             w.Emit(new SimEvent.StructureDestroyed(tower.Id, tower.DefId, tower.SocketId));
         }
     }
@@ -1627,33 +1860,41 @@ public static class Step
         w.Traps.RemoveAll(t => t.ChargesLeft <= 0 && t.RearmTimer <= 0f);
     }
 
-    /// <summary>Knockback is an instantaneous route displacement, not a status:
-    /// walk the enemy backward along its legs.</summary>
+    /// <summary>Knockback is an instantaneous displacement along the lane, not a
+    /// status: walk the enemy backward through the segments it came down, and
+    /// across an edge boundary if it runs out of them.</summary>
     private static void KnockBack(World w, Enemy enemy, float meters)
     {
         float remaining = meters;
         while (remaining > 0f)
         {
-            if (enemy.LegProgress >= remaining)
+            if (enemy.SegmentProgress >= remaining)
             {
-                enemy.LegProgress -= remaining;
+                enemy.SegmentProgress -= remaining;
                 enemy.TotalTraveled -= remaining;
                 break;
             }
-            remaining -= enemy.LegProgress;
-            enemy.TotalTraveled -= enemy.LegProgress;
-            if (enemy.Leg == 0) { enemy.LegProgress = 0f; break; }
-            // Nothing pushes an enemy back through a teleporter. The arrival
-            // pad is as far back as a launcher gets it — the alternative is an
-            // enemy standing on a zero-length leg, or reappearing on the far
-            // side of the map because someone stood on a trap.
-            if (w.Map.Routes[enemy.RouteIndex].IsTeleportLeg(enemy.Leg - 1))
+            remaining -= enemy.SegmentProgress;
+            enemy.TotalTraveled -= enemy.SegmentProgress;
+
+            if (enemy.Segment == 0)
             {
-                enemy.LegProgress = 0f;
-                break;
+                // Off the front of this edge. The edge before it is where we
+                // came from — unless it is a warp, and nothing pushes an enemy
+                // back through one of those. The arrival pad is as far back as
+                // a launcher gets it; the alternative is an enemy parked on a
+                // zero-length span, or reappearing on the far side of the map
+                // because somebody stood on a trap.
+                if (enemy.PrevEdgeIndex < 0) { enemy.SegmentProgress = 0f; break; }
+                var previous = w.Graph.Edges[enemy.PrevEdgeIndex];
+                if (previous.Kind == LaneEdgeKind.Warp) { enemy.SegmentProgress = 0f; break; }
+                enemy.EdgeIndex = enemy.PrevEdgeIndex;
+                enemy.PrevEdgeIndex = -1;          // one edge of memory, spent
+                enemy.Segment = w.EdgeSegmentLengths[enemy.EdgeIndex].Length;
             }
-            enemy.Leg--;
-            enemy.LegProgress = w.RouteLegLengths[enemy.RouteIndex][enemy.Leg];
+
+            enemy.Segment--;
+            enemy.SegmentProgress = w.EdgeSegmentLengths[enemy.EdgeIndex][enemy.Segment];
         }
         enemy.TotalTraveled = MathF.Max(0f, enemy.TotalTraveled);
     }
@@ -1685,7 +1926,9 @@ public static class Step
             if (!enemy.Dead) continue;
             var def = Enemies.All[enemy.DefId];
             if (def.SplitInto is null || def.SplitCount <= 0) continue;
-            if (enemy.Leg >= w.RouteLegLengths[enemy.RouteIndex].Length) continue; // leaked, not killed
+            // Leaked, not killed: a Cluster that reached the core does not get
+            // to spit children at it.
+            if (enemy.EdgeIndex < 0) continue;
 
             var childDef = Enemies.All[def.SplitInto];
             var rng = Util.RngStreams.StreamFor(w.Seed, "split", (uint)enemy.Id);
@@ -1699,9 +1942,13 @@ public static class Step
                     DefId = childDef.Id,
                     Hp = childDef.Hp * hpFactor,
                     MaxHp = childDef.Hp * hpFactor,
-                    RouteIndex = enemy.RouteIndex,
-                    Leg = enemy.Leg,
-                    LegProgress = enemy.LegProgress,
+                    ItineraryIndex = enemy.ItineraryIndex,
+                    EdgeIndex = enemy.EdgeIndex,
+                    PrevEdgeIndex = enemy.PrevEdgeIndex,
+                    Segment = enemy.Segment,
+                    SegmentProgress = enemy.SegmentProgress,
+                    ViaCursor = enemy.ViaCursor,
+                    LegCounter = enemy.LegCounter,
                     TotalTraveled = enemy.TotalTraveled,
                     LateralOffset = (rng.NextFloat() - 0.5f) * MathF.Max(childDef.ScatterWidth, 2f),
                     Pos = enemy.Pos,
@@ -1777,11 +2024,12 @@ public static class Step
         {
             var toSource = fromSource * (-1f / sourceDist);
             float dot = toSource.X * enemy.Facing.X + toSource.Y * enemy.Facing.Y + toSource.Z * enemy.Facing.Z;
-            float angleDegrees = MathF.Acos(System.Math.Clamp(dot, -1f, 1f)) * (180f / MathF.PI);
 
-            if (angleDegrees <= def.FrontArmorArcDegrees / 2f)
+            // Compared as cosines rather than as degrees — same test, no Acos.
+            // The inequalities flip because cosine decreases as the angle grows.
+            if (dot >= def.CosFrontArmorHalfArc)
                 amount *= def.FrontArmorFactor;
-            else if (angleDegrees >= 150f)
+            else if (dot <= EnemyDef.CosRearThreshold)
                 amount *= def.RearWeakFactor;
         }
 
@@ -1913,9 +2161,7 @@ public static class Step
                 // Spread by scrap type so a Monolith's three drops are three
                 // things rather than one pile. Deterministic: the offset comes
                 // from the type, never from an RNG stream.
-                int slot = (int)type;
-                float angle = slot * 2.399963f;      // golden angle, evenly spaced
-                var offset = new Vec3(MathF.Cos(angle) * 0.6f, 0f, MathF.Sin(angle) * 0.6f);
+                var offset = ScrapDropOffsets[(int)type];
                 var pickup = new ScrapPickup
                 {
                     Id = w.NextId(),

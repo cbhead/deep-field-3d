@@ -9,13 +9,14 @@ namespace DeepField.Sim;
 /// Lives in Sim.Core so packing round-trips are fast-lane testable.</summary>
 public static class Protocol
 {
-    /// <summary>Bumped to 2 when melee joined the command vocabulary, and to 3
-    /// when vehicles did. An older client cannot send a swing and a newer one
-    /// would send verbs the old server parses as null — silently dropping every
-    /// melee action, or leaving a player apparently sitting in a vehicle that
-    /// never moves, rather than refusing the connection, which is exactly the
-    /// failure this number exists to make loud.</summary>
-    public const int Version = 3;
+    /// <summary>Bumped to 2 when melee joined the command vocabulary, to 3 when
+    /// vehicles did, and to 4 for the lane levers. An older client cannot send a
+    /// swing and a newer one would send verbs the old server parses as null —
+    /// silently dropping every melee action, leaving a player apparently sitting
+    /// in a vehicle that never moves, or flipping a gate that never moves,
+    /// rather than refusing the connection, which is exactly the failure this
+    /// number exists to make loud.</summary>
+    public const int Version = 4;
 
     /// <summary>Human-readable build identity, sent alongside the protocol
     /// number. The number decides compatibility — determinism requires an exact
@@ -92,6 +93,13 @@ public static class Protocol
         return (tick, snaps);
     }
 
+    /// <summary>The one transcendental left in Sim.Core, and it is allowed to
+    /// stay: this quantises a facing to a single byte for the snapshot wire and
+    /// its result never enters world state, the event log, or any decision the
+    /// tick makes. A one-ulp difference between two machines' libm cannot even
+    /// change the byte in all but a vanishing set of cases, and if it did the
+    /// cost is a remote enemy drawn a degree and a half off. Everything that
+    /// *does* feed the log was moved off libm — see <see cref="DetMath"/>.</summary>
     private static byte PackYaw(Vec3 facing)
     {
         float yaw = MathF.Atan2(facing.X, facing.Z);            // [-π, π]
@@ -122,6 +130,7 @@ public static class Protocol
         Command.Launch c => $"launch|{c.PlayerId}",
         Command.PlayerSync c => $"sync|{c.PlayerId}|{F(c.Pos.X)}|{F(c.Pos.Y)}|{F(c.Pos.Z)}",
         Command.PlaceTower c => $"place|{c.PlayerId}|{c.TowerId}|{c.SocketId}",
+        Command.OperateGate c => $"gate|{c.PlayerId}|{c.GateId}",
         Command.SellTower c => $"sell|{c.PlayerId}|{c.TowerId}",
         Command.UpgradeTower c => $"upgrade|{c.PlayerId}|{c.TowerId}|{c.PathIndex}",
         Command.StartWave c => $"startWave|{c.PlayerId}",
@@ -158,6 +167,7 @@ public static class Protocol
                 "launch" => new Command.Launch(int.Parse(p[1])),
                 "sync" => new Command.PlayerSync(int.Parse(p[1]), new Vec3(Pf(p[2]), Pf(p[3]), Pf(p[4]))),
                 "place" => new Command.PlaceTower(int.Parse(p[1]), p[2], p[3]),
+                "gate" => new Command.OperateGate(int.Parse(p[1]), p[2]),
                 "sell" => new Command.SellTower(int.Parse(p[1]), int.Parse(p[2])),
                 "upgrade" => new Command.UpgradeTower(int.Parse(p[1]), int.Parse(p[2]), int.Parse(p[3])),
                 "startWave" => new Command.StartWave(int.Parse(p[1])),
@@ -196,6 +206,7 @@ public static class Protocol
         Command.Launch c => c.PlayerId == seatPlayerId,
         Command.PlayerSync c => c.PlayerId == seatPlayerId,
         Command.PlaceTower c => c.PlayerId == seatPlayerId,
+        Command.OperateGate c => c.PlayerId == seatPlayerId,
         Command.SellTower c => c.PlayerId == seatPlayerId,
         Command.UpgradeTower c => c.PlayerId == seatPlayerId,
         Command.StartWave c => c.PlayerId == seatPlayerId,

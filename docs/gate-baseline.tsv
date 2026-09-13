@@ -1,0 +1,31 @@
+# Balance baseline — the numbers behind the gates, not their verdicts.
+#
+# Regenerate with `make gate-baseline`. Commit the diff in the change that
+# caused it, and say in the message which of the two it is:
+#
+#   a RE-BASELINE moves hashes and margins and moves no verdict;
+#   a REGRESSION moves a verdict, or moves a margin without a reason.
+#
+# A gate that still says PASS on one life left is a gate about to fail for
+# reasons several commits old. This file is how that is seen coming.
+#
+# Each row is a scenario some gate actually runs, party and factions
+# included, except where the name says otherwise.
+#
+# seed 20260906
+scenario	result	waves	lives	spawned	leaked	towerKills	playerKills	ticks	logHash16
+foundry/mid-band	win	10	19	127	1	82	44	13873	8B560FEE1CED48A6
+foundry/towers-only	win	10	7	127	13	114	0	18435	C4D5B6560270D6B2
+foundry/low-skill	win	10	13	127	7	97	23	15639	42789B525C182835
+foundry/high-skill	win	10	19	127	1	75	51	13047	06BD29DBF6A4CBDB
+foundry/4p	win	10	14	203	6	108	89	17810	CA8716F708B62E20
+foundry/4p-distinct-factions~not-a-gate	loss	9	0	356	20	164	166	20919	BC356DBDA0126C74
+switchyard/generated~both-open	win	12	6	174	14	117	43	17294	8D886EED039085E6
+switchyard/generated~cut-shut	win	12	12	179	8	128	43	20226	D5D31FF41F5FF100
+switchyard/generated~switchback-shut	win	12	4	169	16	117	36	16303	24330D0F6ED898A9
+switchyard/mid-band	win	12	17	179	3	113	63	25187	FF3EE3C71AFB7821
+switchyard/towers-only	win	12	9	179	11	168	0	30238	92B0A54A0EDDFB62
+spire/mid-band	win	12	16	134	4	88	42	20676	4D5EDCF53A140FB5
+spire/towers-only	win	12	12	134	8	126	0	25798	A31F0888D5F5E9B6
+toaster/mid-band	win	12	14	181	6	56	119	40437	DCA336302916A4A5
+toaster/towers-only	win	12	4	171	16	155	0	62132	B7C8FD5F2E777B3B

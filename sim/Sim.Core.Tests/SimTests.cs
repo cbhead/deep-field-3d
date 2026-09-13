@@ -233,8 +233,7 @@ public class StatusTests
         };
         // An aura tick refreshes to full duration. Position via leg coords
         // (MoveEnemies recomputes Pos): leg 0 at 14m sits ~5m from socket s1.
-        enemy.Leg = 0;
-        enemy.LegProgress = 14f;
+        enemy.AtRouteLeg(w, 0, 0, 14f);
         w.Money = 1000;
         w.Enqueue(new Command.PlaceTower(0, "singularity", "s1"));
         Step.Advance(w);
@@ -333,12 +332,11 @@ public class ScrapEconomyTests
         return w;
     }
 
-    private static Enemy Drifter(World w, Vec3 at) => new()
+    private static Enemy Drifter(World w, Vec3 at) => new Enemy
     {
-        Id = w.NextId(), DefId = "drifter", Hp = 1f, MaxHp = 30f,
-        RouteIndex = 0, Leg = 1, LegProgress = 1f, Pos = at,
+        Id = w.NextId(), DefId = "drifter", Hp = 1f, MaxHp = 30f, Pos = at,
         Facing = new Vec3(1, 0, 0), Bounty = 5, LeakDamage = 1,
-    };
+    }.AtRouteLeg(w, 0, 1, 1f);
 
     /// <summary>Kill something with a tower and leave the drop on the floor.
     ///
@@ -507,9 +505,8 @@ public class AirborneScrapTests
         var skiff = new Enemy
         {
             Id = w.NextId(), DefId = "skiff", Hp = 1f, MaxHp = 40f,
-            RouteIndex = airRoute, Leg = leg, LegProgress = progress,
             Facing = new Vec3(1, 0, 0), Bounty = 8, LeakDamage = 1,
-        };
+        }.AtRouteLeg(w, airRoute, leg, progress);
         w.Enemies.Add(skiff);
         Step.Advance(w);
         return skiff;
@@ -590,8 +587,14 @@ public class AirborneScrapTests
         player.Pos = new Vec3(40f, 0f, 30f);
         w.Enqueue(new Command.PlayerSync(1, player.Pos));
 
-        // High over the building rather than out over the street.
-        var skiff = SkiffOnTheStrand(w, Maps.Spire, leg: 2, progress: 0.5f);
+        // High over the building rather than out over the street. That is the
+        // last leg now, and only the last leg: the Spire's strand was
+        // re-authored in M5 to stay clear of the building's own volume — the
+        // old spiral cut through floor three and again through the top storey
+        // — so it crosses the roof once, on its way to the core, and is over
+        // the street for the whole of the rest of it. Scrap dropped out there
+        // landing on the street is the right answer, not a regression.
+        var skiff = SkiffOnTheStrand(w, Maps.Spire, leg: 5, progress: 0.5f);
         Assert.True(skiff.Pos.Y > 20f, $"expected the strand high here (was {skiff.Pos.Y})");
         SkywatchKill(w, Maps.Spire, skiff);
 
@@ -919,13 +922,12 @@ public class BountyScalingTests
             var enemy = new Enemy
             {
                 Id = w.NextId(), DefId = "drifter", Hp = 1f, MaxHp = 30f,
-                RouteIndex = 0, Leg = 1, LegProgress = 1f,
                 Facing = new Vec3(1, 0, 0),
                 Bounty = Math.Max(1, (int)MathF.Round(
                     Enemies.All["drifter"].Bounty * WavePlan.BountyScale(waveIndex),
                     MidpointRounding.AwayFromZero)),
                 LeakDamage = 1, WaveIndex = waveIndex,
-            };
+            }.AtRouteLeg(w, 0, 1, 1f);
             w.Enemies.Add(enemy);
             w.Enqueue(new Command.PlayerHit(1, enemy.Id, "sidearm"));
             Step.Advance(w);

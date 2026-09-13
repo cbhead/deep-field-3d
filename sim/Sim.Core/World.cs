@@ -20,10 +20,49 @@ public sealed class Enemy
     public string DefId = "";
     public float Hp;
     public float MaxHp;
-    public int RouteIndex;        // which map route this enemy walks
-    public int Leg;               // index into route legs
-    public float LegProgress;     // meters along current leg
-    public float TotalTraveled;   // meters along whole route — the "first" targeting metric
+    // --- Where it is, in lane-graph coordinates.
+    //
+    // This was (RouteIndex, Leg, LegProgress): an index into a list of
+    // polylines and a leg of that polyline. It is now an itinerary, a step
+    // along that itinerary's edges, and a segment of the edge — the same three
+    // numbers, one level down, addressing a graph instead of a list.
+    //
+    // The arithmetic is deliberately unchanged. SegmentProgress accumulates per
+    // segment and resets at each one exactly as LegProgress did, rather than
+    // being one distance along the whole edge, because a single accumulator
+    // rounds differently and this port has to be provably free. Position is
+    // still recomputed from scratch every tick, so nothing compounds.
+    public int ItineraryIndex;    // which itinerary this enemy is following
+    public int EdgeIndex;         // the graph edge it is on, or -1 once it leaked
+    public int Segment;           // index into that edge's segments
+    public float SegmentProgress; // meters along the current segment
+
+    /// <summary>How far down its itinerary's list of vias it has got. An
+    /// itinerary names places to pass through, not edges to walk, so this is
+    /// what "the long way round" survives an edge closing as: the enemy still
+    /// wants the barn, it just has to find another way there.</summary>
+    public int ViaCursor;
+
+    /// <summary>The edge it came off, or -1. One edge of memory, which is all
+    /// knockback needs: a launcher moves 8 m and the shortest edge on any map is
+    /// longer than that. It exists because the path is no longer a fixed list —
+    /// once an enemy can route around a closed edge, "the previous step" is a
+    /// fact about what happened, not about the itinerary.</summary>
+    public int PrevEdgeIndex = -1;
+
+    /// <summary>The edge this enemy has committed to breaking through, or -1.
+    /// Intent, as opposed to <see cref="Sieging"/>, which is a fact about this
+    /// tick recomputed from what happens to be in reach. Serialized, because a
+    /// resumed Ram that has forgotten what it was walking at is a Ram that
+    /// turns round.</summary>
+    public int BreachTargetIndex = -1;
+
+    /// <summary>Legs consumed since spawning. Only the wire wants it — the
+    /// teleport event carries a leg index and is in the hashed log — and it is
+    /// counted rather than derived because once an enemy can deviate from its
+    /// itinerary there is no nominal leg to derive it from.</summary>
+    public int LegCounter;
+    public float TotalTraveled;   // meters walked; keys the burrow cycle
     public Vec3 Pos;              // spine position + lateral offset applied
     public Vec3 Facing;           // normalized travel direction (Aegis front arc)
     public float LateralOffset;   // scatter across the path width (seeded at spawn)
@@ -45,6 +84,93 @@ public sealed class Enemy
     /// what the enemy is doing this tick, recomputed every tick from whether a
     /// structure is in reach, so it cannot get stuck on.</summary>
     public bool Sieging;
+
+    /// <summary>Stopped at a junction with nowhere open to go. Should never
+    /// happen — see <see cref="SimEvent.EnemyStranded"/>.</summary>
+    public bool Stranded;
+
+    /// <summary>Metres still to walk before this reaches a core.
+    ///
+    /// The metric towers and bots pick targets on. It replaces TotalTraveled,
+    /// which measured metres *walked* and was therefore incomparable between
+    /// routes of different lengths: on the Toaster a Skiff 100 m down `direct`
+    /// (139 m long) and a Drifter 100 m down `long` (471 m) sorted as equally
+    /// advanced, when one was 39 m from the core and the other 371 m. Worse, an
+    /// enemy that had just come out of a warp — having crossed most of the map
+    /// for free — sorted as barely started, so the wave that arrives behind you
+    /// was the wave towers ignored.
+    ///
+    /// Remaining distance has none of that: it is the same question the defence
+    /// is actually asking, in the same units, wherever the enemy came from.</summary>
+    public float RemainingToCore(World w)
+    {
+        if (EdgeIndex < 0) return 0f;                            // leaked
+
+        var lengths = w.EdgeSegmentLengths[EdgeIndex];
+        float onThisEdge = -SegmentProgress;
+        for (int i = Segment; i < lengths.Length; i++) onThisEdge += lengths[i];
+
+        float ahead = w.DistToCore[w.Graph.NodeIndex[w.Graph.Edges[EdgeIndex].To]];
+        // Cut off from every core: as far away as it is possible to be, so it
+        // sorts last rather than first. Infinity would poison the comparison.
+        return float.IsPositiveInfinity(ahead) ? float.MaxValue : onThisEdge + ahead;
+    }
+
+    /// <summary>Which leg of the underlying route this enemy is on — the read
+    /// side of <see cref="AtRouteLeg"/>.
+    ///
+    /// Two callers, and both are about talking to something outside the sim's
+    /// own coordinates: <see cref="SimEvent.EnemyTeleported"/> puts a leg index
+    /// on the wire and in the hashed log, and the tests are written in legs
+    /// because that is how the maps read. Not a second source of truth — route
+    /// legs map one-to-one onto the itinerary's segments, in order.</summary>
+    public int RouteLeg(World w) => LegCounter;
+
+    /// <summary>Put this enemy at a leg of a route, in the coordinates the
+    /// harness fixtures and the unit tests are written in.
+    ///
+    /// Sixteen gate fixtures say things like "leg 3 of the ground route, 14 m
+    /// along" and one of them explains that leg 3 runs (0,14) to (0,-8) so 14 m
+    /// puts it four metres from socket g4. That is a good way to write a
+    /// fixture and a bad thing to have to rewrite as an edge and a segment when
+    /// the storage changes underneath it. Route legs map one-to-one onto the
+    /// itinerary's flattened segments, in order, so this is an exact
+    /// translation rather than an approximation.</summary>
+    /// <remarks>Deliberately does not touch <see cref="TotalTraveled"/>. Several
+    /// fixtures set it by hand to a round number and then assert against that
+    /// number — the launcher gate measures a setback from exactly 60 — so
+    /// computing a "truer" value here would quietly move what those gates
+    /// measure. Position is what this translates; distance walked stays the
+    /// caller's business, as it was.</remarks>
+    public Enemy AtRouteLeg(World w, int routeIndex, int leg, float progress)
+    {
+        ItineraryIndex = routeIndex;
+        LegCounter = leg;
+        var edges = w.ItineraryEdges[routeIndex];
+        var itinerary = w.Graph.Itineraries[routeIndex];
+        int walked = 0;
+        for (int step = 0; step < edges.Length; step++)
+        {
+            int count = w.EdgeSegmentLengths[edges[step]].Length;
+            if (walked + count > leg)
+            {
+                EdgeIndex = edges[step];
+                Segment = leg - walked;
+                SegmentProgress = progress;
+                // The via it is heading for is the one at the far end of this
+                // edge; everything before that it has already passed.
+                ViaCursor = step + 1;
+                return this;
+            }
+            walked += count;
+        }
+        // Past the end: leaked, which is what the caller asked for.
+        EdgeIndex = -1;
+        Segment = 0;
+        SegmentProgress = 0f;
+        ViaCursor = itinerary.Via.Count;
+        return this;
+    }
 }
 
 public sealed class Tower
@@ -312,6 +438,126 @@ public sealed class World
     /// longer takes four times as long to leak.</summary>
     public float[] RouteWalkLengths;
 
+    /// <summary>The map's routes as a graph. Movement reads this now; the
+    /// routes themselves are only still read to build it.</summary>
+    public readonly LaneGraph Graph;
+
+    /// <summary>Edge indices, in order, for each itinerary. Itinerary i is
+    /// route i — the derivation walks the routes in order — so an enemy's
+    /// itinerary index is still the index its wave plan gave it.</summary>
+    public readonly int[][] ItineraryEdges;
+
+    /// <summary>Segment lengths of each edge, by edge index. Computed exactly
+    /// as <see cref="RouteLegLengths"/> computes leg lengths, from the same
+    /// points in the same order, because the port from legs to segments has to
+    /// be arithmetically free. A warp edge has one segment of length zero: it
+    /// is crossed, not walked.</summary>
+    public readonly float[][] EdgeSegmentLengths;
+
+    /// <summary>Which lane edges are currently passable. Serialized as the set
+    /// of closed ids, so a save naming an edge a later map no longer has is
+    /// ignored rather than throwing.</summary>
+    public bool[] EdgeOpen = System.Array.Empty<bool>();
+
+    /// <summary>Metres from each graph node to the nearest core.</summary>
+    public float[] DistToCore = System.Array.Empty<float>();
+
+    /// <summary>Metres from every node to every node, indexed by target then by
+    /// source. Rebuilt with <see cref="DistToCore"/> whenever an edge opens or
+    /// closes — once per mutation, not per enemy per tick. The graph is tens of
+    /// edges wide, so the whole table costs less than one tick of the sight
+    /// checks the sim already runs.</summary>
+    public float[][] DistToNode = System.Array.Empty<float[]>();
+
+    /// <summary>The same two tables computed as if every gate were open — what a
+    /// siege enemy routes on. A Ram has to be able to *want* the closed lane,
+    /// or it can never reach the wall it exists to break.</summary>
+    public float[] DistToCoreOpen = System.Array.Empty<float>();
+    public float[][] DistToNodeOpen = System.Array.Empty<float[]>();
+
+    /// <summary>Open or close every gated edge from what is standing on its
+    /// socket, then rebuild the routing tables. Called after anything that can
+    /// put a barricade up or take one down.</summary>
+    /// <summary>Levers currently shut, by gate id, and how long until each can
+    /// be flipped again. A cooldown is the whole cost of a free verb: without
+    /// one, a lever is a lane you toggle every time a tower is about to fire.</summary>
+    public readonly HashSet<string> ShutGates = new();
+    public readonly Dictionary<string, float> GateCooldowns = new();
+
+    public void RefreshEdgeState(string cause = "")
+    {
+        foreach (var lever in Map.OperatedGates)
+        {
+            int e = Graph.EdgeIndexOf(lever.EdgeId);
+            if (e < 0) continue;
+            bool open = !ShutGates.Contains(lever.Id);
+            if (open && !EdgeOpen[e] && cause.Length > 0)
+                Emit(new SimEvent.LaneOpened(lever.EdgeId, cause));
+            EdgeOpen[e] = open;
+        }
+        foreach (var gate in Map.LaneGates)
+        {
+            int e = Graph.EdgeIndexOf(gate.EdgeId);
+            if (e < 0) continue;
+            bool open = !Towers.Any(t => t.SocketId == gate.SocketId
+                && Content.Towers.All[t.DefId].Kind == TowerKind.Barricade);
+            if (open && !EdgeOpen[e] && cause.Length > 0)
+                Emit(new SimEvent.LaneOpened(gate.EdgeId, cause));
+            // A lever already holding this lane shut wins: a wall coming down
+            // does not open a door somebody closed.
+            EdgeOpen[e] = open && EdgeOpen[e];
+        }
+        RefreshRouting();
+    }
+
+    /// <summary>Structure health standing in the way of this edge — the wall a
+    /// siege enemy would have to chew through to use it.</summary>
+    public float BlockingHp(int edgeIndex)
+    {
+        float hp = 0f;
+        string edgeId = Graph.Edges[edgeIndex].Id;
+        foreach (var gate in Map.LaneGates)
+        {
+            if (gate.EdgeId != edgeId) continue;
+            foreach (var tower in Towers)
+                if (tower.SocketId == gate.SocketId
+                    && Content.Towers.All[tower.DefId].Kind == TowerKind.Barricade)
+                    hp += tower.Hp;
+        }
+        return hp;
+    }
+
+    /// <summary>Whether closing this edge would leave some spawn unable to reach
+    /// any core. The rule the whole mutable layer rests on: the map can be
+    /// shaped and cannot be sealed.
+    ///
+    /// Asked of *every* spawn, not only the ones a wave is currently using —
+    /// making a content invariant depend on match state is how it stops being
+    /// provable at author time.</summary>
+    public bool WouldSeal(int edgeIndex)
+    {
+        if (!EdgeOpen[edgeIndex]) return false;          // already shut
+        EdgeOpen[edgeIndex] = false;
+        bool sealed_ = !Graph.EverySpawnReachesCore(EdgeOpen);
+        EdgeOpen[edgeIndex] = true;
+        return sealed_;
+    }
+
+    /// <summary>Recompute the routing tables. Called once at construction and
+    /// once per edge state change; never inside the movement loop.</summary>
+    public void RefreshRouting()
+    {
+        DistToCore = Graph.DistanceToCore(EdgeOpen);
+        DistToNode = new float[Graph.Nodes.Count][];
+        DistToCoreOpen = Graph.DistanceToCore();
+        DistToNodeOpen = new float[Graph.Nodes.Count][];
+        for (int i = 0; i < Graph.Nodes.Count; i++)
+        {
+            DistToNode[i] = Graph.DistanceToNode(Graph.Nodes[i].Id, EdgeOpen);
+            DistToNodeOpen[i] = Graph.DistanceToNode(Graph.Nodes[i].Id);
+        }
+    }
+
     /// <summary>Drivable vehicles, parked where the map put them. The sim owns
     /// their seats and takes the driver's word for their position.</summary>
     public List<Vehicle> Vehicles = new();
@@ -362,6 +608,39 @@ public sealed class World
             }
             RouteLegLengths[r] = legs;
             RouteWalkLengths[r] = walked;
+        }
+
+        Graph = LaneGraph.FromRoutes(map);
+
+        EdgeSegmentLengths = new float[Graph.Edges.Count][];
+        for (int e = 0; e < Graph.Edges.Count; e++)
+        {
+            var edge = Graph.Edges[e];
+            var lengths = new float[edge.Waypoints.Count - 1];
+            for (int i = 0; i < lengths.Length; i++)
+                lengths[i] = edge.Kind == LaneEdgeKind.Warp
+                    ? 0f
+                    : edge.Waypoints[i].DistanceTo(edge.Waypoints[i + 1]);
+            EdgeSegmentLengths[e] = lengths;
+        }
+
+        EdgeOpen = new bool[Graph.Edges.Count];
+        for (int e = 0; e < EdgeOpen.Length; e++) EdgeOpen[e] = true;
+        RefreshRouting();
+
+        var edgeIndex = new Dictionary<string, int>();
+        for (int e = 0; e < Graph.Edges.Count; e++) edgeIndex[Graph.Edges[e].Id] = e;
+
+        ItineraryEdges = new int[Graph.Itineraries.Count][];
+        for (int i = 0; i < Graph.Itineraries.Count; i++)
+        {
+            var itinerary = Graph.Itineraries[i];
+            var steps = new int[itinerary.Via.Count - 1];
+            for (int s = 0; s < steps.Length; s++)
+                steps[s] = edgeIndex[Graph.Edges.First(e =>
+                    e.From == itinerary.Via[s] && e.To == itinerary.Via[s + 1]
+                    && e.Layer == itinerary.Layer).Id];
+            ItineraryEdges[i] = steps;
         }
 
         foreach (var spawn in map.Vehicles)

@@ -230,6 +230,38 @@ def check_hygiene(models, rep):
             rep.fail('root/flip', f, 'non-tower root carries the tower 180° flip')
 
 
+def check_imported(files, rep):
+    """Every delivered model has a Godot .import beside it.
+
+    A .glb with no .import has not been imported, and an unimported model is
+    not missing in any way you can see: `AssetLibrary.Has` returns false, the
+    caller takes its graceful fallback, and the game draws a plain box or
+    nothing at all. It is on disk, it is in the manifest, `make assets` counts
+    it as delivered — and it is not in the game.
+
+    Fifteen `spire_*` files were in exactly that state after the 2026-09-12
+    drop: the boundary wall, the parked cars, the skylight roof bay and every
+    terrain variant. The visible symptom was a plaza that rendered flat white,
+    which reads as a lighting or material bug and is neither. Nothing in `make
+    check` could see it, because every other check reads the file rather than
+    asking whether the engine ever did.
+    """
+    have = [p for p in files if os.path.exists(p + '.import')]
+    # A project with no imports at all is a fresh clone, not a defect — and it
+    # is what the engine-free CI lane looks like, since `.import` is generated
+    # rather than committed. What this rule is for is *partial* import: some
+    # files have been through the engine and some have not, which is what a
+    # drop landing on a working tree looks like and is invisible any other way.
+    if not have:
+        print('import: nothing imported here (fresh clone or the engine-free lane) — skipped')
+        return
+    for path in files:
+        if not os.path.exists(path + '.import'):
+            rep.fail('import/missing', os.path.basename(path),
+                     'no .import beside it — run `make import`; until then the '
+                     'game cannot load this and falls back silently')
+
+
 def check_rigs(models, rows, rep):
     """TowerRig.Resolve finds <id>_yaw / _pitch / _muzzle by name and drives them;
     an aura tower must have no yaw at all, because one that pointed at things
@@ -439,6 +471,7 @@ def main(argv):
     else:
         print(f'! {MANIFEST} is missing — manifest, rig and module checks skipped')
     check_hygiene(models, rep)
+    check_imported(files, rep)
     check_weapons(models, rep)
     check_pivots(models, rows, rep)
 

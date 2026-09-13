@@ -1,6 +1,6 @@
 # Asset usage
 
-**612 delivered · 434 consumed · 178 unused** — regenerate with `make usage`.
+**612 delivered · 454 consumed · 158 unused** — regenerate with `make usage`.
 
 `asset-report.sh` answers *has design shipped it*. This answers the question that
 rots silently: an asset can be delivered, imported, and never referenced by a
@@ -30,7 +30,8 @@ marked `wired=yes` in the manifest by reading the code, and show as unused here.
 ## What the 2026-09-12 drop added to the unused list
 
 The drop (docs/ASSET-DELIVERY.md, plus the Toaster kit and vehicles it carried)
-took the count from 129 to 178. The Toaster's forty-odd files are all consumed
+took the count from 129 to 178; designing the Spire took it back to 158, and
+every name that came off the list was a Spire one. The Toaster's forty-odd files are all consumed
 — tiles in four variants, roads, the drive, trees and their billboards, four
 shells and roofs, the interiors, the dressing, the live warp gate, the vehicles
 — and the 49 that are not fall into six groups, none of them by mistake:
@@ -40,7 +41,7 @@ shells and roofs, the interiors, the dressing, the live warp gate, the vehicles
 | Off-hand reload poses (`hands_<set>_magout` / `_magin` / `_charge`) | 18 | **Requested by code** — the reload animation swaps them in for the platform's own left hand — but only during a reload, and a solo match never reloads: the blind spot above. `--shot foundry <txt> reload` exercises all eighteen. |
 | Reload props (`weapon_<id>_magazine` ×3, `weapon_scattergun_shell`) | 4 | Same blind spot: they exist for the half-second a magazine is in the air. |
 | `weapon_scattergun_magazine` | 1 | **Deliberately unused.** The same hull as `_shell`, shipped under the armoury's name so nothing fell back to a placeholder; `_shell` is the one the code loads. |
-| Spire kit, first export | 20 | `BuildSpireStructures` is the graybox from before design's redesign and mounts the floor, facade, roof and terrain; the redesign's antenna, HVAC, water tank, lobby, stairwell, fire-escape flight, interior lane, parapet, boundary wall and dressed car have no placement yet. Adopting the authored Spire (`docs/design/models/levels.js`) is its own change — new socket ids, save data, the harness build order. |
+| ~~Spire kit, first export~~ | ~~20~~ **0** | **The Spire was designed in M5 and every one of its 47 files is consumed.** Fifteen of those twenty were unplaced because the map was a graybox authored before the kit existed; the other five were variants nobody cycled. Two things beyond placement were needed and both are worth recording, because neither is visible from a file listing: **fifteen `spire_*` files had no `.import`** — the drop landed and Godot had never been run over it, so `AssetLibrary.Has` said no and the boundary wall, the parked cars, the skylight bay and every terrain variant silently did not exist, which is what made the plaza render as flat white; and the roof, boundary and terrain variants needed *cycling* rather than placing, or four of them stay on the shelf while one piece repeats on a lattice. |
 | `shared_ladder_250` / `_500` / `_540` / `_1000` | 4 | Height variants of the ladder; the client scales the one it has. |
 | `shared_warp_gate_idle` | 1 | The gate is live at both ends; idle is the fallback for a kit without the active one. |
 | `foundry_gantry_walk` | 1 | A 4 m grating bridge design added so the Foundry gantry could clear its lane (MAP-AUTHORING §4.10); the gantry still uses a deck bay. |
@@ -60,7 +61,9 @@ waits on the system it is for.
 | Overclock tower (chassis + 30 stage modules) | 31 | Overclock does not exist as a tower yet (M4). Delivered early on purpose — art lead time is the schedule risk. |
 | VFX | 27 | No status/ability/reaction VFX system yet: status particles, reaction bursts, ability effects, shield pop/regen, tower place/sell/upgrade, wave start/clear, the Detector pulse, Overclock link and lane wash. (Muzzle flashes, impacts and tracers are consumed now.) |
 | `_s1` stage modules | 19 | **Correct and intentional.** Design's chassis *is* the level-1 state and `_s1` is an empty root, so sim level N asks for stage N+1 and `_s1` is never requested. |
-| Map elements | 17 | Teleporter pad states, elevator, sniper nest, crusher, floodgate, operated gate, destructible wall, control-point and launcher-pad states, caches, physics props — M3/M4 map elements the sim does not drive yet (the pads and nest that *are* placed use the idle/neutral state). |
+| Map elements | 13 | Crusher, floodgate, destructible wall (+ broken + debris), control-point capturing/held, caches, launcher charging/fired, physics props — M4 map elements the sim does not drive yet. **`shared_gate_operated` came off this list on 2026-09-12**: it is the lane lever, and Switchyard places two. The elevator and sniper nest *are* placed but inert: both have an `Area3D` and **no handler**, and the elevator is credited as a traversal exit by validator §4.1 without working. All of these are the subject of the M5 mutable-map work. |
+| ~~Spire kit, unmounted pieces~~ | ~~8~~ **0** | All eight are placed by the Spire redesign: the antenna, HVAC and water tank as roof plant, the fire-escape flight and stairwell as the flights the routes actually climb, the lobby as the two doorways the kit names by z coordinate, the parapet on the roof's X ends and the scatter at the plaza margins. |
+| Teleporter pad charged/cooldown | 2 | **Requested by code** (`SetPadArt`/`RefreshPadArt` follow charge and cooldown) — the blind spot above: a solo match never stands on a pad long enough to charge one. |
 | M4/M5 enemies and states | 8 | Broodmother, Carapace (+ plate), Leaper (+ windup, airborne), the Ram's enraged state, the Shade's shimmer. Ram, Shade and Mender themselves are wired. |
 | Projectile tier variants (`_t2`, `_t3`) | 6 | No tier escalation wiring; projectiles use the base model at every level. |
 | Hero revive poses | 5 | Downed poses are wired; the revive-crouch pose is not. |

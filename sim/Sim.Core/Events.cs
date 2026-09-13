@@ -56,6 +56,48 @@ public abstract record SimEvent
         public override string LogLine() => $"{Tick} enemyLeaked {EnemyId} {DefId} {LivesLost}";
     }
 
+    /// <summary>An enemy reached a junction with no open way onward.
+    ///
+    /// This should be unreachable: no mutation is allowed to leave a spawn
+    /// unable to reach the core, and the validator proves it at author time.
+    /// It exists so that if the proof is ever wrong the sim says so loudly on
+    /// the tick it happens, instead of an enemy quietly standing still forever
+    /// and a wave that never ends reading as a hung match.</summary>
+    public sealed record EnemyStranded(int EnemyId, string AtNode) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} enemyStranded {EnemyId} {AtNode}";
+    }
+
+    /// <summary>A siege enemy has committed to breaking through, and how long
+    /// it will take.
+    ///
+    /// Twenty seconds of warning is the difference between a threat and a bug.
+    /// Without it the first a player knows of a breach is a lane opening
+    /// somewhere they were not looking, which reads as the map malfunctioning
+    /// rather than as something coming.</summary>
+    public sealed record BreachTargeted(int EnemyId, string EdgeId, float EtaSeconds) : SimEvent
+    {
+        public override string LogLine() =>
+            $"{Tick} breachTargeted {EnemyId} {EdgeId} {F(EtaSeconds)}";
+    }
+
+    public sealed record GateOperated(int PlayerId, string GateId, bool Closed) : SimEvent
+    {
+        public override string LogLine() =>
+            $"{Tick} gateOperated {PlayerId} {GateId} {(Closed ? "shut" : "open")}";
+    }
+
+    public sealed record GateRejected(int PlayerId, string GateId, string Reason) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} gateRejected {PlayerId} {GateId} {Reason}";
+    }
+
+    /// <summary>A blocked lane is open again, and what opened it.</summary>
+    public sealed record LaneOpened(string EdgeId, string Cause) : SimEvent
+    {
+        public override string LogLine() => $"{Tick} laneOpened {EdgeId} {Cause}";
+    }
+
     public sealed record TowerPlaced(int TowerId, string DefId, string SocketId, int PlayerId) : SimEvent
     {
         public override string LogLine() => $"{Tick} towerPlaced {TowerId} {DefId} {SocketId} {PlayerId}";

@@ -45,13 +45,10 @@ public class TeleportRouteTests
             DefId = defId,
             Hp = def.Hp,
             MaxHp = def.Hp,
-            RouteIndex = 0,
-            Leg = leg,
-            LegProgress = progress,
             TotalTraveled = progress,
             Bounty = def.Bounty,
             LeakDamage = def.LeakDamage,
-        };
+        }.AtRouteLeg(w, 0, leg, progress);
         w.Enemies.Add(enemy);
         return enemy;
     }
@@ -64,7 +61,7 @@ public class TeleportRouteTests
 
         Step.Advance(w);
 
-        Assert.Equal(2, enemy.Leg);
+        Assert.Equal(2, enemy.RouteLeg(w));
         Assert.True(enemy.Pos.DistanceTo(new Vec3(180f, 0f, 20f)) < 0.5f,
             $"landed at {enemy.Pos}, not on the arrival pad");
         var jump = w.Events.OfType<SimEvent.EnemyTeleported>().Single();
@@ -104,7 +101,7 @@ public class TeleportRouteTests
 
         Step.Advance(w);
 
-        Assert.Equal(2, enemy.Leg);
+        Assert.Equal(2, enemy.RouteLeg(w));
         Assert.False(float.IsNaN(enemy.Pos.X), "position went NaN on a zero-length leg");
         Assert.True(enemy.Pos.DistanceTo(new Vec3(180f, 0f, 20f)) < 0.5f);
     }
@@ -125,13 +122,13 @@ public class TeleportRouteTests
         enemy.TotalTraveled = 25f;
         Step.Advance(w);
 
-        Assert.Equal(2, enemy.Leg);
-        Assert.Equal(0f, enemy.LegProgress);
+        Assert.Equal(2, enemy.RouteLeg(w));
+        Assert.Equal(0f, enemy.SegmentProgress);
         // Knockback is a route displacement; the drawn position catches up on
         // the next move, which is also where a bad clamp would show as an
         // enemy standing two hundred metres away or dividing by a zero leg.
         Step.Advance(w);
-        Assert.Equal(2, enemy.Leg);
+        Assert.Equal(2, enemy.RouteLeg(w));
         Assert.True(enemy.Pos.DistanceTo(new Vec3(180f, 0f, 20f)) < 1.5f,
             $"knocked back to {enemy.Pos}, not held at the pad");
     }

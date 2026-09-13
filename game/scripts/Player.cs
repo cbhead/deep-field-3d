@@ -20,6 +20,26 @@ public partial class Player : CharacterBody3D
     private const float JumpVelocity = 4.8f;
     private const float ClimbSpeed = 4f;
     private const float ZipSpeed = 14f;
+
+    /// <summary>Cargo lift. Slower than the ladder it competes with (4 m/s), so
+    /// the lift buys you a hands-free climb and costs you time — "slow enough
+    /// that taking it is a decision", which is what the Spire's own comment
+    /// always claimed it was and never was, having no handler at all.</summary>
+    private const float LiftSpeed = 3f;
+
+    /// <summary>How far below the rider's origin the car deck tracks. The
+    /// capsule's origin sits at its centre, so this is half its height plus a
+    /// little clearance.</summary>
+    /// <summary>How far under this body's origin the car's centre is driven.
+    ///
+    /// This body's origin is at its **feet** — the hull is a 1.8 m capsule
+    /// offset half its height up — so a 0.4 m deck whose top is level with the
+    /// floor sits 0.2 m below the origin, and a tenth under that is the "just
+    /// under" the paragraph below is after. It was 1.4, which would have hung
+    /// the car more than a metre beneath the rider. Nothing caught it because
+    /// the only lift in the game had both stops at the same height and was
+    /// marked out of service, so this number had never once been used.</summary>
+    private const float CarDeckDrop = 0.3f;
     private const float BaseMouseSensitivity = 0.0022f;
 
     /// <summary>Multiplier from the profile, applied on top of the base rate so
@@ -167,6 +187,13 @@ public partial class Player : CharacterBody3D
     private bool _onLadder;
     private Vector3? _zipTarget;
 
+    /// <summary>Cargo-lift ride: the Y the car is carrying us to, or null. Rides
+    /// are committed — you board and you arrive — because a lift you can step
+    /// off mid-shaft is a fall, and the Spire's whole §4.1 lesson is about
+    /// climbs that cost a wave.</summary>
+    private float? _liftTargetY;
+    private Node3D? _liftCar;
+
     // --- Vehicles ---------------------------------------------------------
     /// <summary>Being in a seat is not remembered here, it is read from the
     /// view every frame — the sim owns seats, so refusals and evictions cost
@@ -234,6 +261,7 @@ public partial class Player : CharacterBody3D
 
     // What the player is currently looking at (refreshed each physics frame).
     private string _aimSocketId = "";
+    private string _aimGateId = "";
     private int _aimEnemyId = -1;
 
     public override void _Ready()
@@ -464,8 +492,33 @@ public partial class Player : CharacterBody3D
             }
         }
 
+        // Cargo lift: a vertical ride, slow on purpose. Horizontal input is
+        // dead while the car moves, so a lift is a commitment the way the
+        // zipline is rather than a faster ladder.
+        if (_liftTargetY is { } liftY)
+        {
+            float gap = liftY - GlobalPosition.Y;
+            if (Mathf.Abs(gap) < 0.2f)
+            {
+                _liftTargetY = null;
+                _liftCar = null;
+            }
+            else
+            {
+                Velocity = new Vector3(0, Mathf.Sign(gap) * LiftSpeed, 0);
+                MoveAndSlide();
+                // Keep the deck just under our feet rather than level with
+                // them: a static body driven into a CharacterBody3D on the same
+                // frame it is moved resolves as a shove, not a floor.
+                if (_liftCar is not null)
+                    _liftCar.GlobalPosition = _liftCar.GlobalPosition with
+                        { Y = GlobalPosition.Y - CarDeckDrop };
+                return;
+            }
+        }
+
         bool uiOwnsInput = _root.UiCapturesMouse;
-        _onLadder = !uiOwnsInput && InArea("ladder");
+        _onLadder = !uiOwnsInput && InArea(AreaKinds.Ladder);
 
         var velocity = Velocity;
 
@@ -584,6 +637,7 @@ public partial class Player : CharacterBody3D
     private void UpdateAim()
     {
         _aimSocketId = "";
+        _aimGateId = "";
         _aimEnemyId = -1;
 
         // Enemies first (they're what you shoot), then sockets (what you build on).
@@ -592,8 +646,13 @@ public partial class Player : CharacterBody3D
             _aimEnemyId = area.GetMeta("enemy_id").AsInt32();
 
         if (Raycast(InteractRange, worldMask: 1 | (1 << 3), areaMask: 0) is { } reach
-            && reach.Collider is StaticBody3D body && body.HasMeta("socket_id"))
-            _aimSocketId = body.GetMeta("socket_id").AsString();
+            && reach.Collider is StaticBody3D body)
+        {
+            if (body.HasMeta("socket_id")) _aimSocketId = body.GetMeta("socket_id").AsString();
+            // Levers share the socket layer and the same reach, so what the
+            // prompt offers is what the sim will accept.
+            if (body.HasMeta("gate_id")) _aimGateId = body.GetMeta("gate_id").AsString();
+        }
 
         _aimVehicleId = "";
         if (Raycast(InteractRange, worldMask: 1 | (1 << 6), areaMask: 0) is { } near
@@ -629,10 +688,12 @@ public partial class Player : CharacterBody3D
             return _teleportCooldown > 0f
                 ? $"teleporter recharging · {_teleportCooldown:0}s"
                 : "[hold E] choose a destination";
-        if (InArea("armory")) return "[Tab] armory   ·   [5] recraft blueprint";
-        if (InArea("zipline")) return "[E] ride the zipline";
-        if (InArea("ladder")) return "[W] climb";
-        if (InArea("controlPoint")) return "control point";
+        if (_aimGateId.Length > 0) return _root.GateHint(_aimGateId);
+        if (InArea(AreaKinds.Armory)) return "[Tab] armory   ·   [5] recraft blueprint";
+        if (InArea(AreaKinds.Zipline)) return "[E] ride the zipline";
+        if (InArea(AreaKinds.Elevator)) return LiftHint();
+        if (InArea(AreaKinds.Ladder)) return "[W] climb";
+        if (InArea(AreaKinds.ControlPoint)) return "control point";
 
         if (_aimSocketId.Length > 0)
         {
@@ -718,11 +779,51 @@ public partial class Player : CharacterBody3D
 
         // E in a zipline volume rides instead of building — traversal wins,
         // since you can't build on a zipline anyway.
-        if (buildHeld && !_root.WheelOpen && InArea("zipline"))
+        if (buildHeld && !_root.WheelOpen && InArea(AreaKinds.Zipline))
         {
             foreach (var area in _sensor.GetOverlappingAreas())
-                if ((string)area.GetMeta("kind", "") == "zipline")
+                if ((string)area.GetMeta("kind", "") == AreaKinds.Zipline)
                     _zipTarget = (Vector3)area.GetMeta("zip_end");
+            return;
+        }
+
+        // E at a lever flips it. Ahead of the build wheel because a lever is
+        // not on a socket, so the two can never both be offered.
+        if (buildHeld && !_boardPressed && !_root.WheelOpen && _aimGateId.Length > 0)
+        {
+            _boardPressed = true;
+            _root.Submit(new Command.OperateGate(_root.LocalPlayerId, _aimGateId));
+            return;
+        }
+
+        // E in a lift car sends it to whichever stop you are not at. Same
+        // precedence as the zipline: traversal beats building, and there is
+        // nothing to build on a lift.
+        // `_liftTargetY is null` is load-bearing, not a guard against double
+        // work: this method runs *before* the ride each frame, so re-deciding
+        // mid-shaft would pick "the stop I am furthest from" against a Y that
+        // is now halfway, and the car would turn round at the midpoint and
+        // oscillate there forever.
+        if (buildHeld && !_root.WheelOpen && _liftTargetY is null && InArea(AreaKinds.Elevator))
+        {
+            foreach (var area in _sensor.GetOverlappingAreas())
+            {
+                if ((string)area.GetMeta("kind", "") != AreaKinds.Elevator) continue;
+                float bottom = (float)area.GetMeta(AreaKinds.LiftBottomMeta, 0f);
+                float top = (float)area.GetMeta(AreaKinds.LiftTopMeta, 0f);
+                // A lift whose stops are the same height serves nothing. That
+                // is authored, not broken — see AreaKinds.LiftTopMeta — so it
+                // refuses the ride rather than pretending to move.
+                if (Mathf.Abs(top - bottom) < 0.5f) continue;
+                // The stops are floor heights, and this body stands with its
+                // origin on the floor, so they compare directly.
+                _liftTargetY = Mathf.Abs(GlobalPosition.Y - bottom)
+                    < Mathf.Abs(GlobalPosition.Y - top) ? top : bottom;
+                // The car rides with you. Its own body is the thing the shaft
+                // art hangs off, so leaving it parked would put you on a lift
+                // you can watch yourself leave behind.
+                _liftCar = area.GetParent() as Node3D;
+            }
             return;
         }
 
@@ -775,6 +876,21 @@ public partial class Player : CharacterBody3D
     }
 
     private Vehicle? _lastRide;
+
+    /// <summary>A lift that goes nowhere says so, rather than offering a ride
+    /// that does nothing. On the Spire that is every lift — see
+    /// <see cref="AreaKinds.LiftTopMeta"/>.</summary>
+    private string LiftHint()
+    {
+        foreach (var area in _sensor.GetOverlappingAreas())
+        {
+            if ((string)area.GetMeta("kind", "") != AreaKinds.Elevator) continue;
+            float bottom = (float)area.GetMeta(AreaKinds.LiftBottomMeta, 0f);
+            float top = (float)area.GetMeta(AreaKinds.LiftTopMeta, 0f);
+            if (Mathf.Abs(top - bottom) >= 0.5f) return "[E] ride the lift";
+        }
+        return "lift — out of service";
+    }
 
     private bool InArea(string kind) =>
         _sensor.GetOverlappingAreas().Any(a => (string)a.GetMeta("kind", "") == kind);

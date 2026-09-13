@@ -9,7 +9,20 @@ jobs:
   # Fast lane: no engine. Sim.Core compiles standalone (a Godot type leaking
   # into the sim is a build break here), unit tests run, then the harness gates.
   sim:
-    runs-on: ubuntu-latest
+    # Two architectures, because "deterministic" used to mean "deterministic on
+    # this machine" and nothing in CI could tell the difference. Both
+    # determinism gates run two matches inside one process and the whole lane
+    # ran on one runner, so a result that differed between x64 and ARM64 would
+    # have shipped silently — and the sim was full of libm calls whose results
+    # reach the SHA-256'd event log. The transcendentals are gone (see
+    # sim/Sim.Core/Math/DetMath.cs); this is what proves they stay gone.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest      # x64
+          - os: macos-latest       # ARM64
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -23,6 +36,55 @@ jobs:
         run: dotnet run --project sim/Sim.Harness --configuration Release
       - name: Model validation (the delivery contract, docs/ART-INTEGRATION.md)
         run: ./tools/model-validate.py
+      - name: Balance baseline (numbers, for the cross-architecture compare)
+        run: dotnet run --project sim/Sim.Harness --configuration Release -- --baseline
+      # The standing form of "the neutral configuration reproduces the
+      # pre-graph hashes": a change that moves a margin or a log hash has to
+      # commit the new baseline alongside it, and say in the message whether it
+      # is a re-baseline or a regression. On ubuntu only — the committed file
+      # can match one architecture's bytes, and the job below is what says the
+      # other one agrees.
+      - name: Baseline matches the committed one
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          if git diff --exit-code -- docs/gate-baseline.tsv; then
+            echo "balance baseline unchanged"
+          else
+            echo "::error::docs/gate-baseline.tsv is stale — run 'make gate-baseline' and commit it, saying whether this is a re-baseline (margins and hashes move, verdicts do not) or a regression"
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gate-baseline-${{ matrix.os }}
+          path: docs/gate-baseline.tsv
+
+  # The check the matrix exists for: the same seeds must produce the same event
+  # logs on x64 and on ARM64, hashes included. A difference here is a
+  # non-portable operation somewhere in the tick, and the baseline's own diff
+  # names the scenario it entered through.
+  determinism-across-architectures:
+    needs: sim
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: gate-baseline-ubuntu-latest
+          path: x64
+      - uses: actions/download-artifact@v4
+        with:
+          name: gate-baseline-macos-latest
+          path: arm64
+      - name: Compare
+        run: |
+          # Drop the comment preamble; compare the rows, hashes and all.
+          grep -v '^#' x64/gate-baseline.tsv > /tmp/x64.tsv
+          grep -v '^#' arm64/gate-baseline.tsv > /tmp/arm64.tsv
+          if diff -u /tmp/x64.tsv /tmp/arm64.tsv; then
+            echo "identical on x64 and ARM64"
+          else
+            echo "::error::the sim is not machine-portable — see the diff above"
+            exit 1
+          fi
 
   # Smoke lane: headless dedicated server + headless client join on loopback.
   smoke:
