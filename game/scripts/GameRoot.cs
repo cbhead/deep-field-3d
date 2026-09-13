@@ -228,6 +228,21 @@ public partial class GameRoot : Node3D
         _playerName = _profile.Name;
 
         var args = OS.GetCmdlineUserArgs();
+
+        // Read before anything else, because the mode flags below each return
+        // out of the parse the moment they match: --join is the first thing on
+        // a client's command line and everything after it was never looked at.
+        //
+        // A client that builds something and reports what it drew. The flight
+        // code is measured on a host by the rounds probe, which shadows the
+        // sim's own rounds with a client's; what only a real join can answer
+        // is whether a client ever gets that far — whether the shot reaches
+        // it, is parsed, and reaches the branch. Nothing else in the suite
+        // runs those.
+        int probeRounds = System.Array.IndexOf(args, "--probe-rounds");
+        if (probeRounds >= 0 && probeRounds + 1 < args.Length)
+            _clientRoundProbePath = args[probeRounds + 1];
+
         if (args.Contains("--server"))
         {
             int port = ParsePort(args);
@@ -1735,7 +1750,12 @@ public partial class GameRoot : Node3D
         SyncVehicles();
         SyncEnemyViewsRemote(delta);
         SyncAvatarsFromMeta();
+        // After the enemies: a round aims at where its target is drawn this
+        // frame, and aiming at where it was drawn last frame is a round that
+        // trails the thing it is chasing by one frame all the way in.
+        SyncClientRounds(delta);
         SyncWorldEffects(delta);
+        TickClientRoundProbe(delta);
     }
 
     // =====================================================================
@@ -2181,16 +2201,205 @@ public partial class GameRoot : Node3D
             ? rig.Muzzle.GlobalPosition
             : view.Position + Vector3.Up * 1.5f;
 
-        if (Towers.All.TryGetValue(defId, out var def)
-            && def.Kind is TowerKind.Beam or TowerKind.Tesla
-            && EnemyAimPoint(targetId) is { } struck)
+        if (Towers.All.TryGetValue(defId, out var def))
         {
-            Vfx.TowerBeam($"beam:{towerId}", defId, origin, struck, BeamHeat(towerId, defId, def, targetId));
-            if (def.Kind == TowerKind.Tesla) DrawChainHops(towerId, defId, def, targetId);
+            if (def.Kind is TowerKind.Beam or TowerKind.Tesla
+                && EnemyAimPoint(targetId) is { } struck)
+            {
+                Vfx.TowerBeam($"beam:{towerId}", defId, origin, struck, BeamHeat(towerId, defId, def, targetId));
+                if (def.Kind == TowerKind.Tesla) DrawChainHops(towerId, defId, def, targetId);
+            }
+            // A client has no projectiles to follow — they never crossed the
+            // wire — so it flies its own from the shot it just heard about.
+            // A host flies one too while the rounds probe is up, shadowing its
+            // own, which is how that branch gets exercised at all.
+            else if (def.ProjectileSpeed > 0f
+                && (Mode == RunMode.Client || _roundReport is not null))
+                LaunchClientRound(towerId, defId, def, targetId, view);
         }
 
         if (rig.Muzzle is null || !IsInstanceValid(rig.Muzzle)) return;
         Vfx.TowerFired(defId, rig.Muzzle.GlobalPosition, rig.Forward);
+    }
+
+    /// <summary>A round a client is flying for itself.
+    ///
+    /// Tower projectiles have never crossed the wire, so a networked player
+    /// watched a Lance, a Nova and a Skywatch deal damage with nothing in the
+    /// air. Reconstructed rather than sent, which is this client's established
+    /// answer for cosmetic ordnance: a teammate's shot never crosses as a shot
+    /// either — <see cref="Vfx.RemoteShot"/> draws their tracer from the
+    /// damage it did.
+    ///
+    /// Everything a round's flight depends on is already here. The sim's rule
+    /// is one line — step toward the target's current position at the def's
+    /// speed, land inside the hit radius — the tower's position gives the
+    /// origin, `towerFired` gives the target, and the target's position rides
+    /// the snapshot fifteen times a second. What it costs is a flight computed
+    /// twice; what it saves is a per-projectile channel at 15 Hz for something
+    /// that cannot affect the match.</summary>
+    private sealed class ClientRound
+    {
+        public Node3D View = null!;
+        public Vector3 Pos;
+        public int TargetId;
+        public float Speed;
+        public string DefId = "";
+        public float Age;
+
+        /// <summary>The sim projectile this one is shadowing, or -1.
+        ///
+        /// Only the rounds probe sets it, and only on a host. The whole of
+        /// this class is code a networked client runs and nothing else does,
+        /// which is the kind of branch that rots: it would compile, ship, and
+        /// be wrong for everyone who joined a friend's game and nobody who
+        /// tested it. So the probe runs the real thing — same launch, same
+        /// stepping, same view — alongside the sim's own round and measures
+        /// how far apart the two get. A shadow draws nothing and plays no
+        /// impact; it exists to be compared.</summary>
+        public int ShadowOf = -1;
+    }
+
+    private readonly List<ClientRound> _clientRounds = new();
+
+    /// <summary>Rounds this client has launched for itself, ever. The client
+    /// round probe's verdict, and cheap enough to keep always.</summary>
+    private int _clientRoundsFlown;
+
+    private string _clientRoundProbePath = "";
+    private float _clientProbeElapsed;
+    private bool _clientProbeBuilt;
+
+    private void LaunchClientRound(int towerId, string defId, TowerDef def, int targetId, Node3D tower)
+    {
+        // Where the sim starts it: the tower's own position, 1.5 m up. Not the
+        // muzzle — the view launches from the muzzle and catches up, exactly
+        // as it does on a host, and both ends of that are in PlaceRoundView.
+        var origin = tower.Position + new Vector3(0f, 1.5f, 0f);
+
+        // And then one tick, because the sim has already taken one. FireTowers
+        // adds the projectile and StepTowerProjectiles moves it inside the
+        // same tick, so by the time anyone hears the event the sim's round is
+        // already a step down the lane. Starting a copy at the muzzle leaves
+        // it permanently that step behind — a metre for a Lance bolt, which is
+        // most of the gap the probe was measuring before this line existed.
+        if (RoundAimPoint(targetId) is { } firstAim)
+            StepRound(ref origin, firstAim, def.ProjectileSpeed, Balance.Dt);
+
+        var levels = _view.Structures.FirstOrDefault(st => st.Id == towerId)?.PathLevels;
+        var view = SpawnProjectileView(defId, levels);
+        LaunchFromMuzzle(view, towerId, origin);
+
+        // Shadowing the sim's own round: the one this tower just fired at this
+        // target, which the tick that raised the event has already added.
+        int shadowOf = _roundReport is null || _world is null ? -1
+            : _world.Projectiles.LastOrDefault(pr =>
+                pr.FiredBy == towerId && pr.TargetId == targetId && !pr.Dead)?.Id ?? -1;
+        if (shadowOf >= 0) view.Visible = false;
+
+        if (shadowOf < 0) _clientRoundsFlown++;
+        _clientRounds.Add(new ClientRound
+        {
+            View = view, Pos = origin, TargetId = targetId,
+            Speed = def.ProjectileSpeed, DefId = defId, ShadowOf = shadowOf,
+        });
+    }
+
+    /// <summary>Builds something on a joined client and reports the rounds it
+    /// drew. Placement goes through the wire like any other build, so a pass
+    /// also says the server accepted a client's command and relayed the shot
+    /// back — and a client with 250 credits can afford exactly this.</summary>
+    private void TickClientRoundProbe(double delta)
+    {
+        if (_clientRoundProbePath.Length == 0 || Mode != RunMode.Client) return;
+        _clientProbeElapsed += (float)delta;
+
+        if (!_clientProbeBuilt)
+        {
+            // Nothing to build on until the server's world has arrived and the
+            // level is up.
+            if (_clientProbeElapsed < 3f || _map.Sockets.Count == 0) return;
+            float ToRoute(SocketDef so) => _map.Routes
+                .Where(r => r.Layer == EnemyLayer.Ground)
+                .SelectMany(r => r.Waypoints)
+                .Min(w => so.Pos.DistanceTo(w));
+            var onLane = _map.Sockets.Where(so => so.Tag == SocketTag.Ground)
+                .OrderBy(ToRoute).First();
+            Submit(new Command.PlaceTower(LocalPlayerId, "lance", onLane.Id));
+            Submit(new Command.StartWave(LocalPlayerId));
+            GD.Print($"[client] round probe: lance on {onLane.Id}, wave away");
+            _clientProbeBuilt = true;
+            return;
+        }
+
+        // Three, not one: a single round proves the chain but leaves no way to
+        // tell a working branch from one lucky event. They arrive 1.6 a second
+        // once the wave is in range, so the extra two cost almost nothing.
+        if (_clientRoundsFlown < 3 && _clientProbeElapsed < 75f) return;
+
+        var report = new List<string>
+        {
+            $"client round probe on {_map.Id}",
+            $"{_view.Structures.Count} structure(s) visible to the client",
+            $"{_clientRoundsFlown} round(s) flown by the client itself",
+        };
+        string path = _clientRoundProbePath;
+        _clientRoundProbePath = "";
+        WriteProbe(report, path, _clientRoundsFlown >= 3,
+            _clientRoundsFlown >= 3
+                ? $"PASS: a joined client drew {_clientRoundsFlown} round(s) of its own "
+                    + $"by {_clientProbeElapsed:0}s"
+                : $"FAIL: a tower fired for 75s and the client put {_clientRoundsFlown} "
+                    + "round(s) in the air");
+    }
+
+    /// <summary>Flies every round this client is carrying, one frame.</summary>
+    private void SyncClientRounds(double delta)
+    {
+        for (int i = _clientRounds.Count - 1; i >= 0; i--)
+        {
+            var round = _clientRounds[i];
+            round.Age += (float)delta;
+
+            // The target is gone: the sim kills a round whose target died, and
+            // the view leaving the snapshot is the same news. The age cap is
+            // the belt to that brace — a round that somehow never resolves
+            // must not fly forever, and nothing on any map is more than a few
+            // seconds away at these speeds.
+            var aim = RoundAimPoint(round.TargetId);
+            bool done = aim is null || round.Age > 6f
+                || !StepRound(ref round.Pos, aim.Value, round.Speed, delta);
+
+            if (done)
+            {
+                // A shadow is drawn by nothing and lands on nothing; the round
+                // it is shadowing plays that impact.
+                if (round.ShadowOf < 0) Vfx.ProjectileLanded(round.DefId, round.Pos);
+                if (IsInstanceValid(round.View)) round.View.QueueFree();
+                _clientRounds.RemoveAt(i);
+                continue;
+            }
+            PlaceRoundView(round.View, round.Pos, delta);
+        }
+    }
+
+    /// <summary>One frame of a round's flight, mirroring
+    /// <c>Step.StepTowerProjectiles</c>: toward the target's current position
+    /// at the def's speed, landing once the next step would reach it. False
+    /// once it has landed.
+    ///
+    /// Stepped on the frame rather than on the sim's fixed tick, deliberately.
+    /// A client draws twice as often as the server ticks, and a round advanced
+    /// in 33 ms jumps would stutter visibly next to enemies that interpolate.
+    /// The two paths therefore trace very slightly different curves toward a
+    /// moving target; the rounds probe measures that gap rather than assuming
+    /// it is small.</summary>
+    private static bool StepRound(ref Vector3 pos, Vector3 aim, float speed, double delta)
+    {
+        float step = speed * (float)delta;
+        if (pos.DistanceTo(aim) <= step + Balance.ProjectileHitRadius) return false;
+        pos += (aim - pos).Normalized() * step;
+        return true;
     }
 
     /// <summary>How hot a beam is, 0 cold to 1 capped.
@@ -2268,6 +2477,22 @@ public partial class GameRoot : Node3D
             struck = next;
         }
     }
+
+    /// <summary>Where a reconstructed round is flying, which is not where a
+    /// beam points.
+    ///
+    /// A beam is drawn to look right and aims at the body — half the enemy's
+    /// own height, matching the turret convention. A round is reproducing
+    /// something the sim is doing, and the sim aims every projectile at a flat
+    /// 0.8 m above the spine base whatever it is shooting at. Using the
+    /// body-height aim here put a client's copy of a shell 0.79 m from the
+    /// sim's own by the end of its flight, nearly all of it on a Monolith,
+    /// whose body point is 2.25 m up and whose sim aim point is 0.8. Matching
+    /// the sim is free and the whole job of this number.</summary>
+    private Vector3? RoundAimPoint(int enemyId) =>
+        _enemyViews.TryGetValue(enemyId, out var view) && IsInstanceValid(view)
+            ? view.Position + new Vector3(0f, 0.8f, 0f)
+            : null;
 
     /// <summary>Where on an enemy a beam lands. The sim keeps an enemy at its
     /// spine base, and a beam terminating at the feet reads as pointing at the
@@ -3050,6 +3275,9 @@ public partial class GameRoot : Node3D
     private void SyncWorldEffects(double delta)
     {
         _effectClock += delta;
+        // Normally empty on a host; the rounds probe fills it with shadows of
+        // the sim's own rounds so the client's flight code is actually run.
+        if (_clientRounds.Count > 0) SyncClientRounds(delta);
         TickDetectorPulses();
         TickReviveBeams();
         Vfx.SweepHeld();
@@ -3081,7 +3309,7 @@ public partial class GameRoot : Node3D
     {
         if (_roundReport is null || _world is null) return;
 
-        SampleRounds();
+        SampleRounds(delta);
         float was = _roundElapsed;
         _roundElapsed += (float)delta;
         if (Mathf.FloorToInt(_roundElapsed / 5f) > Mathf.FloorToInt(was / 5f))
@@ -3115,6 +3343,8 @@ public partial class GameRoot : Node3D
         report.Add($"{_roundSamples} sample(s) from {string.Join(", ", _roundTowers)}");
         report.Add($"worst heading error: {_roundWorstHeading:0.0} deg off what the round was flying at");
         report.Add($"closest a round got to the muzzle it left: {_roundNearestMuzzle:0.00} m");
+        report.Add($"client-flown copies compared {_roundDriftSamples} time(s); "
+            + $"worst gap from the sim's own round: {_roundWorstDrift:0.00} m");
         if (DisplayServer.GetName() == "headless")
         {
             report.Add($"headless run — no frame to write for {_roundReportPath}.png");
@@ -3133,15 +3363,27 @@ public partial class GameRoot : Node3D
         // it, one launched from the chassis centre is a metre below it.
         bool aimed = _roundWorstHeading < 20f;
         bool fromBarrel = _roundNearestMuzzle < 0.35f;
-        WriteProbe(report, _roundReportPath, enough && aimed && fromBarrel,
+        // A metre on a round in flight is nothing a player can see and an
+        // order of magnitude below the distance between two enemies, but it is
+        // tight enough to catch a reconstruction that has the wrong speed, the
+        // wrong origin or the wrong target — every one of which diverges by
+        // metres within the first half-second.
+        bool together = _roundDriftSamples > 0 && _roundWorstDrift < 1f;
+        WriteProbe(report, _roundReportPath, enough && aimed && fromBarrel && together,
             !enough
                 ? $"FAIL: only {_roundSamples} round sample(s) from {_roundTowers.Count} tower(s) in two minutes"
                 : !aimed
                     ? $"FAIL: a round flew {_roundWorstHeading:0} deg off what it was aimed at"
                     : !fromBarrel
                         ? $"FAIL: no round got closer than {_roundNearestMuzzle:0.00} m to the muzzle it left"
-                        : $"PASS: rounds point where they are going ({_roundWorstHeading:0.0} deg worst) "
-                            + $"and leave the barrel ({_roundNearestMuzzle:0.00} m)");
+                        : !together
+                            ? (_roundDriftSamples == 0
+                                ? "FAIL: no client-flown round was ever compared against the sim's"
+                                : $"FAIL: a client's reconstructed round drifted {_roundWorstDrift:0.00} m "
+                                    + "from the sim's own")
+                            : $"PASS: rounds point where they are going ({_roundWorstHeading:0.0} deg worst), "
+                                + $"leave the barrel ({_roundNearestMuzzle:0.00} m) and a client's copy "
+                                + $"stays within {_roundWorstDrift:0.00} m");
     }
 
     private List<string>? _statusReport;
@@ -3173,8 +3415,24 @@ public partial class GameRoot : Node3D
     /// The angle between where a round points and what it is flying at is the
     /// measurement, sampled only once it has caught up with itself — during
     /// the lead the drawn position is deliberately not the real one.</summary>
-    private void SampleRounds()
+    private float _roundWorstDrift;
+    private int _roundDriftSamples;
+
+    private void SampleRounds(double delta)
     {
+        _ = delta;
+        // How far the client's own flight has got from the sim's. Both are
+        // real: the sim's round is the sim's, and the shadow is the same
+        // LaunchClientRound / SyncClientRounds a networked player runs.
+        foreach (var round in _clientRounds)
+        {
+            if (round.ShadowOf < 0) continue;
+            var real = _world!.Projectiles.FirstOrDefault(pr => pr.Id == round.ShadowOf && !pr.Dead);
+            if (real is null) continue;
+            _roundWorstDrift = Mathf.Max(_roundWorstDrift, round.Pos.DistanceTo(ToGd(real.Pos)));
+            _roundDriftSamples++;
+        }
+
         foreach (var projectile in _world!.Projectiles)
         {
             if (projectile.Dead) continue;
@@ -3325,36 +3583,7 @@ public partial class GameRoot : Node3D
                 LaunchFromMuzzle(view, projectile.FiredBy, here);
             }
 
-            // Point it where it is going. Design authors every round along −Z
-            // — the Nova shell's nose and the Lance slug's tip are both at the
-            // −Z end — and nothing here had ever turned one, so every round in
-            // the game flew sideways. On a brass mortar shell with a lit fuse
-            // cap on the back that is unmistakable; on a thin blue bolt it
-            // read as a slightly odd streak, which is why it survived.
-            var travelled = here - (Vector3)view.GetMeta("last_pos", here);
-            if (travelled.LengthSquared() > 1e-6f)
-                view.LookAt(here + travelled, Mathf.Abs(travelled.Normalized().Dot(Vector3.Up)) > 0.99f
-                    ? Vector3.Forward : Vector3.Up);
-            view.SetMeta("last_pos", here);
-
-            // The sim starts a round at the tower's centre because it has no
-            // barrel to start it at: where the muzzle is depends on the rig's
-            // yaw and pitch, which are a client animation the sim knows
-            // nothing about. So the view launches from the barrel and closes
-            // the gap over the first fraction of its flight. It is the same
-            // place the muzzle flash already happens, so the round now comes
-            // out of the flash instead of out of the middle of the tower.
-            float lead = (float)view.GetMeta("muzzle_lead", 0f);
-            if (lead > 0f)
-            {
-                lead = Mathf.Max(0f, lead - (float)delta / MuzzleLeadSeconds);
-                view.SetMeta("muzzle_lead", lead);
-                var offset = (Vector3)view.GetMeta("muzzle_offset", Vector3.Zero);
-                // Eased out, so the round is quickest to rejoin its own round
-                // at the start and imperceptible by the end.
-                here += offset * (lead * lead);
-            }
-            view.Position = here;
+            PlaceRoundView(view, here, delta);
         }
         // A round that is no longer in the sim landed this tick; its view's
         // last position is the hit, and design's impact goes there.
@@ -4761,6 +4990,9 @@ public partial class GameRoot : Node3D
         // over from the previous world would reattach itself to a different
         // enemy on a different map.
         Vfx.Clear();
+        foreach (var round in _clientRounds)
+            if (IsInstanceValid(round.View)) round.View.QueueFree();
+        _clientRounds.Clear();
         _containment = default;
         _enemyStatuses.Clear();
         _lastSnapshotBits.Clear();
@@ -7249,6 +7481,44 @@ public partial class GameRoot : Node3D
             Position = new Vector3(0, 0.2f * scale, 0),
         });
         return root;
+    }
+
+    /// <summary>Puts a round's view where the round is, pointing where it is
+    /// going. Shared by the two paths that have a round to draw: a host
+    /// reading the sim's own projectiles, and a client flying its own copy.
+    ///
+    /// Design authors every round along −Z — the Nova shell's nose and the
+    /// Lance slug's tip are both at the −Z end — and nothing here had ever
+    /// turned one, so every round in the game flew sideways. On a brass mortar
+    /// shell with a lit fuse cap on the back that is unmistakable; on a thin
+    /// blue bolt it read as a slightly odd streak, which is why it survived.
+    ///
+    /// The lead is the other half: the sim starts a round at the tower's
+    /// centre because it has no barrel to start it at — where the muzzle is
+    /// depends on the rig's yaw and pitch, which are a client animation the
+    /// sim knows nothing about — so the view launches from the barrel and
+    /// closes the gap over the first fraction of its flight. It is the same
+    /// place the muzzle flash already happens, so the round comes out of the
+    /// flash instead of out of the middle of the tower.</summary>
+    private static void PlaceRoundView(Node3D view, Vector3 at, double delta)
+    {
+        var travelled = at - (Vector3)view.GetMeta("last_pos", at);
+        if (travelled.LengthSquared() > 1e-6f)
+            view.LookAt(at + travelled, Mathf.Abs(travelled.Normalized().Dot(Vector3.Up)) > 0.99f
+                ? Vector3.Forward : Vector3.Up);
+        view.SetMeta("last_pos", at);
+
+        float lead = (float)view.GetMeta("muzzle_lead", 0f);
+        if (lead > 0f)
+        {
+            lead = Mathf.Max(0f, lead - (float)delta / MuzzleLeadSeconds);
+            view.SetMeta("muzzle_lead", lead);
+            var offset = (Vector3)view.GetMeta("muzzle_offset", Vector3.Zero);
+            // Eased out, so the round is quickest to rejoin its own round at
+            // the start and imperceptible by the end.
+            at += offset * (lead * lead);
+        }
+        view.Position = at;
     }
 
     /// <summary>How long a round takes to rejoin the sim's own round after

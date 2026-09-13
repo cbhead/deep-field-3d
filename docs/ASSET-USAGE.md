@@ -59,9 +59,17 @@ three are true of a live enemy.
 ```
 
 The third is about a round in flight rather than an effect, and measures the
-two things a screenshot shows instantly and nothing else can: the angle between
-where a round points and what it is flying at, and the nearest any round gets
-to the muzzle it left. A Lance upstream of a Nova, because the mortar shell is
+three things a screenshot shows instantly and nothing else can: the angle
+between where a round points and what it is flying at, the nearest any round
+gets to the muzzle it left, and how far a **client's** copy of a round drifts
+from the sim's own. Tower projectiles do not cross the wire — a client is
+handed the shot and flies the rest, the way `Vfx.RemoteShot` already
+reconstructs a teammate's tracer from the damage it did — so the probe flies a
+real client round alongside each of the sim's and compares them. It runs the
+actual client code rather than a copy of the arithmetic, because that branch is
+otherwise run by nothing: it would compile, ship, and be wrong for everyone who
+joined a friend's game and nobody who tested it. Worst gap measured: 0.5 m,
+against a 1 m gate. A Lance upstream of a Nova, because the mortar shell is
 the model both faults are unmistakable on and a Nova reaching sixteen metres
 clears the wave before it ever walks into a Lance's twelve. Run windowed it
 waits for a frame with a shell actually in the air, aims at it, and writes the

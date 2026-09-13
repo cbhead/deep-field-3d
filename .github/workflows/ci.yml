@@ -105,16 +105,27 @@ jobs:
           # 4.7 and every asset stays unimported.
           godot --headless --path game --import
           godot --headless --path game --build-solutions --quit || true
+      # The client also builds a tower and reports the rounds it drew for
+      # itself. Tower projectiles do not cross the wire — a client is handed
+      # the shot and flies the rest — and the flight code is measured against
+      # the sim's own rounds by the rounds probe in the other job. What only a
+      # real join can answer is whether a client ever gets that far: whether
+      # the shot reaches it, is parsed, and reaches the branch. Placement goes
+      # over the wire too, so a pass also says the server took a client's build
+      # command and relayed the shot back.
       - name: Server + client join smoke
         run: |
           godot --headless --path game -- --server --port 8791 > server.log 2>&1 &
           SERVER_PID=$!
           sleep 6
-          godot --headless --path game --quit-after 900 -- --join 127.0.0.1:8791 > client.log 2>&1
+          godot --headless --path game --quit-after 20000 -- \
+            --join 127.0.0.1:8791 --probe-rounds /tmp/client-rounds.txt > client.log 2>&1
           curl -s http://127.0.0.1:8791/info | tee info.json
           kill $SERVER_PID || true
           grep -q '"app":"deepfield-3d"' info.json
           grep -q "\[client\] joined seat" client.log
+          cat /tmp/client-rounds.txt
+          grep -q "^PASS" /tmp/client-rounds.txt
 
       # The info port is TCP while the game itself is ENet/UDP, so losing that
       # one bind costs a server nothing it can feel: it hosts and plays
