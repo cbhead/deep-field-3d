@@ -30,7 +30,16 @@ public partial class Player : CharacterBody3D
     /// <summary>How far below the rider's origin the car deck tracks. The
     /// capsule's origin sits at its centre, so this is half its height plus a
     /// little clearance.</summary>
-    private const float CarDeckDrop = 1.4f;
+    /// <summary>How far under this body's origin the car's centre is driven.
+    ///
+    /// This body's origin is at its **feet** — the hull is a 1.8 m capsule
+    /// offset half its height up — so a 0.4 m deck whose top is level with the
+    /// floor sits 0.2 m below the origin, and a tenth under that is the "just
+    /// under" the paragraph below is after. It was 1.4, which would have hung
+    /// the car more than a metre beneath the rider. Nothing caught it because
+    /// the only lift in the game had both stops at the same height and was
+    /// marked out of service, so this number had never once been used.</summary>
+    private const float CarDeckDrop = 0.3f;
     private const float BaseMouseSensitivity = 0.0022f;
 
     /// <summary>Multiplier from the profile, applied on top of the base rate so
@@ -806,6 +815,8 @@ public partial class Player : CharacterBody3D
                 // is authored, not broken — see AreaKinds.LiftTopMeta — so it
                 // refuses the ride rather than pretending to move.
                 if (Mathf.Abs(top - bottom) < 0.5f) continue;
+                // The stops are floor heights, and this body stands with its
+                // origin on the floor, so they compare directly.
                 _liftTargetY = Mathf.Abs(GlobalPosition.Y - bottom)
                     < Mathf.Abs(GlobalPosition.Y - top) ? top : bottom;
                 // The car rides with you. Its own body is the thing the shaft

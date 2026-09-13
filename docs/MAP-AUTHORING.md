@@ -3,8 +3,12 @@
 **Status:** proposal, written 2026-09-09; §3 and §4 revised 2026-09-12 for the
 M5 lane graph, where they had come to describe a sim that no longer exists —
 §3 listed re-routing mid-walk under what could not be modelled, and it is what
-a barricade does now. The level-file pipeline itself is still a proposal; the
-follow-on work is listed at the end.
+a barricade does now. §4's clearance rules were revised again the same day, for
+the Spire: written for flat lanes, they were unsatisfiable by any lane that
+climbs. §7's Spire entry is now a record of what was done rather than a list of
+what is needed — it is the first map here designed rather than emerged, which
+is the thing §1 says nobody does. The level-file pipeline itself is still a
+proposal; the follow-on work is listed at the end.
 **Audience:** Claude Design first, this repo second.
 **Companions:** `docs/DESIGN-BRIEF.md` §3 (map briefs),
 `docs/FORWARD-MANIFEST-switchyard.md` (the asks that came out of the last three
@@ -456,6 +460,30 @@ is worse design than the hole it closes.
     convention for structures over track, not a gameplay minimum — Switchyard's
     mid deck clears its lane by 4.6 m and is correct.)
 
+**Both of these are measured off the lane's own pitch, and neither counts the
+lane's own floor** — two clauses that are invisible on a flat map and decide
+whether a map that climbs can exist at all. Written for flat lanes they said
+something else than they meant:
+
+- *Off the lane, not off the horizontal.* A 3.4 m clearance box centred 1.1 m
+  **vertically** above a climbing lane reaches 1.7 m along the run, where the
+  stair carrying that lane has already risen 1.7 m. So the flight intersects
+  the box and the rule reports it as an obstruction of the route it exists to
+  carry. Unsatisfiable by any ramp over about 25°: as written, rule 8 did not
+  forbid walls in lanes, it forbade lanes that climb.
+- *A lane's own floor is not an obstruction of it.* Even pitched, at the corner
+  where a level leg meets a flight the flight is the lane a metre and a half
+  ahead and inside the corridor's own cross-section, so any volume test wide
+  enough to be a lane catches the stair. The probe now asks what each sample is
+  standing on and exempts those bodies, plus anything whose highest point is
+  under the clearance band — floor beside the lane, whoever's lane it belongs
+  to. Neither exemption can hide a wall: a wall is above the lane and holds
+  nothing up.
+
+Three maps' lanes are flat, so on Foundry, Switchyard and the Toaster both
+clauses are the identity and those maps report exactly what they reported
+before. The fourth had never been built.
+
 **Readability**
 **Configurations** — the rules a mutable map adds. All four are checked by the
 harness, in the engine-free lane, because connectivity is a sim invariant and
@@ -552,30 +580,52 @@ the shipped map, then work the outstanding art asks in
 `FORWARD-MANIFEST-switchyard.md`. This one is the proof that a mirror cannot be
 kept in step by hand: it fell three passes behind in a fortnight.
 
-### Spire — design from scratch
-The current Spire is a graybox that no one designed, and it should be thrown
-away rather than repaired. What is needed, in order:
+### Spire — **done, M5**
+Designed rather than repaired, and at 0 violations from 84. All four points
+below were the ask; all four are met.
 
-1. **Export the kit.** `tools/design-export/export.html` imports `FOUNDRY`,
-   `SHARED` and `SWITCHYARD`; add `SPIRE`. Fifteen pieces are already written in
-   `docs/design/models/spire.js` and have never been built. This is a one-line
-   import, and it is the single cheapest improvement available to this project.
-2. **Register the prefix.** `spire_` is missing from `AssetLibrary.Routes` —
-   our side, one line.
-3. **Author the layout.** A vertical map is a different design problem from a
-   flat one and the current file does not attempt it. It needs, at minimum:
-   which floors are fightable; how the ground route climbs or whether enemies
-   arrive at height; where the air lane sits relative to the floors; how a
-   player gets up and — the part the current map fails hardest — how they get
-   *down* without a fall that costs the wave. Its 66 sockets should be
-   redesigned with it, not preserved.
-4. **Keep** the wave count, weather schedule and balance; those pass the gate
-   suite and are not what is wrong.
+1. ~~**Export the kit.**~~ Done in M5 phase 0. `export.html` imported
+   `FOUNDRY`, `SHARED` and `SWITCHYARD` and threw on an unvendored import
+   before it reached anything, so `make design-export` had been producing
+   *nothing at all, for every asset*. Forty-seven `spire_*` files now exist and
+   every one of them is consumed.
+2. ~~**Register the prefix.**~~ Done.
+3. ~~**Author the layout.**~~ Done. See `Maps.Spire` and GameRoot's Spire
+   section for the design and the reasoning; the short version is that the
+   diagnosis in §1 was exactly right and the fix was not subtle. **The routes
+   climbed a building that had been built out of solid slabs.** No door where
+   either ground route enters, no well where the stair pierces a plate, no
+   opening where it reaches the roof, and the cargo lift's shaft rising through
+   four storeys of concrete — which is why it had been marked out of service
+   rather than fixed. The four flights the routes climb had never been built at
+   all, so the stair was forty metres of open air and the pads generated six
+   metres off it hung beside nothing: 26 sockets with no way up and 32 of 43
+   with nothing under them were **one** defect, seen twice.
 
-The Spire's kit notes already imply a layout — a lobby bay used twice, a fire
-escape on the east face, a roof at y 40 with the core on it, an atrium the
-stair reads as a well through. That is a design that was written down and never
-built. Building *that* is the ask.
+   What the layout now answers: all four floors are fightable and pads are on
+   every one; the ground routes climb, one inside and one out, converging at
+   floor two; the air lane spirals outside the building's own volume and lands
+   on the roof; a player goes up by the lift or by ladders staggered round the
+   atrium, and gets *down* by stepping into the atrium — free, instant, and
+   paid for by the forty metres you then have to climb again. That asymmetry is
+   the map: **the defence is mobile and the attack is not.**
+
+   The 66 sockets were redesigned with it and not one survived. The 68 that
+   replaced them were generated against the routes *and against the building* —
+   a clear metre of plate, landing or roof on every side, inside a traversal
+   exit's reach, and chosen until every stretch of every lane, air included,
+   has three pads that can answer it.
+4. ~~**Keep the wave count, weather schedule and balance.**~~ Kept, unchanged,
+   and they still hold: 12 waves clear for the mid-band bot with 16 lives and
+   for towers alone with 12.
+
+The kit's notes did imply a layout — a lobby bay used twice, a fire escape on
+the east face, a roof at y 40 with the core on it, an atrium the stair reads as
+a well through — and design had gone further than that: `spire_stairwell` is
+authored at a 10 m rise over a 10 m run with a note saying to stretch it for
+"the 18 m and 14 m legs", which are exactly the four climbing legs in
+`Maps.cs`. **The kit had always known the shape of this stair.** Nothing had
+ever been built to it.
 
 ---
 

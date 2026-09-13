@@ -9,5 +9,5 @@
 # map	max	what is still wrong
 foundry	0	clean — every rule the probe can measure holds
 switchyard	0	clean — every rule the probe can measure holds
-spire	84	never designed — 26 sockets with no way up, 32 of 43 deck pads with nothing under them, the air lane unreachable at most of its length. See MAP-AUTHORING.md §7. (Was 90; the drop is the probe no longer double-counting shared waypoints, not the map improving.)
+spire	0	clean — designed in M5 against the rules rather than measured after the fact. Was 84 for four milestones: the routes climbed a building with no openings in it, and the pads were generated along those routes without asking whether anything had been built under them.
 toaster	0	clean on the day it landed — the first map generated against the rules rather than measured after the fact

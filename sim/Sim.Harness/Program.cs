@@ -52,9 +52,18 @@ if (args.Contains("--floor-policy"))
         var world = new World(Seed, Maps.All[id]);
         var hand = MatchRunner.FloorPolicy(id);
         var generated = FloorPolicy.Build(world, hand.Count);
+        // Played, not just measured. Coverage is the number this file's own
+        // comments say is misleading — the first generator covered 98% of
+        // Foundry and killed nothing — so print what each build does when it
+        // is the only thing defending the map. Towers alone, no hero: that is
+        // the question a floor is the answer to.
+        var handRun = MatchRunner.RunWithBuild(Seed, Maps.All[id], hand.ToArray());
+        var genRun = MatchRunner.RunWithBuild(Seed, Maps.All[id], generated);
         Console.WriteLine($"== {id}");
-        Console.WriteLine($"   hand      {FloorPolicy.Coverage(world, hand):P0}  {string.Join(" ", hand)}");
-        Console.WriteLine($"   generated {FloorPolicy.Coverage(world, generated):P0}  {string.Join(" ", generated)}");
+        Console.WriteLine($"   hand      {FloorPolicy.Coverage(world, hand):P0} cover  "
+            + $"{handRun.WavesCleared}w {handRun.LivesLeft} lives   {string.Join(" ", hand)}");
+        Console.WriteLine($"   generated {FloorPolicy.Coverage(world, generated):P0} cover  "
+            + $"{genRun.WavesCleared}w {genRun.LivesLeft} lives   {string.Join(" ", generated)}");
     }
     return 0;
 }

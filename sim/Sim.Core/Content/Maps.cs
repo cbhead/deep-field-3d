@@ -398,25 +398,51 @@ public static class Maps
 
     /// <summary>Sector 3. A tower block, and the only map where the core is at
     /// the top: enemies come in at street level and climb, so every fight is
-    /// uphill and the last stand is on the roof. That inverts the thing both
-    /// earlier maps taught — there is no "far end of the lane" to hold, only a
-    /// height to give up slowly.
+    /// uphill and the last stand is on the roof.
     ///
-    /// Two ground routes with opposite characters. The stair winds through the
-    /// building's interior, which is tight, sightline-poor and full of corners
-    /// worth trapping. The fire escape zigzags up the outside, wide open and
-    /// visible from everywhere, which makes it the lane towers want and heroes
-    /// find boring. Choosing which one to fortify is the map's question.
+    /// The map is a section, not a plan, and the asymmetry it is built on is
+    /// that **the defence is mobile and the attack is not**. Enemies climb
+    /// forty metres at walking pace through a fixed spiral and cannot take a
+    /// short cut; a player takes the lift up or steps into the atrium and
+    /// falls to the lobby. So towers are spread thin across four levels by
+    /// necessity and your body is the concentration you move to whichever
+    /// floor is losing. Switchyard asks which lane you fortify. This one asks
+    /// where you are standing right now.
     ///
-    /// The air route spirals the exterior and arrives at the roof directly,
-    /// skipping every floor. On Foundry and Switchyard flyers were a coverage
-    /// tax; here they are a shortcut past the entire map, so roof anti-air
-    /// stops being optional.</summary>
+    /// Two ground routes with opposite characters. The stair spirals the
+    /// atrium inside the building — tight, sightline-poor, full of corners
+    /// worth trapping — in four flights that rise ten metres over runs of 10,
+    /// 10, 18 and 14 m. The fire escape zigzags up the open east face, wide
+    /// open and visible from everywhere, which makes it the lane towers want
+    /// and heroes find boring. They converge at floor two, so the lower half
+    /// is a choice of lanes and the upper half is one flight you have to hold:
+    /// two independent forty-metre climbs was double the defensive burden
+    /// against one life pool, and measured that way.
+    ///
+    /// The air route spirals the outside and lands on the roof, skipping every
+    /// floor. It comes in low over the forecourt where the plaza pads can
+    /// still reach it and climbs out of their world after the second turn, so
+    /// past that point it is answered from the floor edges and the roof or it
+    /// is not answered at all. On Foundry and Switchyard flyers were a
+    /// coverage tax; here they are a shortcut past the entire map.
+    ///
+    /// **This map was redesigned in M5 rather than repaired.** It carried 84
+    /// validator violations for four milestones, and they had one cause: the
+    /// routes climbed a building that had been built out of solid slabs, with
+    /// sockets generated along those routes without asking whether there was
+    /// anything under them. See MAP-AUTHORING.md §7 and GameRoot's Spire
+    /// section for what was wrong and what each piece of the fix is for. The
+    /// wave count, weather schedule and balance are the parts that were never
+    /// wrong, and they are unchanged.</summary>
     public static readonly MapDef Spire = new(
         Id: "spire",
         Routes: new[]
         {
-            // Interior stair: lobby, then four flights around the atrium.
+            // Interior stair: in at the main door, then four flights round the
+            // atrium, arriving on the roof through the stair head. Every leg
+            // that climbs is a flight design already drew — `spire_stairwell`
+            // is authored at a 10 m rise over a 10 m run and its note says to
+            // stretch it for the 18 and the 14.
             new RouteDef("stair", EnemyLayer.Ground, new[]
             {
                 new Vec3(-34f, 0f, 0f),
@@ -431,119 +457,150 @@ public static class Maps
                 new Vec3(-14f, 40f, 0f),
                 new Vec3(0f, 40f, 0f),
             }),
-            // Fire escape: the long way up the outside, fully exposed, and it
-            // re-enters the building at floor three. Two independent forty-metre
-            // climbs was double the defensive burden against one life pool and
-            // measured that way; converging them means the lower half is a
-            // choice of lanes and the upper half is one shared flight you have
-            // to hold. It is also what a fire escape does.
+            // Fire escape: in at the service door, across the ground floor and
+            // out onto the east face, then two flights to floor two where it
+            // joins the stair.
+            //
+            // The ground leg runs at z 16 and not the z 18 it was authored at.
+            // Eighteen put a 3.4 m lane a metre and a half off the south
+            // facade — eleven §4.8 violations, one per sample, for the whole
+            // width of the building — and sixteen is where the kit puts the
+            // service door anyway.
             new RouteDef("escape", EnemyLayer.Ground, new[]
             {
                 new Vec3(-34f, 0f, 16f),
-                new Vec3(-18f, 0f, 18f),
-                new Vec3(18f, 0f, 18f),
-                new Vec3(20f, 10f, 10f),
-                new Vec3(20f, 20f, 2f),
+                new Vec3(-18f, 0f, 16f),
+                new Vec3(20f, 0f, 16f),
+                new Vec3(20f, 10f, 8f),
+                new Vec3(20f, 20f, 0f),
                 new Vec3(14f, 20f, 14f),
                 new Vec3(-4f, 30f, 14f),
                 new Vec3(-14f, 30f, 14f),
                 new Vec3(-14f, 40f, 0f),
                 new Vec3(0f, 40f, 0f),
             }),
-            // Flyers spiral the outside and land on the roof, skipping every
-            // floor between. The whole building is their shortcut.
+            // Flyers climb the outside and come over the parapet. Every leg
+            // stays clear of the building's own volume — the old spiral cut
+            // through floor three and again through the top storey, which is
+            // invisible in a screenshot and reads in a match as flyers inside
+            // the walls. It enters low enough that the forecourt answers the
+            // first twenty metres, and after that only height does.
             new RouteDef("air", EnemyLayer.Air, new[]
             {
-                new Vec3(-40f, 8f, 0f),
-                new Vec3(-26f, 20f, -26f),
-                new Vec3(26f, 30f, -26f),
-                new Vec3(26f, 40f, 20f),
-                new Vec3(0f, 44f, 0f),
+                new Vec3(-40f, 6f, 0f),
+                new Vec3(-30f, 12f, -16f),
+                new Vec3(-23f, 20f, -24f),
+                new Vec3(6f, 27f, -26f),
+                new Vec3(26f, 32f, -22f),
+                new Vec3(26f, 41f, 10f),
+                new Vec3(0f, 43f, 0f),
             }),
         },
-        // Generated against the routes rather than placed by eye, then filtered
-        // on the same rules the placement gate enforces — off the road, not
-        // stranded, 4.8 m apart within a tier. The margin lesson from Foundry's
-        // deck is baked in: every socket sits about 6 m off its leg, which is
-        // reach to spare for every tower and leaves Fog something to take away
-        // without switching anything off.
+        // Generated against the routes *and against the building* — the
+        // difference that matters, and the one the last set was missing. The
+        // old pads were laid six metres off every leg without asking whether
+        // the leg had been built, so 32 of 43 deck pads hung in open air and
+        // 26 of them had no way up. These are placed on measured floor: a
+        // clear metre of plate, landing or roof on every side, inside a
+        // traversal exit's reach, off the lane but within a tower's, and
+        // chosen greedily until every stretch of every lane — including the
+        // air strand — has three pads that can answer it.
         Sockets: new[]
         {
-            new SocketDef("g1", new Vec3(-27.0f, 0.0f, 6.0f), SocketTag.Ground),
-            new SocketDef("g2", new Vec3(-27.0f, 0.0f, -6.0f), SocketTag.Ground),
-            new SocketDef("g3", new Vec3(-19.0f, 0.0f, 6.0f), SocketTag.Ground),
-            new SocketDef("g4", new Vec3(-19.0f, 0.0f, -6.0f), SocketTag.Ground),
-            new SocketDef("g5", new Vec3(-8.0f, 0.0f, -4.9f), SocketTag.Ground),
-            new SocketDef("g6", new Vec3(-8.0f, 0.0f, -10.5f), SocketTag.Ground),
-            new SocketDef("g7", new Vec3(-29.1f, 0.0f, 22.7f), SocketTag.Ground),
-            new SocketDef("g8", new Vec3(-22.7f, 0.0f, 23.5f), SocketTag.Ground),
-            new SocketDef("g9", new Vec3(-21.3f, 0.0f, 11.5f), SocketTag.Ground),
-            new SocketDef("g10", new Vec3(-5.4f, 0.0f, 24.0f), SocketTag.Ground),
-            new SocketDef("g11", new Vec3(-5.4f, 0.0f, 12.0f), SocketTag.Ground),
-            new SocketDef("g12", new Vec3(9.0f, 0.0f, 24.0f), SocketTag.Ground),
-            new SocketDef("g13", new Vec3(9.0f, 0.0f, 12.0f), SocketTag.Ground),
-            new SocketDef("w1", new Vec3(-10.5f, 3.5f, -8.0f), SocketTag.Wall),
-            new SocketDef("w2", new Vec3(-10.5f, 3.5f, -20.0f), SocketTag.Wall),
-            new SocketDef("w3", new Vec3(-6.5f, 7.5f, -8.0f), SocketTag.Wall),
-            new SocketDef("w4", new Vec3(-6.5f, 7.5f, -20.0f), SocketTag.Wall),
-            new SocketDef("w5", new Vec3(2.3f, 10.0f, -8.0f), SocketTag.Wall),
-            new SocketDef("w6", new Vec3(2.3f, 10.0f, -20.0f), SocketTag.Wall),
-            new SocketDef("w7", new Vec3(9.5f, 10.0f, -8.0f), SocketTag.Wall),
-            new SocketDef("w8", new Vec3(9.5f, 10.0f, -20.0f), SocketTag.Wall),
-            new SocketDef("w9", new Vec3(8.0f, 13.5f, -10.5f), SocketTag.Wall),
-            new SocketDef("w10", new Vec3(20.0f, 13.5f, -10.5f), SocketTag.Wall),
-            new SocketDef("w11", new Vec3(8.0f, 17.5f, -6.5f), SocketTag.Wall),
-            new SocketDef("w12", new Vec3(20.0f, 17.5f, -6.5f), SocketTag.Wall),
-            new SocketDef("w13", new Vec3(8.0f, 20.0f, 2.3f), SocketTag.Wall),
-            new SocketDef("w14", new Vec3(8.0f, 20.0f, 9.5f), SocketTag.Wall),
-            new SocketDef("w15", new Vec3(7.7f, 23.5f, 8.0f), SocketTag.Wall),
-            new SocketDef("w16", new Vec3(7.7f, 23.5f, 20.0f), SocketTag.Wall),
-            new SocketDef("w17", new Vec3(0.5f, 27.5f, 8.0f), SocketTag.Wall),
-            new SocketDef("w18", new Vec3(0.5f, 27.5f, 20.0f), SocketTag.Wall),
-            new SocketDef("w19", new Vec3(-7.5f, 30.0f, 8.0f), SocketTag.Wall),
-            new SocketDef("w20", new Vec3(-7.5f, 30.0f, 20.0f), SocketTag.Wall),
-            new SocketDef("w21", new Vec3(-8.0f, 33.5f, 9.1f), SocketTag.Wall),
-            new SocketDef("w22", new Vec3(-20.0f, 33.5f, 9.1f), SocketTag.Wall),
-            new SocketDef("w23", new Vec3(-8.0f, 37.5f, 3.5f), SocketTag.Wall),
-            new SocketDef("w24", new Vec3(-20.0f, 37.5f, 3.5f), SocketTag.Wall),
-            new SocketDef("w25", new Vec3(-9.1f, 40.0f, 6.0f), SocketTag.Wall),
-            new SocketDef("w26", new Vec3(-9.1f, 40.0f, -6.0f), SocketTag.Wall),
-            new SocketDef("w27", new Vec3(-3.5f, 40.0f, 6.0f), SocketTag.Wall),
-            new SocketDef("w28", new Vec3(-3.5f, 40.0f, -6.0f), SocketTag.Wall),
-            new SocketDef("w29", new Vec3(24.5f, 3.5f, 16.7f), SocketTag.Wall),
-            new SocketDef("w30", new Vec3(12.9f, 3.5f, 13.7f), SocketTag.Wall),
-            new SocketDef("w31", new Vec3(25.3f, 7.5f, 13.5f), SocketTag.Wall),
-            new SocketDef("w32", new Vec3(13.7f, 7.5f, 10.5f), SocketTag.Wall),
-            new SocketDef("w33", new Vec3(26.0f, 13.5f, 7.2f), SocketTag.Wall),
-            new SocketDef("w34", new Vec3(14.0f, 13.5f, 7.2f), SocketTag.Wall),
-            new SocketDef("w35", new Vec3(26.0f, 17.5f, 4.0f), SocketTag.Wall),
-            new SocketDef("w36", new Vec3(23.3f, 20.0f, 8.9f), SocketTag.Wall),
-            new SocketDef("w37", new Vec3(20.9f, 20.0f, 13.7f), SocketTag.Wall),
-            new SocketDef("w38", new Vec3(9.0f, 40.0f, 0.0f), SocketTag.Wall),
-            new SocketDef("w39", new Vec3(4.5f, 40.0f, 7.8f), SocketTag.Wall),
-            new SocketDef("w40", new Vec3(4.5f, 40.0f, -7.8f), SocketTag.Wall),
-            new SocketDef("w41", new Vec3(24.0f, 30.0f, -18.0f), SocketTag.Wall),
-            new SocketDef("w43", new Vec3(24.0f, 38.0f, 12.0f), SocketTag.Wall),
-            new SocketDef("w44", new Vec3(16.0f, 40.0f, 14.0f), SocketTag.Wall),
-            new SocketDef("t1", new Vec3(-24.0f, 0.0f, 0.0f), SocketTag.Trap),
-            new SocketDef("t2", new Vec3(-9.0f, 5.0f, -14.0f), SocketTag.Trap),
-            new SocketDef("t3", new Vec3(14.0f, 15.0f, -9.0f), SocketTag.Trap),
-            new SocketDef("t4", new Vec3(5.0f, 25.0f, 14.0f), SocketTag.Trap),
-            new SocketDef("t5", new Vec3(-14.0f, 35.0f, 7.0f), SocketTag.Trap),
-            new SocketDef("t6", new Vec3(-26.0f, 0.0f, 17.0f), SocketTag.Trap),
-            new SocketDef("t7", new Vec3(19.0f, 5.0f, 14.0f), SocketTag.Trap),
-            new SocketDef("t8", new Vec3(17.0f, 20.0f, 8.0f), SocketTag.Trap),
-            new SocketDef("t9", new Vec3(-9.0f, 30.0f, 14.0f), SocketTag.Trap),
-            new SocketDef("t10", new Vec3(-7.0f, 40.0f, 0.0f), SocketTag.Trap),
+            // Plaza pads. The two western clusters answer the air lane's
+            // approach as well as the ground lanes' — a flyer at 12 m over the
+            // forecourt is the one stretch of that strand a tower on the floor
+            // can reach, and after the second turn it is out of their world.
+            new SocketDef("g1", new Vec3(-42.0f, 0.0f, -16.0f), SocketTag.Ground),
+            new SocketDef("g2", new Vec3(-42.0f, 0.0f, -8.0f), SocketTag.Ground),
+            new SocketDef("g3", new Vec3(-38.0f, 0.0f, -12.0f), SocketTag.Ground),
+            new SocketDef("g4", new Vec3(-28.0f, 0.0f, -16.0f), SocketTag.Ground),
+            new SocketDef("g5", new Vec3(-24.0f, 0.0f, -12.0f), SocketTag.Ground),
+            new SocketDef("g6", new Vec3(-24.0f, 0.0f, -6.0f), SocketTag.Ground),
+            new SocketDef("g7", new Vec3(-24.0f, 0.0f, 10.0f), SocketTag.Ground),
+            new SocketDef("g8", new Vec3(-20.0f, 0.0f, 20.0f), SocketTag.Ground),
+            new SocketDef("g9", new Vec3(-16.0f, 0.0f, 6.0f), SocketTag.Ground),
+            new SocketDef("g10", new Vec3(-16.0f, 0.0f, 12.0f), SocketTag.Ground),
+            new SocketDef("g11", new Vec3(-14.0f, 0.0f, 20.0f), SocketTag.Ground),
+            new SocketDef("g12", new Vec3(-10.0f, 0.0f, 6.0f), SocketTag.Ground),
+            new SocketDef("g13", new Vec3(2.0f, 0.0f, -14.0f), SocketTag.Ground),
+            new SocketDef("g14", new Vec3(8.0f, 0.0f, 8.0f), SocketTag.Ground),
+            new SocketDef("g15", new Vec3(12.0f, 0.0f, 4.0f), SocketTag.Ground),
+            // Deck pads, numbered up the building: w1 is the lowest and w39 the
+            // highest, because on this map the floor a pad is on is the first
+            // thing you need to know about it. Every one stands on a plate, a
+            // fire-escape landing or the roof, a clear metre from the edge.
+            // floor one (y 10)
+            new SocketDef("w1", new Vec3(-18.0f, 10.0f, -8.0f), SocketTag.Wall),
+            new SocketDef("w2", new Vec3(-16.0f, 10.0f, -16.0f), SocketTag.Wall),
+            new SocketDef("w3", new Vec3(8.0f, 10.0f, -2.0f), SocketTag.Wall),
+            new SocketDef("w4", new Vec3(8.0f, 10.0f, 18.0f), SocketTag.Wall),
+            new SocketDef("w5", new Vec3(10.0f, 10.0f, 6.0f), SocketTag.Wall),
+            new SocketDef("w6", new Vec3(10.0f, 10.0f, 12.0f), SocketTag.Wall),
+            new SocketDef("w7", new Vec3(12.0f, 10.0f, -8.0f), SocketTag.Wall),
+            new SocketDef("w8", new Vec3(14.0f, 10.0f, 16.0f), SocketTag.Wall),
+            new SocketDef("w9", new Vec3(18.0f, 10.0f, 4.0f), SocketTag.Wall),
+            // floor two (y 20)
+            new SocketDef("w10", new Vec3(-18.0f, 20.0f, -14.0f), SocketTag.Wall),
+            new SocketDef("w11", new Vec3(-14.0f, 20.0f, -18.0f), SocketTag.Wall),
+            new SocketDef("w12", new Vec3(-8.0f, 20.0f, -18.0f), SocketTag.Wall),
+            new SocketDef("w13", new Vec3(-2.0f, 20.0f, -18.0f), SocketTag.Wall),
+            new SocketDef("w14", new Vec3(4.0f, 20.0f, -18.0f), SocketTag.Wall),
+            new SocketDef("w15", new Vec3(10.0f, 20.0f, -18.0f), SocketTag.Wall),
+            new SocketDef("w16", new Vec3(18.0f, 20.0f, -18.0f), SocketTag.Wall),
+            // floor three (y 30)
+            new SocketDef("w17", new Vec3(-16.0f, 30.0f, -16.0f), SocketTag.Wall),
+            new SocketDef("w18", new Vec3(-16.0f, 30.0f, 0.0f), SocketTag.Wall),
+            new SocketDef("w19", new Vec3(-12.0f, 30.0f, 12.0f), SocketTag.Wall),
+            new SocketDef("w20", new Vec3(-10.0f, 30.0f, 6.0f), SocketTag.Wall),
+            new SocketDef("w21", new Vec3(-6.0f, 30.0f, 12.0f), SocketTag.Wall),
+            new SocketDef("w22", new Vec3(-4.0f, 30.0f, -16.0f), SocketTag.Wall),
+            new SocketDef("w23", new Vec3(8.0f, 30.0f, -18.0f), SocketTag.Wall),
+            new SocketDef("w24", new Vec3(8.0f, 30.0f, 6.0f), SocketTag.Wall),
+            new SocketDef("w25", new Vec3(14.0f, 30.0f, -16.0f), SocketTag.Wall),
+            new SocketDef("w26", new Vec3(16.0f, 30.0f, 2.0f), SocketTag.Wall),
+            new SocketDef("w27", new Vec3(16.0f, 30.0f, 12.0f), SocketTag.Wall),
+            new SocketDef("w28", new Vec3(18.0f, 30.0f, -12.0f), SocketTag.Wall),
+            new SocketDef("w29", new Vec3(18.0f, 30.0f, -6.0f), SocketTag.Wall),
+            // the roof (y 40)
+            new SocketDef("w30", new Vec3(-8.0f, 40.0f, 8.0f), SocketTag.Wall),
+            new SocketDef("w31", new Vec3(-4.0f, 40.0f, 12.0f), SocketTag.Wall),
+            new SocketDef("w32", new Vec3(-2.0f, 40.0f, 4.0f), SocketTag.Wall),
+            new SocketDef("w33", new Vec3(12.0f, 40.0f, -8.0f), SocketTag.Wall),
+            new SocketDef("w34", new Vec3(12.0f, 40.0f, 6.0f), SocketTag.Wall),
+            new SocketDef("w35", new Vec3(12.0f, 40.0f, 12.0f), SocketTag.Wall),
+            new SocketDef("w36", new Vec3(14.0f, 40.0f, -14.0f), SocketTag.Wall),
+            new SocketDef("w37", new Vec3(16.0f, 40.0f, 2.0f), SocketTag.Wall),
+            new SocketDef("w38", new Vec3(18.0f, 40.0f, -4.0f), SocketTag.Wall),
+            new SocketDef("w39", new Vec3(18.0f, 40.0f, 8.0f), SocketTag.Wall),
+            // Trap plates on the flat legs, where a plate is a plate and not a
+            // step: contact triggers, so the flights get none.
+            new SocketDef("t1", new Vec3(-27.3f, 0.0f, 0.0f), SocketTag.Trap),
+            new SocketDef("t2", new Vec3(-20.7f, 0.0f, 0.0f), SocketTag.Trap),
+            new SocketDef("t3", new Vec3(-14.0f, 0.0f, -7.0f), SocketTag.Trap),
+            new SocketDef("t4", new Vec3(2.0f, 10.0f, -14.0f), SocketTag.Trap),
+            new SocketDef("t5", new Vec3(8.0f, 10.0f, -14.0f), SocketTag.Trap),
+            new SocketDef("t6", new Vec3(14.0f, 20.0f, 2.0f), SocketTag.Trap),
+            new SocketDef("t7", new Vec3(14.0f, 20.0f, 8.0f), SocketTag.Trap),
+            new SocketDef("t8", new Vec3(-7.0f, 40.0f, 0.0f), SocketTag.Trap),
+            new SocketDef("t9", new Vec3(-26.0f, 0.0f, 16.0f), SocketTag.Trap),
+            new SocketDef("t10", new Vec3(-11.7f, 0.0f, 16.0f), SocketTag.Trap),
+            new SocketDef("t11", new Vec3(-5.3f, 0.0f, 16.0f), SocketTag.Trap),
+            new SocketDef("t12", new Vec3(1.0f, 0.0f, 16.0f), SocketTag.Trap),
+            new SocketDef("t13", new Vec3(7.3f, 0.0f, 16.0f), SocketTag.Trap),
+            new SocketDef("t14", new Vec3(13.7f, 0.0f, 16.0f), SocketTag.Trap),
         },
         HeroSpawn: new Vec3(-30f, 0f, 8f),
         ArmoryPos: new Vec3(-26f, 0f, 10f),
+        // One per level, each on floor that exists. The roof station is where
+        // the match ends, and the lobby one is where you come back to when you
+        // take the atrium down.
         HeroStations: new[]
         {
-            new HeroStationDef("lobby", new Vec3(-18f, 0f, 6f)),
-            new HeroStationDef("mezzanine", new Vec3(4f, 10f, -18f)),
-            new HeroStationDef("midFloor", new Vec3(18f, 20f, 6f)),
-            new HeroStationDef("upperFloor", new Vec3(-8f, 30f, 18f)),
+            new HeroStationDef("lobby", new Vec3(-16f, 0f, 6f)),
+            new HeroStationDef("floorOne", new Vec3(-14f, 10f, 6f)),
+            new HeroStationDef("floorTwo", new Vec3(14f, 20f, 8f)),
+            new HeroStationDef("floorThree", new Vec3(-14f, 30f, -6f)),
             new HeroStationDef("roof", new Vec3(0f, 40f, -8f)),
         },
         TotalWaves: 12,
@@ -554,18 +611,18 @@ public static class Maps
             [7] = Conditions.Night.Id,
             [11] = Conditions.Fog.Id,
         },
-        // `floorThree` is where the stair and the fire escape converge — the
-        // one junction on the map, and the reason the upper half is a single
+        // `floorTwo` is where the stair and the fire escape converge — the one
+        // junction on the map, and the reason the upper half is a single
         // flight you have to hold rather than two independent forty-metre
         // climbs against one life pool.
         LaneNodeNamesOrNull: new[]
         {
-            new LaneNodeNameDef("lobby", new Vec3(-34f, 0f, 0f)),
-            new LaneNodeNameDef("escapeFoot", new Vec3(-34f, 0f, 16f)),
-            new LaneNodeNameDef("floorThree", new Vec3(14f, 20f, 14f)),
+            new LaneNodeNameDef("street", new Vec3(-34f, 0f, 0f)),
+            new LaneNodeNameDef("serviceStreet", new Vec3(-34f, 0f, 16f)),
+            new LaneNodeNameDef("floorTwo", new Vec3(14f, 20f, 14f)),
             new LaneNodeNameDef("roofCore", new Vec3(0f, 40f, 0f)),
-            new LaneNodeNameDef("airStreet", new Vec3(-40f, 8f, 0f)),
-            new LaneNodeNameDef("airCore", new Vec3(0f, 44f, 0f)),
+            new LaneNodeNameDef("airStreet", new Vec3(-40f, 6f, 0f)),
+            new LaneNodeNameDef("airCore", new Vec3(0f, 43f, 0f)),
         });
 
     /// <summary>M4 — "The Toaster": a farm three times the width of any yard

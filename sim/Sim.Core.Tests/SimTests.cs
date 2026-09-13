@@ -587,8 +587,14 @@ public class AirborneScrapTests
         player.Pos = new Vec3(40f, 0f, 30f);
         w.Enqueue(new Command.PlayerSync(1, player.Pos));
 
-        // High over the building rather than out over the street.
-        var skiff = SkiffOnTheStrand(w, Maps.Spire, leg: 2, progress: 0.5f);
+        // High over the building rather than out over the street. That is the
+        // last leg now, and only the last leg: the Spire's strand was
+        // re-authored in M5 to stay clear of the building's own volume — the
+        // old spiral cut through floor three and again through the top storey
+        // — so it crosses the roof once, on its way to the core, and is over
+        // the street for the whole of the rest of it. Scrap dropped out there
+        // landing on the street is the right answer, not a regression.
+        var skiff = SkiffOnTheStrand(w, Maps.Spire, leg: 5, progress: 0.5f);
         Assert.True(skiff.Pos.Y > 20f, $"expected the strand high here (was {skiff.Pos.Y})");
         SkywatchKill(w, Maps.Spire, skiff);
 

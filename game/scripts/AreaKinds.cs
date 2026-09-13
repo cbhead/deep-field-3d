@@ -41,14 +41,18 @@ public static class AreaKinds
     public static readonly string[] Handled =
         { Ladder, Zipline, Launcher, Teleporter, Elevator, Armory, ControlPoint };
 
-    /// <summary>Meta key on an <see cref="Elevator"/> area: the Y its car rises
-    /// to. Authored rather than derived from the shaft, because a shaft that
-    /// passes through a solid floor — which is exactly what the Spire's does —
+    /// <summary>Meta key on an <see cref="Elevator"/> area: the **floor height**
+    /// its car rises to — the Y a player stands at when it arrives, not the Y
+    /// of the car body or of the area. See <c>Player.FloorToOrigin</c> for why
+    /// that sentence is worth writing down.
+    ///
+    /// Authored rather than derived from the shaft, because a shaft that
+    /// passes through a solid floor — which is exactly what the Spire's did —
     /// is a lift that serves nothing, and the map file should have to say so
     /// rather than the validator assuming the top of the tube is a destination.</summary>
     public const string LiftTopMeta = "lift_top";
 
-    /// <summary>Meta key on an <see cref="Elevator"/> area: the Y its car rests
-    /// at.</summary>
+    /// <summary>Meta key on an <see cref="Elevator"/> area: the floor height
+    /// its car rests at, on the same terms as <see cref="LiftTopMeta"/>.</summary>
     public const string LiftBottomMeta = "lift_bottom";
 }
