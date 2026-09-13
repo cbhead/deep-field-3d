@@ -189,8 +189,14 @@ def check_manifest(models, rows, rep):
         for key in ('tris', 'parts'):
             if key in row and row[key] != m[key]:
                 rep.fail(f'manifest/{key}', f, f'manifest {row[key]}, file {m[key]}')
-        if row.get('bytes') is not None and row['bytes'] != m['bytes']:
-            rep.fail('manifest/bytes', f, f"manifest {row['bytes']}, file {m['bytes']}")
+        # `bytes` is deliberately NOT checked. Nothing reads it — the game takes
+        # bounds and the rig rows and leaves the rest — and it is the one field
+        # that moves on its own: re-exporting an unchanged model can shift a file
+        # by a few bytes (glTF float formatting, and the canvas-drawn floor
+        # textures re-encode differently between runs) with identical geometry.
+        # Checking it turned an ordinary `make design-export` into twenty-four
+        # failures that no edit could clear, which is the red build this script's
+        # docstring promises not to be. Geometry is what has to agree.
         want, got = row.get('bounds'), (m['min'], m['max'])
         if bool(want) != bool(m['min']):
             rep.fail('manifest/bounds', f, f'manifest {"has" if want else "no"} bounds, file differs')

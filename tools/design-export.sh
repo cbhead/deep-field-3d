@@ -21,6 +21,9 @@
 # its rows into the existing manifest rather than replacing it, and skips the
 # palette/icon/design-system bundle, which it never rewrites anyway.
 #
+# The page lists every file it writes beside the viewer; click a row to load that
+# .glb back off disk and look at it.
+#
 # Afterwards: `make assets && make usage`, and read docs/ASSET-DELIVERY.md for
 # what design says changed.
 set -euo pipefail
