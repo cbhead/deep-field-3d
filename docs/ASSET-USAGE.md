@@ -100,6 +100,32 @@ between: `vfx_shield_regen` is a window closing, and a bit cannot say that.
 | `vfx_detector_pulse` | a 2 s sweep per Detector, staggered by tower id so a pair covering a junction sweeps rather than strobes. Not an event: an aura tower reapplies its status thirty times a second, and a pulse per tick is not a pulse |
 | `vfx_revive_beam` | the sim's revive clock, now on the meta channel — so the teammate covering the door sees the same ring fill as the one crouched over the body |
 | 6 `proj_*_t2` / `_t3` | design's rule from projectiles.js: the tier follows the damage path, L7 → T2, L10 → T3 |
+| `proj_arc_beam` · `proj_filament_beam` | the two towers that fire no round — see below |
+
+Two things were wrong on first play and are worth recording, because both are
+the kind of failure that looks like working software:
+
+**Two delivered projectiles had never been on screen at all.** The Arc and the
+Filament never create a projectile in the sim — a tesla arc is instant and a
+beam applies its damage where it stands — so the projectile view sync, which
+follows sim projectiles, had nothing to follow for either. The models were
+delivered, imported, correctly named, counted as consumed by this measurement
+(the content audit instantiates one round per tower), and no player had ever
+seen one: an Arc and a Filament dealt damage in silence. They are drawn now
+from `TowerFired`, as a unit-length streak scaled to the hit — design's own
+contract for them, and the same one the tracers use. The Arc's chain hop is
+drawn too, the client mirroring the sim's nearest-other-target search the way
+the turret aim already mirrors `PickTarget`.
+
+**Half the effects were being laid on their backs.** `Spawn` turned a model's
+−Z toward a direction, and passing `Vector3.Up` to mean "this one points
+upward" does the opposite of what it reads as: it tips an upright effect
+ninety degrees. The wave-clear beat rose sideways out of the core, and every
+ground ring in the set stood up like a hoop. Anything authored the way it
+stands now passes no direction at all, and only things that genuinely aim —
+muzzle flashes, tracers, beams — pass one. `vfx_impact_nova` had the same bug
+before any of this work, with a comment next to it correctly saying the ring is
+authored flat on the ground.
 
 Two are left, and neither is art:
 

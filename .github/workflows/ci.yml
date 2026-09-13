@@ -209,13 +209,15 @@ jobs:
           grep -q "^PASS" /tmp/vfx.txt
           ! grep -qiE "^ERROR|SCRIPT ERROR" vfx.log
 
-      # The half the probe above cannot prove: a status effect is held on an
+      # The half the probe above cannot prove. A status effect is held on an
       # enemy by three things agreeing — the sim applying it, the snapshot's
       # channel byte still saying so, and the view sync asking for it again
-      # every frame. Nothing else exercises that chain, and a solo match never
-      # applies a status because nothing in one pulls a trigger. A Singularity
-      # does not need one.
-      - name: Status probe (a status is drawn on a live enemy)
+      # every frame. A beam is drawn by a tower that never creates a
+      # projectile, which is how both beam models spent a milestone delivered
+      # and never once on screen. Neither path is reached by a solo match,
+      # because nothing in one pulls a trigger — and none of these three
+      # towers needs anyone to.
+      - name: Live effects probe (statuses and beams on real enemies)
         run: |
           godot --headless --path game --quit-after 9000 -- \
             --shot foundry /tmp/statuses.txt statuses > statuses.log 2>&1 || true

@@ -842,24 +842,42 @@ public partial class GameRoot : Node3D
             return;
         }
 
-        // Statuses on a real enemy in a real match, which is the half the
-        // effect catalogue cannot prove: every other check here either
-        // instantiates a name or calls an entry point directly, and neither
-        // touches the path a burn actually arrives by — the sim applies a
-        // status, the snapshot's channel byte says it is still there, and the
-        // view sync holds an effect on the body for as long as both agree.
-        // A Singularity chills everything that walks past it and needs nobody
-        // to pull a trigger, which is what makes it the tower to build here.
+        // The two effects a probe cannot fake, on a real enemy in a real
+        // match. Everything else here either instantiates a name or calls an
+        // entry point directly, and neither touches the paths these arrive by.
+        //
+        // A status is held by three things agreeing: the sim applying it, the
+        // snapshot's channel byte still saying so, and the view sync asking
+        // for it again every frame. A beam is drawn by a tower that never
+        // creates a projectile, off an event that was host-only until it was
+        // not. Three towers cover both and none of them needs a trigger
+        // pulled: the Singularity chills whatever walks past, the Filament
+        // burns whatever it can see, the Arc chains to a second one.
         if (_shotView == "statuses" && _world is not null)
         {
             _shotView = "eye";
             _statusReportPath = path;
-            _statusReport = new List<string> { $"status probe on {_map.Id}" };
-            string socket = BuildableSocket().Id;
-            _world.Money = 5000;
-            Submit(new Command.PlaceTower(LocalPlayerId, "singularity", socket));
+            _statusReport = new List<string> { $"live effects probe on {_map.Id}" };
+            _world.Money = 9000;
+
+            var sockets = _map.Sockets
+                .Where(so => so.Tag == SocketTag.Ground)
+                .OrderBy(so => _map.Routes
+                    .Where(r => r.Layer == EnemyLayer.Ground)
+                    .SelectMany(r => r.Waypoints)
+                    .Min(w => so.Pos.DistanceTo(w)))
+                .Take(3).ToList();
+            // Filament nearest the lane on purpose: it is the more fragile of
+            // the two beam paths, because it has no muzzle flash and therefore
+            // no muzzle node, and the beam has to start from the chassis head
+            // instead. Whichever tower the wave reaches first is the one this
+            // proves, so make it that one.
+            foreach (var (defId, socket) in new[] { "filament", "arc", "singularity" }.Zip(sockets))
+            {
+                Submit(new Command.PlaceTower(LocalPlayerId, defId, socket.Id));
+                _statusReport.Add($"{defId} on {socket.Id}");
+            }
             Submit(new Command.StartWave(LocalPlayerId));
-            _statusReport.Add($"singularity on {socket}");
             return;
         }
 
@@ -1761,7 +1779,7 @@ public partial class GameRoot : Node3D
                     ReleaseStructureView(sold.TowerId);
                     break;
                 case SimEvent.TowerFired fired:
-                    OnTowerFired(fired.TowerId);
+                    OnTowerFired(fired.TowerId, fired.TargetId);
                     break;
 
                 // A demolished structure has to leave the map, or the Ram's
@@ -1927,6 +1945,7 @@ public partial class GameRoot : Node3D
                 OnTowerUpgraded(int.Parse(p[2]), p[3], int.Parse(p[4]));
                 OnStructureUpgraded(int.Parse(p[2]), int.Parse(p[4]));
                 break;
+            case "towerFired": OnTowerFired(int.Parse(p[2]), int.Parse(p[3])); break;
             case "towerSold":
                 OnStructureSold(int.Parse(p[2]));
                 ReleaseStructureView(int.Parse(p[2]));
@@ -2072,16 +2091,89 @@ public partial class GameRoot : Node3D
     private readonly HashSet<int> _warped = new();
 
     /// <summary>Design's flash at the rig's muzzle, facing where the barrel
-    /// points. Only the host sees these: TowerFired is not relayed, and a
-    /// client's projectile views tell the same story a beat later.</summary>
-    private void OnTowerFired(int towerId)
+    /// points, and the beam for the two towers that have no round.
+    ///
+    /// This used to be host-only on the reasoning that a client's projectile
+    /// views tell the same story a beat later. True for a Lance; false for the
+    /// Arc and the Filament, which have no projectile for a client to see, so
+    /// a networked player watched two towers deal damage in total silence.
+    /// Every event's line is already on the reliable channel — nothing needed
+    /// relaying, only parsing.</summary>
+    private void OnTowerFired(int towerId, int targetId)
     {
         if (!_towerViews.TryGetValue(towerId, out var view) || !IsInstanceValid(view)) return;
         string defId = (string)view.GetMeta("def_id", "");
         if (defId.Length == 0) return;
         var rig = RigFor(towerId, view, defId);
+
+        // A beam tower has something to draw and no round to draw it with.
+        // Neither the Arc nor the Filament ever creates a projectile — a tesla
+        // arc is instant and a beam applies damage where it stands — so the
+        // projectile sync has never had anything to follow for them, and both
+        // delivered models had never been on screen. The muzzle node if the
+        // rig has one, the chassis head otherwise: the Filament has no flash
+        // and therefore no muzzle.
+        var origin = rig.Muzzle is not null && IsInstanceValid(rig.Muzzle)
+            ? rig.Muzzle.GlobalPosition
+            : view.Position + Vector3.Up * 1.5f;
+
+        if (Towers.All.TryGetValue(defId, out var def)
+            && def.Kind is TowerKind.Beam or TowerKind.Tesla
+            && EnemyAimPoint(targetId) is { } struck)
+        {
+            Vfx.TowerBeam($"beam:{towerId}", defId, origin, struck);
+            if (def.Kind == TowerKind.Tesla) DrawChainHops(towerId, defId, def, targetId);
+        }
+
         if (rig.Muzzle is null || !IsInstanceValid(rig.Muzzle)) return;
         Vfx.TowerFired(defId, rig.Muzzle.GlobalPosition, rig.Forward);
+    }
+
+    /// <summary>The rest of an Arc's chain, drawn hop by hop.
+    ///
+    /// The sim hops from the enemy it just struck to the nearest other target
+    /// in chain range, and says nothing about which — only the first target is
+    /// on the event. So the client asks the same question with the same
+    /// numbers, the way the turret aim does for <c>PickTarget</c> and the way
+    /// Overdrive does for its radius. Enemy positions on a client are a
+    /// snapshot behind, so this can occasionally pick a different second
+    /// target than the sim did; it is a cosmetic beam either way, and the
+    /// alternative is a delivered model that stays on the shelf or an event
+    /// per hop on the wire thirty times a second.</summary>
+    private void DrawChainHops(int towerId, string defId, TowerDef def, int firstTargetId)
+    {
+        int struck = firstTargetId;
+        var hit = new HashSet<int> { firstTargetId };
+        for (int hop = 0; hop < def.ChainJumps; hop++)
+        {
+            if (EnemyAimPoint(struck) is not { } from) return;
+
+            int next = -1;
+            float bestDistance = def.ChainRange;
+            foreach (var (id, view) in _enemyViews)
+            {
+                if (hit.Contains(id) || !IsInstanceValid(view)) continue;
+                float distance = view.Position.DistanceTo(from);
+                if (distance >= bestDistance) continue;
+                bestDistance = distance;
+                next = id;
+            }
+            if (next < 0 || EnemyAimPoint(next) is not { } to) return;
+
+            Vfx.TowerBeam($"beam:{towerId}:{hop}", defId, from, to);
+            hit.Add(next);
+            struck = next;
+        }
+    }
+
+    /// <summary>Where on an enemy a beam lands. The sim keeps an enemy at its
+    /// spine base, and a beam terminating at the feet reads as pointing at the
+    /// deck under it.</summary>
+    private Vector3? EnemyAimPoint(int enemyId)
+    {
+        if (!_enemyViews.TryGetValue(enemyId, out var view) || !IsInstanceValid(view)) return null;
+        float height = view.HasMeta("head_height") ? (float)view.GetMeta("head_height") * 0.5f : 1f;
+        return view.Position + new Vector3(0f, height, 0f);
     }
 
     private void OnEnemyDamaged(int enemyId, float amount, string source)
@@ -2866,6 +2958,7 @@ public partial class GameRoot : Node3D
     private float _statusElapsed;
     private int _statusPeak;
     private readonly SortedSet<string> _statusSeen = new();
+    private readonly SortedSet<string> _beamsSeen = new();
 
     /// <summary>Watches for status effects appearing on live enemies and says
     /// which ones did. Stops itself either way — a verification run that can
@@ -2876,33 +2969,51 @@ public partial class GameRoot : Node3D
         if (_statusReport is null || _world is null) return;
 
         foreach (string key in Vfx.HeldKeys)
+        {
             if (key.StartsWith("status:")) _statusSeen.Add(key.Split(':')[^1]);
+            else if (key.StartsWith("beam:")
+                && int.TryParse(key.Split(':')[1], out int beamTower)
+                && _towerViews.TryGetValue(beamTower, out var beamView) && IsInstanceValid(beamView))
+                _beamsSeen.Add((string)beamView.GetMeta("def_id", "?"));
+        }
 
-        // The peak, not this frame's count: an enemy is inside a 9 m aura for
-        // about a second of a minute-long walk, and a per-second sample that
-        // catches none of them reads as a contradiction next to a pass.
+        // The peak, not this frame's count, and any channel rather than one:
+        // an enemy is inside a 9 m aura for about a second of a minute-long
+        // walk, and a five-second sample that catches none of them reads as a
+        // contradiction next to a pass that says a status was held.
         _statusPeak = Mathf.Max(_statusPeak,
-            _world.Enemies.Count(e => e.Statuses[(int)Channel.Movement].Active));
+            _world.Enemies.Count(e => Protocol.PackStatusBits(e) != 0));
 
         float was = _statusElapsed;
         _statusElapsed += (float)delta;
         if (Mathf.FloorToInt(_statusElapsed / 5f) > Mathf.FloorToInt(was / 5f))
         {
             _statusReport.Add($"{_statusElapsed:0}s enemies={_world.Enemies.Count} "
-                + $"chilled at once, most so far={_statusPeak}");
+                + $"afflicted at once, most so far={_statusPeak} "
+                + $"beams from {string.Join("/", _beamsSeen)}");
             if (_world.Enemies.Count == 0) Submit(new Command.StartWave(LocalPlayerId));
         }
 
-        if (_statusSeen.Count == 0 && _statusElapsed < 60f) return;
+        bool done = _statusSeen.Count > 0 && _beamsSeen.Count > 0;
+        if (!done && _statusElapsed < 90f) return;
 
         var report = _statusReport;
         _statusReport = null;
         string drew = string.Join(", ",
             _statusSeen.Select(c => DefaultStatusFor((Channel)int.Parse(c))));
-        WriteProbe(report, _statusReportPath, _statusSeen.Count > 0,
-            _statusSeen.Count > 0
-                ? $"PASS: held on a live enemy at {_statusElapsed:0}s — {drew}"
-                : "FAIL: a minute of Singularity aura and no status effect was ever held");
+        report.Add($"statuses held: {(drew.Length > 0 ? drew : "none")} "
+            + $"(most afflicted at once: {_statusPeak})");
+        // One beam is enough to pass: the Arc and the Filament go through the
+        // same TowerBeam call and differ only in the chain hops after it, and
+        // requiring both would make this fail whenever the wave dies before it
+        // reaches the third socket.
+        report.Add($"beams drawn by: {(_beamsSeen.Count > 0 ? string.Join(", ", _beamsSeen) : "nothing")}");
+        WriteProbe(report, _statusReportPath, done,
+            done
+                ? $"PASS: statuses and beams both drawn on live enemies by {_statusElapsed:0}s"
+                : _statusSeen.Count == 0
+                    ? "FAIL: a wave walked through a Singularity and no status was ever held"
+                    : "FAIL: a Filament and an Arc fired and no beam was ever drawn");
     }
 
     /// <summary>The Detector's reveal sweep, on design's two-second period.
@@ -4116,6 +4227,9 @@ public partial class GameRoot : Node3D
         {
             Vfx.TowerFired(def.Id, at + Vector3.Up, Vector3.Forward);
             Vfx.ProjectileLanded(def.Id, at);
+            if (def.Kind is TowerKind.Beam or TowerKind.Tesla)
+                Vfx.TowerBeam($"probe:beam:{def.Id}", def.Id,
+                    at + Vector3.Up, at + Vector3.Up + Vector3.Forward * 6f);
         }
         foreach (var ammo in Ammo.All.Values)
             Vfx.GunShot(at + Vector3.Up, at + Vector3.Up + Vector3.Forward * 6f, ammo.Id, true);
@@ -4141,6 +4255,9 @@ public partial class GameRoot : Node3D
                 .Where(d => d.ProjectileSpeed > 0f || d.Kind == TowerKind.Tesla)
                 .SelectMany(d => new[] { $"vfx_muzzle_{d.Id}", $"vfx_impact_{d.Id}" }))
             .Concat(Ammo.All.Values.Select(a => $"vfx_tracer_{a.Id}"))
+            // The two towers with no round. Neither has ever been drawn and
+            // neither would show up in a list built from muzzles and impacts.
+            .Concat(new[] { "proj_arc_beam", "proj_filament_beam" })
             .Select(n => n.ToLowerInvariant())
             .Distinct().OrderBy(n => n, System.StringComparer.Ordinal).ToList();
 

@@ -35,6 +35,19 @@ The six projectile tier variants (`proj_lance_bolt_t2` and friends) are drawn
 now too, on the rule projectiles.js states: **the tier follows the damage
 path, level 7 buys T2 and level 10 buys T3.**
 
+So are `proj_arc_beam` and `proj_filament_beam`, which had never been on screen
+at all — not because of anything wrong with the models, but because neither
+tower creates a projectile in the sim and the client only drew projectiles.
+Both now follow their own notes: a unit-length streak along −Z, turned at the
+target and stretched in Z to the distance. The Arc's second copy for the hop is
+there too. Two nodes design named on them are **not** driven yet and are worth
+knowing about rather than being quietly ignored: `filament_beam_ramp` is
+supposed to brighten from 0.3 to 2.0 emissive as the beam's heat ramps, and the
+sim tracks exactly that number (`Tower.RampSeconds`) — it is not wired because
+driving emissive means duplicating the material per instance, which is the same
+call recorded under `_fade` below. If the ramp is worth seeing, say so and it
+is a small change on this side.
+
 ## 2. What is asked for
 
 Three names. The client calls all three today and draws nothing, which is the
@@ -119,8 +132,19 @@ actually driven, which it was not before:
 | `_rise` | lifts; **loops** on a held effect so a burn keeps licking upward instead of walking off the top of the enemy, and is driven **downward** for `vfx_status_poison`, whose beads fall |
 | `_fade` | scales out over the life of a burst — not alpha, because alpha means a material duplicated per instance and a shell shrinking into its own burst reads the same at the speed these live at |
 
-Two conventions beyond that are worth keeping, because the client relies on
-both:
+Three conventions beyond that are worth keeping, because the client relies on
+all three:
+
+- **Author it the way it stands.** A ground ring lies in XZ, a column runs up
+  Y, and the client applies no rotation at all to any of it. Only things that
+  genuinely aim get turned: a muzzle flash, a tracer, a beam — those are the
+  ones authored along −Z. `vfx_wave_start` is the one exception and it is
+  design's own: its ground chevrons run along **+X**, so that effect gets a yaw
+  and nothing else.
+- **A unit-length streak along −Z is scaled, not repeated.** `proj_arc_beam`
+  and `proj_filament_beam` both say so in their notes and both work exactly
+  that way now — the client turns the model at the target and stretches Z to
+  the distance, leaving X and Y alone so the beam does not fatten with range.
 
 - **A named sub-group can be lifted out on its own.** `overdrive_tower_crown`
   is instanced separately onto every tower an Overdrive reached. If an effect

@@ -59,6 +59,16 @@ public partial class Vfx : Node3D
         public float RiseSpeed = 0.7f;
         public float RiseLoopSeconds = 1.4f;
 
+        /// <summary>Seconds to keep this after the last frame that asked for
+        /// it. Zero for anything driven from per-frame world state, which is
+        /// the safe default. A beam is driven from an *event* instead — the
+        /// sim fires thirty times a second and the client draws sixty, so
+        /// half the frames have no event and a zero-linger beam would strobe
+        /// at 30 Hz.</summary>
+        public float LingerSeconds;
+
+        internal float SinceTouched;
+
         /// <summary>0..1 to drive <c>_pulse</c> as a gauge that grows with it;
         /// null to let it breathe. Design asks for the revive ring's *arc* to
         /// be the progress, which would mean rebuilding the torus every frame
@@ -148,6 +158,45 @@ public partial class Vfx : Node3D
         Spawn(asset, muzzle, forward, life: 0.08f, from: 0.1f, to: 1f);
     }
 
+    /// <summary>A tower that does not fire a round: the Filament's continuous
+    /// beam and each leg of the Arc's chain.
+    ///
+    /// Neither of these tower kinds ever creates a projectile in the sim — a
+    /// beam applies its damage where it stands and a tesla arc is instant — so
+    /// the projectile view sync, which follows sim projectiles, has never had
+    /// anything to follow for them. Both models were delivered and neither had
+    /// ever been on screen. Design authors them as a unit-length streak along
+    /// −Z with the note "scale Z to the hit distance", the same contract the
+    /// tracers already use.
+    ///
+    /// Held rather than fired once, and with a linger: the Filament re-arms
+    /// this every sim tick for as long as it holds a target, and a burst per
+    /// tick would stack four deep at 60 fps while a zero-linger held effect
+    /// would strobe on the frames between ticks.</summary>
+    public void TowerBeam(string key, string towerDefId, Vector3 from, Vector3 to)
+    {
+        string asset = towerDefId switch
+        {
+            "arc" => "proj_arc_beam",
+            "filament" => "proj_filament_beam",
+            _ => "",
+        };
+        if (asset.Length == 0) return;
+
+        var along = to - from;
+        float length = along.Length();
+        if (length < 0.05f) return;
+
+        if (Hold(key, asset, from) is not { } beam) return;
+        beam.LingerSeconds = 0.12f;         // three sim ticks: no gap, no stack
+        beam.Node.Position = from;
+        beam.Node.LookAt(to, Mathf.Abs(along.Normalized().Dot(Vector3.Up)) > 0.99f
+            ? Vector3.Forward : Vector3.Up);
+        // Unit length along −Z; only Z is stretched, or the beam fattens with
+        // the distance it crosses.
+        beam.Node.Scale = new Vector3(1f, 1f, length);
+    }
+
     /// <summary>Where a tower's round stopped existing. The sim removes a
     /// projectile the tick it lands, so the view's last position is the hit.</summary>
     public void ProjectileLanded(string towerDefId, Vector3 at)
@@ -156,25 +205,25 @@ public partial class Vfx : Node3D
         if (!AssetLibrary.Has(asset)) return;
         // Nova's splash ring is authored flat on the ground; the rest burst
         // outward from the point.
-        Spawn(asset, at, towerDefId == "nova" ? Vector3.Up : Vector3.Forward, life: 0.25f, from: 0.2f, to: 1f);
+        Spawn(asset, at, towerDefId == "nova" ? null : Vector3.Forward, life: 0.25f, from: 0.2f, to: 1f);
     }
 
     /// <summary>A structure going up on its pad: design's holo-cage of the
     /// chassis volume, clamps dropping onto it, the pad ring closing.</summary>
     public void TowerPlaced(Vector3 at) =>
-        Spawn("vfx_tower_place", at, Vector3.Up, life: 0.5f, from: 0.7f, to: 1.05f);
+        Spawn("vfx_tower_place", at, forward: null, life: 0.5f, from: 0.7f, to: 1.05f);
 
     /// <summary>Refund, in brass rather than damage colours — the effect has
     /// to say "money back", not "something just died here".</summary>
     public void TowerSold(Vector3 at) =>
-        Spawn("vfx_tower_sell", at, Vector3.Up, life: 0.6f, from: 1f, to: 1.1f);
+        Spawn("vfx_tower_sell", at, forward: null, life: 0.6f, from: 1f, to: 1.1f);
 
     /// <summary>A path went up a level. Design draws three chevron tiers on
     /// the <c>_rise</c> group and says the count can be culled per tier, so
     /// the tenth level is visibly more than the second.</summary>
     public void TowerUpgraded(Vector3 at, int newLevel)
     {
-        if (Spawn("vfx_tower_upgrade", at, Vector3.Up, life: 0.7f, from: 0.9f, to: 1.05f) is not { } burst) return;
+        if (Spawn("vfx_tower_upgrade", at, forward: null, life: 0.7f, from: 0.9f, to: 1.05f) is not { } burst) return;
         int tiers = newLevel >= 7 ? 3 : newLevel >= 4 ? 2 : 1;
         CullChevrons(burst.Node, tiers);
     }
@@ -200,7 +249,7 @@ public partial class Vfx : Node3D
     {
         const float AuthoredRadius = 13f;   // Towers.Detector.RangeMeters, as delivered
         float full = radiusMeters / AuthoredRadius;
-        Spawn("vfx_detector_pulse", at + Vector3.Up * 0.05f, Vector3.Up,
+        Spawn("vfx_detector_pulse", at + Vector3.Up * 0.05f, forward: null,
             life: periodSeconds, from: 0.05f * full, to: full);
     }
 
@@ -208,21 +257,28 @@ public partial class Vfx : Node3D
     // The wave, and the thing it is walking at
     // ---------------------------------------------------------------------
 
-    /// <summary>The portal opening. Oriented down the lane, because design's
-    /// ground chevrons point along +X of the model and they are the half of
-    /// this effect that says which way the trouble is coming.</summary>
-    public void WaveStart(Vector3 at, Vector3 downLane) =>
-        Spawn("vfx_wave_start", at, downLane, life: 1.5f, from: 0.6f, to: 1.1f);
+    /// <summary>The portal opening. Yawed rather than aimed: design's ground
+    /// chevrons run along the model's **+X**, and they are the half of this
+    /// effect that says which way the trouble is coming. Everything else in
+    /// it — the iris flare, the siren cones, the shock ring — stands upright,
+    /// so a LookAt down the lane would put the sirens on their side.</summary>
+    public void WaveStart(Vector3 at, Vector3 downLane)
+    {
+        if (Spawn("vfx_wave_start", at, forward: null, life: 1.5f, from: 0.6f, to: 1.1f) is not { } burst)
+            return;
+        if (downLane.LengthSquared() < 1e-6f) return;
+        burst.Node.Rotation = new Vector3(0f, Mathf.DegToRad(MapKit.YawAlongX(downLane)), 0f);
+    }
 
     /// <summary>All clear, at the core. The one effect in the set that is
     /// allowed to be slow.</summary>
     public void WaveClear(Vector3 at) =>
-        Spawn("vfx_wave_clear", at, Vector3.Up, life: 2f, from: 0.5f, to: 1.15f);
+        Spawn("vfx_wave_clear", at, forward: null, life: 2f, from: 0.5f, to: 1.15f);
 
     /// <summary>Something got through. The core already swaps to its struck
     /// model; this is the alarm around it.</summary>
     public void CoreBreach(Vector3 at) =>
-        Spawn("vfx_core_breach", at, Vector3.Up, life: 1f, from: 0.35f, to: 1.2f);
+        Spawn("vfx_core_breach", at, forward: null, life: 1f, from: 0.35f, to: 1.2f);
 
     // ---------------------------------------------------------------------
     // What happens to enemies
@@ -241,13 +297,13 @@ public partial class Vfx : Node3D
     /// <summary>The Mole going under or coming up — the same fountain of dirt
     /// either way, because from outside it is the same event.</summary>
     public void BurrowSpray(Vector3 at) =>
-        Spawn("vfx_burrow_spray", at, Vector3.Up, life: 0.5f, from: 0.5f, to: 1.1f);
+        Spawn("vfx_burrow_spray", at, forward: null, life: 0.5f, from: 0.5f, to: 1.1f);
 
     /// <summary>A Cluster bursting into its Motes. Fired on the death rather
     /// than on the spawns: the sac opening is the moment, and the Motes walk
     /// out of it under their own models.</summary>
     public void ClusterSplit(Vector3 at) =>
-        Spawn("vfx_cluster_split", at, Vector3.Up, life: 0.5f, from: 0.5f, to: 1.15f);
+        Spawn("vfx_cluster_split", at, forward: null, life: 0.5f, from: 0.5f, to: 1.15f);
 
     /// <summary>The co-op payoff. Thermal Shock is a burst; Flash Freeze is
     /// the moment the column comes down, and the lock it leaves behind is
@@ -312,25 +368,25 @@ public partial class Vfx : Node3D
         switch (abilityId)
         {
             case "overdrive":
-                if (Spawn("vfx_ability_overdrive", heroPos, Vector3.Up, life: 1.6f, from: 0.25f, to: 1f) is { } od)
+                if (Spawn("vfx_ability_overdrive", heroPos, forward: null, life: 1.6f, from: 0.25f, to: 1f) is { } od)
                     HideCrown(od.Node);
                 break;
             case "ignitionWave":
-                Spawn("vfx_ability_ignitionwave", aimPos, Vector3.Up, life: 1.1f, from: 0.2f, to: 1f);
+                Spawn("vfx_ability_ignitionwave", aimPos, forward: null, life: 1.1f, from: 0.2f, to: 1f);
                 break;
             case "chainSurge":
-                Spawn("vfx_ability_chainsurge", aimPos, Vector3.Up, life: 0.9f, from: 0.2f, to: 1f);
+                Spawn("vfx_ability_chainsurge", aimPos, forward: null, life: 0.9f, from: 0.2f, to: 1f);
                 break;
             case "revealPulse":
                 // Design has not drawn this one; the Detector's sweep is the
                 // same picture at map scale, which is what the ability is.
                 Spawn(AssetLibrary.Has("vfx_ability_revealpulse") ? "vfx_ability_revealpulse" : "vfx_detector_pulse",
-                    heroPos, Vector3.Up, life: 1.4f, from: 0.1f, to: 4f);
+                    heroPos, forward: null, life: 1.4f, from: 0.1f, to: 4f);
                 break;
             case "cryoField":
                 // Nothing delivered draws a chill dome; ask for it by name so
                 // it lands the day design ships it (docs/FORWARD-MANIFEST-vfx.md).
-                Spawn("vfx_ability_cryofield", aimPos, Vector3.Up, life: 1.1f, from: 0.2f, to: 1f);
+                Spawn("vfx_ability_cryofield", aimPos, forward: null, life: 1.1f, from: 0.2f, to: 1f);
                 break;
         }
     }
@@ -388,24 +444,34 @@ public partial class Vfx : Node3D
         // the stand-in, which is authored lying on the ground and is the
         // closest thing in the delivered set to a column of light.
         string asset = AssetLibrary.Has("vfx_teleport_burst") ? "vfx_teleport_burst" : "vfx_impact_nova";
-        Spawn(asset, at + Vector3.Up * 0.2f, Vector3.Up, life: 0.45f, from: 0.3f, to: 1.6f, tint: hue);
+        Spawn(asset, at + Vector3.Up * 0.2f, forward: null, life: 0.45f, from: 0.3f, to: 1.6f, tint: hue);
     }
 
     // =====================================================================
     // Plumbing
     // =====================================================================
 
-    private Burst? Spawn(string asset, Vector3 at, Vector3 forward, float life, float from, float to, Color? tint = null)
+    /// <summary>Puts one of design's effects in the world.
+    ///
+    /// <paramref name="forward"/> is <c>null</c> for everything authored the
+    /// way it stands — a ground ring, a light column, a portal beat. Those
+    /// want **no rotation at all**, and the way to get one wrong is to pass
+    /// <c>Vector3.Up</c> meaning "it points up": LookAt turns the model's −Z
+    /// toward the target, so an up vector lays an upright effect on its back.
+    /// That is what the wave-clear beat did on the core — the success rings
+    /// rose sideways out of it. Only things that genuinely aim — muzzle
+    /// flashes, tracers, beams — pass a direction.</summary>
+    private Burst? Spawn(string asset, Vector3 at, Vector3? forward, float life, float from, float to, Color? tint = null)
     {
         var node = AssetLibrary.TryInstantiate(asset);
         if (node is null) return null;
         MapKit.NoShadow(node);
         node.Position = at;
         AddChild(node);
-        if (forward.LengthSquared() > 1e-6f)
+        if (forward is { } aim && aim.LengthSquared() > 1e-6f)
         {
-            var up = Mathf.Abs(forward.Normalized().Dot(Vector3.Up)) > 0.99f ? Vector3.Forward : Vector3.Up;
-            node.LookAt(at + forward, up);
+            var up = Mathf.Abs(aim.Normalized().Dot(Vector3.Up)) > 0.99f ? Vector3.Forward : Vector3.Up;
+            node.LookAt(at + aim, up);
         }
         node.Scale = Vector3.One * from;
         if (tint is { } hue) Tint(node, hue);
@@ -455,7 +521,12 @@ public partial class Vfx : Node3D
     {
         if (_held.TryGetValue(key, out var existing))
         {
-            if (IsInstanceValid(existing.Node)) { existing.Touched = true; return existing; }
+            if (IsInstanceValid(existing.Node))
+            {
+                existing.Touched = true;
+                existing.SinceTouched = 0f;
+                return existing;
+            }
             _held.Remove(key);
         }
 
@@ -484,7 +555,12 @@ public partial class Vfx : Node3D
         List<string>? dead = null;
         foreach (var (key, held) in _held)
         {
-            if (held.Touched && IsInstanceValid(held.Node)) { held.Touched = false; continue; }
+            if (IsInstanceValid(held.Node)
+                && (held.Touched || held.SinceTouched < held.LingerSeconds))
+            {
+                held.Touched = false;
+                continue;
+            }
             (dead ??= new List<string>()).Add(key);
             if (IsInstanceValid(held.Node)) held.Node.QueueFree();
         }
@@ -593,6 +669,7 @@ public partial class Vfx : Node3D
             }
             if (h.Fade is not null)
                 h.Fade.Scale = Vector3.One * (0.85f + 0.15f * Mathf.Sin(h.Age * Mathf.Pi));
+            h.SinceTouched += (float)delta;
         }
     }
 
