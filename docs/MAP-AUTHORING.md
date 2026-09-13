@@ -369,10 +369,32 @@ modules tiled along a run; a spanned piece between two points (ziplines); a
 ### The client can now build, since the Toaster
 
 - **A field of any size.** `"field": [x, z]` is honoured: the slab, the terrain
-  grid, the boundary, the scatter and the shadow distance all read it, and the
-  edge of the playable area is an invisible wall rather than a drop. 110 × 80
-  stays the default, and the three maps that were that size are laid exactly as
-  they were. The Toaster is 320 × 160.
+  grid, the boundary, the scatter and the shadow distance all read it. 110 × 80
+  stays the default; the Toaster is 320 × 160.
+- **An edge you cannot walk off.** Every map's field edge is an invisible wall,
+  built for it rather than asked for — a map cannot ship without one by
+  forgetting. This sentence used to be here claiming the same thing and was
+  true of exactly one map: the routine existed, the Toaster called it, and the
+  other three had nothing at all at the edge. A map may add a *tighter* ring of
+  its own where its scenery wants you stopped sooner — the Toaster stops you at
+  the inside of its treeline — and the tighter one wins.
+
+  Two rules follow from that, and both were broken when it was written:
+
+  - **The visible boundary is the field edge, not a ring near the middle of
+    it.** The Foundry's wall stood at 42 × 30 inside a 110 × 80 field, leaving
+    a thirteen-metre band of bare deck outside a wall that plainly did not
+    enclose the yard. A boundary run takes the field's half-extents.
+  - **The wall is as tall as the tallest thing you can stand on.** The original
+    was eight metres, written against a farm whose roofs are three. On the
+    Spire, whose decks go to forty, it was a kerb you stepped over on your way
+    off the building. It is 120 m now and starts below grade; it is invisible
+    and static, so there is no reason to be mean with it.
+
+  `--shot <map> <txt> containment` is the check: a ray sweep around the ring at
+  1, 11 and 41 m, then a player walked into the edge at eight points, because a
+  ray proves a body is there and not that a capsule cannot squeeze past the
+  seam where two of them meet. All four maps run it in CI.
 - **Buildings with insides.** A floor, walls with openings, and a roof that is
   a walkable surface rather than a lid — so a wall socket can sit on one and a
   ladder can serve it. Openings only; a door that closes is a wall.

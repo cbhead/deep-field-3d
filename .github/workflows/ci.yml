@@ -105,16 +105,27 @@ jobs:
           # 4.7 and every asset stays unimported.
           godot --headless --path game --import
           godot --headless --path game --build-solutions --quit || true
+      # The client also builds a tower and reports the rounds it drew for
+      # itself. Tower projectiles do not cross the wire — a client is handed
+      # the shot and flies the rest — and the flight code is measured against
+      # the sim's own rounds by the rounds probe in the other job. What only a
+      # real join can answer is whether a client ever gets that far: whether
+      # the shot reaches it, is parsed, and reaches the branch. Placement goes
+      # over the wire too, so a pass also says the server took a client's build
+      # command and relayed the shot back.
       - name: Server + client join smoke
         run: |
           godot --headless --path game -- --server --port 8791 > server.log 2>&1 &
           SERVER_PID=$!
           sleep 6
-          godot --headless --path game --quit-after 900 -- --join 127.0.0.1:8791 > client.log 2>&1
+          godot --headless --path game --quit-after 20000 -- \
+            --join 127.0.0.1:8791 --probe-rounds /tmp/client-rounds.txt > client.log 2>&1
           curl -s http://127.0.0.1:8791/info | tee info.json
           kill $SERVER_PID || true
           grep -q '"app":"deepfield-3d"' info.json
           grep -q "\[client\] joined seat" client.log
+          cat /tmp/client-rounds.txt
+          grep -q "^PASS" /tmp/client-rounds.txt
 
       # The info port is TCP while the game itself is ENet/UDP, so losing that
       # one bind costs a server nothing it can feel: it hosts and plays
@@ -194,6 +205,65 @@ jobs:
             --shot switchyard /tmp/siege.txt siege > siege.log 2>&1 || true
           tail -4 /tmp/siege.txt
           grep -q "^PASS" /tmp/siege.txt
+
+      # An effect can be delivered, imported, named correctly in the manifest
+      # and still never appear, because the code path that would draw it is
+      # unreachable or because design renamed the sub-group the client drives.
+      # Both failures are invisible from a file listing and from the usage
+      # count, and both look exactly like "we have not got to that yet". This
+      # fires one of everything through the real entry points.
+      - name: VFX probe (every effect the client can draw, draws)
+        run: |
+          godot --headless --path game --quit-after 3000 -- \
+            --shot foundry /tmp/vfx.txt vfx > vfx.log 2>&1 || true
+          cat /tmp/vfx.txt
+          grep -q "^PASS" /tmp/vfx.txt
+          ! grep -qiE "^ERROR|SCRIPT ERROR" vfx.log
+
+      # The half the probe above cannot prove. A status effect is held on an
+      # enemy by three things agreeing — the sim applying it, the snapshot's
+      # channel byte still saying so, and the view sync asking for it again
+      # every frame. A beam is drawn by a tower that never creates a
+      # projectile, which is how both beam models spent a milestone delivered
+      # and never once on screen. Neither path is reached by a solo match,
+      # because nothing in one pulls a trigger — and none of these three
+      # towers needs anyone to.
+      - name: Live effects probe (statuses, beams and the beam ramp)
+        run: |
+          godot --headless --path game --quit-after 9000 -- \
+            --shot foundry /tmp/statuses.txt statuses > statuses.log 2>&1 || true
+          tail -4 /tmp/statuses.txt
+          grep -q "^PASS" /tmp/statuses.txt
+
+      # Two things were wrong with every round in the game for four
+      # milestones and neither could be seen by anything automated: they all
+      # flew sideways, because design authors a round along -Z and nothing
+      # turned one, and they all came out of the middle of their tower rather
+      # than the barrel, because the sim has no barrel to spawn one at. Both
+      # are instant in a screenshot and invisible everywhere else. With the
+      # fixes reverted this reports 60 degrees and 0.93 m and fails.
+      - name: Rounds probe (a round points where it is going, and leaves the barrel)
+        run: |
+          godot --headless --path game --quit-after 20000 -- \
+            --shot foundry /tmp/rounds.txt rounds > rounds.log 2>&1 || true
+          tail -4 /tmp/rounds.txt
+          grep -q "^PASS" /tmp/rounds.txt
+
+      # The perimeter is drawn by one routine and made solid by another, and
+      # until this they did not agree on any map: three of the four had no
+      # solid edge at all, while MAP-AUTHORING said every map's edge was an
+      # invisible wall rather than a drop. A ray sweep at three heights, and
+      # then a player actually walked into the edge at eight points, because a
+      # ray proves a body is there and not that a capsule cannot squeeze past
+      # the seam where two of them meet.
+      - name: Containment probe (you cannot walk off any map)
+        run: |
+          for MAP in foundry switchyard spire toaster; do
+            godot --headless --path game --quit-after 3000 -- \
+              --shot $MAP /tmp/cont-$MAP.txt containment > cont-$MAP.log 2>&1 || true
+            cat /tmp/cont-$MAP.txt
+            grep -q "^PASS" /tmp/cont-$MAP.txt
+          done
 
       # A ladder that stops against the underside of the deck it serves looks
       # completely correct in the map file and from every angle in game, and

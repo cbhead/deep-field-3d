@@ -265,6 +265,16 @@ height.
 `vfx_ability_chainsurge.glb` · `vfx_tower_place.glb` · `vfx_tower_sell.glb` ·
 `vfx_tower_upgrade.glb` · `vfx_wave_start.glb` · `vfx_wave_clear.glb`
 
+Requested by the code and not yet drawn — the effects layer asks for these by
+name and draws nothing until they land (docs/ASSET-USAGE.md):
+`vfx_ability_cryofield.glb` (Glacier's aimed chill dome, 8 m, the built
+Singularity's aura made portable) · `vfx_ability_revealpulse.glb` (Specter's
+map-wide detection beat; the Detector's sweep stands in for it today, which
+reads as the right picture at the wrong scale) · `vfx_reaction_corrode.glb`
+(poison + shred, the third reaction — armour flaking off a body already
+rotting, 10% max HP burst, ~0.6 s, the pair Thermal Shock and Flash Freeze
+have had art for since M1).
+
 ### 3.8 Icons (`game/assets/ui/`) — blocking for the UI milestone
 Towers/traps: `icon_tower_lance` · `icon_tower_nova` · `icon_tower_arc` ·
 `icon_tower_singularity` · `icon_tower_skywatch` · `icon_tower_barricade` ·

@@ -261,6 +261,11 @@ public partial class NetworkManager : Node
                 ["dmg"] = p.DamageDealt,
                 ["built"] = p.TowersBuilt,
                 ["rev"] = p.Revives,
+                // The revive channel, as a fraction. Everyone watching a
+                // downed teammate should see the same ring filling, not just
+                // whoever is holding the key.
+                ["revProg"] = Balance.ReviveSeconds > 0f
+                    ? p.ReviveProgress / Balance.ReviveSeconds : 0f,
                 ["factionLevel"] = p.FactionLevel,
             });
         }
