@@ -208,3 +208,63 @@ public static class WeaponAssembly
         return gun;
     }
 }
+
+/// <summary>The melee platform in your hands, assembled the way the gunsmith
+/// assembles a gun: the host from <c>melee_&lt;id&gt;_vm</c> (the wrench is a
+/// tool platform in the weapon kit, <c>weapon_wrench_vm</c>), each fitted
+/// module on the host's <c>&lt;id&gt;_mount_&lt;slot&gt;</c>. Edge and grip
+/// modules REPLACE the host's own edge and grip parts; a counterweight or a
+/// core infusion attaches beside them. Design exports each module in its
+/// blade fit; the maul and spear fits exist only in design's viewer.</summary>
+public static class MeleeAssembly
+{
+    public static string AssetFor(string meleeId, bool world)
+    {
+        string id = meleeId.ToLowerInvariant();
+        string stem = id == "wrench" ? "weapon_wrench" : $"melee_{id}";
+        return world && AssetLibrary.Has($"{stem}_world") ? $"{stem}_world" : $"{stem}_vm";
+    }
+
+    /// <summary>Melee.cs sells attachments by their sim id; design ships the
+    /// files by slot and look.</summary>
+    public static string ModuleAsset(string attachmentId) => attachmentId switch
+    {
+        "honedEdge" => "meleemod_edge_honed",
+        "serratedEdge" => "meleemod_edge_serrated",
+        "balancedGrip" => "meleemod_grip_balanced",
+        "heavyWeight" => "meleemod_counterweight_heavy",
+        "emberCore" => "meleemod_infusion_ember",
+        "cryoCore" => "meleemod_infusion_cryo",
+        "voltCore" => "meleemod_infusion_volt",
+        "toxinCore" => "meleemod_infusion_toxin",
+        _ => $"meleemod_{attachmentId.ToLowerInvariant()}",
+    };
+
+    public static string MountName(MeleeSlot slot) => slot switch
+    {
+        MeleeSlot.CoreInfusion => "infusion",
+        MeleeSlot.ChargeCell => "chargecell",
+        _ => slot.ToString().ToLowerInvariant(),
+    };
+
+    /// <summary>Null when design has not shipped the platform yet.</summary>
+    public static Node3D? Build(string meleeId, IReadOnlyDictionary<MeleeSlot, string> fitted, bool world = true)
+    {
+        string asset = AssetFor(meleeId, world);
+        if (!AssetLibrary.Has(asset)) return null;
+        var host = AssetLibrary.Instantiate(asset, () => new Node3D());
+        string id = meleeId.ToLowerInvariant();
+        foreach (var (slot, attachmentId) in fitted)
+        {
+            var module = AssetLibrary.TryInstantiate(ModuleAsset(attachmentId));
+            if (module is null) continue;          // model not delivered yet
+            string mount = MountName(slot);
+            module.Name = $"meleemod_{mount}";
+            if (slot is MeleeSlot.Edge or MeleeSlot.Grip
+                && host.FindChild($"{id}_{mount}", true, false) is Node3D replaced)
+                replaced.Visible = false;
+            (host.FindChild($"{id}_mount_{mount}", true, false) as Node3D ?? host).AddChild(module);
+        }
+        return host;
+    }
+}

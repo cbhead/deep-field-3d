@@ -125,6 +125,7 @@ import { TRAPS } from './models/traps.js';
 import { PROJECTILES } from './models/projectiles.js';
 import { makeWeaponKit, WEAPONS, ATTACHMENTS, AMMO, TRACERS } from './models/weapons.js';
 import { makeHeroKit, HEROES } from './models/heroes.js';
+import { MELEE, MELEE_MODS } from './models/melee-hero.js';
 import { FOUNDRY, makeFoundryMats } from './models/foundry.js';
 import { SHARED, PICKUPS } from './models/shared.js';
 import { SWITCHYARD, makeSwitchyardMats } from './models/switchyard.js';
@@ -150,7 +151,20 @@ const ICONS = [
 const EXTRA = [
   { dir: 'enemies/', items: ENEMIES, kind: 'enemy' }, { dir: 'traps/', items: TRAPS, kind: 'trap' }, { dir: 'towers/', items: PROJECTILES, kind: 'projectile' },
   { dir: 'weapons/', items: WEAPONS, kind: 'weapon' }, { dir: 'weapons/', items: WEAPONS.filter((w) => w.worldFile).map((w) => ({ ...w, file: w.worldFile, id: w.id + '_world', baseId: w.id })), kind: 'weapon_world' },
-  { dir: 'heroes/', items: HEROES, kind: 'hero' }, { dir: 'maps/foundry/', items: FOUNDRY, kind: 'map_foundry' }, { dir: 'maps/switchyard/', items: SWITCHYARD, kind: 'map_switchyard' }, { dir: 'maps/spire/', items: SPIRE, kind: 'map_spire' }, { dir: 'maps/toaster/', items: TOASTER, kind: 'map_toaster' }, { dir: 'vehicles/', items: VEHICLES, kind: 'vehicle' }, { dir: 'shared/', items: SHARED, kind: 'shared' }, { dir: 'vfx/', items: VFX, kind: 'vfx' }, { dir: 'economy/', items: PICKUPS, kind: 'pickup' }, { dir: 'weapons/', items: ATTACHMENTS, kind: 'attachment' }, { dir: 'weapons/', items: AMMO, kind: 'ammo' }, { dir: 'weapons/', items: TRACERS, kind: 'tracer' }];
+  { dir: 'heroes/', items: HEROES, kind: 'hero' }, { dir: 'maps/foundry/', items: FOUNDRY, kind: 'map_foundry' }, { dir: 'maps/switchyard/', items: SWITCHYARD, kind: 'map_switchyard' }, { dir: 'maps/spire/', items: SPIRE, kind: 'map_spire' }, { dir: 'maps/toaster/', items: TOASTER, kind: 'map_toaster' }, { dir: 'vehicles/', items: VEHICLES, kind: 'vehicle' }, { dir: 'shared/', items: SHARED, kind: 'shared' }, { dir: 'vfx/', items: VFX, kind: 'vfx' }, { dir: 'economy/', items: PICKUPS, kind: 'pickup' }, { dir: 'weapons/', items: ATTACHMENTS, kind: 'attachment' }, { dir: 'weapons/', items: AMMO, kind: 'ammo' }, { dir: 'weapons/', items: TRACERS, kind: 'tracer' },
+  /* Melee platforms: a viewmodel and a world model each, like the guns. The
+     modules are built per host — edge and grip geometry follow the host — so
+     the exported file is the blade fit; the Gunsmith page shows all three. */
+  { dir: 'weapons/', items: MELEE, kind: 'melee' }, { dir: 'weapons/', items: MELEE.map((w) => ({ ...w, file: w.worldFile, id: w.id + '_world', baseId: w.id })), kind: 'melee_world' },
+  { dir: 'weapons/', items: MELEE_MODS, kind: 'meleemod' }];
+/* How many variants past v0 a kit entry has. Design's page writes v1..v3 for
+   every entry with a buildVariant, which is right for the four-way tiles and
+   wrong twice over on the Toaster: its terrain gained v4 and v5 (the pasture
+   and the hay stubble, assigned by region rather than by hash) and never
+   exported them, and the grain bin and the utility pole have exactly two
+   looks, so v2 and v3 would be v0 and v1 again under new names. */
+const VARIANTS = { toaster_terrain: 5, toaster_grain_bin: 1, toaster_utility_pole: 1 };
+const variantsOf = (it) => it.buildVariant ? (VARIANTS[it.id] ?? 3) : 0;
 /* Reload props (FORWARD-MANIFEST-reload Ask A). Not new geometry: the feed part
    already in each viewmodel, lifted out and exported on its own so a reload can
    put one in the air as the spent mag and another in the off-hand as the fresh
@@ -168,7 +182,7 @@ const RELOAD_PROPS = [
   ['scattergun', 'scattergun_shell', 'weapon_scattergun_magazine.glb', 'A loaded 12-gauge hull under the requested filename so nothing falls back to a placeholder. This gun has no detachable magazine; see `weapon_scattergun_shell.glb`, which is the same file under the name that tells the truth.'],
   ['scattergun', 'scattergun_shell', 'weapon_scattergun_shell.glb', 'Loaded 12-gauge hull: brass head with rim and extractor groove, full-length body, folded six-point crimp cut into the dome as ridges. Origin at the rim face so a reload pushes it in along +Z at `scattergun_mount_loadport`. Distinct from `scattergun_case`, which is fired — open mouth, no crimp.'],
 ];
-const ROUTES = [['enemy_', 'enemies'], ['boss_', 'enemies'], ['tower_', 'structures'], ['trap_', 'structures'], ['socket_', 'structures'], ['weapon_', 'weapons'], ['attach_', 'weapons'], ['ammo_', 'weapons'], ['hands_', 'weapons'], ['hero_', 'heroes'], ['proj_', 'vfx'], ['vfx_', 'vfx'], ['pickup_', 'economy'], ['foundry_', 'maps'], ['switchyard_', 'maps'], ['spire_', 'maps'], ['toaster_', 'maps'], ['vehicle_', 'vehicles'], ['shared_', 'maps'], ['prop_', 'maps'], ['ui_', 'ui']];
+const ROUTES = [['enemy_', 'enemies'], ['boss_', 'enemies'], ['tower_', 'structures'], ['trap_', 'structures'], ['socket_', 'structures'], ['weapon_', 'weapons'], ['melee_', 'weapons'], ['meleemod_', 'weapons'], ['attach_', 'weapons'], ['ammo_', 'weapons'], ['hands_', 'weapons'], ['hero_', 'heroes'], ['proj_', 'vfx'], ['vfx_', 'vfx'], ['pickup_', 'economy'], ['foundry_', 'maps'], ['switchyard_', 'maps'], ['spire_', 'maps'], ['toaster_', 'maps'], ['vehicle_', 'vehicles'], ['shared_', 'maps'], ['prop_', 'maps'], ['ui_', 'ui']];
 const routeFor = (file) => 'game/assets/' + (ROUTES.find(([p]) => file.startsWith(p))?.[1] || 'misc') + '/' + file;
 const TOWERS = (await Promise.all(MODS.map((m) => import(`./models/${m}.js`)))).map((m) => m.TOWER);
 
@@ -223,7 +237,7 @@ function chassis(t, variant) {
  *  stages per path (the barricade is three states); an item is its build, plus
  *  three more if it has variants, plus one per extra pose. */
 const towerFileCount = (t) => (t.id === 'barricade' ? 3 : 1 + t.paths.length * 10);
-const itemFileCount = (it) => (it.buildVariant ? 4 : 1) + (it.poses ? it.poses.length - 1 : 0);
+const itemFileCount = (it) => 1 + variantsOf(it) + (it.poses ? it.poses.length - 1 : 0);
 stage.setObject(chassis(TOWERS[0]));
 
 const glb = async (obj) => new Uint8Array(await exporter.parseAsync(obj, { binary: true, trs: true, onlyVisible: true }));
@@ -397,7 +411,7 @@ try {
     // so v0 was the sole GLB and one tile laid twenty-four times put the same
     // puddle on a lattice — and the switch stand in v1 was never delivered at
     // all (design-system README, “ships one variant of four”).
-    if (it.buildVariant) for (let v = 1; v <= 3; v++)
+    for (let v = 1; v <= variantsOf(it); v++)
       await add(it.file.replace(/\.glb$/, `_v${v}.glb`), it.buildVariant(kit, v), { kind: c.kind, id: `${it.id}_v${v}`, variant: v, note: it.note, ...lin, ...arc, ...budget, ...inst });
     /* Hand sets ship one file per pose. poses[0] is the base build above; the
        rest are the pistol and tool grips the viewmodel picks by platform, and

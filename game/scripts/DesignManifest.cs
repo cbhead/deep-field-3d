@@ -70,6 +70,44 @@ public static class DesignManifest
         return map;
     }
 
+    private static Dictionary<string, Godot.Collections.Dictionary>? _rows;
+
+    /// <summary>Rows by file stem, for the two facts a map builder cannot get
+    /// from the mesh: whether a piece was drawn to be instanced, and how wide a
+    /// linear module is.</summary>
+    private static Dictionary<string, Godot.Collections.Dictionary> Rows
+    {
+        get
+        {
+            if (_rows is not null) return _rows;
+            _rows = new Dictionary<string, Godot.Collections.Dictionary>();
+            foreach (var entry in Files)
+            {
+                var row = entry.AsGodotDictionary();
+                if (!row.TryGetValue("file", out var name)) continue;
+                string key = name.AsString();
+                int slash = key.LastIndexOf('/');
+                if (slash >= 0) key = key[(slash + 1)..];
+                if (key.EndsWith(".glb")) key = key[..^4];
+                _rows[key.ToLowerInvariant()] = row;
+            }
+            return _rows;
+        }
+    }
+
+    /// <summary>True when design marked the file for the multimesh path — a
+    /// module drawn once per part and multiplied by every placement, with
+    /// nothing in it to thin per copy.</summary>
+    public static bool Instanced(string asset)
+        => Rows.TryGetValue(asset.ToLowerInvariant(), out var row)
+           && row.TryGetValue("instanced", out var flag) && flag.AsBool();
+
+    /// <summary>A linear module's stated width in metres, or the fallback when
+    /// the row carries none.</summary>
+    public static float Width(string asset, float fallback)
+        => Rows.TryGetValue(asset.ToLowerInvariant(), out var row)
+           && row.TryGetValue("width", out var width) ? (float)width.AsDouble() : fallback;
+
     private static Vector3 Vec(Godot.Collections.Array a) => a.Count < 3
         ? Vector3.Zero
         : new Vector3((float)a[0].AsDouble(), (float)a[1].AsDouble(), (float)a[2].AsDouble());
@@ -80,5 +118,6 @@ public static class DesignManifest
     {
         _files = null;
         _bounds = null;
+        _rows = null;
     }
 }

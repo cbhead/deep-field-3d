@@ -10,7 +10,10 @@ const PRESETS = {
   foundry: {
     fog: 0x08060a, density: .006, exposure: 1.05,
     hemi: [0x6a4634, 0x120c0a, .7], key: [0xffb27a, .85, [-40, 18, 26]], fill: [0x2a3550, .35],
-    particles: { kind: 'ember', count: 1800, color: 0xff8a2a, size: 5, height: 14, speed: .9 },
+    // No drifting particle field: 1,800 embers over a 110 m yard read as
+    // noise across the whole screen rather than as heat coming off anything.
+    // The furnace glow, the flood cones and the haze layers carry the air.
+    particles: null,
     haze: { color: 0x2a1610, layers: [[.35, .16], [.9, .11], [1.7, .07]] },
     lights: [
       { p: [-32, 3.6, -18], c: 0xff7a1a, i: 140, d: 30 }, { p: [-32, .3, -20.6], c: 0xff5a00, i: 60, d: 8 },   // crucible + pour puddle
@@ -73,21 +76,21 @@ const PRESETS = {
     ],
     hotspots: [{ p: [0, 41.6, 0], r: 2.2, c: 0x22d3ee }], // core glow on the roof
   },
-  /* The Toaster. The only map in the set lit by DAYLIGHT — an overcast late
-     autumn afternoon — and the only one that is 320 m across, which changes
-     both numbers that matter. Fog density has to be a third of a yard's or
-     the far treeline disappears and the map reads as 80 m of grass in a grey
-     box; and with no emissive industry anywhere, the sky is very nearly the
-     whole light budget, so the hemisphere carries it and the point lights are
-     down to the four things that actually glow. */
+  /* The Toaster. The only map in the set lit by DAYLIGHT — a clear summer
+     afternoon — and the only one that is 320 m across, which changes both
+     numbers that matter. Fog is a pale blue distance haze rather than a grey
+     deck, and thin: on a clear day the far treeline should still be THERE,
+     just cooler and lower in contrast. With no emissive industry anywhere the
+     sky is very nearly the whole light budget, so a high sun carries the key
+     and the point lights are down to the four things that actually glow. */
   toaster: {
-    fog: 0xa9a89c, density: .0022, exposure: 1.05,
-    hemi: [0xb9bfc4, 0x6a6450, 1.15], key: [0xffd9a8, 1.35, [-120, 54, -100]], fill: [0x8fa0b4, .45],
-    // Leaf fall rather than ash, and slow: the same particle system, but a
-    // hundred and eighty of them over six times the area is a hint of
-    // movement, and fourteen hundred would be a blizzard.
-    particles: { kind: 'ash', count: 180, color: 0xc08a44, size: 7, height: 16, speed: .22 },
-    haze: { color: 0xb2b0a2, layers: [[.4, .10], [1.4, .06]] },
+    fog: 0xc2d6e6, density: .0016, exposure: 1.12,
+    hemi: [0xbcd9f5, 0x5c6c40, 1.3], key: [0xfff6e2, 2.15, [-110, 150, -90]], fill: [0x9fc2e2, .4],
+    // High-summer motes rather than leaf fall, and slow: the same particle
+    // system, but a hundred and twenty of them over six times the area is a
+    // hint of pollen in the light, and fourteen hundred would be a blizzard.
+    particles: { kind: 'ash', count: 120, color: 0xf4edb8, size: 4, height: 14, speed: .12 },
+    haze: { color: 0xcadcea, layers: [[.4, .07], [1.4, .04]] },
     lights: [
       { p: [-57, 2.2, -10], c: 0x22d3ee, i: 160, d: 30 },                                                     // the core
       { p: [72, 2.2, 24], c: 0xff2e4a, i: 120, d: 26 },                                                       // the spawn gate
@@ -173,7 +176,7 @@ export function applyAtmosphere(stage, THREE, kitId, group, W, H) {
   for (const F of P.floods) flood(THREE, F, group);
   for (const Hs of P.hotspots) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: radialTexture(THREE), color: Hs.c, transparent: true, opacity: .9, blending: THREE.AdditiveBlending, depthWrite: false, fog: false })); s.position.set(...Hs.p); s.scale.setScalar(Hs.r * 2); s.name = '__atmo_hotspot'; s.userData.gizmo = true; group.add(s); }
   // Particles + haze.
-  group.add(particles(THREE, P.particles, W + 10, H + 10));
+  if (P.particles) group.add(particles(THREE, P.particles, W + 10, H + 10));
   const hz = hazeTexture(THREE);
   P.haze.layers.forEach(([y, op], i) => {
     const t = hz.clone(); t.needsUpdate = true; t.repeat.set(3 + i, 2 + i);

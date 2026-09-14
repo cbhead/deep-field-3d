@@ -28,6 +28,7 @@ import { buildSidearmHero, buildHeroHands, buildOffhandPose, OFFHAND_POSES } fro
 import { buildRifleHero } from './rifle-hero.js';
 import { buildScattergunHero } from './scattergun-hero.js';
 import { buildEmberPistolHero } from './emberpistol-hero.js';
+import { buildPoisonStreamHero, buildCryoSprayerHero } from './sprayer-hero.js';
 
 export function makeWeaponKit(THREE) {
   const K = makeKit(THREE);
@@ -288,6 +289,20 @@ export const WEAPONS = [
     note: 'The shooter\'s half of Thermal Shock, rebuilt to the hero standard. No real-world twin, so every part is grounded in a real MACHINE instead: signal-pistol proportions (150 mm barrel, 288 mm overall, 18 mm bore), a canister built as an actual pressure vessel with torispherical ends and a rolled seam, a turned brass handwheel on a brazed boss, and a braided hose that lands in swaged ferrules at BOTH ends rather than floating. Cooling fins are steps cut into the barrel\u2019s turned profile, not discs threaded onto a tube. Fuel-fed, so it ejects nothing \u2014 what it has is a breech block that kicks 8.5 mm on discharge.',
     build(K) {
       return buildEmberPistolHero(K);
+    },
+  }),
+  M({
+    id: 'poisonstream', handsPose: 'rifle', label: 'Poison stream', swatch: '#7fe65a', ms: 'M4', stats: { Cost: 'Plating 6 · Flux 4', Damage: '2.8', Rate: '6.0/s', Range: '18 m', Applies: 'poison', Doses: '40' },
+    note: 'The toxin applier — low direct damage, high rate, and poison ignores armour and shield, so it rots the Warden that eats fire and the Aegis that shrugs chip. Grounded in a real machine: a pressure-fed chemical applicator on paintball-marker architecture. Milled DLC body with lightening pockets and the feed-neck boss as displacement; a 300 mm nitride barrel with six flutes cut in that deepen to through-ports over the front third; a brass fan tip closing from round to a 14 × 2 mm slot. The 40-dose reservoir is the `_magazine` — a graduated glass cylinder on a brass neck with the dose level visible inside — and it pulls UP off `_mount_magwell`. The gas bottle is the stock: a real pressure vessel with torispherical ends, a turned regulator and gauge, braided line landing in ferrules at the ASA under the grip. Fuel-fed, so nothing ejects; the valve armature kicks 12 mm on discharge.',
+    build(K) {
+      return buildPoisonStreamHero(K);
+    },
+  }),
+  M({
+    id: 'cryosprayer', handsPose: 'rifle', label: 'Cryo sprayer', swatch: '#4fc0e8', ms: 'M4', stats: { Cost: 'Flux 8 · Alloy 4', Damage: '2.2', Rate: '7.0/s', Range: '14 m', Applies: 'chill', Doses: '45' },
+    note: 'The chill applier — the hero half of Flash Freeze with a Singularity, or of Thermal Shock with any burn source. Grounded in a CO₂ extinguisher crossed with a cryogen transfer line: bead-blasted steel valve block with nine heat-exchange ribs cut across both flanks, a 230 mm turned stainless lance, and a slotted discharge horn 72 mm at the mouth with eight vents cut through the flare. Rime sits where the cold reaches the metal — the lance root and horn throat — as matte dielectric crust, not a tinted metal. The 45-dose dewar is the `_magazine`: a horizontal vacuum flask on a manifold at the body’s front foot, fill neck, relief valve, sight glass and a frost line where the liquid stands; it pulls FORWARD off `_mount_magwell`. Vacuum-jacketed feed in ferrules at both ends, insulated carry handle under the dewar for the off-hand, tube stock with a rubber pad. The solenoid armature kicks 6 mm.',
+    build(K) {
+      return buildCryoSprayerHero(K);
     },
   }),
   {

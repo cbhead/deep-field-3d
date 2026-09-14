@@ -121,6 +121,73 @@ const lens = (K, name, pos, r = .06) => {
   return g;
 };
 
+/* Leaper: one builder, three poses. Each pose is a group `leaper_pose_<P>`
+   (origin at the ground under the body), so the three files are one build
+   each, and the Roster stacks all three in one model to run the jump cycle. */
+function leaperPose(K, P) {
+  const { part, box, cyl, grp, D, mats, THREE } = K, g = grp('leaper_pose_' + P);
+  const crouch = P === 'windup' ? .55 : P === 'airborne' ? 1.25 : .85, bodyY = P === 'airborne' ? 1.6 : crouch + .35;
+  const body = grp('leaper_body', [0, bodyY, 0]); if (P === 'airborne') body.rotation.x = .45;
+  body.add(part('leaper_torso', new THREE.CapsuleGeometry(.18, .36, 6, 12), mats.leaper_skin, [0, 0, 0], [Math.PI / 2 + .3, 0, 0]));
+  body.add(part('leaper_back_plate', new THREE.BoxGeometry(.26, .06, .40), mats.carapace, [0, .16, .0], [.3, 0, 0]));
+  body.add(part('leaper_chest', new THREE.BoxGeometry(.22, .20, .08), mats.carapace_dark, [0, -.06, -.26], [.3, 0, 0]));
+  body.add(part('leaper_core', new THREE.SphereGeometry(.05, 10, 8), mats.weak, [0, .02, .24]));
+  // Head: narrow, forward lens
+  body.add(part('leaper_neck', cyl(.05, .07, .16, 8), mats.joint, [0, .10, -.32], [1.0, 0, 0]));
+  body.add(part('leaper_head', new THREE.BoxGeometry(.14, .12, .30), mats.carapace_dark, [0, .16, -.46], [-.1, 0, 0]));
+  body.add(part('leaper_head_crest', new THREE.BoxGeometry(.03, .06, .22), mats.carapace, [0, .24, -.44]));
+  body.add(part('leaper_lens_housing', new THREE.CylinderGeometry(.05, .06, .05, 10), mats.joint, [0, .15, -.61], [Math.PI / 2, 0, 0]));
+  body.add(part('leaper_lens', new THREE.SphereGeometry(.04, 10, 8), P === 'windup' ? mats.weak : mats.eye, [0, .15, -.63]));
+  // Forearms
+  for (const s of [-1, 1]) { const tuck = P === 'airborne' ? .6 : 0; body.add(seg(K, 'leaper_arm_a' + (s < 0 ? '_l' : '_r'), [s * .18, -.04, -.20], [s * .26, -.22 + tuck * .1, -.30 + tuck * .12], .035, .03)); body.add(seg(K, 'leaper_arm_b' + (s < 0 ? '_l' : '_r'), [s * .26, -.22 + tuck * .1, -.30 + tuck * .12], [s * .20, -.36 + tuck * .2, -.42 + tuck * .18], .028, .02)); body.add(part('leaper_claw' + (s < 0 ? '_l' : '_r'), new THREE.ConeGeometry(.018, .10, 5), mats.chrome, [s * .20, -.40 + tuck * .2, -.46 + tuck * .18], [Math.PI, 0, 0])); }
+  // Tail with fin plates
+  const tail = grp('leaper_tail', [0, .0, .30]); tail.rotation.x = P === 'windup' ? -.8 : P === 'airborne' ? .2 : -.3;
+  for (let i = 0; i < 6; i++) { tail.add(part('leaper_tail_seg' + i, cyl(.06 - i * .008, .07 - i * .008, .16, 8), mats.leaper_skin, [0, 0, .08 + i * .15], [Math.PI / 2, 0, 0])); if (i % 2) tail.add(part('leaper_tail_fin' + i, new THREE.BoxGeometry(.02, .14 - i * .01, .10), mats.carapace, [0, .08, .08 + i * .15])); }
+  tail.add(part('leaper_tail_tip', new THREE.ConeGeometry(.03, .16, 6), mats.chrome, [0, 0, 1.0], [Math.PI / 2, 0, 0]));
+  body.add(tail);
+  g.add(body);
+  // Hind legs: hip on body, knee forward-high, ankle back-low, piston calf, splayed pad foot.
+  for (const s of [-1, 1]) {
+    const sfx = s < 0 ? '_l' : '_r';
+    const hip = [s * .20, bodyY - .10, .08];
+    const knee = P === 'airborne' ? [s * .26, bodyY - .30, .40] : [s * .26, crouch + .40, -.30];
+    const ankle = P === 'airborne' ? [s * .24, bodyY - .30, .95] : [s * .24, crouch * .35 + .05, .18];
+    const foot = P === 'airborne' ? [s * .24, bodyY - .50, 1.15] : [s * .24, .06, -.10];
+    g.add(part('leaper_hip' + sfx, new THREE.SphereGeometry(.11, 12, 8), mats.joint, hip));
+    g.add(seg(K, 'leaper_thigh' + sfx, hip, knee, .10, .08, mats.leaper_skin));
+    g.add(part('leaper_knee' + sfx, new THREE.SphereGeometry(.09, 12, 8), mats.joint, knee));
+    g.add(part('leaper_knee_cap' + sfx, new THREE.BoxGeometry(.14, .16, .10), mats.carapace, [knee[0], knee[1] + .02, knee[2] - .08]));
+    g.add(seg(K, 'leaper_shin' + sfx, knee, ankle, .07, .05, mats.leaper_skin));
+    g.add(K.hydraulic('leaper_calf_ram' + sfx, [knee[0] + s * .04, knee[1] - .06, knee[2] + .10], [ankle[0] + s * .04, ankle[1] + .04, ankle[2] + .02], .8));
+    g.add(part('leaper_ankle' + sfx, new THREE.SphereGeometry(.06, 10, 8), mats.joint, ankle));
+    g.add(seg(K, 'leaper_meta' + sfx, ankle, foot, .05, .05, mats.leaper_skin));
+    const pad = grp('leaper_foot' + sfx, foot); if (P === 'airborne') pad.rotation.x = 1.2;
+    const splay = P === 'windup' ? 1.4 : 1;
+    for (let i = 0; i < 3; i++) { const a = (i - 1) * .5 * splay; pad.add(part('leaper_toe' + sfx + i, new THREE.CapsuleGeometry(.03, .18, 4, 8), mats.leaper_pad, [Math.sin(a) * .12, -.02, -.10 - Math.cos(a) * .10], [Math.PI / 2, 0, -a])); pad.add(part('leaper_toe_claw' + sfx + i, new THREE.ConeGeometry(.02, .08, 5), mats.chrome, [Math.sin(a) * .22, -.03, -.22 - Math.cos(a) * .12], [-Math.PI / 2, 0, -a])); }
+    pad.add(part('leaper_heel' + sfx, new THREE.SphereGeometry(.05, 8, 6), mats.leaper_pad, [0, -.02, .08]));
+    g.add(pad);
+  }
+  if (P === 'windup') for (let i = 0; i < 4; i++) { const a = i / 4 * Math.PI * 2; g.add(part('leaper_dust' + i, new THREE.BoxGeometry(.12, .02, .06), mats.dirt, [Math.cos(a) * .5, .02, Math.sin(a) * .5], [0, -a, 0])); }
+  return g;
+}
+const LEAPER_NOTE = 'Is your defence one kill-box? A hunched digitigrade jumper: oversized reverse-jointed hind legs with piston calves and splayed pad feet, a short body slung low between them, small grasping forearms, a long counterweight tail with fin plates, and a narrow head with a single forward lens. ';
+const LEAPER_POSES = { stand: 'Standing: poised, knees bent, ready to go.', windup: 'Wind-up: legs fully compressed, tail cocked up, pads splayed, lens flaring — the tell before the jump.', airborne: 'Airborne: legs trailing straight back, arms tucked, tail streaming, body pitched nose-down — mid-arc, the ×1.5 window. Origin stays at the ground under the body.' };
+const leaperEntry = (P) => ({
+  id: P === 'stand' ? 'leaper' : 'leaper_' + P, file: P === 'stand' ? 'enemy_leaper.glb' : `enemy_leaper_${P}.glb`, label: P === 'stand' ? 'Leaper' : 'Leaper — ' + (P === 'windup' ? 'wind-up' : P), size: '1.7 m', swatch: '#6a7a5a', ms: 'M4',
+  stats: { Hp: '30', Speed: '2.8 m/s', Jumps: 'barricades · tiers', Airborne: '×1.5 taken', Pose: P },
+  note: LEAPER_NOTE + LEAPER_POSES[P] + (P === 'stand' ? ' In the Roster the motion preview stacks all three poses and runs the jump cycle (stand → wind-up → airborne arc); the export writes each pose to its own file.' : ''),
+  build(K) {
+    const g = K.grp(this.id);
+    if (P !== 'stand') { g.add(leaperPose(K, P)); return g; }
+    /* Base file carries the stand pose; the Roster adds the other two hidden
+       and toggles them. `userData.poses` names the cycle for any viewer. */
+    g.add(leaperPose(K, 'stand'));
+    for (const q of ['windup', 'airborne']) { const p = leaperPose(K, q); p.visible = false; p.userData.preview = true; p.userData.gizmo = true; g.add(p); }   // gizmo: the export drops them
+    g.userData.poses = { order: ['stand', 'windup', 'airborne'], hold: [1.2, .45, .7], prefix: 'leaper_pose_' };
+    return g;
+  },
+});
+
 export const ENEMIES = [
   {
     id: 'drifter', file: 'enemy_drifter.glb', label: 'Drifter', size: '1.6 m', swatch: '#7d8ba3',
@@ -690,159 +757,7 @@ export const ENEMIES = [
       return g;
     },
   },
-  {
-    id: 'leaper', file: 'enemy_leaper.glb', label: 'Leaper', size: '1.7 m', swatch: '#6a7a5a', ms: 'M4',
-    stats: { Hp: '30', Speed: '2.8 m/s', Jumps: 'barricades · tiers', Airborne: '×1.5 taken', Pose: 'stand' },
-    note: 'Is your defence one kill-box? A hunched digitigrade jumper: oversized reverse-jointed hind legs with piston calves and splayed pad feet, a short body slung low between them, small grasping forearms, a long counterweight tail with fin plates, and a narrow head with a single forward lens. Standing: poised, knees bent, ready to go.',
-    build(K) {
-      const { part, box, cyl, grp, D, mats, THREE } = K, g = grp(this.id), P = 'stand';
-      const crouch = P === 'windup' ? .55 : P === 'airborne' ? 1.25 : .85, bodyY = P === 'airborne' ? 1.6 : crouch + .35;
-      const body = grp('leaper_body', [0, bodyY, 0]); if (P === 'airborne') body.rotation.x = .45;
-      body.add(part('leaper_torso', new THREE.CapsuleGeometry(.18, .36, 6, 12), mats.leaper_skin, [0, 0, 0], [Math.PI / 2 + .3, 0, 0]));
-      body.add(part('leaper_back_plate', new THREE.BoxGeometry(.26, .06, .40), mats.carapace, [0, .16, .0], [.3, 0, 0]));
-      body.add(part('leaper_chest', new THREE.BoxGeometry(.22, .20, .08), mats.carapace_dark, [0, -.06, -.26], [.3, 0, 0]));
-      body.add(part('leaper_core', new THREE.SphereGeometry(.05, 10, 8), mats.weak, [0, .02, .24]));
-      // Head: narrow, forward lens
-      body.add(part('leaper_neck', cyl(.05, .07, .16, 8), mats.joint, [0, .10, -.32], [1.0, 0, 0]));
-      body.add(part('leaper_head', new THREE.BoxGeometry(.14, .12, .30), mats.carapace_dark, [0, .16, -.46], [-.1, 0, 0]));
-      body.add(part('leaper_head_crest', new THREE.BoxGeometry(.03, .06, .22), mats.carapace, [0, .24, -.44]));
-      body.add(part('leaper_lens_housing', new THREE.CylinderGeometry(.05, .06, .05, 10), mats.joint, [0, .15, -.61], [Math.PI / 2, 0, 0]));
-      body.add(part('leaper_lens', new THREE.SphereGeometry(.04, 10, 8), P === 'windup' ? mats.weak : mats.eye, [0, .15, -.63]));
-      // Forearms
-      for (const s of [-1, 1]) { const tuck = P === 'airborne' ? .6 : 0; body.add(seg(K, 'leaper_arm_a' + (s < 0 ? '_l' : '_r'), [s * .18, -.04, -.20], [s * .26, -.22 + tuck * .1, -.30 + tuck * .12], .035, .03)); body.add(seg(K, 'leaper_arm_b' + (s < 0 ? '_l' : '_r'), [s * .26, -.22 + tuck * .1, -.30 + tuck * .12], [s * .20, -.36 + tuck * .2, -.42 + tuck * .18], .028, .02)); body.add(part('leaper_claw' + (s < 0 ? '_l' : '_r'), new THREE.ConeGeometry(.018, .10, 5), mats.chrome, [s * .20, -.40 + tuck * .2, -.46 + tuck * .18], [Math.PI, 0, 0])); }
-      // Tail with fin plates
-      const tail = grp('leaper_tail', [0, .0, .30]); tail.rotation.x = P === 'windup' ? -.8 : P === 'airborne' ? .2 : -.3;
-      for (let i = 0; i < 6; i++) { tail.add(part('leaper_tail_seg' + i, cyl(.06 - i * .008, .07 - i * .008, .16, 8), mats.leaper_skin, [0, 0, .08 + i * .15], [Math.PI / 2, 0, 0])); if (i % 2) tail.add(part('leaper_tail_fin' + i, new THREE.BoxGeometry(.02, .14 - i * .01, .10), mats.carapace, [0, .08, .08 + i * .15])); }
-      tail.add(part('leaper_tail_tip', new THREE.ConeGeometry(.03, .16, 6), mats.chrome, [0, 0, 1.0], [Math.PI / 2, 0, 0]));
-      body.add(tail);
-      g.add(body);
-      // Hind legs: hip on body, knee forward-high, ankle back-low, piston calf, splayed pad foot.
-      for (const s of [-1, 1]) {
-        const sfx = s < 0 ? '_l' : '_r';
-        const hip = [s * .20, bodyY - .10, .08];
-        const knee = P === 'airborne' ? [s * .26, bodyY - .30, .40] : [s * .26, crouch + .40, -.30];
-        const ankle = P === 'airborne' ? [s * .24, bodyY - .30, .95] : [s * .24, crouch * .35 + .05, .18];
-        const foot = P === 'airborne' ? [s * .24, bodyY - .50, 1.15] : [s * .24, .06, -.10];
-        g.add(part('leaper_hip' + sfx, new THREE.SphereGeometry(.11, 12, 8), mats.joint, hip));
-        g.add(seg(K, 'leaper_thigh' + sfx, hip, knee, .10, .08, mats.leaper_skin));
-        g.add(part('leaper_knee' + sfx, new THREE.SphereGeometry(.09, 12, 8), mats.joint, knee));
-        g.add(part('leaper_knee_cap' + sfx, new THREE.BoxGeometry(.14, .16, .10), mats.carapace, [knee[0], knee[1] + .02, knee[2] - .08]));
-        g.add(seg(K, 'leaper_shin' + sfx, knee, ankle, .07, .05, mats.leaper_skin));
-        g.add(K.hydraulic('leaper_calf_ram' + sfx, [knee[0] + s * .04, knee[1] - .06, knee[2] + .10], [ankle[0] + s * .04, ankle[1] + .04, ankle[2] + .02], .8));
-        g.add(part('leaper_ankle' + sfx, new THREE.SphereGeometry(.06, 10, 8), mats.joint, ankle));
-        g.add(seg(K, 'leaper_meta' + sfx, ankle, foot, .05, .05, mats.leaper_skin));
-        const pad = grp('leaper_foot' + sfx, foot); if (P === 'airborne') pad.rotation.x = 1.2;
-        const splay = P === 'windup' ? 1.4 : 1;
-        for (let i = 0; i < 3; i++) { const a = (i - 1) * .5 * splay; pad.add(part('leaper_toe' + sfx + i, new THREE.CapsuleGeometry(.03, .18, 4, 8), mats.leaper_pad, [Math.sin(a) * .12, -.02, -.10 - Math.cos(a) * .10], [Math.PI / 2, 0, -a])); pad.add(part('leaper_toe_claw' + sfx + i, new THREE.ConeGeometry(.02, .08, 5), mats.chrome, [Math.sin(a) * .22, -.03, -.22 - Math.cos(a) * .12], [-Math.PI / 2, 0, -a])); }
-        pad.add(part('leaper_heel' + sfx, new THREE.SphereGeometry(.05, 8, 6), mats.leaper_pad, [0, -.02, .08]));
-        g.add(pad);
-      }
-      if (P === 'windup') for (let i = 0; i < 4; i++) { const a = i / 4 * Math.PI * 2; g.add(part('leaper_dust' + i, new THREE.BoxGeometry(.12, .02, .06), mats.dirt, [Math.cos(a) * .5, .02, Math.sin(a) * .5], [0, -a, 0])); }
-      return g;
-    },
-  },
-  {
-    id: 'leaper_windup', file: 'enemy_leaper_windup.glb', label: 'Leaper — wind-up', size: '1.7 m', swatch: '#6a7a5a', ms: 'M4',
-    stats: { Hp: '30', Speed: '2.8 m/s', Jumps: 'barricades · tiers', Airborne: '×1.5 taken', Pose: 'windup' },
-    note: 'Is your defence one kill-box? A hunched digitigrade jumper: oversized reverse-jointed hind legs with piston calves and splayed pad feet, a short body slung low between them, small grasping forearms, a long counterweight tail with fin plates, and a narrow head with a single forward lens. Wind-up: legs fully compressed, tail cocked up, pads splayed, lens flaring — the tell before the jump.',
-    build(K) {
-      const { part, box, cyl, grp, D, mats, THREE } = K, g = grp(this.id), P = 'windup';
-      const crouch = P === 'windup' ? .55 : P === 'airborne' ? 1.25 : .85, bodyY = P === 'airborne' ? 1.6 : crouch + .35;
-      const body = grp('leaper_body', [0, bodyY, 0]); if (P === 'airborne') body.rotation.x = .45;
-      body.add(part('leaper_torso', new THREE.CapsuleGeometry(.18, .36, 6, 12), mats.leaper_skin, [0, 0, 0], [Math.PI / 2 + .3, 0, 0]));
-      body.add(part('leaper_back_plate', new THREE.BoxGeometry(.26, .06, .40), mats.carapace, [0, .16, .0], [.3, 0, 0]));
-      body.add(part('leaper_chest', new THREE.BoxGeometry(.22, .20, .08), mats.carapace_dark, [0, -.06, -.26], [.3, 0, 0]));
-      body.add(part('leaper_core', new THREE.SphereGeometry(.05, 10, 8), mats.weak, [0, .02, .24]));
-      // Head: narrow, forward lens
-      body.add(part('leaper_neck', cyl(.05, .07, .16, 8), mats.joint, [0, .10, -.32], [1.0, 0, 0]));
-      body.add(part('leaper_head', new THREE.BoxGeometry(.14, .12, .30), mats.carapace_dark, [0, .16, -.46], [-.1, 0, 0]));
-      body.add(part('leaper_head_crest', new THREE.BoxGeometry(.03, .06, .22), mats.carapace, [0, .24, -.44]));
-      body.add(part('leaper_lens_housing', new THREE.CylinderGeometry(.05, .06, .05, 10), mats.joint, [0, .15, -.61], [Math.PI / 2, 0, 0]));
-      body.add(part('leaper_lens', new THREE.SphereGeometry(.04, 10, 8), P === 'windup' ? mats.weak : mats.eye, [0, .15, -.63]));
-      // Forearms
-      for (const s of [-1, 1]) { const tuck = P === 'airborne' ? .6 : 0; body.add(seg(K, 'leaper_arm_a' + (s < 0 ? '_l' : '_r'), [s * .18, -.04, -.20], [s * .26, -.22 + tuck * .1, -.30 + tuck * .12], .035, .03)); body.add(seg(K, 'leaper_arm_b' + (s < 0 ? '_l' : '_r'), [s * .26, -.22 + tuck * .1, -.30 + tuck * .12], [s * .20, -.36 + tuck * .2, -.42 + tuck * .18], .028, .02)); body.add(part('leaper_claw' + (s < 0 ? '_l' : '_r'), new THREE.ConeGeometry(.018, .10, 5), mats.chrome, [s * .20, -.40 + tuck * .2, -.46 + tuck * .18], [Math.PI, 0, 0])); }
-      // Tail with fin plates
-      const tail = grp('leaper_tail', [0, .0, .30]); tail.rotation.x = P === 'windup' ? -.8 : P === 'airborne' ? .2 : -.3;
-      for (let i = 0; i < 6; i++) { tail.add(part('leaper_tail_seg' + i, cyl(.06 - i * .008, .07 - i * .008, .16, 8), mats.leaper_skin, [0, 0, .08 + i * .15], [Math.PI / 2, 0, 0])); if (i % 2) tail.add(part('leaper_tail_fin' + i, new THREE.BoxGeometry(.02, .14 - i * .01, .10), mats.carapace, [0, .08, .08 + i * .15])); }
-      tail.add(part('leaper_tail_tip', new THREE.ConeGeometry(.03, .16, 6), mats.chrome, [0, 0, 1.0], [Math.PI / 2, 0, 0]));
-      body.add(tail);
-      g.add(body);
-      // Hind legs: hip on body, knee forward-high, ankle back-low, piston calf, splayed pad foot.
-      for (const s of [-1, 1]) {
-        const sfx = s < 0 ? '_l' : '_r';
-        const hip = [s * .20, bodyY - .10, .08];
-        const knee = P === 'airborne' ? [s * .26, bodyY - .30, .40] : [s * .26, crouch + .40, -.30];
-        const ankle = P === 'airborne' ? [s * .24, bodyY - .30, .95] : [s * .24, crouch * .35 + .05, .18];
-        const foot = P === 'airborne' ? [s * .24, bodyY - .50, 1.15] : [s * .24, .06, -.10];
-        g.add(part('leaper_hip' + sfx, new THREE.SphereGeometry(.11, 12, 8), mats.joint, hip));
-        g.add(seg(K, 'leaper_thigh' + sfx, hip, knee, .10, .08, mats.leaper_skin));
-        g.add(part('leaper_knee' + sfx, new THREE.SphereGeometry(.09, 12, 8), mats.joint, knee));
-        g.add(part('leaper_knee_cap' + sfx, new THREE.BoxGeometry(.14, .16, .10), mats.carapace, [knee[0], knee[1] + .02, knee[2] - .08]));
-        g.add(seg(K, 'leaper_shin' + sfx, knee, ankle, .07, .05, mats.leaper_skin));
-        g.add(K.hydraulic('leaper_calf_ram' + sfx, [knee[0] + s * .04, knee[1] - .06, knee[2] + .10], [ankle[0] + s * .04, ankle[1] + .04, ankle[2] + .02], .8));
-        g.add(part('leaper_ankle' + sfx, new THREE.SphereGeometry(.06, 10, 8), mats.joint, ankle));
-        g.add(seg(K, 'leaper_meta' + sfx, ankle, foot, .05, .05, mats.leaper_skin));
-        const pad = grp('leaper_foot' + sfx, foot); if (P === 'airborne') pad.rotation.x = 1.2;
-        const splay = P === 'windup' ? 1.4 : 1;
-        for (let i = 0; i < 3; i++) { const a = (i - 1) * .5 * splay; pad.add(part('leaper_toe' + sfx + i, new THREE.CapsuleGeometry(.03, .18, 4, 8), mats.leaper_pad, [Math.sin(a) * .12, -.02, -.10 - Math.cos(a) * .10], [Math.PI / 2, 0, -a])); pad.add(part('leaper_toe_claw' + sfx + i, new THREE.ConeGeometry(.02, .08, 5), mats.chrome, [Math.sin(a) * .22, -.03, -.22 - Math.cos(a) * .12], [-Math.PI / 2, 0, -a])); }
-        pad.add(part('leaper_heel' + sfx, new THREE.SphereGeometry(.05, 8, 6), mats.leaper_pad, [0, -.02, .08]));
-        g.add(pad);
-      }
-      if (P === 'windup') for (let i = 0; i < 4; i++) { const a = i / 4 * Math.PI * 2; g.add(part('leaper_dust' + i, new THREE.BoxGeometry(.12, .02, .06), mats.dirt, [Math.cos(a) * .5, .02, Math.sin(a) * .5], [0, -a, 0])); }
-      return g;
-    },
-  },
-  {
-    id: 'leaper_airborne', file: 'enemy_leaper_airborne.glb', label: 'Leaper — airborne', size: '1.7 m', swatch: '#6a7a5a', ms: 'M4',
-    stats: { Hp: '30', Speed: '2.8 m/s', Jumps: 'barricades · tiers', Airborne: '×1.5 taken', Pose: 'airborne' },
-    note: 'Is your defence one kill-box? A hunched digitigrade jumper: oversized reverse-jointed hind legs with piston calves and splayed pad feet, a short body slung low between them, small grasping forearms, a long counterweight tail with fin plates, and a narrow head with a single forward lens. Airborne: legs trailing straight back, arms tucked, tail streaming, body pitched nose-down — mid-arc, the ×1.5 window. Origin stays at the ground under the body.',
-    build(K) {
-      const { part, box, cyl, grp, D, mats, THREE } = K, g = grp(this.id), P = 'airborne';
-      const crouch = P === 'windup' ? .55 : P === 'airborne' ? 1.25 : .85, bodyY = P === 'airborne' ? 1.6 : crouch + .35;
-      const body = grp('leaper_body', [0, bodyY, 0]); if (P === 'airborne') body.rotation.x = .45;
-      body.add(part('leaper_torso', new THREE.CapsuleGeometry(.18, .36, 6, 12), mats.leaper_skin, [0, 0, 0], [Math.PI / 2 + .3, 0, 0]));
-      body.add(part('leaper_back_plate', new THREE.BoxGeometry(.26, .06, .40), mats.carapace, [0, .16, .0], [.3, 0, 0]));
-      body.add(part('leaper_chest', new THREE.BoxGeometry(.22, .20, .08), mats.carapace_dark, [0, -.06, -.26], [.3, 0, 0]));
-      body.add(part('leaper_core', new THREE.SphereGeometry(.05, 10, 8), mats.weak, [0, .02, .24]));
-      // Head: narrow, forward lens
-      body.add(part('leaper_neck', cyl(.05, .07, .16, 8), mats.joint, [0, .10, -.32], [1.0, 0, 0]));
-      body.add(part('leaper_head', new THREE.BoxGeometry(.14, .12, .30), mats.carapace_dark, [0, .16, -.46], [-.1, 0, 0]));
-      body.add(part('leaper_head_crest', new THREE.BoxGeometry(.03, .06, .22), mats.carapace, [0, .24, -.44]));
-      body.add(part('leaper_lens_housing', new THREE.CylinderGeometry(.05, .06, .05, 10), mats.joint, [0, .15, -.61], [Math.PI / 2, 0, 0]));
-      body.add(part('leaper_lens', new THREE.SphereGeometry(.04, 10, 8), P === 'windup' ? mats.weak : mats.eye, [0, .15, -.63]));
-      // Forearms
-      for (const s of [-1, 1]) { const tuck = P === 'airborne' ? .6 : 0; body.add(seg(K, 'leaper_arm_a' + (s < 0 ? '_l' : '_r'), [s * .18, -.04, -.20], [s * .26, -.22 + tuck * .1, -.30 + tuck * .12], .035, .03)); body.add(seg(K, 'leaper_arm_b' + (s < 0 ? '_l' : '_r'), [s * .26, -.22 + tuck * .1, -.30 + tuck * .12], [s * .20, -.36 + tuck * .2, -.42 + tuck * .18], .028, .02)); body.add(part('leaper_claw' + (s < 0 ? '_l' : '_r'), new THREE.ConeGeometry(.018, .10, 5), mats.chrome, [s * .20, -.40 + tuck * .2, -.46 + tuck * .18], [Math.PI, 0, 0])); }
-      // Tail with fin plates
-      const tail = grp('leaper_tail', [0, .0, .30]); tail.rotation.x = P === 'windup' ? -.8 : P === 'airborne' ? .2 : -.3;
-      for (let i = 0; i < 6; i++) { tail.add(part('leaper_tail_seg' + i, cyl(.06 - i * .008, .07 - i * .008, .16, 8), mats.leaper_skin, [0, 0, .08 + i * .15], [Math.PI / 2, 0, 0])); if (i % 2) tail.add(part('leaper_tail_fin' + i, new THREE.BoxGeometry(.02, .14 - i * .01, .10), mats.carapace, [0, .08, .08 + i * .15])); }
-      tail.add(part('leaper_tail_tip', new THREE.ConeGeometry(.03, .16, 6), mats.chrome, [0, 0, 1.0], [Math.PI / 2, 0, 0]));
-      body.add(tail);
-      g.add(body);
-      // Hind legs: hip on body, knee forward-high, ankle back-low, piston calf, splayed pad foot.
-      for (const s of [-1, 1]) {
-        const sfx = s < 0 ? '_l' : '_r';
-        const hip = [s * .20, bodyY - .10, .08];
-        const knee = P === 'airborne' ? [s * .26, bodyY - .30, .40] : [s * .26, crouch + .40, -.30];
-        const ankle = P === 'airborne' ? [s * .24, bodyY - .30, .95] : [s * .24, crouch * .35 + .05, .18];
-        const foot = P === 'airborne' ? [s * .24, bodyY - .50, 1.15] : [s * .24, .06, -.10];
-        g.add(part('leaper_hip' + sfx, new THREE.SphereGeometry(.11, 12, 8), mats.joint, hip));
-        g.add(seg(K, 'leaper_thigh' + sfx, hip, knee, .10, .08, mats.leaper_skin));
-        g.add(part('leaper_knee' + sfx, new THREE.SphereGeometry(.09, 12, 8), mats.joint, knee));
-        g.add(part('leaper_knee_cap' + sfx, new THREE.BoxGeometry(.14, .16, .10), mats.carapace, [knee[0], knee[1] + .02, knee[2] - .08]));
-        g.add(seg(K, 'leaper_shin' + sfx, knee, ankle, .07, .05, mats.leaper_skin));
-        g.add(K.hydraulic('leaper_calf_ram' + sfx, [knee[0] + s * .04, knee[1] - .06, knee[2] + .10], [ankle[0] + s * .04, ankle[1] + .04, ankle[2] + .02], .8));
-        g.add(part('leaper_ankle' + sfx, new THREE.SphereGeometry(.06, 10, 8), mats.joint, ankle));
-        g.add(seg(K, 'leaper_meta' + sfx, ankle, foot, .05, .05, mats.leaper_skin));
-        const pad = grp('leaper_foot' + sfx, foot); if (P === 'airborne') pad.rotation.x = 1.2;
-        const splay = P === 'windup' ? 1.4 : 1;
-        for (let i = 0; i < 3; i++) { const a = (i - 1) * .5 * splay; pad.add(part('leaper_toe' + sfx + i, new THREE.CapsuleGeometry(.03, .18, 4, 8), mats.leaper_pad, [Math.sin(a) * .12, -.02, -.10 - Math.cos(a) * .10], [Math.PI / 2, 0, -a])); pad.add(part('leaper_toe_claw' + sfx + i, new THREE.ConeGeometry(.02, .08, 5), mats.chrome, [Math.sin(a) * .22, -.03, -.22 - Math.cos(a) * .12], [-Math.PI / 2, 0, -a])); }
-        pad.add(part('leaper_heel' + sfx, new THREE.SphereGeometry(.05, 8, 6), mats.leaper_pad, [0, -.02, .08]));
-        g.add(pad);
-      }
-      if (P === 'windup') for (let i = 0; i < 4; i++) { const a = i / 4 * Math.PI * 2; g.add(part('leaper_dust' + i, new THREE.BoxGeometry(.12, .02, .06), mats.dirt, [Math.cos(a) * .5, .02, Math.sin(a) * .5], [0, -a, 0])); }
-      return g;
-    },
-  },
+  leaperEntry('stand'), leaperEntry('windup'), leaperEntry('airborne'),
   {
     id: 'carapace', file: 'enemy_carapace.glb', label: 'Carapace', size: '2.0 m', swatch: '#8d99ad', ms: 'M4',
     stats: { Hp: '48', Plates: '6 × 10 hp', Under: 'weak ×1.5', Bounty: '20', Answer: 'aim, not DPS' },

@@ -224,10 +224,12 @@ strand) · socket markers: `socket_ground_empty.glb`, `socket_ground_base.glb`,
 `socket_wall_empty.glb`, `socket_wall_base.glb`, `socket_trap_empty.glb`,
 `socket_barricade_empty.glb`
 
-**The Toaster** (`game/assets/maps/`, rural property in late autumn,
+**The Toaster** (`game/assets/maps/`, rural property on a summer afternoon,
 320 × 160 m; commissioned in `FORWARD-MANIFEST-toaster.md`, delivered
-2026-09-12): the instanced set `toaster_terrain.glb` (+ `_v1`…`_v3`, 20 m,
-one part), `toaster_road_asphalt.glb` (4 m, 6 wide), `toaster_road_gravel.glb`
+2026-09-12, uplifted 2026-09-13): the instanced set `toaster_terrain.glb`
+(+ `_v1`…`_v3` lawn, `_v4` rough pasture and `_v5` hay stubble assigned by
+field region, 20 m, one part), `toaster_path_ground.glb` (the enemy lane: a
+4 m worn two-rut track, 3.4 wide, instanced along every walked leg), `toaster_road_asphalt.glb` (4 m, 6 wide), `toaster_road_gravel.glb`
 (4 m, 4 wide), `toaster_road_arc.glb` (30° of the circular drive, origin at the
 centre of curvature), `toaster_tree_oak.glb` · `_maple` · `_pine` (two parts
 each) with `_lod1` billboards, `toaster_understory.glb`,
@@ -241,7 +243,17 @@ interiors `toaster_dress_workbench.glb`, `toaster_dress_shelving.glb`,
 `toaster_skybox.glb`; dressing `toaster_fence_wood.glb` (4 m run),
 `toaster_mailbox.glb`, `toaster_woodpile.glb`, `toaster_hay_bale.glb`,
 `toaster_propane_tank.glb`, `toaster_wreck_pickup.glb`,
-`toaster_leaf_pile.glb`. Shared additions for it: `shared_warp_gate_idle.glb`
+`toaster_leaf_pile.glb`; the fields — `toaster_fence_wire.glb` (4 m run,
+instanced) with `toaster_gate_farm.glb` dropped into a run, `toaster_hedgerow.glb`
+(4 m run), `toaster_tree_oak_open.glb` (open-grown, round plan, + `_lod1`),
+`toaster_tree_apple.glb` (+ `_lod1`), `toaster_crop_rows.glb` (10 × 10 m
+module); the farmstead — `toaster_grain_bin.glb` (+ `_v1`), `toaster_fuel_tank.glb`,
+`toaster_windmill.glb` (its wheel is `toaster_windmill_wheel`, turned by the
+client from `userData.spin`), `toaster_stock_tank.glb`, `toaster_bale_feeder.glb`,
+`toaster_shed_small.glb`, `toaster_garden_plot.glb`, `toaster_clothesline.glb`,
+`toaster_hay_wagon.glb`, `toaster_reeds.glb`; and `toaster_utility_pole.glb`
+(+ `_v1` with a transformer) down both roads, with the conductors strung by the
+client between the poles that passed clearance. Shared additions for it: `shared_warp_gate_idle.glb`
 / `shared_warp_gate_active.glb` (the enemy gate — a 4.5 m arch, deliberately
 not a pad; `_active` carries `warp_membrane`, which the code pulses) and
 `vfx_teleport_burst.glb`.
@@ -335,9 +347,11 @@ Same conventions; titles fixed now so nothing renames later.
   this list in priority — plus `melee_gauntlets_*` · `melee_chainblade_*` still
   forward-looking, all with visible module sets `meleemod_edge_*` / `_grip_*` /
   `_infusion_*` / `_counterweight_*` / `_chargecell_*`.
-  Melee viewmodels join the first-person viewmodel batch rather than shipping
-  alone: the client has no viewmodel rendering yet, so a melee model would have
-  nowhere to appear.
+  Delivered 2026-09-13: `weapon_poisonstream_*`, `weapon_cryosprayer_*`
+  (hero standard, `_magazine` + `_mount_magwell` + `_slide_assembly`, so the
+  reload plays on them unchanged), `melee_blade_*` / `_maul_*` / `_spear_*`
+  and the eight `meleemod_*` files Melee.cs actually sells — consumed by the
+  swing viewmodel (`Player.BeginSwing`) and the asset audit.
 - **Conditions** (environment treatment sets + banner icons):
   `cond_fog` · `cond_night` (lighting rig + `vfx_flashlight_cone.glb` +
   enemy eye-glow treatment) · `cond_storm` · `cond_heatwave` ·

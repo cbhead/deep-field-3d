@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generated": "2026-09-12T21:00:13.318Z",
+  "generated": "2026-09-14T21:47:23.502Z",
   "units": "metres",
   "up": "+Y",
   "forward": "-Z",
@@ -7126,7 +7126,7 @@
     },
     {
       "file": "enemy_leaper.glb",
-      "bytes": 515384,
+      "bytes": 515536,
       "tris": 14976,
       "parts": 63,
       "bounds": {
@@ -7143,11 +7143,11 @@
       },
       "kind": "enemy",
       "id": "leaper",
-      "note": "Is your defence one kill-box? A hunched digitigrade jumper: oversized reverse-jointed hind legs with piston calves and splayed pad feet, a short body slung low between them, small grasping forearms, a long counterweight tail with fin plates, and a narrow head with a single forward lens. Standing: poised, knees bent, ready to go."
+      "note": "Is your defence one kill-box? A hunched digitigrade jumper: oversized reverse-jointed hind legs with piston calves and splayed pad feet, a short body slung low between them, small grasping forearms, a long counterweight tail with fin plates, and a narrow head with a single forward lens. Standing: poised, knees bent, ready to go. In the Roster the motion preview stacks all three poses and runs the jump cycle (stand → wind-up → airborne arc); the export writes each pose to its own file."
     },
     {
       "file": "enemy_leaper_windup.glb",
-      "bytes": 542136,
+      "bytes": 542184,
       "tris": 15216,
       "parts": 67,
       "bounds": {
@@ -7168,7 +7168,7 @@
     },
     {
       "file": "enemy_leaper_airborne.glb",
-      "bytes": 515476,
+      "bytes": 515524,
       "tris": 14976,
       "parts": 63,
       "bounds": {
@@ -7798,7 +7798,7 @@
     },
     {
       "file": "weapon_sidearm_vm.glb",
-      "bytes": 14412540,
+      "bytes": 14407452,
       "tris": 143106,
       "parts": 337,
       "bounds": {
@@ -7819,7 +7819,7 @@
     },
     {
       "file": "weapon_rifle_vm.glb",
-      "bytes": 16852800,
+      "bytes": 16843144,
       "tris": 197896,
       "parts": 121,
       "bounds": {
@@ -7840,7 +7840,7 @@
     },
     {
       "file": "weapon_scattergun_vm.glb",
-      "bytes": 18863508,
+      "bytes": 18863248,
       "tris": 153872,
       "parts": 115,
       "bounds": {
@@ -7861,7 +7861,7 @@
     },
     {
       "file": "weapon_emberpistol_vm.glb",
-      "bytes": 12092536,
+      "bytes": 12092276,
       "tris": 62948,
       "parts": 93,
       "bounds": {
@@ -7879,6 +7879,48 @@
       "kind": "weapon",
       "id": "emberpistol",
       "note": "The shooter's half of Thermal Shock, rebuilt to the hero standard. No real-world twin, so every part is grounded in a real MACHINE instead: signal-pistol proportions (150 mm barrel, 288 mm overall, 18 mm bore), a canister built as an actual pressure vessel with torispherical ends and a rolled seam, a turned brass handwheel on a brazed boss, and a braided hose that lands in swaged ferrules at BOTH ends rather than floating. Cooling fins are steps cut into the barrel’s turned profile, not discs threaded onto a tube. Fuel-fed, so it ejects nothing — what it has is a breech block that kicks 8.5 mm on discharge."
+    },
+    {
+      "file": "weapon_poisonstream_vm.glb",
+      "bytes": 12197104,
+      "tris": 87120,
+      "parts": 266,
+      "bounds": {
+        "min": [
+          -0.039,
+          -0.065,
+          -0.426
+        ],
+        "max": [
+          0.039,
+          0.209,
+          0.372
+        ]
+      },
+      "kind": "weapon",
+      "id": "poisonstream",
+      "note": "The toxin applier — low direct damage, high rate, and poison ignores armour and shield, so it rots the Warden that eats fire and the Aegis that shrugs chip. Grounded in a real machine: a pressure-fed chemical applicator on paintball-marker architecture. Milled DLC body with lightening pockets and the feed-neck boss as displacement; a 300 mm nitride barrel with six flutes cut in that deepen to through-ports over the front third; a brass fan tip closing from round to a 14 × 2 mm slot. The 40-dose reservoir is the `_magazine` — a graduated glass cylinder on a brass neck with the dose level visible inside — and it pulls UP off `_mount_magwell`. The gas bottle is the stock: a real pressure vessel with torispherical ends, a turned regulator and gauge, braided line landing in ferrules at the ASA under the grip. Fuel-fed, so nothing ejects; the valve armature kicks 12 mm on discharge."
+    },
+    {
+      "file": "weapon_cryosprayer_vm.glb",
+      "bytes": 13992372,
+      "tris": 76912,
+      "parts": 248,
+      "bounds": {
+        "min": [
+          -0.038,
+          -0.065,
+          -0.42
+        ],
+        "max": [
+          0.038,
+          0.096,
+          0.314
+        ]
+      },
+      "kind": "weapon",
+      "id": "cryosprayer",
+      "note": "The chill applier — the hero half of Flash Freeze with a Singularity, or of Thermal Shock with any burn source. Grounded in a CO₂ extinguisher crossed with a cryogen transfer line: bead-blasted steel valve block with nine heat-exchange ribs cut across both flanks, a 230 mm turned stainless lance, and a slotted discharge horn 72 mm at the mouth with eight vents cut through the flare. Rime sits where the cold reaches the metal — the lance root and horn throat — as matte dielectric crust, not a tinted metal. The 45-dose dewar is the `_magazine`: a horizontal vacuum flask on a manifold at the body’s front foot, fill neck, relief valve, sight glass and a frost line where the liquid stands; it pulls FORWARD off `_mount_magwell`. Vacuum-jacketed feed in ferrules at both ends, insulated carry handle under the dewar for the off-hand, tube stock with a rubber pad. The solenoid armature kicks 6 mm."
     },
     {
       "file": "weapon_wrench_vm.glb",
@@ -8037,7 +8079,7 @@
     },
     {
       "file": "weapon_sidearm_world.glb",
-      "bytes": 14412544,
+      "bytes": 14407456,
       "tris": 143106,
       "parts": 337,
       "bounds": {
@@ -8058,7 +8100,7 @@
     },
     {
       "file": "weapon_rifle_world.glb",
-      "bytes": 16852804,
+      "bytes": 16843148,
       "tris": 197896,
       "parts": 121,
       "bounds": {
@@ -8079,7 +8121,7 @@
     },
     {
       "file": "weapon_scattergun_world.glb",
-      "bytes": 18863512,
+      "bytes": 18863252,
       "tris": 153872,
       "parts": 115,
       "bounds": {
@@ -8100,7 +8142,7 @@
     },
     {
       "file": "weapon_emberpistol_world.glb",
-      "bytes": 12092540,
+      "bytes": 12092280,
       "tris": 62948,
       "parts": 93,
       "bounds": {
@@ -8118,6 +8160,48 @@
       "kind": "weapon_world",
       "id": "emberpistol_world",
       "note": "The shooter's half of Thermal Shock, rebuilt to the hero standard. No real-world twin, so every part is grounded in a real MACHINE instead: signal-pistol proportions (150 mm barrel, 288 mm overall, 18 mm bore), a canister built as an actual pressure vessel with torispherical ends and a rolled seam, a turned brass handwheel on a brazed boss, and a braided hose that lands in swaged ferrules at BOTH ends rather than floating. Cooling fins are steps cut into the barrel’s turned profile, not discs threaded onto a tube. Fuel-fed, so it ejects nothing — what it has is a breech block that kicks 8.5 mm on discharge."
+    },
+    {
+      "file": "weapon_poisonstream_world.glb",
+      "bytes": 12197108,
+      "tris": 87120,
+      "parts": 266,
+      "bounds": {
+        "min": [
+          -0.039,
+          -0.065,
+          -0.426
+        ],
+        "max": [
+          0.039,
+          0.209,
+          0.372
+        ]
+      },
+      "kind": "weapon_world",
+      "id": "poisonstream_world",
+      "note": "The toxin applier — low direct damage, high rate, and poison ignores armour and shield, so it rots the Warden that eats fire and the Aegis that shrugs chip. Grounded in a real machine: a pressure-fed chemical applicator on paintball-marker architecture. Milled DLC body with lightening pockets and the feed-neck boss as displacement; a 300 mm nitride barrel with six flutes cut in that deepen to through-ports over the front third; a brass fan tip closing from round to a 14 × 2 mm slot. The 40-dose reservoir is the `_magazine` — a graduated glass cylinder on a brass neck with the dose level visible inside — and it pulls UP off `_mount_magwell`. The gas bottle is the stock: a real pressure vessel with torispherical ends, a turned regulator and gauge, braided line landing in ferrules at the ASA under the grip. Fuel-fed, so nothing ejects; the valve armature kicks 12 mm on discharge."
+    },
+    {
+      "file": "weapon_cryosprayer_world.glb",
+      "bytes": 13992376,
+      "tris": 76912,
+      "parts": 248,
+      "bounds": {
+        "min": [
+          -0.038,
+          -0.065,
+          -0.42
+        ],
+        "max": [
+          0.038,
+          0.096,
+          0.314
+        ]
+      },
+      "kind": "weapon_world",
+      "id": "cryosprayer_world",
+      "note": "The chill applier — the hero half of Flash Freeze with a Singularity, or of Thermal Shock with any burn source. Grounded in a CO₂ extinguisher crossed with a cryogen transfer line: bead-blasted steel valve block with nine heat-exchange ribs cut across both flanks, a 230 mm turned stainless lance, and a slotted discharge horn 72 mm at the mouth with eight vents cut through the flare. Rime sits where the cold reaches the metal — the lance root and horn throat — as matte dielectric crust, not a tinted metal. The 45-dose dewar is the `_magazine`: a horizontal vacuum flask on a manifold at the body’s front foot, fill neck, relief valve, sight glass and a frost line where the liquid stands; it pulls FORWARD off `_mount_magwell`. Vacuum-jacketed feed in ferrules at both ends, insulated carry handle under the dewar for the off-hand, tube stock with a rubber pad. The solenoid armature kicks 6 mm."
     },
     {
       "file": "hero_forge.glb",
@@ -9235,7 +9319,7 @@
     },
     {
       "file": "foundry_path_ground.glb",
-      "bytes": 3777224,
+      "bytes": 3777564,
       "tris": 3894,
       "parts": 10,
       "bounds": {
@@ -9256,7 +9340,7 @@
     },
     {
       "file": "foundry_deck.glb",
-      "bytes": 5293952,
+      "bytes": 5281240,
       "tris": 21592,
       "parts": 32,
       "bounds": {
@@ -9277,7 +9361,7 @@
     },
     {
       "file": "foundry_deck_rail.glb",
-      "bytes": 2047852,
+      "bytes": 2035140,
       "tris": 996,
       "parts": 9,
       "bounds": {
@@ -9294,32 +9378,98 @@
       },
       "kind": "map_foundry",
       "id": "foundry_deck_rail",
-      "note": "One 4 m run of deck rail to real handrail geometry: capped 48.3 OD tube posts at 1.27 m centres on bolted base plates, a 48.3 top rail at 1100 and a 42.4 mid rail at 550, and a 100 mm toe board with a hazard band. The old run put an 80 mm rail on 100 mm square posts over a 150 mm plate, which is what made the deck read a size too small for the player. Sits on the deck’s +Z edge at z −11.2; leave bays open where the ladder and zipline anchor land."
+      "note": "One 4 m run of deck rail to real handrail geometry: capped 48.3 OD tube posts at 1.27 m centres on bolted base plates, a 48.3 top rail at 1100 and a 42.4 mid rail at 550, and a 100 mm toe board with a hazard band. The old run put an 80 mm rail on 100 mm square posts over a 150 mm plate, which is what made the deck read a size too small for the player. Four variants, because a perimeter is not a row: v0 the 4 m run; v1 a 2.6 m closer that takes a side edge out to meet the front and back lines instead of overhanging them; v2 and v3 the ladder-landing pair — 3.3 m of rail, a 0.7 m opening at one end and a grab stanchion standing 1.0 m proud of the top rail, mirrored so the two of them leave a 1.4 m gap centred on the ladder head. The run is placed with its toe board and hazard band facing the DROP, so the band reads as an edge warning from off the deck rather than from on it."
+    },
+    {
+      "file": "foundry_deck_rail_v1.glb",
+      "bytes": 2021720,
+      "tris": 806,
+      "parts": 9,
+      "bounds": {
+        "min": [
+          -1.36,
+          0,
+          -0.219
+        ],
+        "max": [
+          1.36,
+          1.124,
+          0.06
+        ]
+      },
+      "kind": "map_foundry",
+      "id": "foundry_deck_rail_v1",
+      "variant": 1,
+      "note": "One 4 m run of deck rail to real handrail geometry: capped 48.3 OD tube posts at 1.27 m centres on bolted base plates, a 48.3 top rail at 1100 and a 42.4 mid rail at 550, and a 100 mm toe board with a hazard band. The old run put an 80 mm rail on 100 mm square posts over a 150 mm plate, which is what made the deck read a size too small for the player. Four variants, because a perimeter is not a row: v0 the 4 m run; v1 a 2.6 m closer that takes a side edge out to meet the front and back lines instead of overhanging them; v2 and v3 the ladder-landing pair — 3.3 m of rail, a 0.7 m opening at one end and a grab stanchion standing 1.0 m proud of the top rail, mirrored so the two of them leave a 1.4 m gap centred on the ladder head. The run is placed with its toe board and hazard band facing the DROP, so the band reads as an edge warning from off the deck rather than from on it."
+    },
+    {
+      "file": "foundry_deck_rail_v2.glb",
+      "bytes": 2047756,
+      "tris": 1104,
+      "parts": 12,
+      "bounds": {
+        "min": [
+          -2.06,
+          -0.033,
+          -0.219
+        ],
+        "max": [
+          2,
+          2.114,
+          0.06
+        ]
+      },
+      "kind": "map_foundry",
+      "id": "foundry_deck_rail_v2",
+      "variant": 2,
+      "note": "One 4 m run of deck rail to real handrail geometry: capped 48.3 OD tube posts at 1.27 m centres on bolted base plates, a 48.3 top rail at 1100 and a 42.4 mid rail at 550, and a 100 mm toe board with a hazard band. The old run put an 80 mm rail on 100 mm square posts over a 150 mm plate, which is what made the deck read a size too small for the player. Four variants, because a perimeter is not a row: v0 the 4 m run; v1 a 2.6 m closer that takes a side edge out to meet the front and back lines instead of overhanging them; v2 and v3 the ladder-landing pair — 3.3 m of rail, a 0.7 m opening at one end and a grab stanchion standing 1.0 m proud of the top rail, mirrored so the two of them leave a 1.4 m gap centred on the ladder head. The run is placed with its toe board and hazard band facing the DROP, so the band reads as an edge warning from off the deck rather than from on it."
+    },
+    {
+      "file": "foundry_deck_rail_v3.glb",
+      "bytes": 2047760,
+      "tris": 1104,
+      "parts": 12,
+      "bounds": {
+        "min": [
+          -2,
+          -0.033,
+          -0.219
+        ],
+        "max": [
+          2.06,
+          2.114,
+          0.06
+        ]
+      },
+      "kind": "map_foundry",
+      "id": "foundry_deck_rail_v3",
+      "variant": 3,
+      "note": "One 4 m run of deck rail to real handrail geometry: capped 48.3 OD tube posts at 1.27 m centres on bolted base plates, a 48.3 top rail at 1100 and a 42.4 mid rail at 550, and a 100 mm toe board with a hazard band. The old run put an 80 mm rail on 100 mm square posts over a 150 mm plate, which is what made the deck read a size too small for the player. Four variants, because a perimeter is not a row: v0 the 4 m run; v1 a 2.6 m closer that takes a side edge out to meet the front and back lines instead of overhanging them; v2 and v3 the ladder-landing pair — 3.3 m of rail, a 0.7 m opening at one end and a grab stanchion standing 1.0 m proud of the top rail, mirrored so the two of them leave a 1.4 m gap centred on the ladder head. The run is placed with its toe board and hazard band facing the DROP, so the band reads as an edge warning from off the deck rather than from on it."
     },
     {
       "file": "foundry_gantry_walk.glb",
-      "bytes": 2756688,
+      "bytes": 2744044,
       "tris": 9088,
       "parts": 27,
       "bounds": {
         "min": [
-          -2.06,
+          -2.01,
           -0.335,
-          -2.01
+          -2.06
         ],
         "max": [
-          2.06,
+          2.01,
           1.124,
-          2.01
+          2.06
         ]
       },
       "kind": "map_foundry",
       "id": "foundry_gantry_walk",
-      "note": "The bridge that crosses the lane, authored with its walking surface AT the mount point so it sits at the height the pads are on. Two PFC 200×75 channel stringers with toes inward carry 41/100 grating; PFC 100 transoms under them at 1 m bring the total to 0.34 m from walking surface to underside — a deck bay is 0.69 m of real section and could not both sit flush at y 6 and leave the lane its 5.5 m of headroom, which is why this is a separate light walkway. Handrail with weldmesh infill on both long edges, hazard nosing angles at both ends. Square, so it tiles either way."
+      "note": "The bridge that crosses the lane, authored with its walking surface AT the mount point so it sits at the height the pads are on. Two PFC 200×75 channel stringers with toes inward carry 41/100 grating; PFC 100 transoms under them at 1 m bring the total to 0.34 m from walking surface to underside — a deck bay is 0.69 m of real section and could not both sit flush at y 6 and leave the lane its 5.5 m of headroom, which is why this is a separate light walkway. Handrail with weldmesh infill on both long edges — the sides that overhang the lane — and hazard nosing angles across both ends, which are open because they are how you get on and off. Square, so it tiles either way."
     },
     {
       "file": "foundry_pillar.glb",
-      "bytes": 4629312,
+      "bytes": 4616260,
       "tris": 7930,
       "parts": 28,
       "bounds": {
@@ -9340,7 +9490,7 @@
     },
     {
       "file": "foundry_vent_tunnel.glb",
-      "bytes": 5311264,
+      "bytes": 5298552,
       "tris": 17272,
       "parts": 48,
       "bounds": {
@@ -9361,7 +9511,7 @@
     },
     {
       "file": "foundry_wall_boundary.glb",
-      "bytes": 9563976,
+      "bytes": 9550924,
       "tris": 5060,
       "parts": 52,
       "bounds": {
@@ -9424,7 +9574,7 @@
     },
     {
       "file": "foundry_dress_pipes.glb",
-      "bytes": 4421032,
+      "bytes": 4421372,
       "tris": 8768,
       "parts": 37,
       "bounds": {
@@ -9445,7 +9595,7 @@
     },
     {
       "file": "foundry_dress_gantry.glb",
-      "bytes": 4417820,
+      "bytes": 4405108,
       "tris": 11626,
       "parts": 28,
       "bounds": {
@@ -9466,7 +9616,7 @@
     },
     {
       "file": "foundry_dress_lightrig.glb",
-      "bytes": 3926296,
+      "bytes": 3913584,
       "tris": 8296,
       "parts": 42,
       "bounds": {
@@ -10019,7 +10169,7 @@
     },
     {
       "file": "spire_wall_boundary_v2.glb",
-      "bytes": 421680,
+      "bytes": 421676,
       "tris": 3956,
       "parts": 70,
       "bounds": {
@@ -10063,30 +10213,30 @@
     },
     {
       "file": "spire_path_interior.glb",
-      "bytes": 78132,
-      "tris": 1640,
-      "parts": 10,
+      "bytes": 179908,
+      "tris": 1620,
+      "parts": 27,
       "bounds": {
         "min": [
-          -2.003,
+          -2.004,
           0.007,
           -1.7
         ],
         "max": [
           2.003,
-          0.034,
+          0.029,
           1.7
         ]
       },
       "kind": "map_spire",
       "id": "spire_path_interior",
-      "note": "One 4 m run of the route where it crosses a floor plate: a dark traffic band worn through the screed, hazard-yellow edge lines flush with the band, one direction arrow and four recessed floor studs. Every mark is symmetric about the lane centre and tiles on the 4 m repeat, with the studs 2 m apart in pairs. No centre line — that would imply two-way traffic on a one-way enemy lane. The arrow (1.4 m shaft, barbs swept back from the tip) points local −X because the layer rotates each module by atan2(d.x,d.z)+90°, which maps local +X against the direction of travel. The band is what makes the lane read at a distance — white paint alone disappears on pale concrete. Three centimetres tall so it lays straight onto a slab; lay it along the flat legs at every level, the way `spire_path_ground` handles the street."
+      "note": "One 4 m run of the route where it crosses a floor plate — and INSIDE it is a building, not a roadway. The asphalt band, hazard-yellow edge lines, direction arrow and cat’s-eye studs are gone: a traffic arrow on an office plate read as a control rather than as where you are (§4.16), and nothing about a carriageway belongs above the lobby. What replaces them is the way a real office marks circulation: a 500 mm carpet-tile runner a couple of shades darker than the screed either side, laid in alternating rows so the pile catches light in bands, seams on the tile grid so it tiles at any 4 m join, a slim brushed-aluminium transition trim down both long edges where the carpet meets the screed, two flush floor boxes on the grid, PAIRED across the lane rather than set diagonally — this module was remade once already because two marks on opposite corners read as dots wandering side to side over a 40 m run instead of as a corridor. Contrast does the work paint used to: the runner reads as the walked line from across a 40 m plate, which is the whole reason this module exists. Three centimetres tall so it lays straight onto a slab; lay it along the flat legs at every level, the way `spire_path_ground` handles the street."
     },
     {
       "file": "spire_floor.glb",
-      "bytes": 111748,
-      "tris": 1940,
-      "parts": 15,
+      "bytes": 139364,
+      "tris": 2900,
+      "parts": 18,
       "bounds": {
         "min": [
           -2.072,
@@ -10105,9 +10255,9 @@
     },
     {
       "file": "spire_facade.glb",
-      "bytes": 332392,
-      "tris": 3000,
-      "parts": 50,
+      "bytes": 612644,
+      "tris": 5520,
+      "parts": 92,
       "bounds": {
         "min": [
           -4.189,
@@ -10117,23 +10267,89 @@
         "max": [
           4.189,
           40.708,
-          0.55
+          0.6
         ]
       },
       "kind": "map_spire",
       "id": "spire_facade",
-      "note": "One 8 m bay of the exterior curtain wall, ground to parapet: stone plinth, four storeys of dark glazing in steel mullions over concrete spandrel bands, a scatter of lit and dimmed offices so the block reads occupied at night. Five bays per face; the east face is left open for the fire escape. Lay along-Z faces with yaw 90."
+      "note": "One 8 m bay of the exterior wall, ground to parapet, and it is a WALL with windows in it. Each storey carries four 1.84 m lights in the mullion grid; a hashed pattern per storey decides which are void and which are glazed solid, never the same two storeys running, and every pattern leaves at least one of each — so a tower has a line out of every floor and no elevation looks stripped. Towers stand inside this building and fire out through the open lights, and the sim only lets a tower hit what it can see through one, so the glazed lights matter as much as the voids: a solid light is fixed glazing split on the transom into two panes with a glazing bead down each jamb, set into the reveal rather than stuck over it, and what the pane is DOING varies per light — sky reflection, a lit office, a dim one, blinds half-drawn on the occupied ones — so the block reads as a scatter of rooms at dusk the way a real office building does. Open lights keep the awning pane hinged out at the transom or the slider parked at a jamb. Storeys are pinned to the FLOOR PLATES at y 0/10/20/30, not to a facade pitch of their own: the old bay divided 40 m into four 9.7 m bands and put floor one’s glazing 1.9 m above the plate, so a tower on that floor was aiming into masonry. A 1 m sill upstand guards each opening and still clears a muzzle a metre inside the glass line. VARIANTS 1–3 notch the upstand over 2.8 m to make that storey’s opening a DOORWAY — jambs, threshold and hazard nose, no mullion in the way, and its two lights forced open — at storey 0, 1 and 2 respectively: the east (back) wall needs one at grade where the escape’s ground leg leaves the building, one at floor one where the landing gate lands, and one at floor two where the escape route walks back in. `userData.apertures` lists one entry per RUN of adjacent open lights (centre + clear size, wall plane local z 0; a door run also carries its `door` clear size) so both the collision punch and the line-of-sight test are built from the art rather than from numbers copied into C#. Five bays per face, all four faces. Lay along-Z faces with yaw 90."
+    },
+    {
+      "file": "spire_facade_v1.glb",
+      "bytes": 599664,
+      "tris": 5400,
+      "parts": 90,
+      "bounds": {
+        "min": [
+          -4.189,
+          -0.189,
+          -0.95
+        ],
+        "max": [
+          4.189,
+          40.708,
+          0.96
+        ]
+      },
+      "kind": "map_spire",
+      "id": "spire_facade_v1",
+      "variant": 1,
+      "note": "One 8 m bay of the exterior wall, ground to parapet, and it is a WALL with windows in it. Each storey carries four 1.84 m lights in the mullion grid; a hashed pattern per storey decides which are void and which are glazed solid, never the same two storeys running, and every pattern leaves at least one of each — so a tower has a line out of every floor and no elevation looks stripped. Towers stand inside this building and fire out through the open lights, and the sim only lets a tower hit what it can see through one, so the glazed lights matter as much as the voids: a solid light is fixed glazing split on the transom into two panes with a glazing bead down each jamb, set into the reveal rather than stuck over it, and what the pane is DOING varies per light — sky reflection, a lit office, a dim one, blinds half-drawn on the occupied ones — so the block reads as a scatter of rooms at dusk the way a real office building does. Open lights keep the awning pane hinged out at the transom or the slider parked at a jamb. Storeys are pinned to the FLOOR PLATES at y 0/10/20/30, not to a facade pitch of their own: the old bay divided 40 m into four 9.7 m bands and put floor one’s glazing 1.9 m above the plate, so a tower on that floor was aiming into masonry. A 1 m sill upstand guards each opening and still clears a muzzle a metre inside the glass line. VARIANTS 1–3 notch the upstand over 2.8 m to make that storey’s opening a DOORWAY — jambs, threshold and hazard nose, no mullion in the way, and its two lights forced open — at storey 0, 1 and 2 respectively: the east (back) wall needs one at grade where the escape’s ground leg leaves the building, one at floor one where the landing gate lands, and one at floor two where the escape route walks back in. `userData.apertures` lists one entry per RUN of adjacent open lights (centre + clear size, wall plane local z 0; a door run also carries its `door` clear size) so both the collision punch and the line-of-sight test are built from the art rather than from numbers copied into C#. Five bays per face, all four faces. Lay along-Z faces with yaw 90."
+    },
+    {
+      "file": "spire_facade_v2.glb",
+      "bytes": 626036,
+      "tris": 5640,
+      "parts": 94,
+      "bounds": {
+        "min": [
+          -4.189,
+          -0.189,
+          -0.95
+        ],
+        "max": [
+          4.189,
+          40.708,
+          0.96
+        ]
+      },
+      "kind": "map_spire",
+      "id": "spire_facade_v2",
+      "variant": 2,
+      "note": "One 8 m bay of the exterior wall, ground to parapet, and it is a WALL with windows in it. Each storey carries four 1.84 m lights in the mullion grid; a hashed pattern per storey decides which are void and which are glazed solid, never the same two storeys running, and every pattern leaves at least one of each — so a tower has a line out of every floor and no elevation looks stripped. Towers stand inside this building and fire out through the open lights, and the sim only lets a tower hit what it can see through one, so the glazed lights matter as much as the voids: a solid light is fixed glazing split on the transom into two panes with a glazing bead down each jamb, set into the reveal rather than stuck over it, and what the pane is DOING varies per light — sky reflection, a lit office, a dim one, blinds half-drawn on the occupied ones — so the block reads as a scatter of rooms at dusk the way a real office building does. Open lights keep the awning pane hinged out at the transom or the slider parked at a jamb. Storeys are pinned to the FLOOR PLATES at y 0/10/20/30, not to a facade pitch of their own: the old bay divided 40 m into four 9.7 m bands and put floor one’s glazing 1.9 m above the plate, so a tower on that floor was aiming into masonry. A 1 m sill upstand guards each opening and still clears a muzzle a metre inside the glass line. VARIANTS 1–3 notch the upstand over 2.8 m to make that storey’s opening a DOORWAY — jambs, threshold and hazard nose, no mullion in the way, and its two lights forced open — at storey 0, 1 and 2 respectively: the east (back) wall needs one at grade where the escape’s ground leg leaves the building, one at floor one where the landing gate lands, and one at floor two where the escape route walks back in. `userData.apertures` lists one entry per RUN of adjacent open lights (centre + clear size, wall plane local z 0; a door run also carries its `door` clear size) so both the collision punch and the line-of-sight test are built from the art rather than from numbers copied into C#. Five bays per face, all four faces. Lay along-Z faces with yaw 90."
+    },
+    {
+      "file": "spire_facade_v3.glb",
+      "bytes": 619320,
+      "tris": 5580,
+      "parts": 93,
+      "bounds": {
+        "min": [
+          -4.189,
+          -0.189,
+          -0.95
+        ],
+        "max": [
+          4.189,
+          40.708,
+          0.96
+        ]
+      },
+      "kind": "map_spire",
+      "id": "spire_facade_v3",
+      "variant": 3,
+      "note": "One 8 m bay of the exterior wall, ground to parapet, and it is a WALL with windows in it. Each storey carries four 1.84 m lights in the mullion grid; a hashed pattern per storey decides which are void and which are glazed solid, never the same two storeys running, and every pattern leaves at least one of each — so a tower has a line out of every floor and no elevation looks stripped. Towers stand inside this building and fire out through the open lights, and the sim only lets a tower hit what it can see through one, so the glazed lights matter as much as the voids: a solid light is fixed glazing split on the transom into two panes with a glazing bead down each jamb, set into the reveal rather than stuck over it, and what the pane is DOING varies per light — sky reflection, a lit office, a dim one, blinds half-drawn on the occupied ones — so the block reads as a scatter of rooms at dusk the way a real office building does. Open lights keep the awning pane hinged out at the transom or the slider parked at a jamb. Storeys are pinned to the FLOOR PLATES at y 0/10/20/30, not to a facade pitch of their own: the old bay divided 40 m into four 9.7 m bands and put floor one’s glazing 1.9 m above the plate, so a tower on that floor was aiming into masonry. A 1 m sill upstand guards each opening and still clears a muzzle a metre inside the glass line. VARIANTS 1–3 notch the upstand over 2.8 m to make that storey’s opening a DOORWAY — jambs, threshold and hazard nose, no mullion in the way, and its two lights forced open — at storey 0, 1 and 2 respectively: the east (back) wall needs one at grade where the escape’s ground leg leaves the building, one at floor one where the landing gate lands, and one at floor two where the escape route walks back in. `userData.apertures` lists one entry per RUN of adjacent open lights (centre + clear size, wall plane local z 0; a door run also carries its `door` clear size) so both the collision punch and the line-of-sight test are built from the art rather than from numbers copied into C#. Five bays per face, all four faces. Lay along-Z faces with yaw 90."
     },
     {
       "file": "spire_lobby.glb",
-      "bytes": 415828,
-      "tris": 6340,
-      "parts": 58,
+      "bytes": 660516,
+      "tris": 7120,
+      "parts": 97,
       "bounds": {
         "min": [
           -4.189,
           -0.18,
-          -1.15
+          -0.55
         ],
         "max": [
           4.189,
@@ -10143,7 +10359,7 @@
       },
       "kind": "map_spire",
       "id": "spire_lobby",
-      "note": "Facade bay with the street entrance: a 6 m glazed opening with revolving-door drums, a cantilevered canopy with downlights, a neon SPIRE sign and a pair of bollards. Storeys 2–4 match `spire_facade`. Used twice on the west face: the main door at z 0 and the service door the fire-escape route uses at z 16."
+      "note": "Facade bay with the street entrance, and the doorway is a CLEAR 5.2 × 4 m opening: the revolving drums that stood in it are gone. Both ground routes walk through this bay and a tower in the lobby fires out through it, so anything in the aperture is either an obstruction to the lane or cover the enemy did not earn — the entrance doors instead stand swung open against the piers, which is also what a building under siege looks like. Piers, header, a fixed transom light over the door, a cantilevered canopy with downlights, a neon SPIRE sign, bollards. Storeys 2–4 match `spire_facade`, open windows included, and the doorway is declared in `userData.apertures` with them. Used twice on the west face: the main door at z 0 and the service door the fire-escape route uses at z 16."
     },
     {
       "file": "spire_roof.glb",
@@ -10255,45 +10471,111 @@
     },
     {
       "file": "spire_fireescape.glb",
-      "bytes": 171696,
+      "bytes": 172056,
       "tris": 2020,
       "parts": 25,
       "bounds": {
         "min": [
-          -3.194,
+          -1.394,
           -0.874,
           -1.5
         ],
         "max": [
-          3.194,
+          1.254,
           1.33,
           1.5
         ]
       },
       "kind": "map_spire",
       "id": "spire_fireescape",
-      "note": "One 3 m segment of an 8 m landing on the east face: steel grating deck on channel stringers, tube handrail with mesh infill on both long edges, rust-streaked wall brackets. Deck top at +0.2 — mount at the landing centre."
+      "note": "One 3 m segment of an 8 m landing bolted to the east wall: steel grating deck on channel stringers, tube handrail with mesh infill on both long edges, rust-streaked brackets on the building side. TWO POINT FOUR metres wide, not six: at six and mounted on the route line at x 20 the landing reached 3 m past the plate edge at x 19, so half of every landing and its whole inner handrail stood inside the office floor. Mounted at x 21.8 the deck runs 20.6–23.0 — clear of the back wall (whose outer face is 20.525) with its brackets bolting onto it, which is how a fire escape hangs. Variant 1 is the GATE segment: the inner rail is split around a 1.4 m opening with a lap plate onto the wall threshold and a grab stanchion each side, so a player steps out through the wall’s doorway onto the escape instead of climbing over the rail. Place it as the middle segment of each landing, plain ones either side. Deck top at +0.2 — mount at the landing centre."
+    },
+    {
+      "file": "spire_fireescape_v1.glb",
+      "bytes": 220112,
+      "tris": 3160,
+      "parts": 31,
+      "bounds": {
+        "min": [
+          -1.409,
+          -0.874,
+          -1.5
+        ],
+        "max": [
+          1.254,
+          1.34,
+          1.5
+        ]
+      },
+      "kind": "map_spire",
+      "id": "spire_fireescape_v1",
+      "variant": 1,
+      "note": "One 3 m segment of an 8 m landing bolted to the east wall: steel grating deck on channel stringers, tube handrail with mesh infill on both long edges, rust-streaked brackets on the building side. TWO POINT FOUR metres wide, not six: at six and mounted on the route line at x 20 the landing reached 3 m past the plate edge at x 19, so half of every landing and its whole inner handrail stood inside the office floor. Mounted at x 21.8 the deck runs 20.6–23.0 — clear of the back wall (whose outer face is 20.525) with its brackets bolting onto it, which is how a fire escape hangs. Variant 1 is the GATE segment: the inner rail is split around a 1.4 m opening with a lap plate onto the wall threshold and a grab stanchion each side, so a player steps out through the wall’s doorway onto the escape instead of climbing over the rail. Place it as the middle segment of each landing, plain ones either side. Deck top at +0.2 — mount at the landing centre."
+    },
+    {
+      "file": "spire_fireescape_v2.glb",
+      "bytes": 172060,
+      "tris": 2020,
+      "parts": 25,
+      "bounds": {
+        "min": [
+          -1.394,
+          -0.874,
+          -1.5
+        ],
+        "max": [
+          1.254,
+          1.33,
+          1.5
+        ]
+      },
+      "kind": "map_spire",
+      "id": "spire_fireescape_v2",
+      "variant": 2,
+      "note": "One 3 m segment of an 8 m landing bolted to the east wall: steel grating deck on channel stringers, tube handrail with mesh infill on both long edges, rust-streaked brackets on the building side. TWO POINT FOUR metres wide, not six: at six and mounted on the route line at x 20 the landing reached 3 m past the plate edge at x 19, so half of every landing and its whole inner handrail stood inside the office floor. Mounted at x 21.8 the deck runs 20.6–23.0 — clear of the back wall (whose outer face is 20.525) with its brackets bolting onto it, which is how a fire escape hangs. Variant 1 is the GATE segment: the inner rail is split around a 1.4 m opening with a lap plate onto the wall threshold and a grab stanchion each side, so a player steps out through the wall’s doorway onto the escape instead of climbing over the rail. Place it as the middle segment of each landing, plain ones either side. Deck top at +0.2 — mount at the landing centre."
+    },
+    {
+      "file": "spire_fireescape_v3.glb",
+      "bytes": 172060,
+      "tris": 2020,
+      "parts": 25,
+      "bounds": {
+        "min": [
+          -1.394,
+          -0.874,
+          -1.5
+        ],
+        "max": [
+          1.254,
+          1.33,
+          1.5
+        ]
+      },
+      "kind": "map_spire",
+      "id": "spire_fireescape_v3",
+      "variant": 3,
+      "note": "One 3 m segment of an 8 m landing bolted to the east wall: steel grating deck on channel stringers, tube handrail with mesh infill on both long edges, rust-streaked brackets on the building side. TWO POINT FOUR metres wide, not six: at six and mounted on the route line at x 20 the landing reached 3 m past the plate edge at x 19, so half of every landing and its whole inner handrail stood inside the office floor. Mounted at x 21.8 the deck runs 20.6–23.0 — clear of the back wall (whose outer face is 20.525) with its brackets bolting onto it, which is how a fire escape hangs. Variant 1 is the GATE segment: the inner rail is split around a 1.4 m opening with a lap plate onto the wall threshold and a grab stanchion each side, so a player steps out through the wall’s doorway onto the escape instead of climbing over the rail. Place it as the middle segment of each landing, plain ones either side. Deck top at +0.2 — mount at the landing centre."
     },
     {
       "file": "spire_fireescape_flight.glb",
-      "bytes": 444360,
+      "bytes": 444504,
       "tris": 4480,
       "parts": 66,
       "bounds": {
         "min": [
-          -1.654,
-          -0.174,
-          -8.218
+          -1.172,
+          -0.291,
+          -8.452
         ],
         "max": [
-          1.654,
+          1.172,
           11.119,
-          0.218
+          0.2
         ]
       },
       "kind": "map_spire",
       "id": "spire_fireescape_flight",
-      "note": "The zigzag run between landings: two steel stringers, 25 open treads with a hazard nose, handrails both sides and an anchor bracket at each end. Origin at the bottom tread centre; climbs +10 m over 8 m toward −Z. Place at (19, 0, 18) and (20, 10, 10) for the escape route legs."
+      "note": "The zigzag run between landings: two steel stringers, 25 open treads with a hazard nose, handrails both sides and an anchor bracket at each end. Origin at the bottom tread centre; climbs +10 m over 8 m toward −Z. TWO POINT TWO metres wide, matching the landing: at 2.8 m and mounted on the route line at x 20 the flight was 3.3 m over its rails, so its inner stringer, handrail and both end anchors crossed the plate edge at x 19 and stood proud through the office floor at every arrival. Mount at x 21.8 with the landings, outboard of the back wall — the whole escape then runs 20.6–23.0 and the route climbs on the treads."
     },
     {
       "file": "spire_stairwell.glb",
@@ -10489,7 +10771,7 @@
     },
     {
       "file": "toaster_terrain.glb",
-      "bytes": 4060304,
+      "bytes": 4136948,
       "tris": 392,
       "parts": 1,
       "bounds": {
@@ -10506,14 +10788,14 @@
       },
       "kind": "map_toaster",
       "id": "toaster_terrain",
-      "note": "Dry autumn grass, 20 m, in four variants off one shared albedo/roughness/normal set. Relief is ≤0.15 m and damped to EXACTLY zero from 8 m out so tiles seam and roads lie flat. 128 instanced placements, so the tile carries no road, no fence and no grass tuft — a tuft a metre is fifty thousand parts, and tufts are `toaster_terrain_scatter`. v0 plain; v1 a mown strip and a bare scrape; v2 a leaf drift and a fallen branch (the only furniture true at a 20 m repeat); v3 tyre ruts along +X. Variation that can ride in vertex colour does, because it is free and because a hundred and twenty-eight copies of one tile is wallpaper at any rotation.",
+      "note": "Green summer pasture, 20 m, in four variants off one shared albedo/roughness/normal set. Relief is ≤0.15 m and damped to EXACTLY zero from 8 m out so tiles seam and roads lie flat. 128 instanced placements, so the tile carries no road, no fence and no grass tuft — a tuft a metre is fifty thousand parts, and tufts are `toaster_terrain_scatter`. v0 plain; v1 a mown strip and a bare scrape; v2 a sun-burnt patch and a fallen branch (the only furniture true at a 20 m repeat); v3 tyre ruts along +X. Variation that can ride in vertex colour does, because it is free and because a hundred and twenty-eight copies of one tile is wallpaper at any rotation. v4 and v5 are FIELD tiles rather than lawn — rough grazed pasture, and cut hay stubble in 3 m mower widths with a windrow every third pass — assigned by region in the level file (`fields`), so the property reads as fields divided by fences rather than one mown park.",
       "budgetTris": 900,
       "budgetParts": 4,
       "instanced": true
     },
     {
       "file": "toaster_terrain_v1.glb",
-      "bytes": 4060396,
+      "bytes": 4137040,
       "tris": 392,
       "parts": 1,
       "bounds": {
@@ -10531,14 +10813,14 @@
       "kind": "map_toaster",
       "id": "toaster_terrain_v1",
       "variant": 1,
-      "note": "Dry autumn grass, 20 m, in four variants off one shared albedo/roughness/normal set. Relief is ≤0.15 m and damped to EXACTLY zero from 8 m out so tiles seam and roads lie flat. 128 instanced placements, so the tile carries no road, no fence and no grass tuft — a tuft a metre is fifty thousand parts, and tufts are `toaster_terrain_scatter`. v0 plain; v1 a mown strip and a bare scrape; v2 a leaf drift and a fallen branch (the only furniture true at a 20 m repeat); v3 tyre ruts along +X. Variation that can ride in vertex colour does, because it is free and because a hundred and twenty-eight copies of one tile is wallpaper at any rotation.",
+      "note": "Green summer pasture, 20 m, in four variants off one shared albedo/roughness/normal set. Relief is ≤0.15 m and damped to EXACTLY zero from 8 m out so tiles seam and roads lie flat. 128 instanced placements, so the tile carries no road, no fence and no grass tuft — a tuft a metre is fifty thousand parts, and tufts are `toaster_terrain_scatter`. v0 plain; v1 a mown strip and a bare scrape; v2 a sun-burnt patch and a fallen branch (the only furniture true at a 20 m repeat); v3 tyre ruts along +X. Variation that can ride in vertex colour does, because it is free and because a hundred and twenty-eight copies of one tile is wallpaper at any rotation. v4 and v5 are FIELD tiles rather than lawn — rough grazed pasture, and cut hay stubble in 3 m mower widths with a windrow every third pass — assigned by region in the level file (`fields`), so the property reads as fields divided by fences rather than one mown park.",
       "budgetTris": 900,
       "budgetParts": 4,
       "instanced": true
     },
     {
       "file": "toaster_terrain_v2.glb",
-      "bytes": 4205984,
+      "bytes": 4282628,
       "tris": 452,
       "parts": 2,
       "bounds": {
@@ -10556,14 +10838,14 @@
       "kind": "map_toaster",
       "id": "toaster_terrain_v2",
       "variant": 2,
-      "note": "Dry autumn grass, 20 m, in four variants off one shared albedo/roughness/normal set. Relief is ≤0.15 m and damped to EXACTLY zero from 8 m out so tiles seam and roads lie flat. 128 instanced placements, so the tile carries no road, no fence and no grass tuft — a tuft a metre is fifty thousand parts, and tufts are `toaster_terrain_scatter`. v0 plain; v1 a mown strip and a bare scrape; v2 a leaf drift and a fallen branch (the only furniture true at a 20 m repeat); v3 tyre ruts along +X. Variation that can ride in vertex colour does, because it is free and because a hundred and twenty-eight copies of one tile is wallpaper at any rotation.",
+      "note": "Green summer pasture, 20 m, in four variants off one shared albedo/roughness/normal set. Relief is ≤0.15 m and damped to EXACTLY zero from 8 m out so tiles seam and roads lie flat. 128 instanced placements, so the tile carries no road, no fence and no grass tuft — a tuft a metre is fifty thousand parts, and tufts are `toaster_terrain_scatter`. v0 plain; v1 a mown strip and a bare scrape; v2 a sun-burnt patch and a fallen branch (the only furniture true at a 20 m repeat); v3 tyre ruts along +X. Variation that can ride in vertex colour does, because it is free and because a hundred and twenty-eight copies of one tile is wallpaper at any rotation. v4 and v5 are FIELD tiles rather than lawn — rough grazed pasture, and cut hay stubble in 3 m mower widths with a windrow every third pass — assigned by region in the level file (`fields`), so the property reads as fields divided by fences rather than one mown park.",
       "budgetTris": 900,
       "budgetParts": 4,
       "instanced": true
     },
     {
       "file": "toaster_terrain_v3.glb",
-      "bytes": 4060360,
+      "bytes": 4137004,
       "tris": 392,
       "parts": 1,
       "bounds": {
@@ -10581,7 +10863,57 @@
       "kind": "map_toaster",
       "id": "toaster_terrain_v3",
       "variant": 3,
-      "note": "Dry autumn grass, 20 m, in four variants off one shared albedo/roughness/normal set. Relief is ≤0.15 m and damped to EXACTLY zero from 8 m out so tiles seam and roads lie flat. 128 instanced placements, so the tile carries no road, no fence and no grass tuft — a tuft a metre is fifty thousand parts, and tufts are `toaster_terrain_scatter`. v0 plain; v1 a mown strip and a bare scrape; v2 a leaf drift and a fallen branch (the only furniture true at a 20 m repeat); v3 tyre ruts along +X. Variation that can ride in vertex colour does, because it is free and because a hundred and twenty-eight copies of one tile is wallpaper at any rotation.",
+      "note": "Green summer pasture, 20 m, in four variants off one shared albedo/roughness/normal set. Relief is ≤0.15 m and damped to EXACTLY zero from 8 m out so tiles seam and roads lie flat. 128 instanced placements, so the tile carries no road, no fence and no grass tuft — a tuft a metre is fifty thousand parts, and tufts are `toaster_terrain_scatter`. v0 plain; v1 a mown strip and a bare scrape; v2 a sun-burnt patch and a fallen branch (the only furniture true at a 20 m repeat); v3 tyre ruts along +X. Variation that can ride in vertex colour does, because it is free and because a hundred and twenty-eight copies of one tile is wallpaper at any rotation. v4 and v5 are FIELD tiles rather than lawn — rough grazed pasture, and cut hay stubble in 3 m mower widths with a windrow every third pass — assigned by region in the level file (`fields`), so the property reads as fields divided by fences rather than one mown park.",
+      "budgetTris": 900,
+      "budgetParts": 4,
+      "instanced": true
+    },
+    {
+      "file": "toaster_terrain_v4.glb",
+      "bytes": 4137052,
+      "tris": 392,
+      "parts": 1,
+      "bounds": {
+        "min": [
+          -10,
+          -0.125,
+          -10
+        ],
+        "max": [
+          10,
+          0.101,
+          10
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_terrain_v4",
+      "variant": 4,
+      "note": "Green summer pasture, 20 m, in four variants off one shared albedo/roughness/normal set. Relief is ≤0.15 m and damped to EXACTLY zero from 8 m out so tiles seam and roads lie flat. 128 instanced placements, so the tile carries no road, no fence and no grass tuft — a tuft a metre is fifty thousand parts, and tufts are `toaster_terrain_scatter`. v0 plain; v1 a mown strip and a bare scrape; v2 a sun-burnt patch and a fallen branch (the only furniture true at a 20 m repeat); v3 tyre ruts along +X. Variation that can ride in vertex colour does, because it is free and because a hundred and twenty-eight copies of one tile is wallpaper at any rotation. v4 and v5 are FIELD tiles rather than lawn — rough grazed pasture, and cut hay stubble in 3 m mower widths with a windrow every third pass — assigned by region in the level file (`fields`), so the property reads as fields divided by fences rather than one mown park.",
+      "budgetTris": 900,
+      "budgetParts": 4,
+      "instanced": true
+    },
+    {
+      "file": "toaster_terrain_v5.glb",
+      "bytes": 4137056,
+      "tris": 392,
+      "parts": 1,
+      "bounds": {
+        "min": [
+          -10,
+          -0.029,
+          -10
+        ],
+        "max": [
+          10,
+          0.082,
+          10
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_terrain_v5",
+      "variant": 5,
+      "note": "Green summer pasture, 20 m, in four variants off one shared albedo/roughness/normal set. Relief is ≤0.15 m and damped to EXACTLY zero from 8 m out so tiles seam and roads lie flat. 128 instanced placements, so the tile carries no road, no fence and no grass tuft — a tuft a metre is fifty thousand parts, and tufts are `toaster_terrain_scatter`. v0 plain; v1 a mown strip and a bare scrape; v2 a sun-burnt patch and a fallen branch (the only furniture true at a 20 m repeat); v3 tyre ruts along +X. Variation that can ride in vertex colour does, because it is free and because a hundred and twenty-eight copies of one tile is wallpaper at any rotation. v4 and v5 are FIELD tiles rather than lawn — rough grazed pasture, and cut hay stubble in 3 m mower widths with a windrow every third pass — assigned by region in the level file (`fields`), so the property reads as fields divided by fences rather than one mown park.",
       "budgetTris": 900,
       "budgetParts": 4,
       "instanced": true
@@ -10668,8 +11000,35 @@
       "instanced": true
     },
     {
+      "file": "toaster_path_ground.glb",
+      "bytes": 4128764,
+      "tris": 112,
+      "parts": 1,
+      "bounds": {
+        "min": [
+          -2,
+          -0.054,
+          -1.7
+        ],
+        "max": [
+          2,
+          0.004,
+          1.7
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_path_ground",
+      "note": "The enemy lane, 4 m of it: two tyre-and-boot ruts 1.5 m apart in trodden grass, no kerb, 3.4 m wide. Same grass material as the terrain tile, with the wear — bare earth in the ruts, bruised grass between — carried in vertex colour, so the module’s edges vanish into the field and only the track shows. Laid along every walked route at y 0.06; over the county road it sits on the asphalt a metre narrower than the carriageway. Instanced, about 230 placements.",
+      "run": "+X",
+      "repeat": 4,
+      "width": 3.4,
+      "budgetTris": 200,
+      "budgetParts": 1,
+      "instanced": true
+    },
+    {
       "file": "toaster_tree_oak.glb",
-      "bytes": 586964,
+      "bytes": 586988,
       "tris": 296,
       "parts": 2,
       "bounds": {
@@ -10686,7 +11045,7 @@
       },
       "kind": "map_toaster",
       "id": "toaster_tree_oak",
-      "note": "Autumn oak, root collar on grade, trunk up +Y. EXACTLY two parts — `toaster_tree_oak_trunk` and `toaster_tree_oak_canopy` — because culling, visibility ranges and mesh LOD all act on a multimesh's whole bounding box, the belt is cut into 40 m cells, and every part multiplies the number of them. Canopy is MASK leaf cards off the shared 1024² atlas: blended leaves sort badly per instance and cost a transparent pass on the most-instanced thing in the game. Limbs leave the bole below the canopy — a crown floating over a pole is what gives a billboard away when you walk up to it.",
+      "note": "Summer oak, root collar on grade, trunk up +Y. EXACTLY two parts — `toaster_tree_oak_trunk` and `toaster_tree_oak_canopy` — because culling, visibility ranges and mesh LOD all act on a multimesh's whole bounding box, the belt is cut into 40 m cells, and every part multiplies the number of them. Canopy is MASK leaf cards off the shared 1024² atlas: blended leaves sort badly per instance and cost a transparent pass on the most-instanced thing in the game. Limbs leave the bole below the canopy — a crown floating over a pole is what gives a billboard away when you walk up to it.",
       "budgetTris": 600,
       "budgetParts": 2,
       "instanced": true,
@@ -10719,7 +11078,7 @@
     },
     {
       "file": "toaster_tree_maple.glb",
-      "bytes": 584052,
+      "bytes": 584076,
       "tris": 264,
       "parts": 2,
       "bounds": {
@@ -10736,7 +11095,7 @@
       },
       "kind": "map_toaster",
       "id": "toaster_tree_maple",
-      "note": "Autumn maple, root collar on grade, trunk up +Y. EXACTLY two parts — `toaster_tree_maple_trunk` and `toaster_tree_maple_canopy` — because culling, visibility ranges and mesh LOD all act on a multimesh's whole bounding box, the belt is cut into 40 m cells, and every part multiplies the number of them. Canopy is MASK leaf cards off the shared 1024² atlas: blended leaves sort badly per instance and cost a transparent pass on the most-instanced thing in the game. Limbs leave the bole below the canopy — a crown floating over a pole is what gives a billboard away when you walk up to it.",
+      "note": "Summer maple, root collar on grade, trunk up +Y. EXACTLY two parts — `toaster_tree_maple_trunk` and `toaster_tree_maple_canopy` — because culling, visibility ranges and mesh LOD all act on a multimesh's whole bounding box, the belt is cut into 40 m cells, and every part multiplies the number of them. Canopy is MASK leaf cards off the shared 1024² atlas: blended leaves sort badly per instance and cost a transparent pass on the most-instanced thing in the game. Limbs leave the bole below the canopy — a crown floating over a pole is what gives a billboard away when you walk up to it.",
       "budgetTris": 600,
       "budgetParts": 2,
       "instanced": true,
@@ -10769,7 +11128,7 @@
     },
     {
       "file": "toaster_tree_pine.glb",
-      "bytes": 591260,
+      "bytes": 591288,
       "tris": 344,
       "parts": 2,
       "bounds": {
@@ -10786,7 +11145,7 @@
       },
       "kind": "map_toaster",
       "id": "toaster_tree_pine",
-      "note": "Autumn pine, root collar on grade, trunk up +Y. EXACTLY two parts — `toaster_tree_pine_trunk` and `toaster_tree_pine_canopy` — because culling, visibility ranges and mesh LOD all act on a multimesh's whole bounding box, the belt is cut into 40 m cells, and every part multiplies the number of them. Canopy is MASK leaf cards off the shared 1024² atlas: blended leaves sort badly per instance and cost a transparent pass on the most-instanced thing in the game. Limbs leave the bole below the canopy — a crown floating over a pole is what gives a billboard away when you walk up to it.",
+      "note": "Summer pine, root collar on grade, trunk up +Y. EXACTLY two parts — `toaster_tree_pine_trunk` and `toaster_tree_pine_canopy` — because culling, visibility ranges and mesh LOD all act on a multimesh's whole bounding box, the belt is cut into 40 m cells, and every part multiplies the number of them. Canopy is MASK leaf cards off the shared 1024² atlas: blended leaves sort badly per instance and cost a transparent pass on the most-instanced thing in the game. Limbs leave the bole below the canopy — a crown floating over a pole is what gives a billboard away when you walk up to it.",
       "budgetTris": 600,
       "budgetParts": 2,
       "instanced": true,
@@ -10818,8 +11177,108 @@
       "instanced": true
     },
     {
+      "file": "toaster_tree_oak_open.glb",
+      "bytes": 650348,
+      "tris": 932,
+      "parts": 2,
+      "bounds": {
+        "min": [
+          -6.703,
+          0,
+          -7.5
+        ],
+        "max": [
+          7.452,
+          16.001,
+          7.001
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_tree_oak_open",
+      "note": "Summer oak_open, root collar on grade, trunk up +Y. EXACTLY two parts — `toaster_tree_oak_open_trunk` and `toaster_tree_oak_open_canopy` — because culling, visibility ranges and mesh LOD all act on a multimesh's whole bounding box, the belt is cut into 40 m cells, and every part multiplies the number of them. Canopy is MASK leaf cards off the shared 1024² atlas: blended leaves sort badly per instance and cost a transparent pass on the most-instanced thing in the game. Limbs leave the bole below the canopy — a crown floating over a pole is what gives a billboard away when you walk up to it.",
+      "budgetTris": 600,
+      "budgetParts": 2,
+      "instanced": true,
+      "lod1": "toaster_tree_oak_open_lod1",
+      "lodSwitch": 90
+    },
+    {
+      "file": "toaster_tree_oak_open_lod1.glb",
+      "bytes": 419868,
+      "tris": 4,
+      "parts": 1,
+      "bounds": {
+        "min": [
+          -6.876,
+          0,
+          -7.5
+        ],
+        "max": [
+          7.625,
+          16.001,
+          7.001
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_tree_oak_open_lod1",
+      "note": "Distance stand-in for `toaster_tree_oak_open`: a billboard cross carrying the same silhouette, drawn from the same atlas so the 90 m swap does not change the outline or the colour. Casts no shadow. Without it the full tree draws at every distance — still instanced, so it runs; it just costs.",
+      "budgetTris": 40,
+      "budgetParts": 1,
+      "instanced": true
+    },
+    {
+      "file": "toaster_tree_apple.glb",
+      "bytes": 581552,
+      "tris": 236,
+      "parts": 2,
+      "bounds": {
+        "min": [
+          -2.141,
+          0,
+          -2.4
+        ],
+        "max": [
+          2.397,
+          4.6,
+          1.986
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_tree_apple",
+      "note": "Summer apple, root collar on grade, trunk up +Y. EXACTLY two parts — `toaster_tree_apple_trunk` and `toaster_tree_apple_canopy` — because culling, visibility ranges and mesh LOD all act on a multimesh's whole bounding box, the belt is cut into 40 m cells, and every part multiplies the number of them. Canopy is MASK leaf cards off the shared 1024² atlas: blended leaves sort badly per instance and cost a transparent pass on the most-instanced thing in the game. Limbs leave the bole below the canopy — a crown floating over a pole is what gives a billboard away when you walk up to it.",
+      "budgetTris": 600,
+      "budgetParts": 2,
+      "instanced": true,
+      "lod1": "toaster_tree_apple_lod1",
+      "lodSwitch": 90
+    },
+    {
+      "file": "toaster_tree_apple_lod1.glb",
+      "bytes": 419896,
+      "tris": 4,
+      "parts": 1,
+      "bounds": {
+        "min": [
+          -2.141,
+          0,
+          -2.476
+        ],
+        "max": [
+          2.397,
+          4.6,
+          2.062
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_tree_apple_lod1",
+      "note": "Distance stand-in for `toaster_tree_apple`: a billboard cross carrying the same silhouette, drawn from the same atlas so the 90 m swap does not change the outline or the colour. Casts no shadow. Without it the full tree draws at every distance — still instanced, so it runs; it just costs.",
+      "budgetTris": 40,
+      "budgetParts": 1,
+      "instanced": true
+    },
+    {
       "file": "toaster_understory.glb",
-      "bytes": 426496,
+      "bytes": 426500,
       "tris": 68,
       "parts": 1,
       "bounds": {
@@ -10843,78 +11302,78 @@
     },
     {
       "file": "toaster_barn_shell.glb",
-      "bytes": 1056492,
-      "tris": 588,
-      "parts": 6,
+      "bytes": 1076988,
+      "tris": 780,
+      "parts": 7,
       "bounds": {
         "min": [
-          -15.1,
+          -15.35,
           0,
-          -10.6
+          -10.86
         ],
         "max": [
-          15.1,
+          15.35,
           6,
-          10.6
+          10.86
         ]
       },
       "kind": "map_toaster",
       "id": "toaster_barn_shell",
-      "note": "The equipment shed, 30 × 21, eaves 6.0 and roof surface 6.3 — red-brown brick under a shallow metal gable, not a board pole barn: this building is masonry on the ground, and the brick is what makes it read as the shed on this property. Two vehicle bays across the +Z elevation, the left one open at 5 × 4 because the Gator is driven through it (2.9 long, 1.5 wide, 1.85 tall) and the right one a closed white overhead leaf; the person door is on −Z, 8 m left of centre. NO WINDOWS — the real building is a blank brick rectangle, and the kit’s automatic domestic band (1 m sill, panes every 4.2 m) put seventeen lit house windows on it. The one building with no teleport pad: it is the vehicle shed. Ladder to the roof goes on the +X wall, 8.5 m toward −Z (`shared_ladder`, placed by the level file). Walls 0.3 m thick as solid boxes so the shell reads from inside as well as out, interior floor top at y 0.15, clear height over 3 m everywhere a player walks. DOOR OPENINGS ONLY, no doors — a door that closes is a wall, and the sim cannot model one that opens. Windows are opaque faintly-emissive panels in the wall face, not glass: no transparency anywhere in this kit.",
-      "budgetTris": 6000,
-      "budgetParts": 12
+      "note": "The equipment shed, 30 × 21, eaves 6.0 and roof surface 6.3 — red-brown brick under a 12° (about 2½:12) metal gable ridging at 9.2 m, with two louvred cupolas on the ridge and sliding-door rails over both bays: the 6° lid of the first pass read as a flat roof from every angle the game uses. Two vehicle bays across the +Z elevation, the left one open at 5 × 4 because the Gator is driven through it (2.9 long, 1.5 wide, 1.85 tall) and the right one a closed white overhead leaf; the person door is on −Z, 8 m left of centre. NO WINDOWS — the real building is a blank brick rectangle, and the kit’s automatic domestic band (1 m sill, panes every 4.2 m) put seventeen lit house windows on it. The one building with no teleport pad: it is the vehicle shed. Ladder to the roof goes on the +X wall, 8.5 m toward −Z (`shared_ladder`, placed by the level file). Walls 0.3 m thick as solid boxes so the shell reads from inside as well as out, interior floor top at y 0.15, clear height over 3 m everywhere a player walks. DOOR OPENINGS ONLY, no doors — a door that closes is a wall, and the sim cannot model one that opens. Windows are opaque faintly-emissive panels in the wall face, not glass: no transparency anywhere in this kit. Casings are frames (head, jambs, sill) proud of the face rather than boxes in the opening; concrete steps at every person door; gutters and corner downspouts at the eaves.",
+      "budgetTris": 7000,
+      "budgetParts": 14
     },
     {
       "file": "toaster_barn_roof.glb",
-      "bytes": 567600,
-      "tris": 136,
-      "parts": 3,
+      "bytes": 625268,
+      "tris": 224,
+      "parts": 5,
       "bounds": {
         "min": [
           -15.5,
-          5.78,
+          5.7,
           -11
         ],
         "max": [
           15.5,
-          7.577,
+          10.718,
           11
         ]
       },
       "kind": "map_toaster",
       "id": "toaster_barn_roof",
-      "note": "Separate file because the roof is a surface players stand on and the code puts a collider under it. The contract asks for ONE flat area of at least 4 × 4 m at 6.3 m — not a flat roof — and allows pitched slopes elsewhere up to 30°. So the flat is 6 × 6 m placed at the ladder head (local 12, -7.5), which on all four buildings is a corner, and it reads as the lower roof of an attached bay; the rest is a single gable at 6° ridging at 7.6 m over 6 m eaves. The plan is split into bays across X so no one span has to carry an absurd ridge. Built as a heightfield whose x samples include every bay boundary, every ridge line and both deck edges, so each crease is exact and the whole roof is about a hundred cells.",
-      "budgetTris": 1500,
-      "budgetParts": 3
+      "note": "Separate file because the roof is a surface players stand on and the code puts a collider under it. The contract asks for ONE flat area of at least 4 × 4 m at 6.3 m — not a flat roof — and allows pitched slopes elsewhere up to 30°. So the flat is 6 × 6 m placed at the ladder head (local 12, -7.5), which on all four buildings is a corner, and it reads as the lower roof of an attached bay; the rest is a single gable at 12° ridging at 9.2 m over 6 m eaves. The plan is split into bays across X so no one span has to carry an absurd ridge. Built as a heightfield whose x samples include every bay boundary, every ridge line and both deck edges, so each crease is exact and the whole roof is about a hundred cells.",
+      "budgetTris": 2000,
+      "budgetParts": 6
     },
     {
       "file": "toaster_house_buggy_shell.glb",
-      "bytes": 1130996,
-      "tris": 1308,
-      "parts": 8,
+      "bytes": 1201900,
+      "tris": 2004,
+      "parts": 9,
       "bounds": {
         "min": [
-          -10.6,
+          -11,
           0,
-          -14.575
+          -14.36
         ],
         "max": [
-          11.54,
+          13,
           4.118,
-          14.575
+          14.36
         ]
       },
       "kind": "map_toaster",
       "id": "toaster_house_buggy_shell",
-      "note": "Single-storey brick ranch, 19 × 28, eaves 3.4, roof surface 3.7 — long and low, with a gabled entry bay projecting 2 m off the +X elevation and a second cross gable down the run. The front door sits IN that entry bay under a brick arch, 6 m toward +Z; back door on −X, 8 m toward −Z. Teleport pad inside at local (0, 0, −5) — placed by the level file, not baked in, so the room arranges around the pad. Ladder on the −X wall, 12 m toward +Z. Walls 0.3 m thick as solid boxes so the shell reads from inside as well as out, interior floor top at y 0.15, clear height over 3 m everywhere a player walks. DOOR OPENINGS ONLY, no doors — a door that closes is a wall, and the sim cannot model one that opens. Windows are opaque faintly-emissive panels in the wall face, not glass: no transparency anywhere in this kit.",
-      "budgetTris": 6000,
-      "budgetParts": 12
+      "note": "Single-storey brick ranch, 19 × 28, eaves 3.4, roof surface 3.7 — long and low, with a gabled entry bay projecting 2 m off the +X elevation and a second cross gable down the run. The front door sits IN that entry bay under a brick arch, 6 m toward +Z; back door on −X, 8 m toward −Z. Teleport pad inside at local (0, 0, −5) — placed by the level file, not baked in, so the room arranges around the pad. Ladder on the −X wall, 12 m toward +Z. Walls 0.3 m thick as solid boxes so the shell reads from inside as well as out, interior floor top at y 0.15, clear height over 3 m everywhere a player walks. DOOR OPENINGS ONLY, no doors — a door that closes is a wall, and the sim cannot model one that opens. Windows are opaque faintly-emissive panels in the wall face, not glass: no transparency anywhere in this kit. Casings are frames (head, jambs, sill) proud of the face rather than boxes in the opening; concrete steps at every person door; gutters and corner downspouts at the eaves.",
+      "budgetTris": 7000,
+      "budgetParts": 14
     },
     {
       "file": "toaster_house_buggy_roof.glb",
-      "bytes": 579644,
-      "tris": 258,
-      "parts": 3,
+      "bytes": 1022908,
+      "tris": 274,
+      "parts": 5,
       "bounds": {
         "min": [
           -11.05,
@@ -10923,21 +11382,21 @@
         ],
         "max": [
           11.95,
-          5.926,
+          6.015,
           14.5
         ]
       },
       "kind": "map_toaster",
       "id": "toaster_house_buggy_roof",
       "note": "Separate file because the roof is a surface players stand on and the code puts a collider under it. The contract asks for ONE flat area of at least 4 × 4 m at 3.7 m — not a flat roof — and allows pitched slopes elsewhere up to 30°. So the flat is 6 × 6 m placed at the ladder head (local -6.5, 11), which on all four buildings is a corner, and it reads as the lower roof of an attached bay; the rest is 2 parallel gables at 28° ridging at 5.9 m over 3.4 m eaves. The plan is split into bays across X so no one span has to carry an absurd ridge. Built as a heightfield whose x samples include every bay boundary, every ridge line and both deck edges, so each crease is exact and the whole roof is about a hundred cells.",
-      "budgetTris": 1500,
-      "budgetParts": 3
+      "budgetTris": 2000,
+      "budgetParts": 6
     },
     {
       "file": "toaster_house_vehickle_shell.glb",
-      "bytes": 1191048,
-      "tris": 1908,
-      "parts": 8,
+      "bytes": 1258368,
+      "tris": 2568,
+      "parts": 9,
       "bounds": {
         "min": [
           -18.2,
@@ -10945,22 +11404,22 @@
           -14.84
         ],
         "max": [
-          17.1,
+          17.35,
           4.322,
-          14.3
+          14.5
         ]
       },
       "kind": "map_toaster",
       "id": "toaster_house_vehickle_shell",
-      "note": "The large main house, 34 × 26, with the circular drive to its north. Red-brown brick to the eaves with stucco gable fields above — the two-tone that gives this house its roofline. The −Z elevation is three stepped cross gables: a tall arched entry bay projecting 1.8 m at 10 m toward −X, a broad gable beside it, and a smaller one at the east end. Back door on +Z 12 m toward +X, and a 4.5 × 2.8 garage opening on −X centred — the quad lives in it. One storey deliberately: a second floor needs a climb, and a climb the sim cannot see is a tier the coverage rules cannot reason about. Pad at local (−7, 0, 0); ladder on +X, 11 m toward −Z. Walls 0.3 m thick as solid boxes so the shell reads from inside as well as out, interior floor top at y 0.15, clear height over 3 m everywhere a player walks. DOOR OPENINGS ONLY, no doors — a door that closes is a wall, and the sim cannot model one that opens. Windows are opaque faintly-emissive panels in the wall face, not glass: no transparency anywhere in this kit.",
-      "budgetTris": 6000,
-      "budgetParts": 12
+      "note": "The large main house, 34 × 26, with the circular drive to its north. Red-brown brick to the eaves with stucco gable fields above — the two-tone that gives this house its roofline. The −Z elevation is three stepped cross gables: a tall arched entry bay projecting 1.8 m at 10 m toward −X, a broad gable beside it, and a smaller one at the east end. Back door on +Z 12 m toward +X, and a 4.5 × 2.8 garage opening on −X centred — the quad lives in it. One storey deliberately: a second floor needs a climb, and a climb the sim cannot see is a tier the coverage rules cannot reason about. Pad at local (−7, 0, 0); ladder on +X, 11 m toward −Z. Walls 0.3 m thick as solid boxes so the shell reads from inside as well as out, interior floor top at y 0.15, clear height over 3 m everywhere a player walks. DOOR OPENINGS ONLY, no doors — a door that closes is a wall, and the sim cannot model one that opens. Windows are opaque faintly-emissive panels in the wall face, not glass: no transparency anywhere in this kit. Casings are frames (head, jambs, sill) proud of the face rather than boxes in the opening; concrete steps at every person door; gutters and corner downspouts at the eaves.",
+      "budgetTris": 7000,
+      "budgetParts": 14
     },
     {
       "file": "toaster_house_vehickle_roof.glb",
-      "bytes": 588188,
-      "tris": 346,
-      "parts": 3,
+      "bytes": 1033860,
+      "tris": 386,
+      "parts": 5,
       "bounds": {
         "min": [
           -18.65,
@@ -10976,14 +11435,14 @@
       "kind": "map_toaster",
       "id": "toaster_house_vehickle_roof",
       "note": "Separate file because the roof is a surface players stand on and the code puts a collider under it. The contract asks for ONE flat area of at least 4 × 4 m at 3.7 m — not a flat roof — and allows pitched slopes elsewhere up to 30°. So the flat is 6 × 6 m placed at the ladder head (local 14, -10), which on all four buildings is a corner, and it reads as the lower roof of an attached bay; the rest is 3 parallel gables at 28° ridging at 6.4 m over 3.4 m eaves. The plan is split into bays across X so no one span has to carry an absurd ridge. Built as a heightfield whose x samples include every bay boundary, every ridge line and both deck edges, so each crease is exact and the whole roof is about a hundred cells.",
-      "budgetTris": 1500,
-      "budgetParts": 3
+      "budgetTris": 2000,
+      "budgetParts": 6
     },
     {
       "file": "toaster_house_grnmchn_shell.glb",
-      "bytes": 1156220,
-      "tris": 1560,
-      "parts": 8,
+      "bytes": 1221132,
+      "tris": 2196,
+      "parts": 9,
       "bounds": {
         "min": [
           -12.94,
@@ -10991,22 +11450,22 @@
           -16.1
         ],
         "max": [
-          12.1,
+          13.5,
           4.195,
           16.4
         ]
       },
       "kind": "map_toaster",
       "id": "toaster_house_grnmchn_shell",
-      "note": "The second house, south-east, facing the pond across an arched entry bay on its −X elevation; back door on +X 8 m toward +Z. Pale buff brick with stucco gables, 24 × 30, eaves 3.4, roof surface 3.7, cross gables on three elevations so it reads as a plan rather than a block from every approach. Pad at local (−4, 0, 2); ladder on the −X wall, 13 m toward +Z. Walls 0.3 m thick as solid boxes so the shell reads from inside as well as out, interior floor top at y 0.15, clear height over 3 m everywhere a player walks. DOOR OPENINGS ONLY, no doors — a door that closes is a wall, and the sim cannot model one that opens. Windows are opaque faintly-emissive panels in the wall face, not glass: no transparency anywhere in this kit.",
-      "budgetTris": 6000,
-      "budgetParts": 12
+      "note": "The second house, south-east, facing the pond across an arched entry bay on its −X elevation; back door on +X 8 m toward +Z. Pale buff brick with stucco gables, 24 × 30, eaves 3.4, roof surface 3.7, cross gables on three elevations so it reads as a plan rather than a block from every approach. Pad at local (−4, 0, 2); ladder on the −X wall, 13 m toward +Z. Walls 0.3 m thick as solid boxes so the shell reads from inside as well as out, interior floor top at y 0.15, clear height over 3 m everywhere a player walks. DOOR OPENINGS ONLY, no doors — a door that closes is a wall, and the sim cannot model one that opens. Windows are opaque faintly-emissive panels in the wall face, not glass: no transparency anywhere in this kit. Casings are frames (head, jambs, sill) proud of the face rather than boxes in the opening; concrete steps at every person door; gutters and corner downspouts at the eaves.",
+      "budgetTris": 7000,
+      "budgetParts": 14
     },
     {
       "file": "toaster_house_grnmchn_roof.glb",
-      "bytes": 580908,
-      "tris": 270,
-      "parts": 3,
+      "bytes": 1024144,
+      "tris": 286,
+      "parts": 5,
       "bounds": {
         "min": [
           -13.35,
@@ -11015,15 +11474,15 @@
         ],
         "max": [
           12.5,
-          6.59,
+          7.079,
           16.85
         ]
       },
       "kind": "map_toaster",
       "id": "toaster_house_grnmchn_roof",
       "note": "Separate file because the roof is a surface players stand on and the code puts a collider under it. The contract asks for ONE flat area of at least 4 × 4 m at 3.7 m — not a flat roof — and allows pitched slopes elsewhere up to 30°. So the flat is 6 × 6 m placed at the ladder head (local -9, 12), which on all four buildings is a corner, and it reads as the lower roof of an attached bay; the rest is 2 parallel gables at 28° ridging at 6.6 m over 3.4 m eaves. The plan is split into bays across X so no one span has to carry an absurd ridge. Built as a heightfield whose x samples include every bay boundary, every ridge line and both deck edges, so each crease is exact and the whole roof is about a hundred cells.",
-      "budgetTris": 1500,
-      "budgetParts": 3
+      "budgetTris": 2000,
+      "budgetParts": 6
     },
     {
       "file": "toaster_dress_workbench.glb",
@@ -11119,7 +11578,7 @@
     },
     {
       "file": "toaster_terrain_scatter.glb",
-      "bytes": 984480,
+      "bytes": 984476,
       "tris": 102,
       "parts": 4,
       "bounds": {
@@ -11189,26 +11648,26 @@
     },
     {
       "file": "toaster_pond.glb",
-      "bytes": 38672,
-      "tris": 1008,
-      "parts": 3,
+      "bytes": 1479488,
+      "tris": 10704,
+      "parts": 4,
       "bounds": {
         "min": [
-          -15.787,
-          -1.197,
-          -17.927
+          -17.903,
+          -0.509,
+          -16.784
         ],
         "max": [
-          15.79,
-          1.591,
-          18
+          17.903,
+          1.062,
+          16.784
         ]
       },
       "kind": "map_toaster",
       "id": "toaster_pond",
-      "note": "Drawn upward, not dug: the ground is one flat slab and always will be. An elliptical basin rather than a disc — the pond on this property is a long oval lying roughly north-east, with a broad earth rim, a BIG bare island filling most of the middle and only a ring of open water round it. That is the shape in the aerial, and it is why the view across it from the lane reads as a green hollow rather than as a lake. Riprap bank r 15 → 18 rising to 0.5 m (the hidden collider the code rings it with sits at r 17), an OPAQUE dark water ring at y 0.15 inside it — roughness ~0.1, no transparency, no refraction. Three parts named `pond_bank`, `pond_water`, `pond_island`. No collision: the code rings it with a hidden bank collider, which is what stops a quad doing twenty across the surface of the water.",
-      "budgetTris": 2500,
-      "budgetParts": 3
+      "note": "Drawn upward, not dug: the ground is one flat slab and always will be. A plain pond — OPEN WATER across the whole basin, ringed by river rock. No island: a bare disc filling two thirds of the middle read as a crater rather than as water, which is the reason for the rebuild. An elliptical plan (1.0 × 0.84, turned 34°), a low earth shelf from r 13.6 out to r 18.8 that the water laps over, and ~120 water-tumbled stones laid in three courses — a wet inner course standing in the shallows at r 14.9, a large crest course at r 16.0, a smaller outer course bedded into the grass at r 17.1, plus scatter to break the ring. Stones are rounded ellipsoids with their own displacement, randomly tumbled and tinted in vertex colour, merged to ONE mesh per course pair so the whole ring is two draw calls. Water is an opaque plane at y 0.22 with a low-amplitude swell on it so the specular breaks up instead of reading as a plastic disc — roughness ~0.1, no transparency, no refraction. Four parts: `pond_shelf`, `pond_water`, `pond_rocks`, `pond_rocks_wet`. No collision: the code rings it with a hidden bank collider at r 17, which is what stops a quad doing twenty across the surface of the water.",
+      "budgetTris": 12000,
+      "budgetParts": 4
     },
     {
       "file": "toaster_dock.glb",
@@ -11235,7 +11694,7 @@
     },
     {
       "file": "toaster_skybox.glb",
-      "bytes": 1884836,
+      "bytes": 949732,
       "tris": 0,
       "parts": 0,
       "bounds": {
@@ -11252,7 +11711,7 @@
       },
       "kind": "map_toaster",
       "id": "toaster_skybox",
-      "note": "Overcast late-autumn afternoon: low warm sun in the south-west at 24° elevation, grey-gold cloud deck, and a treeline silhouette baked into the horizon band so the belt meets the sky rather than stopping. Baked at 2048 × 1024 — the existing two skies are 4096 × 2048 and 9 MB each, and an overcast sky does not need it.",
+      "note": "Clear summer afternoon: high sun in the south-west at 58° elevation with a small disc, scattered fair-weather cumulus that flatten and thin toward the horizon, and a green treeline silhouette baked into the horizon band so the belt meets the sky rather than stopping. Baked at 2048 × 1024 — the existing two skies are 4096 × 2048 and 9 MB each, and a gradient-and-cumulus sky does not need it.",
       "budgetTris": 4000,
       "budgetParts": 1
     },
@@ -11378,7 +11837,7 @@
     },
     {
       "file": "toaster_wreck_pickup.glb",
-      "bytes": 39096,
+      "bytes": 39100,
       "tris": 348,
       "parts": 6,
       "bounds": {
@@ -11401,7 +11860,7 @@
     },
     {
       "file": "toaster_leaf_pile.glb",
-      "bytes": 421468,
+      "bytes": 421464,
       "tris": 18,
       "parts": 1,
       "bounds": {
@@ -11418,7 +11877,7 @@
       },
       "kind": "map_toaster",
       "id": "toaster_leaf_pile",
-      "note": "A drift of leaves for the inner edge of the belt, where the wood sheds onto the field. One merged part of MASK cards.",
+      "note": "A drift of cut grass and brush at the inner edge of the belt, where the mower stops and the wood begins. One merged part of MASK cards.",
       "budgetTris": 60,
       "budgetParts": 1,
       "instanced": true
@@ -11445,6 +11904,412 @@
       "note": "A short column of light for a player arriving or leaving on a pad, and for an enemy coming through a warp gate. One file, tinted by the code — teal for a player, red for an enemy — so it is authored white and standing on the ground. Stand-in today is the Nova impact ring, which is flat, and a flat ring on a flat pad is the §4.12 problem again.",
       "budgetTris": 400,
       "budgetParts": 2
+    },
+    {
+      "file": "toaster_fence_wire.glb",
+      "bytes": 12408,
+      "tris": 96,
+      "parts": 2,
+      "bounds": {
+        "min": [
+          -2.07,
+          -0.05,
+          -0.06
+        ],
+        "max": [
+          2,
+          1.555,
+          0.06
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_fence_wire",
+      "note": "Five-strand wire on a steel T-post, 4 m of it — the fence a working field has, where post-and-rail is the fence a lawn has. Post on the module end so runs share posts. Instanced round the pasture, the orchard, the crop field and the hayfield, about 180 placements, and it is what turns one 320 m lawn into fields.",
+      "run": "+X",
+      "repeat": 4,
+      "width": 0.1,
+      "budgetTris": 120,
+      "budgetParts": 2,
+      "instanced": true
+    },
+    {
+      "file": "toaster_gate_farm.glb",
+      "bytes": 580496,
+      "tris": 316,
+      "parts": 2,
+      "bounds": {
+        "min": [
+          -2.167,
+          0,
+          -0.108
+        ],
+        "max": [
+          2.167,
+          1.7,
+          0.12
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_gate_farm",
+      "note": "A 4 m galvanised tube gate between two timber posts — the same module length as the wire, so it drops into a fence run in place of one module. Six rails, two uprights and a diagonal brace, as the real thing is welded. Hung shut: a gate that stands open is an opening the sim does not know about.",
+      "run": "+X",
+      "repeat": 4,
+      "width": 0.2,
+      "budgetTris": 900,
+      "budgetParts": 2
+    },
+    {
+      "file": "toaster_utility_pole.glb",
+      "bytes": 568984,
+      "tris": 164,
+      "parts": 3,
+      "bounds": {
+        "min": [
+          -1.1,
+          0,
+          -0.17
+        ],
+        "max": [
+          1.1,
+          10.21,
+          0.17
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_utility_pole",
+      "note": "A 10 m treated pole with a single crossarm and three insulators, laid down the county road and the south road at 36 m intervals, on the verge. The conductors between them are built by the level (`buildToasterWires`) from the poles that were actually placed, with real sag, so a refused pole never leaves a wire hanging in air. v1 adds a pole-mounted transformer at the drops to the houses. Poles and wires are what say a road is a road that goes somewhere.",
+      "budgetTris": 600,
+      "budgetParts": 3
+    },
+    {
+      "file": "toaster_utility_pole_v1.glb",
+      "bytes": 574316,
+      "tris": 228,
+      "parts": 3,
+      "bounds": {
+        "min": [
+          -1.1,
+          0,
+          -0.17
+        ],
+        "max": [
+          1.1,
+          10.21,
+          0.57
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_utility_pole_v1",
+      "variant": 1,
+      "note": "A 10 m treated pole with a single crossarm and three insulators, laid down the county road and the south road at 36 m intervals, on the verge. The conductors between them are built by the level (`buildToasterWires`) from the poles that were actually placed, with real sag, so a refused pole never leaves a wire hanging in air. v1 adds a pole-mounted transformer at the drops to the houses. Poles and wires are what say a road is a road that goes somewhere.",
+      "budgetTris": 600,
+      "budgetParts": 3
+    },
+    {
+      "file": "toaster_grain_bin.glb",
+      "bytes": 110712,
+      "tris": 1836,
+      "parts": 3,
+      "bounds": {
+        "min": [
+          -3.25,
+          0,
+          -3.232
+        ],
+        "max": [
+          3.25,
+          6.813,
+          3.232
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_grain_bin",
+      "note": "Corrugated galvanised grain bin on a concrete pad: stiffener rings every 950 mm, a 30° cone roof with eave flashing and a fill cap, a side ladder and the unloading auger out of the base. Turned as one profile, so the rings are in the silhouette rather than painted. Two sizes (5.5 and 7.3 m) beside the shed, where a farm keeps them. The single most legible thing on a farm horizon after the barn itself.",
+      "budgetTris": 3000,
+      "budgetParts": 3
+    },
+    {
+      "file": "toaster_grain_bin_v1.glb",
+      "bytes": 136456,
+      "tris": 2268,
+      "parts": 3,
+      "bounds": {
+        "min": [
+          -4.15,
+          0,
+          -4.127
+        ],
+        "max": [
+          4.15,
+          9.108,
+          4.127
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_grain_bin_v1",
+      "variant": 1,
+      "note": "Corrugated galvanised grain bin on a concrete pad: stiffener rings every 950 mm, a 30° cone roof with eave flashing and a fill cap, a side ladder and the unloading auger out of the base. Turned as one profile, so the rings are in the silhouette rather than painted. Two sizes (5.5 and 7.3 m) beside the shed, where a farm keeps them. The single most legible thing on a farm horizon after the barn itself.",
+      "budgetTris": 3000,
+      "budgetParts": 3
+    },
+    {
+      "file": "toaster_windmill.glb",
+      "bytes": 145652,
+      "tris": 1818,
+      "parts": 5,
+      "bounds": {
+        "min": [
+          -1.775,
+          -0.207,
+          -2.35
+        ],
+        "max": [
+          1.775,
+          11.612,
+          1.775
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_windmill",
+      "note": "Aermotor-pattern pumping mill: a four-leg galvanised lattice tower 10 m tall with girts and X-bracing at 2 m panels, a 2.5 m 18-blade wheel on a rim, and the tail vane that keeps it in the wind. Stands over the stock tank in the pasture. The wheel is ONE part named `toaster_windmill_wheel` and the group declares `userData.spin = { part, axis, rpm }` so a driver can turn it without knowing its geometry — the moving-parts contract from the weapons applied to a prop.",
+      "budgetTris": 5000,
+      "budgetParts": 6
+    },
+    {
+      "file": "toaster_stock_tank.glb",
+      "bytes": 43040,
+      "tris": 664,
+      "parts": 3,
+      "bounds": {
+        "min": [
+          -1.25,
+          -0.1,
+          -1.25
+        ],
+        "max": [
+          1.776,
+          0.976,
+          1.25
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_stock_tank",
+      "note": "Round galvanised stock tank with a rolled rim, standing water in it, and the fill pipe from the mill. Turned, like the bins, from one profile with the rim in it.",
+      "budgetTris": 900,
+      "budgetParts": 3
+    },
+    {
+      "file": "toaster_shed_small.glb",
+      "bytes": 576368,
+      "tris": 228,
+      "parts": 2,
+      "bounds": {
+        "min": [
+          -2.05,
+          0,
+          -1.427
+        ],
+        "max": [
+          2.51,
+          2.51,
+          1.797
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_shed_small",
+      "note": "Board shed under a corrugated lean-to — a hen house behind the south-east house, a garden shed behind the main house. Grey unpainted board, door hung ajar on the +Z side, a nest box on the flank. The kind of outbuilding every property has two of and no plan ever draws.",
+      "budgetTris": 600,
+      "budgetParts": 2
+    },
+    {
+      "file": "toaster_hedgerow.glb",
+      "bytes": 580568,
+      "tris": 200,
+      "parts": 3,
+      "bounds": {
+        "min": [
+          -2.419,
+          -0.309,
+          -1.57
+        ],
+        "max": [
+          2.5,
+          2.495,
+          1.619
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_hedgerow",
+      "note": "Four metres of overgrown field hedge — hawthorn and bramble that grew up along a fence line and was never cut back — with a few bare stems showing through. MASK cards off the shared leaf atlas in two greens, so the run has depth. Along the hayfield frontage with open-grown oaks standing in it, which is how a hedgerow tree got there.",
+      "run": "+X",
+      "repeat": 4,
+      "width": 1.8,
+      "budgetTris": 400,
+      "budgetParts": 3,
+      "instanced": true
+    },
+    {
+      "file": "toaster_crop_rows.glb",
+      "bytes": 481280,
+      "tris": 728,
+      "parts": 2,
+      "bounds": {
+        "min": [
+          -5.011,
+          0.02,
+          -5
+        ],
+        "max": [
+          5.009,
+          0.759,
+          5
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_crop_rows",
+      "note": "Ten metres square of row crop — soybeans a month in — as 13 ridged rows on 760 mm centres along +X with the plants as MASK cards and the ridges in a shaded soil plane. Twelve modules fill the fenced field north of the core yard, and from the drive the rows read as the striped block a crop field is from a distance. Instanced.",
+      "budgetTris": 700,
+      "budgetParts": 2,
+      "instanced": true
+    },
+    {
+      "file": "toaster_reeds.glb",
+      "bytes": 587644,
+      "tris": 308,
+      "parts": 2,
+      "bounds": {
+        "min": [
+          -0.826,
+          0,
+          -0.922
+        ],
+        "max": [
+          0.87,
+          2.088,
+          0.888
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_reeds",
+      "note": "A clump of cattails for the pond’s wet shelf, standing in the inner rock course: blade cards with brown seed heads. Eight round the margin, none on the dock side or where the lane passes. A pond with a bare stone rim is a reservoir; reeds are what make it a farm pond.",
+      "budgetTris": 200,
+      "budgetParts": 2,
+      "instanced": true
+    },
+    {
+      "file": "toaster_fuel_tank.glb",
+      "bytes": 34500,
+      "tris": 504,
+      "parts": 3,
+      "bounds": {
+        "min": [
+          -1.15,
+          0.005,
+          -0.5
+        ],
+        "max": [
+          1.223,
+          2.82,
+          0.63
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_fuel_tank",
+      "note": "Gravity diesel tank on a steel stand beside the shed — red enamel, rust on the stand, the hose and nozzle hung off the end. Turned like the propane tank; the stand is the same welded angle every farm builds.",
+      "budgetTris": 900,
+      "budgetParts": 3
+    },
+    {
+      "file": "toaster_hay_wagon.glb",
+      "bytes": 612848,
+      "tris": 668,
+      "parts": 4,
+      "bounds": {
+        "min": [
+          -1.32,
+          0.02,
+          -2.5
+        ],
+        "max": [
+          1.32,
+          3.74,
+          4.6
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_hay_wagon",
+      "note": "Flat running-gear wagon, tongue down, loaded with five round bales and left in the hayfield where the baler stopped. Red running gear under a grey plank deck, tyres on the axles. DRESSING, not a vehicle — no rig, nothing the vehicle code binds to.",
+      "budgetTris": 1800,
+      "budgetParts": 4
+    },
+    {
+      "file": "toaster_bale_feeder.glb",
+      "bytes": 59316,
+      "tris": 1048,
+      "parts": 2,
+      "bounds": {
+        "min": [
+          -1.23,
+          0.005,
+          -1.23
+        ],
+        "max": [
+          1.23,
+          1.42,
+          1.23
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_bale_feeder",
+      "note": "Round tube bale feeder with a bale stood in it — the one object that says a pasture is grazed without putting an animal in the scene. Two in the south-west pasture.",
+      "budgetTris": 1200,
+      "budgetParts": 2
+    },
+    {
+      "file": "toaster_garden_plot.glb",
+      "bytes": 1025996,
+      "tris": 520,
+      "parts": 4,
+      "bounds": {
+        "min": [
+          -4.025,
+          0,
+          -3.725
+        ],
+        "max": [
+          4.025,
+          1,
+          3.725
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_garden_plot",
+      "note": "Four timber raised beds with a low rabbit wire round them, behind the two houses that are lived in. Plants as MASK cards on the soil. Origin at footprint centre on grade.",
+      "budgetTris": 900,
+      "budgetParts": 4
+    },
+    {
+      "file": "toaster_clothesline.glb",
+      "bytes": 26520,
+      "tris": 246,
+      "parts": 3,
+      "bounds": {
+        "min": [
+          -4.03,
+          0,
+          -0.9
+        ],
+        "max": [
+          4.03,
+          2.2,
+          0.9
+        ]
+      },
+      "kind": "map_toaster",
+      "id": "toaster_clothesline",
+      "note": "Two steel T-posts, three lines with sag in them, and washing on the middle one. Cheap, and it is the one prop that says the house is lived in today rather than abandoned.",
+      "budgetTris": 400,
+      "budgetParts": 3
     },
     {
       "file": "vehicle_buggy.glb",
@@ -11786,7 +12651,7 @@
     },
     {
       "file": "shared_zipline_anchor.glb",
-      "bytes": 98768,
+      "bytes": 98820,
       "tris": 2828,
       "parts": 18,
       "bounds": {
@@ -11803,7 +12668,7 @@
       },
       "kind": "shared",
       "id": "shared_zipline_anchor",
-      "note": "Post with a top sheave at 1.6 m — the cable leaves from `zip_sheave`. Brass lamp is the interact prompt anchor."
+      "note": "Post with a top sheave at 1.6 m — the cable leaves from `zip_sheave`, and the group declares that node in `userData.zip.sheave` so a client (or the viewer) strings the cable from the anchors themselves rather than from a second, hand-typed pair of endpoints. Brass lamp is the interact prompt anchor."
     },
     {
       "file": "shared_zipline_cable.glb",
@@ -13193,9 +14058,9 @@
     },
     {
       "file": "pickup_primecore.glb",
-      "bytes": 219528,
-      "tris": 8288,
-      "parts": 10,
+      "bytes": 215980,
+      "tris": 8224,
+      "parts": 9,
       "bounds": {
         "min": [
           -0.415,
@@ -13204,13 +14069,13 @@
         ],
         "max": [
           0.415,
-          2.2,
+          0.928,
           0.508
         ]
       },
       "kind": "pickup",
       "id": "pickup_primecore",
-      "note": "Very rare — boss drop. A soul-violet core lattice suspended between two brass yokes, orbited by four rings, throwing a light column so it reads as the rarest thing on the floor."
+      "note": "Very rare — boss drop. A soul-violet core lattice suspended between two brass yokes, orbited by four rings, over a ground ring, so it reads as the rarest thing on the floor. (The light column was dropped: it wrapped the core in a cone and hid the detail — a beacon belongs to the client, not the mesh.)"
     },
     {
       "file": "pickup_gravium.glb",
@@ -13654,8 +14519,302 @@
       "note": "Unit-length streak the client stretches to the hit (head at z = −1). Cold blue streak trailing vapour rather than smoke, shedding ice shards that tumble off the flight line. Unlit, alpha-blended, colour and falloff in vertex RGBA — no material overrides on import."
     },
     {
+      "file": "melee_blade_vm.glb",
+      "bytes": 7735556,
+      "tris": 18914,
+      "parts": 67,
+      "bounds": {
+        "min": [
+          -0.017,
+          -0.043,
+          -0.56
+        ],
+        "max": [
+          0.017,
+          0.031,
+          0.16
+        ]
+      },
+      "kind": "melee",
+      "id": "blade",
+      "note": "Fast and narrow — the single-target platform, and the one an infusion pays off on most. Measured against a tactical short sword: 560 mm clip-point blade, 42 mm at the ricasso, 6.2 mm spine with distal taper to 2.2 mm at the point. The fuller is cut INTO both flats in the loft profile, the whetted edge is its own bright part (`blade_edge`, which edge modules replace), the oval guard is crowned and the G10 grip carries a palm swell and three finger grooves as displacement on two through-bolts. Satin blade over a black guard and pommel: two finishes separated by surface. Wear rides the edge bevel and the spine crown."
+    },
+    {
+      "file": "melee_maul_vm.glb",
+      "bytes": 12935460,
+      "tris": 37232,
+      "parts": 156,
+      "bounds": {
+        "min": [
+          -0.09,
+          -0.027,
+          -0.627
+        ],
+        "max": [
+          0.09,
+          0.027,
+          0.213
+        ]
+      },
+      "kind": "melee",
+      "id": "maul",
+      "note": "Slow, wide, and it moves things. A 10 lb double-faced forged sledge head — 180 × 55 × 55, corners chamfered, both faces crowned so a strike lands on a dome, a charge-cell pocket milled into the top face — on an 810 mm fibreglass-core haft that roots 12 mm inside the eye. Steel overstrike collar where a missed swing lands, two overmoulded grip zones with finger grooves cut in, flared butt with a turned steel cap. Phosphate head, polymer haft, rubber grips: three matte blacks, three different surfaces. The faces burnish themselves."
+    },
+    {
+      "file": "melee_spear_vm.glb",
+      "bytes": 6589228,
+      "tris": 23864,
+      "parts": 11,
+      "bounds": {
+        "min": [
+          -0.043,
+          -0.032,
+          -1.72
+        ],
+        "max": [
+          0.043,
+          0.032,
+          0.52
+        ]
+      },
+      "kind": "melee",
+      "id": "spear",
+      "note": "Reach — the platform that makes melee survivable against things that hurt to stand next to. Measured against a boar spear: 2.24 m overall, a 320 mm leaf head 62 mm at its widest on a median ridge (both edges are bright parts under `spear_edge`), turned into a coned socket with a rolled lip, forged wings that root inside the socket wall and a through-pin. 33→30 mm composite shaft turned as one profile, two waxed-cord grips whose turns read as ridges in the section, and a ferruled butt spike. Origin at the primary hand, so the off-hand grip sits 60 cm ahead of it."
+    },
+    {
+      "file": "melee_blade_world.glb",
+      "bytes": 7735560,
+      "tris": 18914,
+      "parts": 67,
+      "bounds": {
+        "min": [
+          -0.017,
+          -0.043,
+          -0.56
+        ],
+        "max": [
+          0.017,
+          0.031,
+          0.16
+        ]
+      },
+      "kind": "melee_world",
+      "id": "blade_world",
+      "note": "Fast and narrow — the single-target platform, and the one an infusion pays off on most. Measured against a tactical short sword: 560 mm clip-point blade, 42 mm at the ricasso, 6.2 mm spine with distal taper to 2.2 mm at the point. The fuller is cut INTO both flats in the loft profile, the whetted edge is its own bright part (`blade_edge`, which edge modules replace), the oval guard is crowned and the G10 grip carries a palm swell and three finger grooves as displacement on two through-bolts. Satin blade over a black guard and pommel: two finishes separated by surface. Wear rides the edge bevel and the spine crown."
+    },
+    {
+      "file": "melee_maul_world.glb",
+      "bytes": 12935460,
+      "tris": 37232,
+      "parts": 156,
+      "bounds": {
+        "min": [
+          -0.09,
+          -0.027,
+          -0.627
+        ],
+        "max": [
+          0.09,
+          0.027,
+          0.213
+        ]
+      },
+      "kind": "melee_world",
+      "id": "maul_world",
+      "note": "Slow, wide, and it moves things. A 10 lb double-faced forged sledge head — 180 × 55 × 55, corners chamfered, both faces crowned so a strike lands on a dome, a charge-cell pocket milled into the top face — on an 810 mm fibreglass-core haft that roots 12 mm inside the eye. Steel overstrike collar where a missed swing lands, two overmoulded grip zones with finger grooves cut in, flared butt with a turned steel cap. Phosphate head, polymer haft, rubber grips: three matte blacks, three different surfaces. The faces burnish themselves."
+    },
+    {
+      "file": "melee_spear_world.glb",
+      "bytes": 6589232,
+      "tris": 23864,
+      "parts": 11,
+      "bounds": {
+        "min": [
+          -0.043,
+          -0.032,
+          -1.72
+        ],
+        "max": [
+          0.043,
+          0.032,
+          0.52
+        ]
+      },
+      "kind": "melee_world",
+      "id": "spear_world",
+      "note": "Reach — the platform that makes melee survivable against things that hurt to stand next to. Measured against a boar spear: 2.24 m overall, a 320 mm leaf head 62 mm at its widest on a median ridge (both edges are bright parts under `spear_edge`), turned into a coned socket with a rolled lip, forged wings that root inside the socket wall and a through-pin. 33→30 mm composite shaft turned as one profile, two waxed-cord grips whose turns read as ridges in the section, and a ferruled butt spike. Origin at the primary hand, so the off-hand grip sits 60 cm ahead of it."
+    },
+    {
+      "file": "meleemod_edge_honed.glb",
+      "bytes": 680212,
+      "tris": 5304,
+      "parts": 1,
+      "bounds": {
+        "min": [
+          -0.001,
+          -0.002,
+          -0.268
+        ],
+        "max": [
+          0.001,
+          0.032,
+          0.266
+        ]
+      },
+      "kind": "meleemod",
+      "id": "edge_honed",
+      "note": "Replaces `<host>_edge`: a wider mirror-polished bevel along the whole cutting line (both edges on the spear); on the maul it is a hardened crowned face insert on both striking faces."
+    },
+    {
+      "file": "meleemod_edge_serrated.glb",
+      "bytes": 680224,
+      "tris": 5304,
+      "parts": 1,
+      "bounds": {
+        "min": [
+          -0.001,
+          -0.003,
+          -0.268
+        ],
+        "max": [
+          0.001,
+          0.032,
+          0.266
+        ]
+      },
+      "kind": "meleemod",
+      "id": "edge_serrated",
+      "note": "Replaces `<host>_edge`: forty-six teeth as displacement along the edge sweep; the maul gets a waffle face with the grooves turned into the insert profile."
+    },
+    {
+      "file": "meleemod_grip_balanced.glb",
+      "bytes": 1381128,
+      "tris": 9312,
+      "parts": 1,
+      "bounds": {
+        "min": [
+          -0.014,
+          -0.02,
+          -0.063
+        ],
+        "max": [
+          0.014,
+          0.02,
+          0.063
+        ]
+      },
+      "kind": "meleemod",
+      "id": "grip_balanced",
+      "note": "Replaces `<host>_grip`: a machined alloy sleeve with deep finger grooves turned in, a knurl band between them and a balance ring at each end, sized to each host's grip length and section."
+    },
+    {
+      "file": "meleemod_counterweight_heavy.glb",
+      "bytes": 101580,
+      "tris": 2016,
+      "parts": 1,
+      "bounds": {
+        "min": [
+          -0.014,
+          -0.014,
+          0
+        ],
+        "max": [
+          0.014,
+          0.014,
+          0.024
+        ]
+      },
+      "kind": "meleemod",
+      "id": "counterweight_heavy",
+      "note": "Screw-on tungsten slug at the butt, knurled so it spins on by hand; diameter matched to each host's pommel."
+    },
+    {
+      "file": "meleemod_infusion_ember.glb",
+      "bytes": 1887016,
+      "tris": 1960,
+      "parts": 9,
+      "bounds": {
+        "min": [
+          -0.042,
+          -0.012,
+          -0.012
+        ],
+        "max": [
+          0,
+          0.012,
+          0.012
+        ]
+      },
+      "kind": "meleemod",
+      "id": "infusion_ember",
+      "note": "Core infusion: a turned cell on a clamp saddle — brass end rings, a glass barrel with the charge visible inside, three retaining ribs and a bleed valve on the cap. Same body for all four; only the glass changes. Stands off the ricasso (blade), the head's front face (maul) or the socket (spear)."
+    },
+    {
+      "file": "meleemod_infusion_cryo.glb",
+      "bytes": 1887020,
+      "tris": 1960,
+      "parts": 9,
+      "bounds": {
+        "min": [
+          -0.042,
+          -0.012,
+          -0.012
+        ],
+        "max": [
+          0,
+          0.012,
+          0.012
+        ]
+      },
+      "kind": "meleemod",
+      "id": "infusion_cryo",
+      "note": "Core infusion: a turned cell on a clamp saddle — brass end rings, a glass barrel with the charge visible inside, three retaining ribs and a bleed valve on the cap. Same body for all four; only the glass changes. Stands off the ricasso (blade), the head's front face (maul) or the socket (spear)."
+    },
+    {
+      "file": "meleemod_infusion_volt.glb",
+      "bytes": 1886872,
+      "tris": 1960,
+      "parts": 9,
+      "bounds": {
+        "min": [
+          -0.042,
+          -0.012,
+          -0.012
+        ],
+        "max": [
+          0,
+          0.012,
+          0.012
+        ]
+      },
+      "kind": "meleemod",
+      "id": "infusion_volt",
+      "note": "Core infusion: a turned cell on a clamp saddle — brass end rings, a glass barrel with the charge visible inside, three retaining ribs and a bleed valve on the cap. Same body for all four; only the glass changes. Stands off the ricasso (blade), the head's front face (maul) or the socket (spear)."
+    },
+    {
+      "file": "meleemod_infusion_toxin.glb",
+      "bytes": 1887036,
+      "tris": 1960,
+      "parts": 9,
+      "bounds": {
+        "min": [
+          -0.042,
+          -0.012,
+          -0.012
+        ],
+        "max": [
+          0,
+          0.012,
+          0.012
+        ]
+      },
+      "kind": "meleemod",
+      "id": "infusion_toxin",
+      "note": "Core infusion: a turned cell on a clamp saddle — brass end rings, a glass barrel with the charge visible inside, three retaining ribs and a bleed valve on the cap. Same body for all four; only the glass changes. Stands off the ricasso (blade), the head's front face (maul) or the socket (spear)."
+    },
+    {
       "file": "weapon_sidearm_magazine.glb",
-      "bytes": 4832212,
+      "bytes": 4827384,
       "tris": 6016,
       "parts": 9,
       "bounds": {

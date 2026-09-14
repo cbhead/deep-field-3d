@@ -55,6 +55,42 @@ public static class ToasterLayout
         // Grnmchn spur: off the county road's last bend to the -X front door,
         // approaching from the west so it never crosses the footprint.
         new(Surface.Gravel, new[] { new Vector3(70, 0, -58), new Vector3(75, 0, -52), new Vector3(78, 0, -50) }, 4f),
+        // Shed apron: 8 m of the drive's gravel across the whole +Z front of
+        // the barn, under the drive's first leg — two rows of the 4 m module,
+        // 15 mm under the drive so the two gravels do not fight.
+        new(Surface.Gravel, new[] { new Vector3(-122, 0, 68.5f), new Vector3(-90, 0, 68.5f) }, 8f, Apron: true),
+    };
+
+    /// <summary>Which tiles are which ground. Mown lawn round the houses and
+    /// along the roads; beyond the fences the tile grid carries the FIELD
+    /// variants — rough grazed pasture south-west (v4), cut hay stubble east
+    /// (v5). A tile takes a field's variant only when it lies wholly inside
+    /// it, because a variant is a whole tile.</summary>
+    public static readonly (int Variant, float X0, float X1, float Z0, float Z1)[] Fields =
+    {
+        (5, 80f, 140f, -20f, 60f),      // the hayfield
+        (4, -140f, -20f, -60f, -20f),   // the pasture
+    };
+
+    /// <summary>The field variant for the 20 m tile centred here, or null for
+    /// the lawn cycle.</summary>
+    public static int? FieldVariant(float x, float z)
+    {
+        foreach (var (variant, x0, x1, z0, z1) in Fields)
+            if (x - 10f >= x0 - 0.01f && x + 10f <= x1 + 0.01f && z - 10f >= z0 - 0.01f && z + 10f <= z1 + 0.01f)
+                return variant;
+        return null;
+    }
+
+    /// <summary>Where the power lines run: poles every 36 m down the county
+    /// road and every 40 m down the south road, 5.5 m off the centreline on
+    /// one consistent side. The south road's line is drawn off the boundary to
+    /// boundary rather than off the road's own points so its first pole is not
+    /// forty metres in.</summary>
+    public static readonly (Vector3[] Points, float Spacing, float Offset)[] PoleLines =
+    {
+        (Roads[0].Points, 36f, 5.5f),
+        (new[] { new Vector3(-152, 0, -66), new Vector3(152, 0, -66) }, 40f, 5.5f),
     };
 
     /// <summary>The Vehickle house's circular drive: twelve 30° arcs of

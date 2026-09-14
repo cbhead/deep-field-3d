@@ -139,12 +139,15 @@ ReactDOM.createRoot(document.getElementById('tweaks-host')).render(<App />);
 </script>
 <script type="module">
 import { makeWeaponKit, WEAPONS, ATTACHMENTS, AMMO, TRACERS } from './models/weapons.js';
+import { MELEE, MELEE_MODS, MELEE_SLOTS } from './models/melee-hero.js';
 import { triCount, countMeshes } from './models/tower-kit.js';
 import { applyStudio } from './models/studio.js';
 
 const SLOTS = ['barrel', 'muzzle', 'optic', 'magazine', 'stock', 'underbarrel', 'infusion'];
 const FACT = { longbarrel: [1.10, .92, 1.25], shortbarrel: [.95, 1.18, .8], compensator: [1.12, 1, 1], rangefinder: [1, 1, 1.2], drumfeed: [1, 1.15, 1], bracestock: [1, 1.08, 1.05], stabilizer: [1.18, .95, 1], embercoil: [1, 1, 1], cryocell: [1, 1, 1], voltcap: [1, 1, 1] };
-const APPLIES = { embercoil: 'burn', cryocell: 'chill', voltcap: 'shock' };
+const APPLIES = { embercoil: 'burn', cryocell: 'chill', voltcap: 'shock', infusion_ember: 'burn', infusion_cryo: 'chill', infusion_volt: 'shock', infusion_toxin: 'poison' };
+/* Melee factors are [damage, rate, reach] — Melee.cs attachment table. */
+Object.assign(FACT, { edge_honed: [1.18, .92, 1], edge_serrated: [1.05, 1.10, 1], grip_balanced: [1, 1.15, 1], counterweight_heavy: [1.10, .90, 1.15] });
 /* Reload parts (FORWARD-MANIFEST-reload). Two kinds, both lifted out of work
    that already exists: the feed part exported on its own, and the three
    off-hand poses. Here so the pivots and the poses can be eyeballed before the
@@ -190,10 +193,12 @@ const RELOAD = [
     build: posed('charge') },
 ];
 const CATS = [
-  { id: 'weapons', label: 'Platforms', items: WEAPONS.filter((w) => w.worldFile), buildable: true },
+  { id: 'weapons', label: 'Platforms', items: WEAPONS.filter((w) => w.worldFile), buildable: true, slots: SLOTS, mods: ATTACHMENTS },
+  { id: 'melee', label: 'Melee', items: MELEE, buildable: true, slots: MELEE_SLOTS, mods: MELEE_MODS },
   { id: 'tools', label: 'Tool & hands', items: WEAPONS.filter((w) => !w.worldFile), buildable: false },
   { id: 'reload', label: 'Reload', items: RELOAD },
   { id: 'attachments', label: 'Attachments', items: ATTACHMENTS },
+  { id: 'meleemods', label: 'Melee modules', items: MELEE_MODS },
   { id: 'ammo', label: 'Ammo', items: AMMO },
   { id: 'tracers', label: 'Tracers', items: TRACERS },
 ];
@@ -204,13 +209,16 @@ applyStudio(stage, THREE);
 const K = makeWeaponKit(THREE);
 const HANDS = WEAPONS.find((w) => w.id === 'hands');
 let cat = CATS[0], cur = null, model = null;
-const build = Object.fromEntries(SLOTS.map((s) => [s, null]));
+const build = Object.fromEntries([...SLOTS, ...MELEE_SLOTS].map((s) => [s, null]));
 
 el('tabs').innerHTML = CATS.map((c) => `<button type="button" data-cat="${c.id}">${c.label}</button>`).join('') +
   `<a href="Deep Field 3D - Asset Export.html"><span class="swatch" style="background:var(--arcane-400)"></span>Export pack</a><a href="Deep Field 3D - Roster.html"><span class="swatch" style="background:#e9614c"></span>Enemies</a><a href="Lance.html"><span class="swatch" style="background:#2b5cff"></span>Towers</a>`;
 el('tabs').addEventListener('click', (e) => { const c = CATS.find((x) => x.id === e.target.dataset.cat); if (c) setCat(c); });
 
-el('slots').innerHTML = SLOTS.map((s) => `<div class="slot" data-slot="${s}"><span class="label">${s}</span><div class="opts"><button type="button" data-att="" aria-pressed="true">—</button>${ATTACHMENTS.filter((a) => a.slot === s).map((a) => `<button type="button" data-att="${a.id}">${a.label}</button>`).join('')}</div></div>`).join('');
+function renderSlots(c) {
+  el('slots').innerHTML = c.slots.map((s) => `<div class="slot${build[s] ? ' filled' : ''}" data-slot="${s}"><span class="label">${s}</span><div class="opts"><button type="button" data-att="" aria-pressed="${String(!build[s])}">—</button>${c.mods.filter((a) => a.slot === s).map((a) => `<button type="button" data-att="${a.id}" aria-pressed="${String(build[s] === a.id)}">${a.label}</button>`).join('')}</div></div>`).join('');
+}
+renderSlots(CATS[0]);
 el('slots').addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return;
   const slot = b.closest('.slot').dataset.slot;
@@ -228,6 +236,7 @@ function setCat(c) {
   el('list-title').textContent = c.label;
   el('items').innerHTML = c.items.map((it) => `<li><button type="button" data-id="${it.id}"><span class="swatch" style="background:${it.swatch}"></span>${it.label}<small>${it.slot || ''}</small></button></li>`).join('');
   el('build').style.display = c.buildable ? '' : 'none';
+  if (c.buildable) renderSlots(c);
   select(c.items[0]);
 }
 el('items').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; select(cat.items.find((x) => x.id === b.dataset.id)); });
@@ -244,13 +253,15 @@ function assemble() {
   model = cur.build(K);
   if (el('hands').checked && cur.handsPose) { K.__handsPose = cur.handsPose; model.add(HANDS.build(K)); }
   if (cat.buildable) {
-    for (const slot of SLOTS) {
-      const att = ATTACHMENTS.find((a) => a.id === build[slot]);
+    for (const slot of cat.slots) {
+      const att = cat.mods.find((a) => a.id === build[slot]);
       if (!att) continue;
       const hide = (n) => { const o = model.getObjectByName(n); if (o) o.visible = false; };
       if (slot === 'barrel') hide(`${cur.id}_barrel`);
       if (slot === 'magazine') { hide(`${cur.id}_magazine`); hide(`${cur.id}_mag_tube`); }
       if (slot === 'stock') hide(`${cur.id}_stock`);
+      if (slot === 'edge') hide(`${cur.id}_edge`);
+      if (slot === 'grip') hide(`${cur.id}_grip`);
       let mnt = model.getObjectByName(`${cur.id}_mount_${slot}`);
       if (slot === 'muzzle' && build.barrel) mnt = model.getObjectByName('attach_mount_muzzle') || mnt;
       mnt?.add(att.build(K, cur.id));
@@ -270,11 +281,12 @@ function assemble() {
     .map(([k, v]) => `<div><dt>${k}</dt><dd class="${k === 'Tris' || k === 'Parts' ? 'arcane' : ''}">${v}</dd></div>`).join('');
   if (cat.buildable) {
     const f = [1, 1, 1];
-    for (const s of SLOTS) if (build[s] && FACT[build[s]]) FACT[build[s]].forEach((v, i) => f[i] *= v);
-    const base = { Damage: parseFloat(cur.stats.Damage), Rate: parseFloat(cur.stats.Rate), Range: parseFloat(cur.stats.Range) };
-    const applies = [cur.stats.Applies, ...SLOTS.map((s) => APPLIES[build[s]])].filter(Boolean);
+    for (const s of cat.slots) if (build[s] && FACT[build[s]]) FACT[build[s]].forEach((v, i) => f[i] *= v);
+    const reachKey = cur.melee ? 'Reach' : 'Range';
+    const base = { Damage: parseFloat(cur.stats.Damage), Rate: parseFloat(cur.stats.Rate), Range: parseFloat(cur.stats[reachKey]) };
+    const applies = [cur.stats.Applies, ...cat.slots.map((s) => APPLIES[build[s]])].filter(Boolean);
     const row = (k, v, fac, unit) => `<div><dt>${k}</dt><dd class="${fac > 1.001 ? 'up' : fac < .999 ? 'down' : ''}">${(v * fac).toFixed(1)}${unit} <small style="color:var(--text-muted);font-weight:400">×${fac.toFixed(2)}</small></dd><div class="bar"><i style="width:${Math.min(100, fac * 50)}%"></i><b style="left:50%"></b></div></div>`;
-    el('eff').innerHTML = row('Damage', base.Damage, f[0], '') + row('Rate', base.Rate, f[1], '/s') + row('Range', base.Range, f[2], ' m') + `<div><dt>Applies</dt><dd>${applies.join(' · ') || '—'}</dd></div>`;
+    el('eff').innerHTML = row('Damage', base.Damage, f[0], '') + row('Rate', base.Rate, f[1], '/s') + row(reachKey, base.Range, f[2], ' m') + `<div><dt>Applies</dt><dd>${applies.join(' · ') || '—'}</dd></div>`;
   }
 }
 setCat(CATS[0]);
@@ -289,7 +301,7 @@ const FINISH = {
   night: { gun_metal: [0x0f1116, .55, .6], gun_dark: [0x08090c, .6, .5], gun_pale: [0x1c1f26, .5, .6], gun_bronze: [0x141317, .5, .6], polymer: [0x0b0c10, .85], chrome: [0x2a2e36, .35, .8], brass: [0x3a3327, .45, .7], skin_plate: [0x4a3f22, .5, .5] },
 };
 const STAGE = { bench: { bg: '#0D1119', key: [0xffffff, 1.25], hemi: .26, exposure: 1.22, env: 1.15 }, armory: { bg: '#161008', key: [0xffc27a, 1.6], hemi: .22, exposure: 1.25, env: .8 }, range: { bg: '#03050a', key: [0x9fb4ff, .7], hemi: .12, exposure: .8, env: .45 } };
-const EXPLODE = { barrel: [0, 0, -1], muzzle: [0, 0, -1.6], optic: [0, 1, 0], magazine: [0, -1, 0], stock: [0, 0, 1], underbarrel: [0, -.8, 0], infusion: [-1, 0, 0] };
+const EXPLODE = { barrel: [0, 0, -1], muzzle: [0, 0, -1.6], optic: [0, 1, 0], magazine: [0, -1, 0], stock: [0, 0, 1], underbarrel: [0, -.8, 0], infusion: [-1, 0, 0], edge: [0, -1, 0], grip: [0, -1, 0], counterweight: [0, 0, 1], chargecell: [0, 1, 0] };
 const HERO_FINISH = {           // [tint, tintAmount, roughnessFactor, metalnessFactor]
   factory: [0x000000, 0, 1, 1],
   worn: [0x3a3a30, .26, 1, .82],
@@ -326,7 +338,7 @@ function applyExplode() {
     const d = EXPLODE[slot] || [0, 0, 0];
     for (const c of o.children) { if (c.userData.mountGizmo) continue; c.userData.basePos ??= c.position.clone(); c.position.copy(c.userData.basePos).add(new THREE.Vector3(...d).multiplyScalar(k)); }
   });
-  for (const [n, slot] of [[`${cur.id}_barrel`, 'barrel'], [`${cur.id}_magazine`, 'magazine'], [`${cur.id}_stock`, 'stock']]) {
+  for (const [n, slot] of [[`${cur.id}_barrel`, 'barrel'], [`${cur.id}_magazine`, 'magazine'], [`${cur.id}_stock`, 'stock'], [`${cur.id}_edge`, 'edge'], [`${cur.id}_grip`, 'grip']]) {
     const g = model.getObjectByName(n); if (!g || !g.visible) continue;
     g.userData.basePos ??= g.position.clone(); g.position.copy(g.userData.basePos).add(new THREE.Vector3(...EXPLODE[slot]).multiplyScalar(k));
   }

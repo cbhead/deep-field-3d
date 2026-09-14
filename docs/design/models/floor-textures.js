@@ -223,7 +223,7 @@ function bakeBrick(THREE) {
   return { map: tex(THREE, a, true), roughnessMap: tex(THREE, r), normalMap: tex(THREE, normalFromHeight(h, 2.4)) };
 }
 
-/* ── Toaster: dry autumn grass, country asphalt, gravel drive ────────── */
+/* ── Toaster: green summer pasture, country asphalt, gravel drive ────── */
 /* 1024² = 12.5 × 12.5 m at the kit's 0.08 repeats/m. Everything that reads as
    detail on this map is in these three canvases rather than in geometry: a
    20 m tile is 128 placements and a road module is ninety, so a tuft of grass
@@ -231,25 +231,27 @@ function bakeBrick(THREE) {
 function bakeGrass(THREE) {
   const N = 1024, R = rng(2211);
   const a = cv(N), ax = a.getContext('2d'), r = cv(N), rx = r.getContext('2d'), h = cv(N), hx = h.getContext('2d');
-  ax.fillStyle = rgba(146, 132, 78); ax.fillRect(0, 0, N, N);
+  ax.fillStyle = rgba(84, 112, 52); ax.fillRect(0, 0, N, N);
   rx.fillStyle = rgba(238, 238, 238); rx.fillRect(0, 0, N, N);
   hx.fillStyle = rgba(128, 128, 128); hx.fillRect(0, 0, N, N);
-  // Broad drifts — sun-bleached, still-green and dead-thatch, so the field is
-  // not one flat hue at distance. This is the read that matters most: 128
-  // copies of an even tile is wallpaper however good the blades are.
+  // Broad drifts — new growth, deep shaded green and a little sun-bleached
+  // thatch, so the field is not one flat hue at distance. This is the read
+  // that matters most: 128 copies of an even tile is wallpaper however good
+  // the blades are.
   for (let i = 0; i < 90; i++) {
-    const t = R(), c = t < .4 ? [168, 154, 88] : t < .75 ? [116, 118, 66] : [138, 106, 58];
+    const t = R(), c = t < .4 ? [104, 138, 58] : t < .75 ? [70, 100, 44] : [136, 146, 70];
     blot(ax, R() * N, R() * N, 60 + R() * 180, rgba(c[0], c[1], c[2], 1), .30);
   }
   // Blades: short strokes on the drift colours, leaning one way as wind does.
   for (let i = 0; i < 26000; i++) {
     const x = R() * N, y = R() * N, len = 3 + R() * 7, lean = .5 + R() * .9, v = R();
-    ax.strokeStyle = v < .5 ? rgba(176, 160, 92, .5) : v < .8 ? rgba(126, 128, 72, .45) : rgba(198, 182, 120, .4);
+    ax.strokeStyle = v < .5 ? rgba(124, 166, 68, .5) : v < .8 ? rgba(78, 110, 46, .45) : rgba(162, 192, 88, .4);
     ax.lineWidth = 1; ax.beginPath(); ax.moveTo(x, y); ax.lineTo(x + len * lean, y - len); ax.stroke();
     hx.strokeStyle = rgba(150, 150, 150, .25); hx.beginPath(); hx.moveTo(x, y); hx.lineTo(x + len * lean, y - len); hx.stroke();
   }
-  // Fallen leaves, a few small stones, and the bare scrapes stock wear in.
-  for (let i = 0; i < 420; i++) { const x = R() * N, y = R() * N, s = 3 + R() * 5, c = [[186, 96, 44], [158, 118, 48], [140, 62, 38]][(R() * 3) | 0]; ax.fillStyle = rgba(c[0], c[1], c[2], .55); ax.beginPath(); ax.ellipse(x, y, s, s * .6, R() * 3.14, 0, 6.283); ax.fill(); }
+  // Clover heads and small wildflowers, a few stones, and the bare scrapes
+  // stock wear in.
+  for (let i = 0; i < 420; i++) { const x = R() * N, y = R() * N, s = 3 + R() * 5, c = [[228, 232, 208], [188, 204, 108], [232, 214, 118]][(R() * 3) | 0]; ax.fillStyle = rgba(c[0], c[1], c[2], .55); ax.beginPath(); ax.ellipse(x, y, s, s * .6, R() * 3.14, 0, 6.283); ax.fill(); }
   for (let i = 0; i < 60; i++) { const x = R() * N, y = R() * N, s = 2 + R() * 4; ax.fillStyle = rgba(150, 146, 136, .7); ax.beginPath(); ax.arc(x, y, s, 0, 6.283); ax.fill(); blot(hx, x, y, s * 1.6, 'rgba(210,210,210,1)', .5); rx.fillStyle = rgba(200, 200, 200, .6); rx.beginPath(); rx.arc(x, y, s, 0, 6.283); rx.fill(); }
   for (let i = 0; i < 14; i++) { const x = R() * N, y = R() * N, s = 18 + R() * 46; blot(ax, x, y, s, 'rgba(122,100,72,1)', .5, .2); blot(rx, x, y, s, 'rgba(210,210,210,1)', .4, .2); }
   return { map: tex(THREE, a, true), roughnessMap: tex(THREE, r), normalMap: tex(THREE, normalFromHeight(h, 1.6)) };

@@ -392,19 +392,38 @@ P({ id: 'foundry_deck', label: 'Upper deck section (4 m)', size: '4×10 m', swat
   } });
 
 P({ id: 'foundry_deck_rail', label: 'Deck guard rail (4 m)', size: '4 m', swatch: '#8d99ad', stats: { Height: '1.10 m', Rails: '48.3 / 42.4 OD', Posts: '4 @ 1.27 m', Toe: '100 mm' },
-  note: 'One 4 m run of deck rail to real handrail geometry: capped 48.3 OD tube posts at 1.27 m centres on bolted base plates, a 48.3 top rail at 1100 and a 42.4 mid rail at 550, and a 100 mm toe board with a hazard band. The old run put an 80 mm rail on 100 mm square posts over a 150 mm plate, which is what made the deck read a size too small for the player. Sits on the deck’s +Z edge at z −11.2; leave bays open where the ladder and zipline anchor land.',
-  build(K) {
+  note: 'One 4 m run of deck rail to real handrail geometry: capped 48.3 OD tube posts at 1.27 m centres on bolted base plates, a 48.3 top rail at 1100 and a 42.4 mid rail at 550, and a 100 mm toe board with a hazard band. The old run put an 80 mm rail on 100 mm square posts over a 150 mm plate, which is what made the deck read a size too small for the player. Four variants, because a perimeter is not a row: v0 the 4 m run; v1 a 2.6 m closer that takes a side edge out to meet the front and back lines instead of overhanging them; v2 and v3 the ladder-landing pair — 3.3 m of rail, a 0.7 m opening at one end and a grab stanchion standing 1.0 m proud of the top rail, mirrored so the two of them leave a 1.4 m gap centred on the ladder head. The run is placed with its toe board and hazard band facing the DROP, so the band reads as an edge warning from off the deck rather than from on it.',
+  build(K) { return this.buildVariant(K, 0); },
+  buildVariant(K, v = 0) {
     const { grp, mats, THREE } = K; envSurfaces(THREE, mats);
     const g = grp('foundry_deck_rail');
-    g.add(handrail(K, 'rail', 4));
-    // Knee braces at the run ends — a 4 m run needs them and they read.
-    for (const s of [-1, 1]) g.add(bar(THREE, `rail_brace${s > 0 ? '_p' : '_n'}`,
-      [s * 1.90, 1.02, 0], [s * 1.62, .14, -.20], .016, mats.env_galv));
+    const LEN = v === 1 ? 2.6 : 4;
+    const brace = (nm, sgn, half) => bar(THREE, nm, [sgn * (half - .10), 1.02, 0], [sgn * (half - .38), .14, -.20], .016, mats.env_galv);
+    if (v >= 2) {
+      /* Ladder landing. A climber steps off into a 0.7 m gap and needs a hand
+         on something above the rail while they do it — hence the stanchion,
+         which is what the real thing has and what the old unbroken run down
+         this edge did not: it ran straight across the ladder head. */
+      const s = v === 3 ? -1 : 1, OPEN = .7, run = LEN - OPEN, half = LEN / 2;
+      g.add(handrail(K, 'rail', run, { pos: [-s * OPEN / 2, 0, 0] }));
+      const xe = s * (half - OPEN);                       // end post beside the opening
+      g.add(member(THREE, 'rail_stanchion', SECT.tube(.0242, 12), 2.10, mats.env_galv, { axis: 'y', pos: [xe, 1.05, 0] }));
+      g.add(bolts(THREE, 'rail_stanchion_cap', [[xe, 2.10, 0]], .0242, .014, mats.env_galv));
+      g.add(bar(THREE, 'rail_stanchion_tie', [xe, 1.60, 0], [xe - s * .44, 1.10, 0], .0212, mats.env_galv));
+      g.add(brace('rail_brace_n', -s, half));
+      // Hazard nosing across the opening — the edge being stepped over.
+      g.add(member(THREE, 'rail_nose', L90, OPEN, mats.env_haz,
+        { axis: 'x', spin: Math.PI / 2, pos: [s * (half - OPEN / 2), .012, -.030], uScale: 1.2, vScale: 1.2 }));
+    } else {
+      g.add(handrail(K, 'rail', LEN));
+      // Knee braces at the run ends — a run this long needs them and they read.
+      for (const sgn of [-1, 1]) g.add(brace(`rail_brace${sgn > 0 ? '_p' : '_n'}`, sgn, LEN / 2));
+    }
     return stain(THREE, g, foundrySoot({ lift: 4.4 }));
   } });
 
 P({ id: 'foundry_gantry_walk', label: 'Gantry walkway (4 m)', size: '4×4 m', swatch: '#6b7484', stats: { Deck: '41/100 grating', Depth: '0.34 m', Stringers: 'PFC 200×75', Rails: 'both edges' },
-  note: 'The bridge that crosses the lane, authored with its walking surface AT the mount point so it sits at the height the pads are on. Two PFC 200×75 channel stringers with toes inward carry 41/100 grating; PFC 100 transoms under them at 1 m bring the total to 0.34 m from walking surface to underside — a deck bay is 0.69 m of real section and could not both sit flush at y 6 and leave the lane its 5.5 m of headroom, which is why this is a separate light walkway. Handrail with weldmesh infill on both long edges, hazard nosing angles at both ends. Square, so it tiles either way.',
+  note: 'The bridge that crosses the lane, authored with its walking surface AT the mount point so it sits at the height the pads are on. Two PFC 200×75 channel stringers with toes inward carry 41/100 grating; PFC 100 transoms under them at 1 m bring the total to 0.34 m from walking surface to underside — a deck bay is 0.69 m of real section and could not both sit flush at y 6 and leave the lane its 5.5 m of headroom, which is why this is a separate light walkway. Handrail with weldmesh infill on both long edges — the sides that overhang the lane — and hazard nosing angles across both ends, which are open because they are how you get on and off. Square, so it tiles either way.',
   build(K) {
     const { grp, mats, THREE } = K; envSurfaces(THREE, mats);
     const g = grp('foundry_gantry_walk');
@@ -415,7 +434,12 @@ P({ id: 'foundry_gantry_walk', label: 'Gantry walkway (4 m)', size: '4×4 m', sw
     g.add(merge(THREE, [-1.5, -.5, .5, 1.5].map((z) => ({ geo: bake(tr), m: new THREE.Matrix4().makeTranslation(0, TR, z) })), 'walk_transoms', mats.env_mill));
     for (let i = 0; i < 4; i++) g.add(grating(THREE, 'walk_grating' + i, 3.80, 1.0, mats.env_galv, { pos: [0, 0, -1.5 + i * 1.0] }));
     for (const s of [-1, 1]) {
-      g.add(handrail(K, `walk_rail${s > 0 ? '_p' : '_n'}`, 4, { pos: [0, 0, s * 1.95], rot: [0, s > 0 ? 0 : Math.PI, 0], infill: true }));
+      /* Rails go on the LONG edges — the sides that overhang the lane — not
+         across the ends, which are the walking connections: the stringers run
+         along Z at x ±1.93, so the rail runs along Z too, turned a quarter so
+         its toe board faces out over the drop. Mounted on the ends it fenced
+         the bridge off at both mouths and left the drop open. */
+      g.add(handrail(K, `walk_rail${s > 0 ? '_p' : '_n'}`, 4, { pos: [s * 1.95, 0, 0], rot: [0, s > 0 ? -Math.PI / 2 : Math.PI / 2, 0], infill: true }));
       g.add(member(THREE, `walk_nose${s > 0 ? '_p' : '_n'}`, L90, 3.86, mats.env_haz,
         { axis: 'x', spin: s > 0 ? -Math.PI / 2 : Math.PI / 2, pos: [0, -.006, s * 1.955], uScale: 1.2, vScale: 1.2 }));
     }

@@ -5,8 +5,10 @@
  * volumes, areas, place, conditions. Foundry and Switchyard are regenerated
  * from the current sim/Sim.Core/Content/Maps.cs (44 sockets each — the old
  * mirror carried 12 and 16) and the graybox builders in GameRoot.cs. Spire is
- * authored here from its Maps.cs plan and the spire kit's own placement notes;
- * it has never been built.
+ * regenerated from the M5 redesign upstream — Maps.Spire plus GameRoot's Spire
+ * section — which replaced every route, every socket and the whole building:
+ * plates with the atrium and a stair well punched out of them, four flights,
+ * two escape landings, a lift that runs, six staggered atrium ladders.
  *
  * Sim space is X/Z with Y up; the Godot client converts with ToGd, we keep sim
  * coordinates directly.
@@ -20,6 +22,56 @@
  *   areas     { kind, at, size, to?, velocity? } — traversal (§2.5).
  *   place     [modelId, [x,y,z], rotY, scale?] — scale may be a [x,y,z] triple.
  */
+/**
+ * Rectangle subtraction, as Punch() in GameRoot.cs — a floor is a rectangle
+ * with holes in it, and this is the primitive the Spire's plates are cut with.
+ * Slabs are [a0, b0, a1, b1] in the level's own X/Z; up to four pieces come
+ * back per rect, and slivers are dropped rather than emitted as plate too thin
+ * to stand on. Kept identical to the client's version on purpose: the plates
+ * design walks in the viewer and the colliders the game builds are then the
+ * same set of rectangles rather than two hand-matched lists.
+ */
+function punch(rects, holes) {
+  let kept = rects.slice();
+  for (const h of [].concat(holes)) {
+    const out = [];
+    for (const r of kept) {
+      if (h[2] <= r[0] || h[0] >= r[2] || h[3] <= r[1] || h[1] >= r[3]) { out.push(r); continue; }
+      if (r[1] < h[1]) out.push([r[0], r[1], r[2], h[1]]);
+      if (r[3] > h[3]) out.push([r[0], h[3], r[2], r[3]]);
+      const b0 = Math.max(r[1], h[1]), b1 = Math.min(r[3], h[3]);
+      if (r[0] < h[0]) out.push([r[0], b0, h[0], b1]);
+      if (r[2] > h[2]) out.push([h[2], b0, r[2], b1]);
+    }
+    kept = out.filter((s) => s[2] - s[0] >= .05 && s[3] - s[1] >= .05);
+  }
+  return kept;
+}
+/** A punched plate as a volume: walking surface at `top`, with its module. */
+const plateVol = (id, s, top, surface, piece) => ({
+  id, at: [(s[0] + s[2]) / 2, top - .2, (s[1] + s[3]) / 2],
+  size: [s[2] - s[0], .4, s[3] - s[1]], top, solid: true, surface,
+  run: (s[2] - s[0]) >= (s[3] - s[1]) ? 'x' : 'z', piece,
+});
+/**
+ * A punched plate as placements: the module tiled across it the way SpireDeck
+ * does. The bay is 4 m along its run and 12 m across, and a plate cut round a
+ * well is not 12 m across anywhere in particular, so the across axis is scaled
+ * to the piece and the 4 m repeat is left alone — the difference between
+ * tiling a shape and stretching one bay over it.
+ */
+function plateBays(id, s, y, across = 12) {
+  const cx = (s[0] + s[2]) / 2, cz = (s[1] + s[3]) / 2, sx = s[2] - s[0], sz = s[3] - s[1];
+  const alongX = sx >= sz, run = alongX ? sx : sz, wide = alongX ? sz : sx;
+  const n = Math.max(1, Math.round(run / 4)), step = run / n, out = [];
+  for (let i = 0; i < n; i++) {
+    const o = -run / 2 + step * (i + .5);
+    out.push([id, alongX ? [cx + o, y, cz] : [cx, y, cz + o], alongX ? 0 : Math.PI / 2,
+      [step / 4, 1, wide / across]]);
+  }
+  return out;
+}
+
 export const LEVELS = {
   foundry: {
     label: 'Foundry', kit: 'foundry', field: [110, 80], totalWaves: 10,
@@ -59,7 +111,13 @@ export const LEVELS = {
     ],
     areas: [
       { kind: 'ladder', at: [-8, 3, -11.4], size: [1.2, 6, .8], tops: 6 },
-      { kind: 'zipline', at: [14, 6.8, -17.5], size: [2, 2, 2], to: [33, 1.6, 2.5] },
+      /* The ride line hangs 0.8 m under the cable at BOTH ends — that is the
+         trolley and the T-bar. The cable itself runs sheave to sheave: 7.60 m
+         on the deck post down to 1.60 m on the grade post, 6 m of drop over
+         27.6 m of run. `to` used to be written at 1.60, which is the CABLE's
+         bottom end, not the rider's, and left the line ending above the wire
+         it hangs from. */
+      { kind: 'zipline', at: [14, 6.8, -17.5], size: [2, 2, 2], to: [34.36, 0.8, 2.06] },
       { kind: 'launcher', at: [-14, 0, -20], size: [2.4, .4, 2.4], velocity: [0, 12, 8] },
       { kind: 'armory', at: [-6, 0, -24], size: [3, 3, 3] },
     ],
@@ -68,8 +126,27 @@ export const LEVELS = {
       // than the graybox so the front-lip row (w4–w7, z −12.8) sits a clear
       // metre inside the footprint — MAP-AUTHORING §4.9.
       ...[-10, -6, -2, 2, 6, 10, 14].map((x) => ['foundry_deck', [x, 0, -16.5], 0, [1, 1, 1.1]]),
-      // Guard rail on the +Z edge (z −11.2), skipping the ladder bay (x −8) and zipline bay (x 14).
-      ...[-10, -6, -2, 2, 6, 10].map((x) => ['foundry_deck_rail', [x, 6.0, -11.2], 0]),
+      /* Guard rail around the WHOLE deck, 0.2 m inside each edge (the deck is
+         x −12…16, z −22…−11). Every run is placed with its toe board facing
+         the drop, which fixes the rotation per edge: front ry π, back 0, left
+         +π/2, right −π/2. Sides are 4 m + 4 m + a 2.6 m closer (#1) so they
+         end ON the front and back lines instead of overhanging them.
+         Three openings, all deliberate: the ladder head at x −8, flanked by the
+         mirrored gap runs (#3/#2) that leave a 1.4 m gap with a grab stanchion
+         each side; the same pair again at x 6/10, because the gantry bridge
+         lands on this edge (its walkway spans x 7.05…11.0 at z −11) and a
+         completed perimeter would otherwise wall the deck off from it; and the
+         right-edge bay z −13.8…−17.8, which is where the zipline leaves — the
+         cable crosses that line at z −15.8 and y 7.11, one centimetre over a
+         rail top, so that bay stays open. */
+      ...[-10, -6, -2, 2, 6, 10, 14].map((x) => ['foundry_deck_rail', [x, 6.0, -21.8], 0]),
+      ['foundry_deck_rail#3', [-10, 6.0, -11.2], Math.PI], ['foundry_deck_rail#2', [-6, 6.0, -11.2], Math.PI],
+      ...[-2, 2, 14].map((x) => ['foundry_deck_rail', [x, 6.0, -11.2], Math.PI]),
+      ['foundry_deck_rail#3', [6, 6.0, -11.2], Math.PI], ['foundry_deck_rail#2', [10, 6.0, -11.2], Math.PI],
+      ...[-19.8, -15.8].map((z) => ['foundry_deck_rail', [-11.8, 6.0, z], Math.PI / 2]),
+      ['foundry_deck_rail#1', [-11.8, 6.0, -12.5], Math.PI / 2],
+      ['foundry_deck_rail', [15.8, 6.0, -19.8], -Math.PI / 2],
+      ['foundry_deck_rail#1', [15.8, 6.0, -12.5], -Math.PI / 2],
       ['foundry_pillar', [-10, 0, -16.5], 0], ['foundry_pillar', [14, 0, -16.5], 0],
       // Gantry bridge: three 4 m walkway bays from the deck edge out over the
       // lane's elbow. The piece carries its own rails, and its walking surface
@@ -83,8 +160,18 @@ export const LEVELS = {
       // Traversal.
       ['shared_ladder', [-8, 0, -11.4], 0],
       ['shared_launcher_idle', [-14, 0, -20], 0],
-      ['shared_zipline_anchor', [14, 6.0, -17.5], 0.62],
-      ['shared_zipline_anchor', [33, 0, 2.5], -2.4, .6],
+      /* Both anchors are the same full-size post, and each is yawed to FACE
+         the other: the sheave sits 0.2 m out along the anchor's local +Z, so
+         an anchor pointing anywhere else hangs its cable off the side of its
+         own wheel. Top post stands on the deck (surface y 6.0, sheave 7.60),
+         bottom post on grade (sheave 1.60). The bottom one used to be scaled
+         to 0.6 — a 1.1 m post whose sheave sat at 0.96, below the height the
+         cable was drawn to. At full size its base plate is 0.9 m across, so
+         the landing post moved clear of both the lane and the g19 pad (to
+         34.5, 2.2) to keep the §4.8 three-metre clearance it used to get by
+         being small. */
+      ['shared_zipline_anchor', [14, 6.0, -17.5], 0.805],
+      ['shared_zipline_anchor', [34.5, 0, 2.2], -2.336],
       ['shared_controlpoint_neutral', [26, 0, -6], 0],
       ['shared_armory_kiosk', [-6, 0, -24], 0],
       ['shared_spawn_portal', [-40, 0, 0], Math.PI / 2],
@@ -101,7 +188,9 @@ export const LEVELS = {
       ['foundry_terrain_scatter', [-46, 0, -30], .3], ['foundry_terrain_scatter', [-46, 0, 30], 1.2], ['foundry_terrain_scatter', [46, 0, -30], 2.1], ['foundry_terrain_scatter', [46, 0, 28], .8],
       ['foundry_terrain_scatter', [-20, 0, 32], 1.6], ['foundry_terrain_scatter', [30, 0, 32], .5], ['foundry_terrain_scatter', [12, 0, -32], 2.6], ['foundry_terrain_scatter', [-38, 0, 14], 1.0],
     ],
-    zipline: [[14, 6.8, -17.5], [33, 1.6, 2.5]],
+    /* No `zipline:` endpoint pair here: the cable is strung from the two
+       anchors' own sheave nodes (`userData.zip`), so there is exactly one
+       description of where it is attached. */
   },
 
   switchyard: {
@@ -171,215 +260,274 @@ export const LEVELS = {
   },
 
   /**
-   * Spire — sector 3, authored here for the first time (MAP-AUTHORING §7:
-   * "design from scratch"). A 40×40 m block on a plaza, x ±20 / z ±20, floors
-   * at 10 / 20 / 30 and the roof at 40 with the core on it.
+   * Spire — sector 3, REGENERATED from the M5 redesign upstream rather than
+   * from the version authored here. A 40 × 40 m block on a plaza with floors
+   * at 10 / 20 / 30 and the core on the roof at 40; everything else about it
+   * changed. What this mirrors, piece by piece, is Maps.Spire (routes,
+   * sockets, anchors, stations) and GameRoot's Spire section (the building).
    *
-   * Every floor is a 12 m gallery ring around a 16×16 atrium, and the stair
-   * route walks nearly all of it before it climbs: up the west gallery, along
-   * the north, down the east, then west along the south gallery to the stair,
-   * which rises ten metres through the opening in the plate above and lands
-   * where the next lap starts. Four laps, one per level, then the roof. That is
-   * the point of a vertical map — you give up a floor at a time, and every
-   * metre of every floor is defensible ground someone has to walk.
+   * The old design here was a 12 m gallery ring around a 16 × 16 atrium with
+   * a lap of every floor before each climb, 67 sockets and a four-flight fire
+   * escape. None of it survives. Upstream's building is a full 38 × 40 plate
+   * per level with the atrium and ONE stair well cut out of it, four interior
+   * flights that spiral the void, a two-flight escape that rejoins the stair
+   * at floor two, and 68 sockets placed on measured floor.
    *
-   * The last climb is external: the plate above a stair needs an opening, and
-   * the roof cannot have one with the core standing on it, so the fourth flight
-   * is the fire escape's and enemies come over the parapet. The escape is also
-   * the whole alternative route — four exposed flights up the east face,
-   * skipping every gallery, which is short and covered by everything. Long and
-   * sheltered against short and open is the choice this map asks.
+   * Three things worth carrying into any refinement, because each is a fix
+   * for a defect rather than a preference:
    *
-   * The kit's own notes carry the shell placements: five 8 m facade bays per
-   * face with the east face left open for the fire escape, the lobby bay used
-   * twice on the west face (main door z 0, service door z 16), roof in five 8 m
-   * bays with end parapets at x ±20.
+   *   - The plates have holes. The atrium is void plaza-to-roof (it is also
+   *     the players' way down, free and instant), each level has a well where
+   *     the flight below comes within 3 m of the plate, and the roof has one
+   *     at the stair head plus the lift's. Without them the flights rose into
+   *     the underside of the floor they serve.
+   *   - The doorways are cut out of the collision, not only out of the art:
+   *     both ground routes used to walk through solid curtain wall, and the
+   *     escape's ground leg moved from z 18 to z 16 because a 3.4 m lane a
+   *     metre and a half off the south facade was eleven §4.8 violations.
+   *   - Circulation is the map's idea: the lift is an express lobby-to-roof,
+   *     six ladders staggered round the atrium are the local stops it does
+   *     not make, the atrium is the ride down and the fare is the climb back.
+   *     The defence is mobile and the attack is not.
    *
-   * Getting down is the thing the old graybox failed hardest at, so the roof
-   * has a zipline to the plaza and the escape's first landing has a hop pad
-   * under it — a wipe on the roof should not cost the climb twice. The atrium
-   * lift and the lobby↔roof pad pair are the client's existing traversal, now
-   * written down. There are deliberately no west-face ladders: the facade
-   * occupies x −20.5…−19.5 and the wing plate starts at x −20, so a ladder
-   * there is narrower than the player and tops out under the floor it serves
-   * (design-system README). The east side is the fire escape's.
-   *
-   * The field edge is a street: `spire_wall_boundary` tiles the far frontage
-   * around all four sides in four ground-floor variants, and cars park at its
-   * kerb, so the plaza reads as a city block rather than an open field.
+   * Design's own, unchanged from our side: the perimeter street frontage, the
+   * painted interior lane on every flat leg above grade, the plaza dressing.
    */
   spire: {
     label: 'Spire', kit: 'spire', field: [110, 80], totalWaves: 12,
     conditions: { 7: 'night', 11: 'fog' },
-    // Above the 13.4 m street frontage that now rings the field and inside its
-    // far side, so the enclosure reads as a street rather than a grey band.
     view: { cam: [72, 66, 88], target: [0, 10, 0] },
     routes: {
-      // Interior stair: a lap of each gallery, then ten metres up. The lap runs
-      // west gallery north → north gallery east → east gallery south → south
-      // gallery west, and the flight sits in the last quarter, so the quarter
-      // it skips is the one the stair itself occupies.
+      // Interior stair: in at the main door, then four flights round the
+      // atrium, arriving on the roof through the stair head. Every leg that
+      // climbs is a flight — 10, 10, 18 and 14 m of run for 10 m of rise,
+      // which is what `spire_stairwell` was authored to stretch to.
       stair: [
-        [-34, 0, 0], [-20, 0, 0], [-14, 0, 0],
-        [-14, 0, 14], [14, 0, 14], [14, 0, -14], [2, 0, -14],           // ground lap
-        [-8, 10, -14], [-14, 10, -14],
-        [-14, 10, 14], [14, 10, 14], [14, 10, -14], [2, 10, -14],       // floor one
-        [-8, 20, -14], [-14, 20, -14],
-        [-14, 20, 14], [14, 20, 14], [14, 20, -14], [2, 20, -14],       // floor two
-        [-8, 30, -14], [-14, 30, -14],
-        [-14, 30, 14], [14, 30, 14], [14, 30, -6], [22, 30, -6],        // floor three, out to the escape
-        [22, 40, -14], [18, 40, -13],
-        [13, 40, -13], [13, 40, 13], [-13, 40, 13], [-13, 40, -13], [0, 40, 0], // roof lap to the core
+        [-34, 0, 0], [-14, 0, 0], [-14, 0, -14],
+        [-4, 10, -14], [14, 10, -14],
+        [14, 20, -4], [14, 20, 14],
+        [-4, 30, 14], [-14, 30, 14],
+        [-14, 40, 0], [0, 40, 0],
       ],
-      // Fire escape: four flights up the outside of the east face, no gallery
-      // walked at all. Short, and visible from everywhere.
+      // Fire escape: in at the service door at z 16, out through the BACK WALL
+      // at grade, then two flights on the east face to floor two, where it
+      // walks back in through that wall's own doorway and joins the stair. The
+      // climbing legs are at x 21.8 — the escape hangs off the outside of the
+      // wall, so its treads are outboard of the wall plane at x 20.
       escape: [
-        [-34, 0, 16], [-24, 0, 24], [26, 0, 24], [26, 0, 18], [21, 0, 18], // plaza, round the corner to the foot of the escape
-        [22, 10, 10], [22, 20, 2], [22, 30, -6], [22, 40, -14], [18, 40, -13],
-        [13, 40, -13], [13, 40, 13], [-13, 40, 13], [-13, 40, -13], [0, 40, 0],
+        [-34, 0, 16], [-18, 0, 16], [21.8, 0, 16],
+        [21.8, 10, 8], [21.8, 20, 0], [19, 20, 0],
+        [14, 20, 14], [-4, 30, 14], [-14, 30, 14],
+        [-14, 40, 0], [0, 40, 0],
       ],
-      // Flyers spiral the outside and land on the roof, skipping every floor.
-      air: [[-40, 8, 0], [-26, 20, -26], [26, 30, -26], [26, 40, 20], [0, 44, 0]],
+      // Flyers climb the outside and come over the parapet. Every leg stays
+      // clear of the building's own volume — the old spiral cut through floor
+      // three and again through the top storey, which reads in a match as
+      // flyers inside the walls.
+      air: [[-40, 6, 0], [-30, 12, -16], [-23, 20, -24], [6, 27, -26], [26, 32, -22], [26, 41, 10], [0, 43, 0]],
     },
     // Only the legs outside the shell get asphalt; inside the footprint the
     // same route reads as a taped corridor at every level, grade included.
     roads: ['stair', 'escape'],
     indoor: { x: [-20, 20], z: [-20, 20] },
     sockets: [
-      // Grade. Street and plaza pads cover the approach and the escape's plaza
-      // leg from a few metres off it — a tower pad in the lane is a tower pad
-      // enemies walk through; four more stand inside the lobby, where the
-      // ground lap runs.
-      ['g1', [-29, 0, 12], 'ground'], ['g2', [-27, 0, -6], 'ground'], ['g3', [-22, 0, 8], 'ground'], ['g4', [31, 0, 17], 'ground'],
-      ['g5', [-30, 0, 26], 'ground'], ['g6', [-22, 0, 28], 'ground'], ['g7', [-6, 0, 28], 'ground'], ['g8', [18, 0, 28], 'ground'], ['g9', [28, 0, 22], 'ground'],
-      ['g10', [0, 0, 8], 'ground'], ['g11', [-8, 0, 8], 'ground'], ['g12', [8, 0, 4], 'ground'], ['g13', [4, 0, -8], 'ground'],
-      // Gallery pads — twelve per level, alternating either side of the lap
-      // line so every leg is answered from both flanks and nothing stands more
-      // than 4 m off the lane. Tagged ground: on a gallery the floor is the
-      // ground, and the sim builds the same towers on ground and wall alike.
-      ...[10, 20, 30].flatMap((y, n) => {
-        const L = 'l' + (n + 1);
-        return [
-          [L + 'a', [-18, y, -14], 'ground'], [L + 'b', [-10, y, -6], 'ground'], [L + 'c', [-18, y, 2], 'ground'],
-          [L + 'd', [-10, y, 10], 'ground'], [L + 'e', [-18, y, 18], 'ground'],
-          [L + 'f', [-4, y, 10], 'ground'], [L + 'g', [4, y, 18], 'ground'],
-          [L + 'h', [18, y, 14], 'ground'], [L + 'i', [10, y, 6], 'ground'],
-          [L + 'j', [18, y, -2], 'ground'], [L + 'k', [10, y, -10], 'ground'], [L + 'l', [4, y, -18], 'ground'],
-        ];
-      }),
-      // Roof: the last stand, and the only tier the air lane comes near. Eight
-      // pads — the parapet where the escape arrives, all four sides of the roof
-      // lap and the diagonal in to the core each answered from three.
-      ['r1', [-17, 40, -10], 'ground'], ['r2', [-17, 40, 4], 'ground'], ['r3', [17, 40, -10], 'ground'], ['r4', [17, 40, -5], 'ground'],
-      ['r5', [-6, 40, 17], 'ground'], ['r6', [11, 40, -17], 'ground'], ['r7', [8, 40, 16], 'ground'], ['r8', [-10, 40, -4], 'ground'],
-      // Path plates, one or two per level, laid on the lane itself.
-      ['t1', [-24, 0, 0], 'trap'], ['t2', [-14, 0, 8], 'trap'], ['t3', [6, 0, 14], 'trap'], ['t4', [14, 0, -6], 'trap'], ['t5', [2, 0, 24], 'trap'],
-      ['t6', [-14, 10, 4], 'trap'], ['t7', [10, 10, 14], 'trap'], ['t8', [14, 20, 6], 'trap'], ['t9', [-14, 30, -6], 'trap'], ['t10', [13, 40, 4], 'trap'],
+      // Plaza pads. The two western clusters answer the air lane's approach as
+      // well as the ground lanes' — a flyer at 12 m over the forecourt is the
+      // one stretch of that strand a tower on the floor can reach.
+      ['g1', [-42, 0, -16], 'ground'], ['g2', [-42, 0, -8], 'ground'], ['g3', [-38, 0, -12], 'ground'],
+      ['g4', [-28, 0, -16], 'ground'], ['g5', [-24, 0, -12], 'ground'], ['g6', [-24, 0, -6], 'ground'],
+      ['g7', [-24, 0, 10], 'ground'], ['g8', [-20, 0, 20], 'ground'], ['g9', [-16, 0, 6], 'ground'],
+      ['g10', [-16, 0, 12], 'ground'], ['g11', [-14, 0, 20], 'ground'], ['g12', [-10, 0, 6], 'ground'],
+      ['g13', [2, 0, -14], 'ground'], ['g14', [8, 0, 8], 'ground'], ['g15', [12, 0, 4], 'ground'],
+      // Deck pads, numbered UP the building: w1 is the lowest and w39 the
+      // highest, because on this map the floor a pad is on is the first thing
+      // you need to know about it. Every one stands on a plate, a fire-escape
+      // landing or the roof, a clear metre from the edge.
+      ['w1', [-18, 10, -8], 'wall'], ['w2', [-16, 10, -16], 'wall'], ['w3', [8, 10, -2], 'wall'],
+      ['w4', [8, 10, 18], 'wall'], ['w5', [10, 10, 6], 'wall'], ['w6', [10, 10, 12], 'wall'],
+      ['w7', [12, 10, -8], 'wall'], ['w8', [14, 10, 16], 'wall'], ['w9', [18, 10, 4], 'wall'],
+      ['w10', [-18, 20, -14], 'wall'], ['w11', [-14, 20, -18], 'wall'], ['w12', [-8, 20, -18], 'wall'],
+      ['w13', [-2, 20, -18], 'wall'], ['w14', [4, 20, -18], 'wall'], ['w15', [10, 20, -18], 'wall'],
+      ['w16', [18, 20, -18], 'wall'],
+      ['w17', [-16, 30, -16], 'wall'], ['w18', [-16, 30, 0], 'wall'], ['w19', [-12, 30, 12], 'wall'],
+      ['w20', [-10, 30, 6], 'wall'], ['w21', [-6, 30, 12], 'wall'], ['w22', [-4, 30, -16], 'wall'],
+      ['w23', [8, 30, -18], 'wall'], ['w24', [8, 30, 6], 'wall'], ['w25', [14, 30, -16], 'wall'],
+      ['w26', [16, 30, 2], 'wall'], ['w27', [16, 30, 12], 'wall'], ['w28', [18, 30, -12], 'wall'],
+      ['w29', [18, 30, -6], 'wall'],
+      ['w30', [-8, 40, 8], 'wall'], ['w31', [-4, 40, 12], 'wall'], ['w32', [-2, 40, 4], 'wall'],
+      ['w33', [12, 40, -8], 'wall'], ['w34', [12, 40, 6], 'wall'], ['w35', [12, 40, 12], 'wall'],
+      ['w36', [14, 40, -14], 'wall'], ['w37', [16, 40, 2], 'wall'], ['w38', [18, 40, -4], 'wall'],
+      ['w39', [18, 40, 8], 'wall'],
+      // Trap plates on the flat legs only, where a plate is a plate and not a
+      // step: they are contact triggers, so the flights get none.
+      ['t1', [-27.3, 0, 0], 'trap'], ['t2', [-20.7, 0, 0], 'trap'], ['t3', [-14, 0, -7], 'trap'],
+      ['t4', [2, 10, -14], 'trap'], ['t5', [8, 10, -14], 'trap'], ['t6', [14, 20, 2], 'trap'],
+      ['t7', [14, 20, 8], 'trap'], ['t8', [-7, 40, 0], 'trap'], ['t9', [-26, 0, 16], 'trap'],
+      ['t10', [-11.7, 0, 16], 'trap'], ['t11', [-5.3, 0, 16], 'trap'], ['t12', [1, 0, 16], 'trap'],
+      ['t13', [7.3, 0, 16], 'trap'], ['t14', [13.7, 0, 16], 'trap'],
     ],
     heroSpawn: [-30, 0, 8], armory: [-26, 0, 10],
-    stations: [['lobby', [-18, 0, 6]], ['mezzanine', [-4, 10, -14]], ['midFloor', [14, 20, 6]], ['upperFloor', [-4, 30, 14]], ['roof', [0, 40, -8]]],
+    // One per level, each on floor that exists. The roof station is where the
+    // match ends; the lobby one is where you come back to down the atrium.
+    stations: [
+      ['lobby', [-16, 0, 6]], ['floorOne', [-14, 10, 6]], ['floorTwo', [14, 20, 8]],
+      ['floorThree', [-14, 30, -6]], ['roof', [0, 40, -8]],
+    ],
     volumes: [
-      // Each floor is a closed 12 m gallery ring: west and east galleries run
-      // the full 40 m, north and south close the ends across the atrium. The
-      // south gallery is short two bays at every level above grade — that gap
-      // is the stair opening the flight below rises through.
-      ...[10, 20, 30].flatMap((y) => [
-        { id: `f${y}_west`, at: [-14, y - .2, 0], size: [12, .4, 40], top: y, solid: true, surface: 'spire_floor', run: 'z', piece: 4 },
-        { id: `f${y}_east`, at: [14, y - .2, 0], size: [12, .4, 40], top: y, solid: true, surface: 'spire_floor', run: 'z', piece: 4 },
-        { id: `f${y}_north`, at: [0, y - .2, 14], size: [16, .4, 12], top: y, solid: true, surface: 'spire_floor', run: 'x', piece: 4 },
-        { id: `f${y}_south`, at: [4, y - .2, -14], size: [8, .4, 12], top: y, solid: true, surface: 'spire_floor', run: 'x', piece: 4 },
-      ]),
-      // The roof bay is authored at true height: you stand on 40.07, not 40.2.
-      { id: 'roof', at: [0, 40, 0], size: [40, .4, 40], top: 40.07, solid: true, surface: 'spire_roof', run: 'x', piece: 8 },
-      // Fire escape hangs off the east face: a landing at every floor and one
-      // at roof level, 8 m of grating each.
-      ...[[10, 10], [20, 2], [30, -6], [40, -14]].map(([y, z]) => (
-        { id: `escape_l${y}`, at: [23.5, y - .2, z], size: [6, .2, 8], top: y, solid: true, surface: 'spire_fireescape', run: 'z', piece: 3 }
-      )),
-      // Stair flights, as the walkable ramps they are: three inside on the
-      // south gallery, four outside zigzagging up the east face.
-      ...[0, 10, 20].map((y) => ({ id: `flight_${y}`, at: [-3, y + 5, -14], size: [10, .5, 3.4], solid: true })),
-      ...[0, 10, 20, 30].map((y, i) => ({ id: `escape_f${y}`, at: [22, y + 5, 14 - i * 8], size: [3, .5, 8], solid: true })),
+      /* The three office floors: a 38 × 40 plate each, with the atrium and one
+         stair well cut out. The well is the stretch where the flight below
+         comes within three metres of the plate — measured off the lane — and
+         the plate keeps every other metre, because every metre it keeps is
+         somewhere a pad can stand. */
+      ...[[10, [-11, -18, -4, -10]], [20, [11, -13, 19, -4]], [30, [-4, 10, 5, 18]]].flatMap(
+        ([y, well]) => punch([[-19, -20, 19, 20]], [[-7, -10, 7, 10], well])
+          .map((s, i) => plateVol('f' + y + '_' + (i + 1), s, y, 'spire_floor', 4))),
+      /* The roof: the core's ground, and the only floor here that is a
+         destination rather than a landing. Two wells — the stair head, which
+         stops short of z 0 because the roof lap walks that line and an opening
+         under it is a hole in the lane, and the lift's. */
+      ...punch([[-20, -20, 20, 20]], [[-18, .5, -10, 7], [-7, -10, -3, -6]])
+        .map((s, i) => plateVol('roof_' + (i + 1), s, 40, 'spire_roof', 8)),
+      /* Fire escape: two landings, not the three that were here before — the
+         third stood at y 30 on a route that re-enters the building at y 20, so
+         it served nothing and never had. 2.4 m deep and outboard of the back
+         wall (outer face 20.525): upstream's 6 m slab (x 17–23) put half of
+         every landing inside the office floor. */
+      ...[[10, 4, 12], [20, -4, 4]].map(([y, z0, z1]) =>
+        plateVol('escape_l' + y, [20.6, z0, 23, z1], y, 'spire_fireescape', 3)),
+      /* The flights, as the walkable ramps they are: four inside spiralling
+         the atrium, two outside on the east face. */
+      { id: 'flight_1', at: [-9, 5, -14], size: [10, .5, 3.4], solid: true },
+      { id: 'flight_2', at: [14, 15, -9], size: [3.4, .5, 10], solid: true },
+      { id: 'flight_3', at: [5, 25, 14], size: [18, .5, 3.4], solid: true },
+      { id: 'flight_4', at: [-14, 35, 7], size: [3.4, .5, 14], solid: true },
+      { id: 'escape_f1', at: [21.8, 5, 12], size: [2.4, .5, 8], solid: true },
+      { id: 'escape_f2', at: [21.8, 15, 4], size: [2.4, .5, 8], solid: true },
+      // The lift's shaft, in the atrium's north-west corner: the atrium is
+      // void plaza-to-roof, so the car pierces no plate on its way up and the
+      // only opening it needs is the one in the roof.
+      { id: 'liftShaft', at: [-5, 20, -8], size: [4, 40, 4], solid: true },
     ],
     areas: [
-      { kind: 'zipline', at: [18, 40.6, 18], size: [2, 2, 2], to: [36, 1.6, 26] },
-      { kind: 'launcher', at: [28, 0, 12], size: [2.4, .4, 2.4], velocity: [-5, 15, -1.5] },
-      // Cargo lift in the atrium, serving grade and all three floors; it stops
-      // level with each plate, which the west ladders never did.
-      { kind: 'elevator', at: [0, 20, -4], size: [3.4, 40, 3.4], stops: [0, 10, 20, 30, 40] },
-      { kind: 'teleporter', at: [-16, 0, -6], size: [2, 2.4, 2], padId: 'lobbyRoof' },
-      { kind: 'teleporter', at: [6, 40, -14], size: [2, 2.4, 2], padId: 'lobbyRoof' },
+      // The lift, running the building's full height: an express, lobby to
+      // roof, and slow enough that boarding it is a decision.
+      { kind: 'elevator', at: [-5, 20, -8], size: [4, 40, 4], stops: [0, 40] },
+      /* The local stops the express does not make, on opposite corners of the
+         atrium and STAGGERED by storey rather than stacked: two grip volumes
+         at the same spot on consecutive storeys overlap and chain, so a hold
+         at the plaza carried you past floor one to wherever you let go. Six
+         metres of offset on the middle pair turns the climb into a spiral
+         round the void — which is what the enemies' stair is doing on the
+         other side of it. tops is the plate you step onto; the rungs run
+         1.5 m past it, in the void, so there is time to step across. */
+      ...[[6, -8, -2], [-6, 8, 2]].flatMap(([x, near, far]) => [0, 1, 2].map((f) => (
+        { kind: 'ladder', at: [x, f * 10 + 5, f === 1 ? far : near], size: [1.6, 12, 1.6], tops: (f + 1) * 10 }
+      ))),
+      // The rotation the lift is too slow for. The roof end doubles as the
+      // traversal exit that keeps the roof's south-east corner in reach.
+      { kind: 'teleporter', at: [-14, .2, 6], size: [2, 2.4, 2], padId: 'padGround', label: 'LOBBY' },
+      { kind: 'teleporter', at: [6, 40.2, 6], size: [2, 2.4, 2], padId: 'padRoof', label: 'ROOF' },
+      // One way down that is not the atrium, out over the OPEN east face — the
+      // three walled faces would put the rider through a curtain wall.
+      { kind: 'zipline', at: [14, 40.7, -2], size: [2.4, 2.6, 2.4], to: [32, 1.2, 0] },
       { kind: 'armory', at: [-26, 0, 10], size: [3, 3, 3] },
     ],
     place: [
-      /* ── Shell: facade bays, 8 m each, authored ground-to-parapet ────────── */
-      // West face (x −20): main lobby at z 0, service lobby at z 16.
+      /* ── Shell: five 8 m facade bays per face, ground to parapet, on ALL FOUR
+         faces — the east side is a real back wall now, not an open flank. Its
+         bays carry the escape's three doorways (variant N notches storey N−1):
+         grade at z 16 where the ground leg leaves the building, floor one at
+         z 8 where the landing gate lands, floor two at z 0 where the route
+         walks back in. Both lobby bays are on the west face, where the kit puts
+         them: the main door at z 0 and the service door at z 16. ── */
       ...[-16, -8, 8].map((z) => ['spire_facade', [-20, 0, z], -Math.PI / 2]),
       ['spire_lobby', [-20, 0, 0], -Math.PI / 2], ['spire_lobby', [-20, 0, 16], -Math.PI / 2],
-      // South and north faces. The east face is left open for the fire escape.
       ...[-16, -8, 0, 8, 16].map((x) => ['spire_facade', [x, 0, -20], Math.PI]),
       ...[-16, -8, 0, 8, 16].map((x) => ['spire_facade', [x, 0, 20], 0]),
-      /* ── Floors: a 12 m gallery ring per level around a 16×16 atrium ────── */
-      ...[10, 20, 30].flatMap((y) => [
-        // West and east galleries, 10 bays each along Z.
-        // Mounted 0.2 m low: the bay's slab top is +0.2 from its mount, and the
-        // pads and the route are on the level's own height, so mounting at the
-        // height put the walking surface 20 cm above both of them.
-        ...[-18, -14, -10, -6, -2, 2, 6, 10, 14, 18].flatMap((z) => [
-          ['spire_floor', [-14, y - .2, z], Math.PI / 2],
-          ['spire_floor', [14, y - .2, z], Math.PI / 2],
-        ]),
-        // The north gallery closes the ring; the south gallery keeps only its
-        // two eastern bays — x −8…0 is the opening the stair rises through.
-        ...[-6, -2, 2, 6].map((x) => ['spire_floor', [x, y - .2, 14], 0]),
-        ...[2, 6].map((x) => ['spire_floor', [x, y - .2, -14], 0]),
-      ]),
-      /* ── Roof: 5 bays of 8 m, end parapets on the X edges ───────────────── */
-      ...[-16, -8, 0, 8, 16].map((x) => ['spire_roof#0', [x, 0, 0], 0]),
+      ...[-16, -8].map((z) => ['spire_facade', [20, 0, z], Math.PI / 2]),
+      ['spire_facade#3', [20, 0, 0], Math.PI / 2], ['spire_facade#2', [20, 0, 8], Math.PI / 2],
+      ['spire_facade#1', [20, 0, 16], Math.PI / 2],
+      /* ── Floors: the punched plates, tiled with the 4 m bay. Bays mount
+         0.2 m low so the walking surface lands ON the level's own height. ── */
+      ...[[10, [-11, -18, -4, -10]], [20, [11, -13, 19, -4]], [30, [-4, 10, 5, 18]]].flatMap(
+        ([y, well]) => punch([[-19, -20, 19, 20]], [[-7, -10, 7, 10], well])
+          .flatMap((s) => plateBays('spire_floor', s, y - .2))),
+      /* ── Roof: 5 bays of 8 m, the skylight on the ONE bay over the atrium
+         (five bays of it is a 40 m glazed strip — §5's repeat-distance
+         mistake), the plain bays cycled so five bays are not one bay five
+         times, and end parapets on the X edges. ── */
+      // Every bay is laid PLAIN. The skylight variant belongs over the atrium
+      // and the atrium's centre line is the roof lap: variant 1 puts its frame
+      // at 40.25-40.5 across z 0, x -1.8..1.8, so the lane paint rode up onto
+      // the glass (0.62 m of it) on the surface the match ends on. The
+      // skylight wants shipping as its own piece, placed once, clear of the
+      // lap - the same forward ask that took it off five bays last pass.
+      ['spire_roof#0', [-16, 0, 0], 0], ['spire_roof#2', [-8, 0, 0], 0], ['spire_roof#3', [0, 0, 0], 0],
+      ['spire_roof#0', [8, 0, 0], 0], ['spire_roof#2', [16, 0, 0], 0],
       ...[-16, -8, 0, 8, 16].flatMap((z) => [
         ['spire_roof_parapet', [-20, 0, z], Math.PI / 2],
         ['spire_roof_parapet', [20, 0, z], Math.PI / 2],
       ]),
-      /* ── Stair: one flight per level, stacked on the south gallery ──────── */
-      ...[0, 10, 20].map((y) => ['spire_stairwell', [2, y, -14], Math.PI]),
-      /* ── Fire escape: four flights up the east face, a landing at each ───── */
-      ...[[0, 18], [10, 10], [20, 2], [30, -6]].map(([y, z]) => ['spire_fireescape_flight', [y === 0 ? 21 : 22, y, z], 0]),
-      ...[[10, 10], [20, 2], [30, -6], [40, -14]].flatMap(([y, z]) => [-2.6, 0, 2.6].map((d) => ['spire_fireescape', [23.5, y - .2, z + d], 0])),
+      /* ── The stair: four flights spiralling the atrium, 10 m of rise each.
+         The art climbs +X from its bottom step, so the yaw turns it onto the
+         leg and the X scale stretches it to the 18 and the 14 m run. ── */
+      ['spire_stairwell', [-14, 0, -14], 0],
+      ['spire_stairwell', [14, 10, -14], -Math.PI / 2],
+      ['spire_stairwell', [14, 20, 14], Math.PI, [1.8, 1, 1]],
+      ['spire_stairwell', [-14, 30, 14], Math.PI / 2, [1.4, 1, 1]],
+      /* ── Fire escape: two flights on the open east face, a landing at each
+         floor they serve. The flight art climbs toward −Z, which is the way
+         both legs run, so neither is yawed. Flights and landings alike mount at
+         x 21.8 so the whole escape runs 20.6–23.0 — outboard of the back wall,
+         brackets bolted onto it — while the route climbs on the treads. The
+         MIDDLE segment of each landing is the gate variant, opposite that
+         storey's doorway, so you step through the wall rather than over the
+         rail. ── */
+      ['spire_fireescape_flight', [21.8, 0, 16], 0], ['spire_fireescape_flight', [21.8, 10, 8], 0],
+      ...[[10, 8], [20, 0]].flatMap(([y, cz]) => [[-8 / 3, 0], [0, 1], [8 / 3, 0]].map(
+        ([d, v]) => ['spire_fireescape#' + v, [21.8, y - .2, cz + d], 0])),
       /* ── Fixtures ────────────────────────────────────────────────────────── */
       ['shared_core', [0, 40.02, 0], -Math.PI / 2],
       ['shared_spawn_portal', [-34, 0, 0], Math.PI / 2], ['shared_spawn_portal', [-34, 0, 16], Math.PI / 2],
       ['shared_armory_kiosk', [-26, 0, 10], Math.PI / 2],
-      ['shared_launcher_idle', [28, 0, 12], -Math.PI / 2],
-      ['shared_zipline_anchor', [18, 40.02, 18], 2.2], ['shared_zipline_anchor', [36, 0, 26], -0.9, .6],
-      // Only the strand's first waypoint is inside mast height; the rest of the
-      // air lane is above the block, which is the point of it.
-      ['shared_airlane_pylon', [-40, 0, 0], 0, 8 / 9],
-      /* ── Service plant at grade. The tank is not on the roof: the lap runs
-         the full ±13 ring, leaving a 6.8 m diagonal pocket in each corner, and
-         a 3.4 × 6 m tank cannot sit 3 m clear of the lap and inside the parapet
-         at once. Its own note says it blocks sight, so it stands against the
-         block's south-east corner where that is an asset. ── */
-      ['spire_watertank', [26, 0, -26], .4],
-      /* ── Roof dressing: corners only, clear of the core, lap and air lane ─ */
-      ['spire_antenna', [-17.5, 40.02, -17.5], 0],
-      ['spire_hvac', [-18, 40.02, 16], Math.PI / 2], ['spire_hvac', [18, 40.02, 8], -Math.PI / 2],
+      // Traversal. The lift runs the full 40 m for the first time; the six
+      // atrium ladders are 10 m climbs, so they use the 10 m piece — the set
+      // holds a true 30 cm rung pitch at every height, so a placement picks
+      // the height rather than scaling one.
+      // The shaft ships as one 5 m bay, so the 40 m rise is eight of them.
+      ...[0, 5, 10, 15, 20, 25, 30, 35].map((y) => ['shared_elevator_shaft', [-5, y, -8], 0]),
+      ['shared_elevator', [-5, 0, -8], 0],
+      ...[[6, -8, -2], [-6, 8, 2]].flatMap(([x, near, far]) => [0, 1, 2].map(
+        (f) => ['shared_ladder_1000', [x, f * 10, f === 1 ? far : near], x > 0 ? 0 : Math.PI])),
+      ['shared_teleporter_pad_idle', [-14, 0, 6], 0], ['shared_teleporter_pad_idle', [6, 40.02, 6], 0],
+      // 2 m off w37 where upstream puts it; two metres south clears the pad
+      // without moving the ride off the open east face.
+      ['shared_zipline_anchor', [14, 40.02, -2], -Math.PI / 2], ['shared_zipline_anchor', [32, 0, 0], Math.PI / 2, .6],
+      // Only the strand's first waypoint is inside mast height; the rest of
+      // the air lane is above the block, which is the point of it.
+      ['shared_airlane_pylon', [-40, 0, 0], 0, 6 / 9],
+      /* ── Roof plant. The mast tops out at 52 m, so it stands in the corner
+         the air lane does not come over; the tank is back on the roof now that
+         the lap no longer rings the parapet. ── */
+      ['spire_hvac', [-15, 40, -16], .31], ['spire_hvac', [-15, 40, -10], -.21],
+      // Upstream stands the tank at (15, -16), which is 2.24 m from w36 and
+      // leaves 0.3 m between a 3.4 m tank and a build pad. Hard into the
+      // corner instead — and measured off the FOOTPRINT, not the origin: the
+      // lid cone is the widest part at r 1.7, so 3.28 m clear of w36, 14 m of
+      // w38, and 19.68 against the parapet's 19.8 inner face.
+      ['spire_watertank', [18, 40, -18], 0],
+      ['spire_antenna', [-16, 40, 16], 0],
       /* ── Plaza dressing — margins only, ≥3 m off every route and socket ── */
       ['spire_terrain_scatter', [-44, 0, -22], .3], ['spire_terrain_scatter', [-44, 0, 26], 1.4], ['spire_terrain_scatter', [44, 0, -24], 2.2], ['spire_terrain_scatter', [42, 0, 24], .7],
       ['spire_terrain_scatter', [-12, 0, 30], 1.1], ['spire_terrain_scatter', [27, 0, 33], .2], ['spire_terrain_scatter', [-2, 0, -30], 2.7], ['spire_terrain_scatter', [30, 0, -12], 1.8],
-      /* ── Kerbside traffic on the perimeter street ─────────────────────── */
-      // The frontage piece carries the carriageway; cars park just off its kerb
-      // — z ±37.6 on the long edges, x ±52.6 on the short ones, wheels at y .1 so
-      // they stand on the carriageway rather than 10 cm into it. Nose direction
-      // alternates the way a real street parks, and every car is ≥10 m from the
-      // nearest socket, so nothing here reads as gameplay.
-      ['spire_dress_car#0', [-40, .1, 37.6], Math.PI], ['spire_dress_car#2', [-33, .1, 37.6], Math.PI], ['spire_dress_car#1', [-19, .1, 37.6], 0],
-      ['spire_dress_car#3', [-7, .1, 37.6], Math.PI], ['spire_dress_car#0', [7, .1, 37.6], 0], ['spire_dress_car#2', [21, .1, 37.6], Math.PI], ['spire_dress_car#1', [34, .1, 37.6], 0],
-      ['spire_dress_car#1', [-44, .1, -37.6], 0], ['spire_dress_car#3', [-27, .1, -37.6], 0], ['spire_dress_car#0', [-14, .1, -37.6], Math.PI],
-      ['spire_dress_car#2', [11, .1, -37.6], 0], ['spire_dress_car#1', [26, .1, -37.6], Math.PI], ['spire_dress_car#0', [40, .1, -37.6], 0],
-      ['spire_dress_car#3', [52.6, .1, -20], -Math.PI / 2], ['spire_dress_car#0', [52.6, .1, -5], Math.PI / 2], ['spire_dress_car#2', [52.6, .1, 14], -Math.PI / 2],
-      ['spire_dress_car#1', [-52.6, .1, -12], Math.PI / 2], ['spire_dress_car#0', [-52.6, .1, 7], -Math.PI / 2], ['spire_dress_car#3', [-52.6, .1, 23], Math.PI / 2],
+      /* ── Kerbside traffic on the perimeter street, variants cycled so a row
+         of parked cars is four models rather than one model eight times. ── */
+      ['spire_dress_car#0', [-44, 0, -26], Math.PI / 2], ['spire_dress_car#1', [-44, 0, -34], Math.PI / 2],
+      ['spire_dress_car#2', [-44, 0, 26], Math.PI / 2], ['spire_dress_car#3', [44, 0, -14], -Math.PI / 2],
+      ['spire_dress_car#0', [30, 0, -31], 0], ['spire_dress_car#1', [-12, 0, -31], 0],
+      ['spire_dress_car#2', [12, 0, 31], 0], ['spire_dress_car#3', [-30, 0, 31], 0],
     ],
-    zipline: [[18, 40.6, 18], [36, 1.6, 26]],
+    zipline: [[14, 40.7, -2], [32, 1.2, 0]],
   },
 
   /**
@@ -396,12 +544,12 @@ export const LEVELS = {
    * same rules — keeping the rule in the kit means the client and the art
    * cannot drift apart.
    *
-   * `roads: []` is deliberate and is the one place this map breaks with the
-   * other three. Everywhere else the enemy lane IS the road and gets paved.
-   * Here the made roads are the VEHICLE network — handling is read off those
-   * centre lines — and the enemy routes mostly go cross-country over grass.
-   * Paving the lanes would put tarmac through the middle of the fields and,
-   * worse, tell a driver the grip changes where it does not.
+   * `roads` here names every walked route, as on the other maps — but the
+   * module it lays is `toaster_path_ground`, a worn two-rut TRACK in the
+   * tile's own grass, not tarmac. The made roads (`vroads`) are the VEHICLE
+   * network — handling is read off those centre lines — and the enemy routes
+   * mostly go cross-country over the fields; paving them would put asphalt
+   * through a hayfield and tell a driver the grip changes where it does not.
    */
   toaster: {
     label: 'The Toaster', kit: 'toaster', field: [320, 160], totalWaves: 12,
@@ -441,7 +589,21 @@ export const LEVELS = {
       ],
     },
     teleportLegs: { long: [11, 20], west: [11] },
-    roads: [],
+    /* Every WALKED route is dressed with `toaster_path_ground` — the worn
+       two-rut track, not tarmac (FORWARD-MANIFEST-hero §E). The lanes still go
+       cross-country; a farm marks a line walked twelve waves a night exactly
+       this way, and the module is the tile's own grass with the wear in
+       vertex colour, so the fields stay fields. Teleport legs are skipped by
+       the builder — nothing walks them. */
+    roads: ['direct', 'long', 'west'],
+    /* Which tiles are which ground. Mown lawn round the houses and along the
+       roads; beyond the fences the tile grid carries the FIELD variants —
+       rough grazed pasture south-west, cut hay stubble east. Tile-aligned
+       (20 m), because a variant is a whole tile. */
+    fields: [
+      { variant: 5, x: [80, 140], z: [-20, 60] },
+      { variant: 4, x: [-140, -20], z: [-60, -20] },
+    ],
     /* The made roads. Vehicle handling reads grip, acceleration and top speed
        off these lines, so where a road runs is gameplay and what it is drawn
        with is not.
@@ -489,6 +651,10 @@ export const LEVELS = {
       // Grnmchn spur: off the county road's last bend to the −X front door,
       // approaching from the west so it never crosses the footprint.
       { kind: 'gravel', width: 4, pts: [[70, 0, -58], [75, 0, -52], [78, 0, -50]] },
+      /* Shed apron: 8 m of gravel across the whole +Z front, under the drive's
+         first leg. Design-only (the client draws the drive strip); it sits 15
+         mm under the drive so the two gravels do not fight. */
+      { kind: 'apron', width: 8, pts: [[-122, 0, 68.5], [-90, 0, 68.5]] },
     ],
     /* Circular drive, at the Vehickle house's front rather than 22 m north of
        it. Centre (24, 4) with the kit's 12 m centreline radius puts the ring
@@ -626,11 +792,27 @@ export const LEVELS = {
          the armory or a hero station — the code refuses those placements and
          logs them, so a bad coordinate is a line in the output rather than a
          girder in the roadway. */
-      ['toaster_propane_tank', [-122, 0, 66], 0], ['toaster_propane_tank', [-126, 0, -20], 1.57], ['toaster_propane_tank', [100, 0, -58], 1.57],
-      ['toaster_woodpile', [-118, 0, 44], .2], ['toaster_woodpile', [98, 0, -38], -1.3],
-      ['toaster_wreck_pickup', [-116, 0, 70], .45],
+      /* Each tank and woodpile 3 m off the wall it serves, OUTSIDE the
+         footprint: (−126, −20), (100, −58), (−118, 44) and (98, −38) were all
+         inside a building. */
+      ['toaster_propane_tank', [44, 0, 47.5], 0], ['toaster_propane_tank', [-146.4, 0, -12], 1.57], ['toaster_propane_tank', [105, 0, -50], 1.57],
+      ['toaster_woodpile', [-120, 0, 40], .2], ['toaster_woodpile', [106, 0, -42], -1.3],
+      ['toaster_wreck_pickup', [-128, 0, 63], 1.2],
+
+      /* ── The working farm ───────────────────────────────────────────────
+         Bins and fuel by the shed; the mill, its tank and two feeders in the
+         pasture; a hen house and a garden shed; gardens and washing behind
+         the two houses that are lived in; the wagon where the baler stopped. */
+      ['toaster_grain_bin#1', [-137, 0, 50], .4], ['toaster_grain_bin', [-137, 0, 59.5], 1.1],
+      ['toaster_fuel_tank', [-127, 0, 38], 0],
+      ['toaster_windmill', [-85, 0, -46], 0], ['toaster_stock_tank', [-81, 0, -46], 0],
+      ['toaster_bale_feeder', [-60, 0, -50], 0], ['toaster_bale_feeder', [-100, 0, -36], .8],
+      ['toaster_shed_small', [110, 0, -58], Math.PI], ['toaster_shed_small', [36, 0, 52], Math.PI],
+      ['toaster_garden_plot', [26, 0, 53], 0], ['toaster_garden_plot', [-134, 0, -30], 0],
+      ['toaster_clothesline', [14, 0, 50], 0], ['toaster_clothesline', [112, 0, -48], Math.PI / 2],
+      ['toaster_hay_wagon', [100, 0, 44], .3],
       // Everything else — mailboxes, the fence runs, the bale field, the belt
-      // understory and the leaf drift — is generated and filtered below,
+      // understory and the cut-grass drift — is generated and filtered below,
       // against the same clearance rule the client refuses placements on.
     ],
   },
@@ -672,7 +854,7 @@ export function roadKeepOut(L, margin = 2) {
 }
 /* ══ generated dressing ═══════════════════════════════════════════════════
  *
- * The Toaster's fence runs, bale field, understory and leaf drift are rows
+ * The Toaster's fence runs, bale field, understory and grass drift are rows
  * rather than placements — six times the area of any map before it, and a
  * hand-listed row is a row that is wrong the next time a route moves. So they
  * are generated here and passed through the SAME rule the client enforces
@@ -696,8 +878,9 @@ export function roadKeepOut(L, margin = 2) {
      one scatter clump 2 m from a build pad — inside the margin by 200 mm,
      which is exactly how these get missed. */
   const RADIUS = {
-    toaster_mailbox: .4, toaster_fence_wood: 2.1, toaster_hay_bale: .8,
-    toaster_understory: 2.4, toaster_leaf_pile: 1.5, toaster_terrain_scatter: 2.4,
+    toaster_mailbox: .4, toaster_fence_wood: 2.1, toaster_fence_wire: 2.1, toaster_gate_farm: 2.2, toaster_hay_bale: .8,
+    toaster_understory: 2.4, toaster_leaf_pile: 1.5, toaster_terrain_scatter: 2.4, toaster_hedgerow: 2.2,
+    toaster_tree_oak_open: 7.6, toaster_tree_apple: 2.5, toaster_crop_rows: 7.1, toaster_reeds: 1.1, toaster_utility_pole: 1.2,
   };
   // Walked lanes only — a teleport leg is a line nothing ever stands on.
   const walked = [];
@@ -713,36 +896,78 @@ export function roadKeepOut(L, margin = 2) {
     return Math.hypot(x - (a[0] + abx * t), z - (a[2] + abz * t));
   };
   /* Roadside furniture may stand at the kerb; scenery may not stand ON the
-     road. A fence line and a mailbox are the point of a verge, so they get
-     the road test at the carriageway edge; understory, leaf drift, bales and
-     ground scatter get the same 2 m margin as the trees, because a shrub on
-     asphalt is the same mistake as an oak in it. */
+     road. Fence lines, gates, poles, a hedgerow and a mailbox are the point
+     of a verge, so they get the road test at the carriageway edge; the rest
+     get the same 2 m margin as the trees. Nothing generated may land inside
+     a building's footprint either — the first drop stood two tanks and two
+     woodpiles inside walls because nothing checked. */
   const onRoad = roadKeepOut(T, 2);
   const atKerb = roadKeepOut(T, 0);
-  const VERGE = new Set(['toaster_mailbox', 'toaster_fence_wood']);
+  const VERGE = new Set(['toaster_mailbox', 'toaster_fence_wood', 'toaster_fence_wire', 'toaster_gate_farm', 'toaster_utility_pole', 'toaster_hedgerow']);
+  const inBuilding = (x, z, m) => T.volumes.some((v) => Math.abs(x - v.at[0]) < v.size[0] / 2 + m && Math.abs(z - v.at[2]) < v.size[2] / 2 + m);
   const add = (id, x, z, ry) => {
-    const m = 3 + (RADIUS[id] || 1) + .2;
-    for (const s of walked) if (segDist(x, z, s) < m) return;
-    for (const p of keepOut) if (Math.hypot(p[0] - x, p[2] - z) < m) return;
-    if ((VERGE.has(id) ? atKerb : onRoad)(x, z)) return;
+    const base = id.split('#')[0], rad = RADIUS[base] || 1, m = 3 + rad + .2;
+    for (const s of walked) if (segDist(x, z, s) < m) return false;
+    for (const p of keepOut) if (Math.hypot(p[0] - x, p[2] - z) < m) return false;
+    if ((VERGE.has(base) ? atKerb : onRoad)(x, z)) return false;
+    if (inBuilding(x, z, rad + 1)) return false;
     T.place.push([id, [x, 0, z], ry]);
+    return true;
+  };
+  /* A fence run from a to b in 4 m modules, posts landing on module ends, a
+     gate in place of the modules `gates` names. Runs are the field lines —
+     where a fence goes IS the design of a farm. */
+  const fence = (id, a, b, gates = []) => {
+    const dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz), n = Math.max(1, Math.round(len / 4)), ry = Math.atan2(-dz, dx);
+    for (let i = 0; i < n; i++) { const t = (i + .5) / n; add(gates.includes(i) ? 'toaster_gate_farm' : id, a[0] + dx * t, a[1] + dz * t, ry); }
   };
 
   // Mailboxes at the three road heads.
   add('toaster_mailbox', -52.5, 44, 1.57);
   add('toaster_mailbox', -86, 42.4, 0.14);
   add('toaster_mailbox', 33, 9.6, -0.34);
-  // Post-and-rail: both sides of the barn drive, and the east field's frontage.
+  // Post-and-rail both sides of the shed drive — the one dressed fence.
   for (let i = 0; i < 8; i++) add('toaster_fence_wood', -88 + i * 4, 41.5, 0.14);
   for (let i = 0; i < 9; i++) add('toaster_fence_wood', -88 + i * 4, 53, 0.14);
-  for (let i = 0; i < 10; i++) add('toaster_fence_wood', 44 + i * 4, -22, 0);
-  // Round bales, scattered through the east field on a spiral so they do not
-  // read as a grid.
-  for (let i = 0; i < 24; i++) {
+
+  /* ── Field lines ───────────────────────────────────────────────────────
+     Wire on T-posts. The south-west pasture (mill, tank, feeders), the
+     orchard plot beside it, the crop field north of the core yard, and the
+     hayfield east of the spawn — four enclosures that turn 320 m of lawn into
+     a property. Gates face the yard each field is worked from. */
+  fence('toaster_fence_wire', [-118, -60], [-24, -60]);
+  fence('toaster_fence_wire', [-24, -60], [-24, -28], [4]);
+  fence('toaster_fence_wire', [-24, -28], [-118, -28], [12]);
+  fence('toaster_fence_wire', [-118, -28], [-118, -60]);
+  fence('toaster_fence_wire', [-146, -36], [-122, -36], [3]);
+  fence('toaster_fence_wire', [-122, -36], [-122, -60]);
+  fence('toaster_fence_wire', [-41, 7], [-9, 7], [4]);
+  fence('toaster_fence_wire', [-9, 7], [-9, 49]);
+  fence('toaster_fence_wire', [-9, 49], [-41, 49]);
+  fence('toaster_fence_wire', [-41, 49], [-41, 7]);
+  fence('toaster_fence_wire', [85, -16], [85, 62], [9]);
+  fence('toaster_fence_wire', [85, 62], [146, 62]);
+  fence('toaster_fence_wire', [146, 62], [146, -16]);
+  fence('toaster_fence_wire', [146, -16], [85, -16], [7]);
+
+  // Hedgerow along the hayfield frontage, with open-grown oaks standing in it.
+  for (let z = -12; z <= 58; z += 4) add('toaster_hedgerow', 82, z, Math.PI / 2 + ((z / 4) % 2 ? .05 : -.05));
+  for (const [x, z, ry] of [[86, -10, .3], [82, 40, 2.2], [82, 58, .8]]) add('toaster_tree_oak_open', x, z, ry);
+  // Specimen oaks: in the pasture, over the pond, at the road, by the shed.
+  for (const [x, z, ry] of [[-30, -35, .4], [-48, -52, 1.7], [-100, -44, 2.6], [-72, -57, .9], [-20, 61, 1.3], [-75, 60, 2.1], [112, -30, .5], [38, -40, 2.9]]) add('toaster_tree_oak_open', x, z, ry);
+  // Orchard: four rows of four on 6 m centres, south of the Buggy house.
+  for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) add('toaster_tree_apple', -143 + c * 6, -57 + r * 6, c * 1.3 + r * .7);
+  // Row crop: twelve 10 m modules inside the wire north of the core yard.
+  for (let c = 0; c < 3; c++) for (let r = 0; r < 4; r++) add('toaster_crop_rows', -35 + c * 10, 13 + r * 10, 0);
+  // Round bales through the hayfield on a spiral, so they do not read as a grid.
+  for (let i = 0; i < 26; i++) {
     const r = i * 2.399;
-    add('toaster_hay_bale', 96 + Math.cos(r) * (8 + (i % 5) * 7), -6 + Math.sin(r) * (7 + (i % 4) * 6), r);
+    add('toaster_hay_bale', 110 + Math.cos(r) * (6 + (i % 5) * 5.5), 16 + Math.sin(r) * (6 + (i % 4) * 5), r);
   }
-  // Understory and leaf drift along the inner edge of the treeline.
+  // Reeds on the pond's wet shelf — not on the dock side, not where the lane passes.
+  for (const a of [.35, .95, 1.6, 3.55, 4.25, 4.95, 5.6, 6.05]) add('toaster_reeds', 19 + Math.cos(a) * 16.2, -36 + Math.sin(a) * 16.2, a);
+
+  // Understory and cut-grass drift along the inner edge of the treeline.
   for (let i = 0; i < 18; i++) {
     const s = i % 2 ? 1 : -1, t = (i * 0.137) % 1;
     add('toaster_understory', -148 + t * 296, s * (66 - (i % 3) * 3), i * .7);
@@ -751,9 +976,35 @@ export function roadKeepOut(L, margin = 2) {
     const s = i % 2 ? 1 : -1, t = ((i * 0.211) + .07) % 1;
     add('toaster_leaf_pile', -146 + t * 292, s * (64 - (i % 4) * 4), i * 1.1);
   }
-  // Ground scatter: the detail the terrain tile is forbidden from carrying.
-  for (const [x, z, ry] of [[-70, 24, .4], [-30, 34, 1.9], [22, -6, 2.7], [-16, -48, .8],
-    [62, -24, 2.1], [-96, -26, 1.2], [112, 30, .6], [-40, 30, 2.4]]) {
-    add('toaster_terrain_scatter', x, z, ry);
+  // Ground scatter: the detail the terrain tile is forbidden from carrying,
+  // on a hashed lattice across the whole field and filtered like the rest.
+  for (let i = 0; i < 64; i++) {
+    const x = -140 + ((i * 53) % 280) + ((i * 7) % 11) - 5, z = -62 + ((i * 29) % 124) + ((i * 3) % 7) - 3;
+    add('toaster_terrain_scatter', x, z, i * .7);
   }
+
+  /* ── Power lines ───────────────────────────────────────────────────────
+     Poles every 36 m down the county road and the south road, 5.5 m off the
+     centreline on one consistent side, every third one carrying a
+     transformer. The conductors are built by the viewer from the poles that
+     PASSED the clearance test (`powerlines`), so a refused pole shortens a
+     span rather than leaving wire over nothing. */
+  T.powerlines = [];
+  const poleLine = (pts, spacing, off) => {
+    const line = []; let carry = spacing * .5, k = 0;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [ax, , az] = pts[i], [bx, , bz] = pts[i + 1], dx = bx - ax, dz = bz - az, len = Math.hypot(dx, dz);
+      const nx = dz / len, nz = -dx / len, ry = Math.atan2(-nz, nx);
+      let s = carry;
+      for (; s < len; s += spacing, k++) {
+        const t = s / len, x = ax + dx * t + nx * off, z = az + dz * t + nz * off;
+        if (Math.abs(x) > 152 || Math.abs(z) > 76) continue;
+        if (add(k % 3 === 1 ? 'toaster_utility_pole#1' : 'toaster_utility_pole', x, z, ry)) line.push([x, z, ry]);
+      }
+      carry = s - len;
+    }
+    if (line.length > 1) T.powerlines.push(line);
+  };
+  poleLine(T.vroads[0].pts, 36, 5.5);
+  poleLine([[-152, 0, -66], [152, 0, -66]], 40, 5.5);
 }

@@ -130,6 +130,7 @@ import { makeEnemyKit, ENEMIES } from './models/enemies.js';
 import { TRAPS } from './models/traps.js';
 import { PROJECTILES } from './models/projectiles.js';
 import { makeWeaponKit, WEAPONS, ATTACHMENTS, AMMO, TRACERS } from './models/weapons.js';
+import { MELEE, MELEE_MODS } from './models/melee-hero.js';
 import { makeHeroKit, HEROES } from './models/heroes.js';
 import { FOUNDRY, makeFoundryMats } from './models/foundry.js';
 import { SHARED, PICKUPS } from './models/shared.js';
@@ -161,6 +162,9 @@ const ICONS = [
 const EXTRA = [
   { dir: 'enemies/', items: ENEMIES, kind: 'enemy' }, { dir: 'traps/', items: TRAPS, kind: 'trap' }, { dir: 'towers/', items: PROJECTILES, kind: 'projectile' },
   { dir: 'weapons/', items: WEAPONS, kind: 'weapon' }, { dir: 'weapons/', items: WEAPONS.filter((w) => w.worldFile).map((w) => ({ ...w, file: w.worldFile, id: w.id + '_world' })), kind: 'weapon_world' },
+  { dir: 'weapons/', items: MELEE, kind: 'melee' }, { dir: 'weapons/', items: MELEE.map((w) => ({ ...w, file: w.worldFile, id: w.id + '_world' })), kind: 'melee_world' },
+  /* Melee modules are built per host (edge and grip geometry follow the host); the exported file is the blade fit, the Gunsmith shows all three. */
+  { dir: 'weapons/', items: MELEE_MODS, kind: 'meleemod' },
   { dir: 'heroes/', items: HEROES, kind: 'hero' }, { dir: 'maps/foundry/', items: FOUNDRY, kind: 'map_foundry' }, { dir: 'maps/switchyard/', items: SWITCHYARD, kind: 'map_switchyard' }, { dir: 'maps/spire/', items: SPIRE, kind: 'map_spire' }, { dir: 'maps/toaster/', items: TOASTER, kind: 'map_toaster' }, { dir: 'vehicles/', items: VEHICLES, kind: 'vehicle' }, { dir: 'shared/', items: SHARED, kind: 'shared' }, { dir: 'vfx/', items: VFX, kind: 'vfx' }, { dir: 'economy/', items: PICKUPS, kind: 'pickup' }, { dir: 'weapons/', items: ATTACHMENTS, kind: 'attachment' }, { dir: 'weapons/', items: AMMO, kind: 'ammo' }, { dir: 'weapons/', items: TRACERS, kind: 'tracer' }];
 /* Reload props (FORWARD-MANIFEST-reload Ask A). Not new geometry: the feed part
    already in each viewmodel, lifted out and exported on its own so a reload can
@@ -181,7 +185,7 @@ const RELOAD_PROPS = [
 ];
 const EXTRA_COUNT = EXTRA.reduce((a, c) => a + c.items.reduce((n, it) => n + (it.buildVariant ? 4 : 1) + (it.poses ? it.poses.length - 1 : 0), 0), 0) + RELOAD_PROPS.length;
 // game/scripts/AssetLibrary.cs → Routes: the name prefix picks the folder under game/assets/. The zip unpacks straight onto the repo root.
-const ROUTES = [['enemy_', 'enemies'], ['boss_', 'enemies'], ['tower_', 'structures'], ['trap_', 'structures'], ['socket_', 'structures'], ['weapon_', 'weapons'], ['attach_', 'weapons'], ['ammo_', 'weapons'], ['hands_', 'weapons'], ['hero_', 'heroes'], ['proj_', 'vfx'], ['vfx_', 'vfx'], ['pickup_', 'economy'], ['foundry_', 'maps'], ['switchyard_', 'maps'], ['spire_', 'maps'], ['toaster_', 'maps'], ['vehicle_', 'vehicles'], ['shared_', 'maps'], ['prop_', 'maps'], ['ui_', 'ui']];
+const ROUTES = [['enemy_', 'enemies'], ['boss_', 'enemies'], ['tower_', 'structures'], ['trap_', 'structures'], ['socket_', 'structures'], ['weapon_', 'weapons'], ['melee_', 'weapons'], ['meleemod_', 'weapons'], ['attach_', 'weapons'], ['ammo_', 'weapons'], ['hands_', 'weapons'], ['hero_', 'heroes'], ['proj_', 'vfx'], ['vfx_', 'vfx'], ['pickup_', 'economy'], ['foundry_', 'maps'], ['switchyard_', 'maps'], ['spire_', 'maps'], ['toaster_', 'maps'], ['vehicle_', 'vehicles'], ['shared_', 'maps'], ['prop_', 'maps'], ['ui_', 'ui']];
 const routeFor = (file) => 'game/assets/' + (ROUTES.find(([p]) => file.startsWith(p))?.[1] || 'misc') + '/' + file;
 const el = (id) => document.getElementById(id);
 const TOWERS = (await Promise.all(MODS.map((m) => import(`./models/${m}.js`)))).map((m) => m.TOWER);
