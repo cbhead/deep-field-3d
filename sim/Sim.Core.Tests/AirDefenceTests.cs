@@ -28,8 +28,8 @@ public class AirDefenceTests
         var skiff = new Enemy
         {
             Id = w.NextId(), DefId = "skiff", Hp = 1000f, MaxHp = 1000f,
-            Facing = new Vec3(1, 0, 0), RouteIndex = airRoute, Leg = 0, LegProgress = 0f,
-        };
+            Facing = new Vec3(1, 0, 0),
+        }.AtRouteLeg(w, airRoute, 0, 0f);
         w.Enemies.Add(skiff);
         // An enemy's position is its route progress, so setting Pos by hand does
         // not stick — MoveEnemies puts it back on the lane before any tower
@@ -139,8 +139,8 @@ public class AirDefenceTests
         var skiff = new Enemy
         {
             Id = w.NextId(), DefId = "skiff", Hp = 100000f, MaxHp = 100000f,
-            Facing = new Vec3(1, 0, 0), RouteIndex = airRoute, Leg = 0, LegProgress = 0f,
-        };
+            Facing = new Vec3(1, 0, 0),
+        }.AtRouteLeg(w, airRoute, 0, 0f);
         w.Enemies.Add(skiff);
         w.Towers.Add(new Tower
         {

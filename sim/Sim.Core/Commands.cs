@@ -41,6 +41,15 @@ public abstract record Command
     /// <summary>Client-detected hitscan hit, server-sanity-checked (weapon
     /// cooldown). Clients raycast locally for instant feel; the sim applies
     /// damage authoritatively.</summary>
+    /// <summary>Flip a lever: shut an open lane, or reopen one you shut.
+    ///
+    /// One command with a toggle rather than separate open/close verbs. The
+    /// player presses one key at one gate and the gate does the other thing —
+    /// splitting that into two commands would put a state machine on the wire
+    /// for no gain, and every extra command is three more entries in Protocol
+    /// and one more sample Gate 22 has to carry.</summary>
+    public sealed record OperateGate(int PlayerId, string GateId) : Command;
+
     public sealed record PlayerHit(int PlayerId, int EnemyId, string WeaponId) : Command;
 
     /// <summary>A swing. Unlike a hitscan hit the client does not name a

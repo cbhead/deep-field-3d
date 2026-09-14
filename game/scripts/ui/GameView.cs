@@ -19,6 +19,11 @@ public sealed class PlayerView
     public Vector3 Pos;
     public float Hp;
     public bool Downed;
+
+    /// <summary>0..1 through the hold-R channel. Client-visible because the
+    /// revive column draws its progress ring from it, and a teammate watching
+    /// the revive should see the same arc as the one doing it.</summary>
+    public float ReviveProgress;
     public bool Connected = true;
     public string WeaponId = "sidearm";
     public float AbilityCooldown;
@@ -186,6 +191,8 @@ public sealed class GameView
                 FactionLevel = p.FactionLevel,
                 Pos = new Vector3(p.Pos.X, p.Pos.Y, p.Pos.Z),
                 Hp = p.Hp, Downed = p.Downed, Connected = p.Connected,
+                ReviveProgress = Balance.ReviveSeconds > 0f
+                    ? p.ReviveProgress / Balance.ReviveSeconds : 0f,
                 WeaponId = p.WeaponId, AbilityCooldown = p.AbilityCooldown,
                 MatchXp = p.MatchXp,
                 Kills = p.Kills, DamageDealt = p.DamageDealt,
@@ -284,6 +291,7 @@ public sealed class GameView
                 DamageDealt = entry.TryGetValue("dmg", out var dmg) ? (float)dmg : 0f,
                 TowersBuilt = entry.TryGetValue("built", out var built) ? (int)built : 0,
                 Revives = entry.TryGetValue("rev", out var rev) ? (int)rev : 0,
+                ReviveProgress = entry.TryGetValue("revProg", out var rp) ? (float)rp : 0f,
             };
             foreach (var (key, value) in entry["scrap"].AsGodotDictionary())
                 player.Scrap[System.Enum.Parse<ScrapType>((string)key)] = (int)value;

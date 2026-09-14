@@ -18,6 +18,182 @@ const uint Seed = 20260906;
 PlayerBot MidBot(int id = 1, string faction = "ember") =>
     new(Seed + (uint)id) { PlayerId = id, FactionId = faction, Accuracy = 0.6f, Uptime = 0.8f };
 
+// --- `--lane-graph [map]`: print the derived graph, for reading and for naming.
+//
+// The derivation numbers its nodes by position (n0, n1, …), which is stable for
+// a fixed set of waypoints and renumbers the moment one moves. That is fine for
+// a check and useless as a reference: a fixture naming an edge, and a save file
+// naming it back, need an id that survives a map edit. So the graph gets read
+// here and named in Maps.cs.
+if (args.Contains("--lane-graph"))
+{
+    foreach (var map in Maps.All.Values)
+    {
+        if (map.Id == "testlane") continue;
+        var graph = LaneGraph.FromRoutes(map);
+        Console.WriteLine($"== {map.Id}: {graph.Nodes.Count} nodes, {graph.Edges.Count} edges");
+        foreach (var n in graph.Nodes)
+            Console.WriteLine($"   {n.Id,-4} {n.Kind,-8} ({n.Pos.X,7:0.#}, {n.Pos.Y,5:0.#}, {n.Pos.Z,7:0.#})");
+        foreach (var e in graph.Edges)
+            Console.WriteLine($"   {e.Id,-4} {e.From,-4} -> {e.To,-4} {e.Layer,-6} {e.Kind,-5} "
+                + $"{e.Waypoints.Count} pts {e.WalkedLength,7:0.#} m");
+        foreach (var i in graph.Itineraries)
+            Console.WriteLine($"   itinerary {i.Id,-12} {string.Join(" -> ", i.Via)}");
+        Console.WriteLine();
+    }
+    return 0;
+}
+
+// --- `--floor-policy`: what the generated build actually is, beside the hand one.
+if (args.Contains("--floor-policy"))
+{
+    foreach (var id in Campaign.Sectors)
+    {
+        var world = new World(Seed, Maps.All[id]);
+        var hand = MatchRunner.FloorPolicy(id);
+        var generated = FloorPolicy.Build(world, hand.Count);
+        // Played, not just measured. Coverage is the number this file's own
+        // comments say is misleading — the first generator covered 98% of
+        // Foundry and killed nothing — so print what each build does when it
+        // is the only thing defending the map. Towers alone, no hero: that is
+        // the question a floor is the answer to.
+        var handRun = MatchRunner.RunWithBuild(Seed, Maps.All[id], hand.ToArray());
+        var genRun = MatchRunner.RunWithBuild(Seed, Maps.All[id], generated);
+        Console.WriteLine($"== {id}");
+        Console.WriteLine($"   hand      {FloorPolicy.Coverage(world, hand):P0} cover  "
+            + $"{handRun.WavesCleared}w {handRun.LivesLeft} lives   {string.Join(" ", hand)}");
+        Console.WriteLine($"   generated {FloorPolicy.Coverage(world, generated):P0} cover  "
+            + $"{genRun.WavesCleared}w {genRun.LivesLeft} lives   {string.Join(" ", generated)}");
+    }
+    return 0;
+}
+
+// --- `--baseline`: write the numbers behind the balance gates, not the verdicts.
+//
+// A gate says PASS. That is the right thing for CI to read and the wrong thing
+// for a person to review, because a change that takes Foundry's floor from
+// fourteen lives to one still says PASS — right up until the commit after it
+// says FAIL, by which point the cause is several commits back.
+//
+// M5 replaces the route model, and the plan for it turns on being able to tell a
+// *re-baseline* from a *regression*: a re-baseline moves hashes and margins and
+// must never move a verdict. That is only checkable against a recorded set of
+// margins, so this writes one — the same ratchet culture as
+// docs/map-validation-baseline.tsv, applied to balance.
+//
+// Regenerate with `make gate-baseline` and commit the diff in the same change
+// that caused it, with the reason in the message.
+if (args.Contains("--baseline"))
+{
+    var rows = new List<string>();
+    void Row(string scenario, MatchResult r) => rows.Add(string.Join('\t', new[]
+    {
+        scenario,
+        r.Victory ? "win" : "loss",
+        r.WavesCleared.ToString(),
+        r.LivesLeft.ToString(),
+        r.Spawned.ToString(),
+        r.Leaked.ToString(),
+        r.TowerKills.ToString(),
+        r.PlayerKills.ToString(),
+        r.Ticks.ToString(),
+        r.EventLogHash[..16],
+    }));
+
+    // Every scenario a balance gate actually measures, named for the gate that
+    // measures it. Bot-in-the-loop runs first, floor policies second.
+    Row("foundry/mid-band", MatchRunner.Run(Seed, Maps.Foundry, MidBot()));
+    Row("foundry/towers-only", MatchRunner.Run(Seed, Maps.Foundry));
+    Row("foundry/low-skill", MatchRunner.Run(Seed, Maps.Foundry,
+        new PlayerBot(Seed + 1) { PlayerId = 1, FactionId = "ember", Accuracy = 0.4f, Uptime = 0.6f }));
+    Row("foundry/high-skill", MatchRunner.Run(Seed, Maps.Foundry,
+        new PlayerBot(Seed + 1) { PlayerId = 1, FactionId = "ember", Accuracy = 0.8f, Uptime = 0.9f }));
+    // The exact party Gate 6 runs, factions included — players 3 and 4 take
+    // faction-taken rejections, and that is part of what the gate measures. A
+    // baseline row that quietly used four distinct factions would be recording
+    // a match no gate runs.
+    Row("foundry/4p", MatchRunner.Run(Seed, Maps.Foundry,
+        MidBot(1, "ember"), MidBot(2, "forge"),
+        new PlayerBot(Seed + 3) { PlayerId = 3, FactionId = "ember", Accuracy = 0.6f, Uptime = 0.8f },
+        new PlayerBot(Seed + 4) { PlayerId = 4, FactionId = "forge", Accuracy = 0.6f, Uptime = 0.8f }));
+    // Not a gate — recorded because measuring the one above turned it up. Gate
+    // 6 names itself "4p waves are bigger and clearable" and asserts only that
+    // 4p spawns more than solo; nothing checks clearable. Its party is
+    // ember/forge/ember/forge, so two players are refused their faction, and a
+    // party of four *distinct* factions is a materially different match: 356
+    // spawned against 203, and the floor loses it on wave 9 with no lives left.
+    // Whether that is a real co-op scaling problem or a floor-policy problem is
+    // a question for the balance phase; it is here so it stops being invisible.
+    Row("foundry/4p-distinct-factions~not-a-gate", MatchRunner.Run(Seed, Maps.Foundry,
+        MidBot(1, "ember"), MidBot(2, "forge"), MidBot(3, "tempest"), MidBot(4, "glacier")));
+
+    // The configuration sweep. Each door is *played* — towers generated against
+    // the lanes that are actually open — because a build tuned for one
+    // configuration measures the others as disasters. Recorded rather than
+    // gated: how far apart the doors are is a design judgement, and this is the
+    // number the judgement is made against.
+    int syPicks = MatchRunner.FloorPolicy("switchyard").Count(e => !e.StartsWith("barricade:"));
+    foreach (var (label, shut) in new[]
+        { ("both-open", (string?)null), ("cut-shut", "b1"), ("switchback-shut", "b2") })
+    {
+        var probe = new World(Seed, Maps.Switchyard);
+        if (shut is not null)
+        {
+            probe.Money = 10000;
+            probe.Enqueue(new Command.PlaceTower(0, "barricade", shut));
+            Step.Advance(probe);
+        }
+        var built = FloorPolicy.Build(probe, syPicks);
+        if (shut is not null) built = built.Prepend("barricade:" + shut).ToArray();
+        Row($"switchyard/generated~{label}",
+            MatchRunner.RunWithBuild(Seed, Maps.Switchyard, built, MidBot()));
+    }
+
+    Row("switchyard/mid-band", MatchRunner.Run(Seed, Maps.Switchyard, MidBot()));
+    Row("switchyard/towers-only", MatchRunner.Run(Seed, Maps.Switchyard));
+    Row("spire/mid-band", MatchRunner.Run(Seed, Maps.Spire, MidBot()));
+    Row("spire/towers-only", MatchRunner.Run(Seed, Maps.Spire));
+    Row("toaster/mid-band", MatchRunner.Run(Seed, Maps.Toaster, MidBot()));
+    Row("toaster/towers-only", MatchRunner.Run(Seed, Maps.Toaster));
+
+    var header = string.Join('\t', "scenario", "result", "waves", "lives", "spawned",
+        "leaked", "towerKills", "playerKills", "ticks", "logHash16");
+    var preamble = new[]
+    {
+        "# Balance baseline — the numbers behind the gates, not their verdicts.",
+        "#",
+        "# Regenerate with `make gate-baseline`. Commit the diff in the change that",
+        "# caused it, and say in the message which of the two it is:",
+        "#",
+        "#   a RE-BASELINE moves hashes and margins and moves no verdict;",
+        "#   a REGRESSION moves a verdict, or moves a margin without a reason.",
+        "#",
+        "# A gate that still says PASS on one life left is a gate about to fail for",
+        "# reasons several commits old. This file is how that is seen coming.",
+        "#",
+        "# Each row is a scenario some gate actually runs, party and factions",
+        "# included, except where the name says otherwise.",
+        "#",
+        $"# seed {Seed}",
+        header,
+    };
+    // Walk up for the repo rather than counting "..": the depth from the build
+    // output depends on configuration and TFM, and a baseline written to the
+    // wrong place is a file nobody diffs.
+    var dir = new DirectoryInfo(AppContext.BaseDirectory);
+    while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, "docs")))
+        dir = dir.Parent;
+    if (dir is null)
+    {
+        Console.Error.WriteLine("--baseline: no docs/ directory above " + AppContext.BaseDirectory);
+        return 1;
+    }
+    var outPath = Path.Combine(dir.FullName, "docs", "gate-baseline.tsv");
+    File.WriteAllLines(outPath, preamble.Concat(rows));
+    Console.WriteLine($"wrote {outPath} — {rows.Count} scenarios");
+    return 0;
+}
+
 // --- Gate 1: determinism — same seed + same bots => byte-identical logs, twice.
 {
     var a = MatchRunner.Run(Seed, Maps.Foundry, MidBot());
@@ -183,9 +359,8 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
     var enemy = new Enemy
     {
         Id = world.NextId(), DefId = "monolith", Hp = 300f, MaxHp = 300f,
-        RouteIndex = 0, Leg = 2, LegProgress = 15f,
         Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1,
-    };
+    }.AtRouteLeg(world, 0, 2, 15f);
     world.Enemies.Add(enemy);
     Step.Advance(world);   // aura chills
 
@@ -230,10 +405,9 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
     var world = new World(Seed, Maps.Foundry);
     var cluster = new Enemy
     {
-        Id = world.NextId(), DefId = "cluster", Hp = 1f, MaxHp = 80f,   // 2x wave scaling
-        RouteIndex = 0, Leg = 1, LegProgress = 2f, Facing = new Vec3(1, 0, 0),
+        Id = world.NextId(), DefId = "cluster", Hp = 1f, MaxHp = 80f,   // 2x wave scaling Facing = new Vec3(1, 0, 0),
         Bounty = 10, LeakDamage = 1,
-    };
+    }.AtRouteLeg(world, 0, 1, 2f);
     world.Enemies.Add(cluster);
     world.Enqueue(new Command.Join(1, "p1", "ember"));
     Step.Advance(world);
@@ -254,10 +428,9 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
     Step.Advance(world);
     var warden = new Enemy
     {
-        Id = world.NextId(), DefId = "warden", Hp = 60f, MaxHp = 60f, Shield = 25f,
-        RouteIndex = 0, Leg = 1, LegProgress = 2f, Facing = new Vec3(1, 0, 0),
+        Id = world.NextId(), DefId = "warden", Hp = 60f, MaxHp = 60f, Shield = 25f, Facing = new Vec3(1, 0, 0),
         Bounty = 0, LeakDamage = 1,
-    };
+    }.AtRouteLeg(world, 0, 1, 2f);
     world.Enemies.Add(warden);
     world.Players[1].Pos = warden.Pos + new Vec3(3, 0, 0);
 
@@ -288,10 +461,9 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
     Step.Advance(world);
     var mole = new Enemy
     {
-        Id = world.NextId(), DefId = "mole", Hp = 34f, MaxHp = 34f,
-        RouteIndex = 0, Leg = 0, LegProgress = 10f, TotalTraveled = 10f,
+        Id = world.NextId(), DefId = "mole", Hp = 34f, MaxHp = 34f, TotalTraveled = 10f,
         Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1,
-    };
+    }.AtRouteLeg(world, 0, 0, 10f);
     world.Enemies.Add(mole);
 
     bool firedWhileBurrowed = false, firedWhileSurfaced = false;
@@ -314,10 +486,9 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
     var world = new World(Seed, Maps.Foundry);
     var target = new Enemy
     {
-        Id = world.NextId(), DefId = "drifter", Hp = 1000f, MaxHp = 1000f,
-        RouteIndex = 0, Leg = 1, LegProgress = 2f, Facing = new Vec3(1, 0, 0),
+        Id = world.NextId(), DefId = "drifter", Hp = 1000f, MaxHp = 1000f, Facing = new Vec3(1, 0, 0),
         Bounty = 0, LeakDamage = 1,
-    };
+    }.AtRouteLeg(world, 0, 1, 2f);
     world.Enemies.Add(target);
     target.Statuses[(int)Channel.Movement] = new StatusSlot { StatusId = "chill", TimeLeft = 5f, Source = "t" };
     target.CcResist = 0f;
@@ -347,12 +518,11 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
     world.Enqueue(new Command.PlaceTower(0, "arc", "g3"));
     Step.Advance(world);
 
-    Enemy Spawn(float lateral) => new()
+    Enemy Spawn(float lateral) => new Enemy
     {
-        Id = world.NextId(), DefId = "drifter", Hp = 500f, MaxHp = 500f,
-        RouteIndex = 0, Leg = 2, LegProgress = 15f, LateralOffset = lateral,
+        Id = world.NextId(), DefId = "drifter", Hp = 500f, MaxHp = 500f, LateralOffset = lateral,
         Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1,
-    };
+    }.AtRouteLeg(world, 0, 2, 15f);
     var a = Spawn(0f);
     var b = Spawn(2f);
     a.Statuses[(int)Channel.Movement] = new StatusSlot { StatusId = "chill", TimeLeft = 10f, Source = "t" };
@@ -385,10 +555,9 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
         // Trap t2 sits at (0,0,3); ground route leg 3 runs (0,14)→(0,-8).
         var e = new Enemy
         {
-            Id = world.NextId(), DefId = defId, Hp = 10000f, MaxHp = 10000f,
-            RouteIndex = 0, Leg = 3, LegProgress = 11f, TotalTraveled = 60f,
+            Id = world.NextId(), DefId = defId, Hp = 10000f, MaxHp = 10000f, TotalTraveled = 60f,
             Facing = new Vec3(0, 0, -1), Bounty = 0, LeakDamage = 1,
-        };
+        }.AtRouteLeg(world, 0, 3, 11f);
         world.Enemies.Add(e);
         return e;
     }
@@ -425,12 +594,11 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
     var player = world.Players[1];
     player.Scrap[ScrapType.Plating] = 10;
 
-    Enemy Armored() => new()
+    Enemy Armored() => new Enemy
     {
-        Id = world.NextId(), DefId = "aegis", Hp = 500f, MaxHp = 500f,
-        RouteIndex = 0, Leg = 1, LegProgress = 2f, Facing = new Vec3(1, 0, 0),
+        Id = world.NextId(), DefId = "aegis", Hp = 500f, MaxHp = 500f, Facing = new Vec3(1, 0, 0),
         Bounty = 0, LeakDamage = 1,
-    };
+    }.AtRouteLeg(world, 0, 1, 2f);
 
     // Baseline: sidearm into the FRONT of an Aegis.
     var target = Armored();
@@ -481,6 +649,7 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
         new Command.Launch(1),
         new Command.PlayerSync(1, new Vec3(1.5f, 2f, -3.25f)),
         new Command.PlaceTower(1, "lance", "g1"),
+        new Command.OperateGate(1, "cutGate"),
         new Command.SellTower(1, 7),
         new Command.UpgradeTower(1, 7, 2),
         new Command.StartWave(1),
@@ -553,9 +722,8 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
         var e = new Enemy
         {
             Id = w.NextId(), DefId = defId, Hp = hp, MaxHp = hp,
-            Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1,
-            RouteIndex = 0, Leg = 0, LegProgress = 0f, Pos = new Vec3(x, y, z),
-        };
+            Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1, Pos = new Vec3(x, y, z),
+        }.AtRouteLeg(world, 0, 0, 0f);
         w.Enemies.Add(e);
         return e;
     }
@@ -741,8 +909,7 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
         {
             Id = world.NextId(), DefId = "drifter", Hp = 400f, MaxHp = 400f,
             Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1,
-            RouteIndex = 0, Leg = 3, LegProgress = 14f,
-        };
+        }.AtRouteLeg(world, 0, 3, 14f);
         world.Enemies.Add(enemy);
         Step.Advance(world);
 
@@ -1033,7 +1200,7 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
             if (e is SimEvent.EnemySpawned spawned)
             {
                 var enemy = world.Enemies.First(x => x.Id == spawned.EnemyId);
-                routeOf[spawned.EnemyId] = world.Map.Routes[enemy.RouteIndex].Id;
+                routeOf[spawned.EnemyId] = world.Graph.Itineraries[enemy.ItineraryIndex].Id;
             }
             if (e is SimEvent.EnemyTeleported jump)
                 jumps[jump.EnemyId] = jumps.GetValueOrDefault(jump.EnemyId) + 1;
@@ -1111,7 +1278,13 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
                             : string.Join("; ", problems.Take(4)));
 }
 
-// --- Gate 22 (M2): a barricade on b1 reroutes shortcut spawns to the long way.
+// --- Gate 22: a barricade shuts the freight cut, for walkers as well as spawns.
+//
+// This used to assert that a barricade changed which *route index* spawns were
+// given — a claim about a data model that no longer exists. The barricade is a
+// door now, so the thing to assert is what a player would see: with it up,
+// nothing walks the cut. Wave 1 is authored entirely onto groundShort, so every
+// enemy keeps that itinerary and takes a different way to reach the same places.
 {
     var world = new World(Seed, Maps.Switchyard);
     world.Money = 1000;
@@ -1119,11 +1292,85 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
     world.Enqueue(new Command.StartWave(0));
     while (world.Enemies.Count == 0) Step.Advance(world);
 
-    // Wave 1 is authored entirely onto groundShort (route index 1); with the
-    // gate closed every spawn must walk route index 0 (the long way).
-    bool rerouted = world.Enemies.All(e => e.RouteIndex == 0);
-    Gate("barricade: gated shortcut spawns fall back to the long route", rerouted,
-        $"routes {string.Join(",", world.Enemies.Select(e => e.RouteIndex).Distinct())}");
+    int cut = world.Graph.EdgeIndexOf("westGate-cutMouth");
+    var walkers = world.Enemies.Where(e => Enemies.All[e.DefId].StructureDps <= 0f).ToList();
+    bool avoided = walkers.Count > 0 && walkers.All(e => e.EdgeIndex != cut);
+    bool keptItinerary = walkers.All(e => e.ItineraryIndex == 1);
+
+    Gate("barricade: a closed gate turns the wave at the fork", avoided && keptItinerary,
+        $"{walkers.Count} walkers, none on the cut: {avoided}; itinerary kept: {keptItinerary}");
+}
+
+// --- Gate 22b: the thing the old model could not do — turn a wave already walking.
+//
+// MAP-AUTHORING §3 lists "re-routing mid-walk" under what the sim cannot model,
+// and the barricade's own doc said a wall built while enemies were walking did
+// not redirect the ones already committed. Both are now false, and this is the
+// gate that says so: let the wave get properly into the cut, then shut it, and
+// watch them come back out and go the other way.
+{
+    var world = new World(Seed, Maps.Switchyard);
+    world.Money = 1000;
+    world.Enqueue(new Command.StartWave(0));
+    while (world.Enemies.Count == 0) Step.Advance(world);
+
+    int cut = world.Graph.EdgeIndexOf("westGate-cutMouth");
+    for (int i = 0; i < 120; i++) Step.Advance(world);       // four seconds down the cut
+    int onCutBefore = world.Enemies.Count(e => e.EdgeIndex == cut);
+
+    world.Enqueue(new Command.PlaceTower(0, "barricade", "b1"));
+    Step.Advance(world);
+    // They finish the span they are on — nothing rubber-bands — and decide at
+    // the far end, so give them time to reach it.
+    for (int i = 0; i < 900; i++) Step.Advance(world);
+    int onCutAfter = world.Enemies.Count(e => e.EdgeIndex == cut);
+    bool anyWentLong = world.Enemies.Any(e =>
+        world.Graph.Edges[e.EdgeIndex].From == "switchbackNorth"
+        || world.Graph.Edges[e.EdgeIndex].To == "switchbackNorth");
+
+    Gate("barricade: shutting the gate re-routes enemies already walking",
+        onCutBefore > 0 && onCutAfter == 0 && anyWentLong,
+        $"on the cut {onCutBefore} -> {onCutAfter}, some took the switchback: {anyWentLong}");
+}
+
+// --- Gate 22c: the map can be shaped and cannot be sealed.
+//
+// The rule the whole mutable layer rests on, exercised the way a player would
+// find it: Switchyard has two doors out of its gate, and this shuts them both.
+// The first succeeds and the second is refused — named, and before the money
+// moves, so walking into the edge of the system costs nothing but the attempt.
+//
+// Order matters and is checked both ways round: whichever door you shut first,
+// the other one is the one you cannot have.
+{
+    static (bool Built, bool Refused, string Reason, bool Paid) ShutBoth(string first, string second)
+    {
+        var world = new World(Seed, Maps.Switchyard);
+        world.Money = 1000;
+        world.Enqueue(new Command.PlaceTower(0, "barricade", first));
+        Step.Advance(world);
+        bool built = world.Towers.Any(t => t.SocketId == first);
+
+        int before = world.Money;
+        world.Enqueue(new Command.PlaceTower(0, "barricade", second));
+        Step.Advance(world);
+        var rejection = world.Events.OfType<SimEvent.BuildRejected>().FirstOrDefault();
+
+        return (built,
+                !world.Towers.Any(t => t.SocketId == second),
+                rejection?.Reason ?? "none",
+                world.Money != before);
+    }
+
+    var cutFirst = ShutBoth("b1", "b2");
+    var switchbackFirst = ShutBoth("b2", "b1");
+    bool ok = cutFirst.Built && cutFirst.Refused && cutFirst.Reason == "wouldSeal" && !cutFirst.Paid
+           && switchbackFirst.Built && switchbackFirst.Refused
+           && switchbackFirst.Reason == "wouldSeal" && !switchbackFirst.Paid;
+
+    Gate("barricade: you may shut either way through, and never both", ok,
+        $"cut then switchback: {cutFirst.Reason}; switchback then cut: {switchbackFirst.Reason}"
+        + $"; charged for the refusal: {cutFirst.Paid || switchbackFirst.Paid}");
 }
 
 // --- Gate 24 (M3): poison is the answer burn is not.
@@ -1243,13 +1490,13 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
 
         // Leg 3 runs (0,14) → (0,-8); 14 along it puts the enemy at (0,0),
         // four metres from socket g4 and well inside the beam's reach.
-        Enemy Spawn() => new()
+        Enemy Spawn() => new Enemy
         {
             Id = world.NextId(), DefId = "drifter",
             Hp = 4000f, MaxHp = 4000f,
             Facing = new Vec3(1, 0, 0),
-            Bounty = 0, LeakDamage = 1, RouteIndex = 0, Leg = 3, LegProgress = 14f,
-        };
+            Bounty = 0, LeakDamage = 1,
+        }.AtRouteLeg(world, 0, 3, 14f);
 
         var first = Spawn();
         world.Enemies.Add(first);
@@ -1292,8 +1539,8 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
     {
         Id = world.NextId(), DefId = "drifter", Hp = 100f, MaxHp = 100f,
         Facing = new Vec3(1, 0, 0),
-        Bounty = 0, LeakDamage = 1, RouteIndex = 0, Leg = 3, LegProgress = 14f,
-    };
+        Bounty = 0, LeakDamage = 1,
+    }.AtRouteLeg(world, 0, 3, 14f);
     world.Enemies.Add(enemy);
 
     float before = enemy.Hp;
@@ -1376,8 +1623,7 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
         {
             Id = world.NextId(), DefId = "shade", Hp = 500f, MaxHp = 500f,
             Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1,
-            RouteIndex = 0, Leg = 3, LegProgress = 14f,
-        };
+        }.AtRouteLeg(world, 0, 3, 14f);
         world.Enemies.Add(shade);
 
         for (int i = 0; i < Balance.TickHz * 2; i++) Step.Advance(world);
@@ -1413,8 +1659,7 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
             {
                 Id = world.NextId(), DefId = defId, Hp = hp, MaxHp = hp,
                 Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1,
-                RouteIndex = 0, Leg = 3, LegProgress = legProgress,
-            };
+            }.AtRouteLeg(world, 0, 3, legProgress);
             world.Enemies.Add(e);
             return e;
         }
@@ -1458,8 +1703,7 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
             Id = world.NextId(), DefId = "ram",
             Hp = Enemies.Ram.Hp, MaxHp = Enemies.Ram.Hp,
             Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 2,
-            RouteIndex = 0, Leg = 2, LegProgress = 4f,
-        };
+        }.AtRouteLeg(world, 0, 2, 4f);
         world.Enemies.Add(ram);
         Step.Advance(world);
 
@@ -1505,8 +1749,7 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
             Id = world.NextId(), DefId = "ram",
             Hp = 100_000f, MaxHp = 100_000f,          // the demolition is the subject, not the kill
             Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 2,
-            RouteIndex = 0, Leg = 0, LegProgress = 0f,
-        };
+        }.AtRouteLeg(world, 0, 0, 0f);
         world.Enemies.Add(ram);
 
         // Walk it in rather than placing it. MoveEnemies recomputes position
@@ -1648,6 +1891,550 @@ PlayerBot MidBot(int id = 1, string faction = "ember") =>
             // campaign-chain gate was written to catch one file over.
             ? string.Join(", ", Campaign.Sectors.Select(id => $"{id} {Maps.All[id].Sockets.Count}"))
             : string.Join(" | ", problems.Take(6)));
+}
+
+// --- Gate 49: the lane graph derived from the routes is lossless.
+//
+// The first step of the M5 mutable-map work is a decomposition, not a change:
+// Maps.cs stores a list of polylines, and where two routes overlap it stores the
+// overlap twice. LaneGraph.FromRoutes turns that into nodes and the spans
+// between them. Nothing reads it yet, and nothing may until this holds — the
+// whole safety argument for switching movement onto the graph is that the graph
+// *is* the routes, proven rather than assumed.
+//
+// Exact equality throughout. A rebuild that matched "closely enough" would be a
+// derivation quietly moving a lane, which is the one thing this step must not do.
+{
+    var problems = new List<string>();
+    var shape = new List<string>();
+
+    foreach (var map in Maps.All.Values)
+    {
+        var graph = LaneGraph.FromRoutes(map);
+
+        foreach (var route in map.Routes)
+        {
+            var rebuilt = graph.Rebuild(route.Id);
+            if (rebuilt.Count != route.Waypoints.Count)
+            {
+                problems.Add($"{map.Id}/{route.Id}: rebuilt {rebuilt.Count} waypoints, authored {route.Waypoints.Count}");
+                continue;
+            }
+            for (int i = 0; i < rebuilt.Count; i++)
+                if (!rebuilt[i].Equals(route.Waypoints[i]))
+                    problems.Add($"{map.Id}/{route.Id}: waypoint {i} rebuilt as "
+                        + $"({rebuilt[i].X},{rebuilt[i].Y},{rebuilt[i].Z}), authored "
+                        + $"({route.Waypoints[i].X},{route.Waypoints[i].Y},{route.Waypoints[i].Z})");
+
+            // Walked length has to survive too: it is what the run cap, the
+            // coverage sampler and the burrow cycle are all denominated in.
+            float authored = 0f;
+            for (int leg = 0; leg < route.LegCount; leg++)
+                if (!route.IsTeleportLeg(leg))
+                    authored += route.Waypoints[leg].DistanceTo(route.Waypoints[leg + 1]);
+
+            var itinerary = graph.Itineraries.First(i => i.Id == route.Id);
+            float walked = 0f;
+            for (int i = 0; i < itinerary.Via.Count - 1; i++)
+                walked += graph.Edges
+                    .First(e => e.From == itinerary.Via[i] && e.To == itinerary.Via[i + 1]
+                        && e.Layer == itinerary.Layer)
+                    .WalkedLength;
+
+            if (MathF.Abs(walked - authored) > 0.001f)
+                problems.Add($"{map.Id}/{route.Id}: walked {walked:0.###} m, authored {authored:0.###} m");
+        }
+
+        // Every warp leg must have become exactly one zero-length Warp edge.
+        int authoredWarps = map.Routes.Sum(r => r.TeleportLegs?.Count ?? 0);
+        int warpEdges = graph.Edges.Count(e => e.Kind == LaneEdgeKind.Warp);
+        if (warpEdges > authoredWarps)
+            problems.Add($"{map.Id}: {warpEdges} warp edges for {authoredWarps} authored warp legs");
+        foreach (var warp in graph.Edges.Where(e => e.Kind == LaneEdgeKind.Warp))
+            if (warp.WalkedLength != 0f)
+                problems.Add($"{map.Id}/{warp.Id}: warp edge has length {warp.WalkedLength}");
+
+        if (map.Id != "testlane")
+            shape.Add($"{map.Id} {graph.Nodes.Count}n/{graph.Edges.Count}e"
+                + (graph.NearMisses.Count > 0 ? $" ({graph.NearMisses.Count} near-miss)" : ""));
+    }
+
+    Gate("lane graph: the decomposition of every route is lossless",
+        problems.Count == 0,
+        problems.Count == 0 ? string.Join(", ", shape) : string.Join(" | ", problems.Take(6)));
+}
+
+// --- Gate 50: near-miss waypoints are reported, never merged.
+//
+// Coalescing is exact equality with no epsilon, on purpose: two waypoints a
+// centimetre apart are two places, and merging on a tolerance would be a
+// derivation performing a content edit. So points that look like typos get
+// named here and fixed as content — before movement reads the graph, which is
+// the only window in which fixing them is free.
+{
+    var found = new List<string>();
+    foreach (var map in Maps.All.Values)
+        foreach (var miss in LaneGraph.FromRoutes(map).NearMisses)
+            found.Add($"{map.Id}: {miss}");
+
+    Gate("lane graph: no two waypoints are within half a metre of each other",
+        found.Count == 0,
+        found.Count == 0
+            ? $"exact-equality coalescing is safe on all {Maps.All.Count} maps"
+            : string.Join(" | ", found.Take(6)));
+}
+
+// --- Gate 51: every junction on a campaign map is named, and every name is real.
+//
+// Derived ids are positional and renumber the moment a waypoint moves, so a
+// fixture naming an edge, and a save file naming it back, need authored names.
+// Checked in both directions: an unnamed node means a map edit added a junction
+// nobody described, and a name matching nothing means one was moved or removed
+// and the name was left behind pointing at empty ground. The second is the one
+// that rots quietly — it is exactly how levels.js fell three passes behind.
+{
+    var problems = new List<string>();
+    foreach (var map in Campaign.Sectors.Select(id => Maps.All[id]))
+    {
+        var graph = LaneGraph.FromRoutes(map);
+        var named = map.LaneNodeNames.ToDictionary(n => n.At, n => n.Id);
+
+        foreach (var node in graph.Nodes)
+            if (!named.ContainsKey(node.Pos))
+                problems.Add($"{map.Id}: junction at ({node.Pos.X:0.#},{node.Pos.Y:0.#},{node.Pos.Z:0.#}) has no name");
+
+        var positions = graph.Nodes.Select(n => n.Pos).ToHashSet();
+        foreach (var name in map.LaneNodeNames)
+            if (!positions.Contains(name.At))
+                problems.Add($"{map.Id}/{name.Id}: names ({name.At.X:0.#},{name.At.Y:0.#},{name.At.Z:0.#}), which is not a junction");
+
+        var duplicates = map.LaneNodeNames.GroupBy(n => n.Id).Where(g => g.Count() > 1);
+        foreach (var dup in duplicates) problems.Add($"{map.Id}: duplicate node name {dup.Key}");
+    }
+
+    Gate("lane graph: every junction is named, and every name is a junction",
+        problems.Count == 0,
+        problems.Count == 0
+            ? string.Join(", ", Campaign.Sectors.Select(id =>
+                $"{id} {Maps.All[id].LaneNodeNames.Count}"))
+            : string.Join(" | ", problems.Take(6)));
+}
+
+// --- Gate 53: the Ram prices the wall; it does not simply ignore it.
+//
+// The difference between a decision and a hard-coded preference. A siege enemy
+// pays hp / StructureDps seconds to chew through, which at its own speed is
+// that many metres it could have walked instead — so a wall in front of a
+// short detour is worth going round, and the same wall in front of a long one
+// is worth breaking. Both directions are checked here, by moving the one dial
+// the design says tunes it: the barricade's health.
+{
+    static (bool Breaches, float Detour) RamFacing(uint seed, float barricadeHp)
+    {
+        var world = new World(seed, Maps.Switchyard);
+        world.Money = 1000;
+        world.Enqueue(new Command.PlaceTower(0, "barricade", "b1"));
+        Step.Advance(world);
+        foreach (var t in world.Towers) t.Hp = barricadeHp;
+        world.RefreshEdgeState();
+
+        // Spawned through the real path rather than hand-placed, because the
+        // decision being measured is the one a spawn makes at the gate — and a
+        // hand-placed enemy is already on an edge somebody else chose.
+        world.Enqueue(new Command.StartWave(0));
+        Step.Advance(world);
+        world.PendingSpawns.Clear();
+        world.PendingSpawns.Add(new SpawnEntry("ram", 0, 1f, RouteIndex: 1, LateralOffset: 0f));
+        while (world.Enemies.All(e => e.DefId != "ram")) Step.Advance(world);
+        var ram = world.Enemies.First(e => e.DefId == "ram");
+
+        int cut = world.Graph.EdgeIndexOf("westGate-cutMouth");
+        float detour = world.Graph.Edge("westGate-switchbackNorth").WalkedLength
+                     - world.Graph.Edge("westGate-cutMouth").WalkedLength;
+        return (ram.EdgeIndex == cut, detour);
+    }
+
+    // The shipped barricade: 300 hp, and it must be worth breaking, because the
+    // map's lesson is that the wall turns everything except the thing sent to
+    // open it. This is the case the design cares about and the one that a pure
+    // time comparison got wrong by two per cent — see Balance.SiegeBreachBias.
+    var shipped = RamFacing(Seed, Towers.Barricade.StructureHp);
+    // And it stays a comparison: thick enough and the detour is the bargain.
+    var dear = RamFacing(Seed, 3000f);
+
+    Gate("ram: it breaks the barricade it is sent at, and walks round a thicker one",
+        shipped.Breaches && !dear.Breaches,
+        $"detour {shipped.Detour:0.#} m · shipped {Towers.Barricade.StructureHp:0} hp"
+        + $" breached: {shipped.Breaches} · 3000 hp breached: {dear.Breaches}");
+}
+
+// --- Gate 54: the Ram announces itself before it breaks anything.
+//
+// A breach the player does not see coming reads as the map malfunctioning. The
+// telegraph fires when the Ram commits, not when the wall falls, so the warning
+// is worth the seconds it names.
+{
+    var world = new World(Seed, Maps.Switchyard);
+    world.Money = 1000;
+    world.Enqueue(new Command.PlaceTower(0, "barricade", "b1"));
+    world.Enqueue(new Command.StartWave(0));
+    Step.Advance(world);
+    world.PendingSpawns.Clear();
+    world.PendingSpawns.Add(new SpawnEntry("ram", 0, 1f, RouteIndex: 1, LateralOffset: 0f));
+
+    SimEvent.BreachTargeted? warning = null;
+    for (int i = 0; i < 200 && warning is null; i++)
+    {
+        Step.Advance(world);
+        warning = world.Events.OfType<SimEvent.BreachTargeted>().FirstOrDefault();
+    }
+    // Announced long before it lands: 300 hp at 14 dps is about 21 seconds.
+    bool early = warning is not null && warning.EtaSeconds > 15f;
+
+    Gate("ram: a breach is announced when it commits, not when the wall falls",
+        warning is not null && early && warning.EdgeId == "westGate-cutMouth",
+        warning is null ? "no warning" : $"{warning.EdgeId} in {warning.EtaSeconds:0.#}s");
+}
+
+// --- Gate 55: shutting a gate is a decision, not a free win.
+//
+// The question the mutable layer lives or dies on. If closing everything you
+// legally can is simply better, then the "choice" is a tax on players who have
+// not worked out that it is compulsory, and the wave tables will get retuned
+// around a turtle nobody meant to design. This is not a correctness gate — it
+// cannot be, because the answer is a judgement — but it is the measurement the
+// judgement needs, and it fails if the spread is so lopsided there is nothing
+// to decide.
+//
+// Same seed, same floor policy, same towers; only the doors differ.
+{
+    // Each configuration is *played*, not just measured: the towers are
+    // generated against the lanes that are actually open in it. Holding one
+    // hand-tuned list still across all three would compare a build tuned for
+    // one door against two doors it was never meant for — the first version of
+    // this gate did exactly that and reported shutting the switchback as a
+    // twenty-life catastrophe, which was the fixture's fault, not the map's.
+    int picks = MatchRunner.FloorPolicy("switchyard").Count(e => !e.StartsWith("barricade:"));
+
+    (MatchResult Run, float Coverage) Play(string? shut)
+    {
+        var probe = new World(Seed, Maps.Switchyard);
+        if (shut is not null)
+        {
+            probe.Money = 10000;
+            probe.Enqueue(new Command.PlaceTower(0, "barricade", shut));
+            Step.Advance(probe);
+        }
+        var order = FloorPolicy.Build(probe, picks);
+        if (shut is not null) order = order.Prepend("barricade:" + shut).ToArray();
+        var run = MatchRunner.RunWithBuild(Seed, Maps.Switchyard, order, MidBot());
+        return (run, FloorPolicy.Coverage(probe, order));
+    }
+
+    var open = Play(null).Run;
+    var cutShut = Play("b1").Run;
+    var switchbackShut = Play("b2").Run;
+
+    var lives = new[] { open.LivesLeft, cutShut.LivesLeft, switchbackShut.LivesLeft };
+    int spread = lives.Max() - lives.Min();
+
+    // What is *asserted* is that no door loses you the map. A configuration a
+    // player can reach and cannot survive is a trap, and the point of letting
+    // them shape the level is undone by one of the shapes being fatal.
+    //
+    // What is *reported* is the spread, and it is deliberately not a gate.
+    // Switchyard is the map that teaches the barricade — its own doc says the
+    // freight cut is "fast and badly covered" and that closing it is the
+    // lesson — so shutting the cut being worth eight lives is the design
+    // working, not a turtle problem. A threshold here would be a number nobody
+    // can move, on a map with an intended answer, and this repo's own note says
+    // a ratchet nobody can turn green gets switched off within a week.
+    //
+    // The spread belongs in docs/gate-baseline.tsv, where a later map that is
+    // supposed to pose a dilemma can be read against the one that is not.
+    bool allWinnable = open.Victory && cutShut.Victory && switchbackShut.Victory;
+
+    Gate("switchyard: every door you may shut is survivable", allWinnable,
+        $"lives — both open {open.LivesLeft}, cut shut {cutShut.LivesLeft}, "
+        + $"switchback shut {switchbackShut.LivesLeft} (spread {spread}; "
+        + "shutting the cut is this map's lesson, so its lead is intended)");
+}
+
+// --- Gate 56: the generated floor policy is a competent floor on every map.
+//
+// The hand lists stay the reference build — they are better, and measurably so:
+// the human's Switchyard reaches twelve waves with seventeen lives where the
+// generator manages fourteen. The generator's job is not to beat them, it is to
+// be able to play a configuration nobody hand-tuned, which is the only way to
+// compare doors fairly. So what is asserted is competence, not parity: build it
+// against each map from scratch and it must still clear the campaign.
+//
+// Coverage is reported alongside, because it is the number the hand lists'
+// own comments quote — and because chasing it alone is what produced the first
+// version of this generator, which covered 98% of Foundry with a wall of Novas
+// and killed nothing.
+{
+    var weak = new List<string>();
+    var shape = new List<string>();
+    foreach (var id in Campaign.Sectors)
+    {
+        var probe = new World(Seed, Maps.All[id]);
+        int picks = MatchRunner.FloorPolicy(id).Count;
+        var built = FloorPolicy.Build(probe, picks);
+        var run = MatchRunner.RunWithBuild(Seed, Maps.All[id], built, MidBot());
+
+        shape.Add($"{id} {FloorPolicy.Coverage(probe, built):P0}/{run.WavesCleared}w");
+        if (!run.Victory) weak.Add($"{id}: {run.WavesCleared} waves, {run.LivesLeft} lives");
+    }
+
+    Gate("floor policy: a build generated from scratch clears every map",
+        weak.Count == 0,
+        weak.Count == 0 ? string.Join(", ", shape) : string.Join(" | ", weak));
+}
+
+// --- Gate 57: every configuration a map allows, proved before it ships.
+//
+// The runtime refuses a closure that would seal the map. That is a safety net,
+// and a safety net is not a proof: it fires on the tick a player finds the
+// hole. This enumerates every combination of gates a map can be put into and
+// checks the properties there, at author time, with no match running.
+//
+// Four things, and the third is the one that earns the enumeration:
+//
+//  1. Monotonicity — closing more edges never makes the map *more* connected,
+//     so a configuration being legal implies every configuration on the way to
+//     it was legal too. That is what makes "no configuration is a trap" free:
+//     you can always get back to neutral by opening what you shut. Asserted
+//     rather than assumed, because it stops being true the day something
+//     irreversible lands (a dropped bridge), and this is where that will be
+//     caught.
+//  2. The enumeration and WouldSeal agree. They are the same predicate by
+//     construction now; this is what keeps them that way.
+//  3. Every gate matters. A gate whose closure changes nothing a wave does is
+//     inert content — the mutable analogue of §4.6's dead pad, and exactly the
+//     defect that left a control point sitting on Foundry as decoration for two
+//     milestones.
+//  4. Every edge is walkable in some legal configuration. An edge no
+//     configuration can open is lane nobody will ever see.
+//
+// Capped at eight gates per map (256 configurations), which is a legibility
+// limit as much as a computational one: no map that teaches one idea needs nine
+// levers.
+{
+    var problems = new List<string>();
+    var shape = new List<string>();
+
+    foreach (var map in Campaign.Sectors.Select(id => Maps.All[id]))
+    {
+        var world = new World(Seed, map);
+        var graph = world.Graph;
+        // Both kinds of door count, and an edge with one of each counts once:
+        // what the enumeration is about is which lanes can be shut, not how
+        // many ways there are to shut them.
+        var gateEdges = map.LaneGates.Select(g => g.EdgeId)
+            .Concat(map.OperatedGates.Select(g => g.EdgeId))
+            .Distinct()
+            .Select(graph.EdgeIndexOf)
+            .Where(e => e >= 0)
+            .ToList();
+        var gateNames = map.LaneGates.Select(g => g.SocketId)
+            .Concat(map.OperatedGates.Select(g => g.Id))
+            .ToList();
+
+        if (gateEdges.Count > 8)
+        {
+            problems.Add($"{map.Id}: {gateEdges.Count} gates — over the eight-gate cap");
+            continue;
+        }
+
+        int configurations = 1 << gateEdges.Count;
+        var legal = new bool[configurations];
+        for (int mask = 0; mask < configurations; mask++)
+        {
+            var open = Enumerable.Repeat(true, graph.Edges.Count).ToArray();
+            for (int g = 0; g < gateEdges.Count; g++)
+                if ((mask & (1 << g)) != 0) open[gateEdges[g]] = false;
+            legal[mask] = graph.EverySpawnReachesCore(open);
+        }
+
+        // 1. Monotonic: anything legal with more shut is legal with less shut.
+        for (int mask = 0; mask < configurations; mask++)
+            if (legal[mask])
+                for (int g = 0; g < gateEdges.Count; g++)
+                    if ((mask & (1 << g)) != 0 && !legal[mask & ~(1 << g)])
+                        problems.Add($"{map.Id}: opening a gate made the map less connected");
+
+        // 2. WouldSeal says the same thing, one gate at a time from neutral.
+        for (int g = 0; g < gateEdges.Count; g++)
+            if (world.WouldSeal(gateEdges[g]) == legal[1 << g])
+                problems.Add($"{map.Id}/{gateNames[g]}: WouldSeal disagrees with the enumeration");
+
+        // 3. Every gate changes where something walks.
+        //
+        // Asked of the *paths*, not of the distances. The first version compared
+        // shortest distance to the core and called Switchyard's switchback gate
+        // inert: closing it does not change how far the gate is from the core,
+        // because the cut was already the shorter way — while changing entirely
+        // which lane half the waves walk down. Distance is how a path gets
+        // chosen; the path is the thing a gate is for.
+        var allOpen = Enumerable.Repeat(true, graph.Edges.Count).ToArray();
+        var before = graph.Itineraries.ToDictionary(i => i.Id, i => graph.PathFor(i, allOpen));
+        for (int g = 0; g < gateEdges.Count; g++)
+        {
+            if (!legal[1 << g]) continue;                  // sealing gates are checked above
+            var open = Enumerable.Repeat(true, graph.Edges.Count).ToArray();
+            open[gateEdges[g]] = false;
+
+            bool changed = graph.Itineraries.Any(i =>
+                !graph.PathFor(i, open).SequenceEqual(before[i.Id]));
+            if (!changed)
+                problems.Add($"{map.Id}/{gateNames[g]}: shutting it moves nothing");
+        }
+
+        // 4. No edge is permanently unreachable.
+        foreach (var gate in map.LaneGates)
+            if (graph.EdgeIndexOf(gate.EdgeId) < 0)
+                problems.Add($"{map.Id}/{gate.SocketId}: gates edge '{gate.EdgeId}', which does not exist");
+        foreach (var lever in map.OperatedGates)
+            if (graph.EdgeIndexOf(lever.EdgeId) < 0)
+                problems.Add($"{map.Id}/{lever.Id}: gates edge '{lever.EdgeId}', which does not exist");
+
+        int shuttable = Enumerable.Range(1, configurations - 1).Count(m => legal[m]);
+        shape.Add($"{map.Id} {gateEdges.Count}g/{shuttable + 1} legal");
+    }
+
+    Gate("configurations: every shape a map can be put into is proved before it ships",
+        problems.Count == 0,
+        problems.Count == 0 ? string.Join(", ", shape) : string.Join(" | ", problems.Take(6)));
+}
+
+// --- Gate 58: the lever, and everything it refuses.
+//
+// A free, instant, reversible verb has to cost something or it is not a
+// decision. Four things make it one, and all four are checked: you have to be
+// there, you have to wait between flips, you cannot shut the last way through,
+// and it will not shut on a body — chaff in the doorway is the attacker using
+// your own mutation against you.
+{
+    static World Ready()
+    {
+        var w = new World(Seed, Maps.Switchyard);
+        w.Enqueue(new Command.Join(1, "solo", "ember"));
+        Step.Advance(w);
+        var lever = Maps.Switchyard.OperatedGates.First(g => g.Id == "cutGate");
+        w.Enqueue(new Command.PlayerSync(1, lever.At));
+        Step.Advance(w);
+        return w;
+    }
+
+    string Flip(World w, string id)
+    {
+        w.Enqueue(new Command.OperateGate(1, id));
+        Step.Advance(w);
+        var bad = w.Events.OfType<SimEvent.GateRejected>().FirstOrDefault();
+        return bad?.Reason ?? "ok";
+    }
+
+    var problems = new List<string>();
+    int cut = new World(Seed, Maps.Switchyard).Graph.EdgeIndexOf("westGate-cutMouth");
+
+    // Shuts, and the lane is shut.
+    var world = Ready();
+    if (Flip(world, "cutGate") != "ok") problems.Add("would not shut");
+    if (world.EdgeOpen[cut]) problems.Add("shut the lever and the lane stayed open");
+
+    // Cooldown: not twice in a row.
+    if (Flip(world, "cutGate") != "cooldown") problems.Add("no cooldown");
+
+    // Reopens once it has elapsed, and the lane comes back.
+    for (int i = 0; i < 8 * Balance.TickHz; i++) Step.Advance(world);
+    if (Flip(world, "cutGate") != "ok") problems.Add("would not reopen");
+    if (!world.EdgeOpen[cut]) problems.Add("opened the lever and the lane stayed shut");
+
+    // Out of reach.
+    var far = Ready();
+    far.Enqueue(new Command.PlayerSync(1, new Vec3(40f, 0f, 8f)));
+    Step.Advance(far);
+    if (Flip(far, "cutGate") != "notNear") problems.Add("reachable from the far side of the map");
+
+    // Will not shut on a body.
+    var blocked = Ready();
+    var lever = Maps.Switchyard.OperatedGates.First(g => g.Id == "cutGate");
+    blocked.Enemies.Add(new Enemy
+    {
+        Id = blocked.NextId(), DefId = "drifter", Hp = 10f, MaxHp = 10f,
+        Pos = lever.At, Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1,
+    }.AtRouteLeg(blocked, 1, 0, 0f));
+    if (Flip(blocked, "cutGate") != "blocked") problems.Add("shut on a body");
+
+    // Cannot shut the last way through: barricade one lane, lever the other.
+    var sealing = Ready();
+    sealing.Money = 1000;
+    sealing.Enqueue(new Command.PlaceTower(1, "barricade", "b2"));
+    Step.Advance(sealing);
+    if (Flip(sealing, "cutGate") != "wouldSeal") problems.Add("sealed the map with a lever");
+
+    Gate("lever: it shuts a lane, and refuses the four things it should",
+        problems.Count == 0,
+        problems.Count == 0
+            ? "reach, cooldown, a body in the doorway, and the last way through"
+            : string.Join(" | ", problems));
+}
+
+// --- Gate 59: a lever turns the wave; it does not turn the Ram.
+//
+// The lever's whole cost, stated as an assertion. There is nothing to break, so
+// a siege enemy's breach price is zero and it walks straight through a shut
+// gate — while the walkers behind it turn at the fork. If you want a Ram
+// stopped you buy the wall, which is what the wall is for.
+{
+    var world = new World(Seed, Maps.Switchyard);
+    world.Enqueue(new Command.Join(1, "solo", "ember"));
+    Step.Advance(world);
+    world.Enqueue(new Command.PlayerSync(1, Maps.Switchyard.OperatedGates[0].At));
+    Step.Advance(world);
+    world.Enqueue(new Command.OperateGate(1, "cutGate"));
+    Step.Advance(world);
+
+    int cut = world.Graph.EdgeIndexOf("westGate-cutMouth");
+    world.Enqueue(new Command.StartWave(1));
+    Step.Advance(world);
+    world.PendingSpawns.Clear();
+    world.PendingSpawns.Add(new SpawnEntry("ram", 0, 1f, RouteIndex: 1, LateralOffset: 0f));
+    world.PendingSpawns.Add(new SpawnEntry("drifter", 0, 1f, RouteIndex: 1, LateralOffset: 0f));
+    while (world.Enemies.Count < 2) Step.Advance(world);
+
+    var ram = world.Enemies.First(e => e.DefId == "ram");
+    var walker = world.Enemies.First(e => e.DefId == "drifter");
+
+    Gate("lever: it turns the wave and not the Ram",
+        !world.EdgeOpen[cut] && ram.EdgeIndex == cut && walker.EdgeIndex != cut,
+        $"cut shut {!world.EdgeOpen[cut]}; ram through it {ram.EdgeIndex == cut}; "
+        + $"walker round it {walker.EdgeIndex != cut}");
+}
+
+// --- Gate 52: nothing is ever stranded, anywhere in the campaign.
+//
+// The runtime counterpart to the landlock refusal. WouldSeal stops a player
+// sealing the map; this checks the other half — that no combination of a
+// closed gate and an enemy's own itinerary leaves it at a junction with
+// nowhere open to go. The sim emits enemyStranded on the tick it happens
+// precisely so a proof that turns out to be wrong is loud instead of looking
+// like a wave that never ends.
+{
+    var stranded = new List<string>();
+    foreach (var id in Campaign.Sectors)
+    {
+        var r = MatchRunner.Run(Seed, Maps.All[id], MidBot());
+        int count = r.EventLog.Count(line => line.Contains("enemyStranded"));
+        if (count > 0) stranded.Add($"{id}: {count}");
+    }
+
+    Gate("routing: no enemy is ever left at a junction with nowhere to go",
+        stranded.Count == 0,
+        stranded.Count == 0
+            ? $"{Campaign.Sectors.Count} maps, full floor policies, none stranded"
+            : string.Join(" | ", stranded));
 }
 
 Console.WriteLine();

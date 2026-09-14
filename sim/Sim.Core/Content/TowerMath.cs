@@ -26,7 +26,7 @@ public static class TowerMath
         {
             if (def.UpgradePaths[i].Id != pathId) continue;
             int bought = i < pathLevels.Count ? pathLevels[i] : 0;
-            return MathF.Pow(def.UpgradePaths[i].PerLevelFactor, bought);
+            return DetMath.PowInt(def.UpgradePaths[i].PerLevelFactor, bought);
         }
         return 1f;
     }

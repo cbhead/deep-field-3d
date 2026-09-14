@@ -1,0 +1,548 @@
+namespace DeepField.Sim.Content;
+
+/// <summary>The lane graph: the map's routes as nodes and the authored spans
+/// between them, which is the shape the content has always had and never said.
+///
+/// `Maps.cs` stores a *list of polylines*, and where two routes overlap it
+/// stores the overlap twice, as byte-identical `Vec3` literals. The Toaster's
+/// `direct` has nine waypoints and **not one of them is its own**: it is a
+/// sub-path of `long`, typed out again. `long` and `west` share an identical
+/// thirteen-waypoint prefix. Nothing can check that duplication, and nothing
+/// can act on it — which is why a barricade is a route swap decided at spawn
+/// rather than a door, and why `docs/MAP-AUTHORING.md` §3 has to list
+/// "re-routing mid-walk" as something the sim cannot model.
+///
+/// A graph can be acted on. An edge can close; a path can be found again. That
+/// is the whole point of the M5 mutable-map work, and this file is step one of
+/// it: **derive** the graph from the routes that exist, change nothing, and
+/// prove the derivation is lossless. Hand-authored graphs and mutable state
+/// come after, on top of a decomposition that has already been shown to
+/// reproduce every metre of every lane.</summary>
+public enum LaneNodeKind
+{
+    /// <summary>Where a route begins — a spawn gate, or a warp arrival pad.</summary>
+    Spawn,
+
+    /// <summary>Where routes meet, split, or where a warp departs.</summary>
+    Junction,
+
+    /// <summary>Where a route ends. Today every ground route ends at the core.</summary>
+    Core,
+}
+
+public enum LaneEdgeKind
+{
+    /// <summary>Walked at the enemy's speed, along its authored waypoints.</summary>
+    Walk,
+
+    /// <summary>Crossed in a tick and length zero for every purpose — distance
+    /// travelled, coverage sampling, lane geometry. A `RouteDef.TeleportLegs`
+    /// entry becomes one of these, and the three content invariants the harness
+    /// gates for those legs (never first, never last, never adjacent) stop being
+    /// rules and become a structural fact: a node is never a position an enemy
+    /// occupies between ticks.</summary>
+    Warp,
+}
+
+public sealed record LaneNodeDef(string Id, Vec3 Pos, LaneNodeKind Kind);
+
+/// <summary>A name for a junction the derivation finds, authored on the map.
+/// See <see cref="MapDef.LaneNodeNamesOrNull"/> for why derived ids are not
+/// enough.</summary>
+public sealed record LaneNodeNameDef(string Id, Vec3 At);
+
+/// <summary>An edge a player can close, and the socket that closes it.
+///
+/// This is the barricade, promoted. It used to be RouteDef.BarricadeGate: a
+/// named slot that, while occupied, made *spawning* enemies pick a different
+/// polyline. Enemies already walking were unaffected, because there was nothing
+/// a route could do about a wall appearing on it — MAP-AUTHORING §3 records
+/// that as "the sim cannot model re-routing mid-walk".
+///
+/// On a graph it is a door. The edge closes, and everything that reaches the
+/// junction in front of it — spawning or already halfway down the map — goes
+/// the other way. The decision moves from "which polyline was I born on" to
+/// "what is open when I get to the fork", which is the same thing a player
+/// thinks is happening and never was.</summary>
+public sealed record LaneGateDef(string EdgeId, string SocketId);
+
+/// <summary>A lever, and the lane it shuts.
+///
+/// The other half of the barricade, and deliberately the opposite of it in
+/// every respect that matters. A barricade is an economic commitment: you pay
+/// for it, it stands there, a Ram has to break it and you lose it when one
+/// does. A lever is a timing decision — free, instant, reversible, and used
+/// forty times a match rather than once.
+///
+/// What it costs is that it stops walkers and not sieges. There is nothing to
+/// break, so a Ram's breach price is zero and it comes straight through a shut
+/// gate. That is not a hole in the mechanic, it is the mechanic: the lever
+/// turns the wave and does not turn the thing sent to open the wave's way. If
+/// you want a Ram stopped you buy the wall.
+///
+/// And it will not shut on a body. An enemy inside the gateway denies the
+/// close, which turns chaff into a tool the *attacker* uses against your
+/// mutation — the one thing a free, instant, reversible verb needed in order to
+/// cost something.</summary>
+public sealed record OperatedGateDef(string Id, string EdgeId, Vec3 At, string Label);
+
+/// <summary>One authored span between two nodes. <see cref="Waypoints"/>
+/// includes both endpoints, so an edge carries its whole geometry and a walker
+/// needs nothing but the edge to know where it is.</summary>
+public sealed record LaneEdgeDef(
+    string Id,
+    string From,
+    string To,
+    EnemyLayer Layer,
+    IReadOnlyList<Vec3> Waypoints,
+    LaneEdgeKind Kind = LaneEdgeKind.Walk,
+    float CostFactor = 1f)
+{
+    /// <summary>Metres walked along this edge. Zero for a warp, by definition.</summary>
+    public float WalkedLength
+    {
+        get
+        {
+            if (Kind == LaneEdgeKind.Warp) return 0f;
+            float total = 0f;
+            for (int i = 0; i < Waypoints.Count - 1; i++)
+                total += Waypoints[i].DistanceTo(Waypoints[i + 1]);
+            return total;
+        }
+    }
+}
+
+/// <summary>What a wave group means by "the long way round".
+///
+/// `WaveGroup.RouteId` names a route 132 times across the wave tables, and that
+/// vocabulary is how the campaign's teaching arc is written — the Toaster's is
+/// explicitly about which route a group takes. It survives as an *itinerary*: an
+/// ordered list of nodes a group must pass through on its way to the core.
+///
+/// Deliberately mandatory vias rather than a soft cost bias. A bias is not
+/// sweep-enumerable, it re-routes all 132 authored references on any cost tweak,
+/// and it turns "wave 1 is `direct` and nothing else" into "wave 1 mostly
+/// prefers direct". And the via list for a route that exists today is exactly
+/// its junction sequence — which is what lets the movement switch land with the
+/// event log unchanged.</summary>
+public sealed record ItineraryDef(string Id, EnemyLayer Layer, IReadOnlyList<string> Via);
+
+/// <summary>A derived or authored lane graph, plus the derivation.</summary>
+public sealed class LaneGraph
+{
+    public IReadOnlyList<LaneNodeDef> Nodes { get; }
+    public IReadOnlyList<LaneEdgeDef> Edges { get; }
+    public IReadOnlyList<ItineraryDef> Itineraries { get; }
+
+    /// <summary>Pairs of waypoints close enough to look like the same point and
+    /// not close enough to be one. Coalescing is **exact equality only** — see
+    /// <see cref="FromRoutes"/> — so these are reported rather than merged.</summary>
+    public IReadOnlyList<string> NearMisses { get; }
+
+    private LaneGraph(IReadOnlyList<LaneNodeDef> nodes, IReadOnlyList<LaneEdgeDef> edges,
+        IReadOnlyList<ItineraryDef> itineraries, IReadOnlyList<string> nearMisses)
+    {
+        Nodes = nodes;
+        Edges = edges;
+        Itineraries = itineraries;
+        NearMisses = nearMisses;
+    }
+
+    public int EdgeIndexOf(string id)
+    {
+        for (int i = 0; i < Edges.Count; i++) if (Edges[i].Id == id) return i;
+        return -1;
+    }
+
+    public LaneEdgeDef Edge(string id) => Edges.First(e => e.Id == id);
+    public LaneNodeDef Node(string id) => Nodes.First(n => n.Id == id);
+
+    /// <summary>Decompose a map's routes into nodes and edges, losslessly.
+    ///
+    /// A waypoint becomes a **node** when it is a route's first or last point,
+    /// when it is either end of a warp, or when the routes passing through it do
+    /// not all agree on where they came from and where they go. Everything else
+    /// stays an interior point of an edge, so the graph is as small as the
+    /// content allows rather than one node per waypoint.
+    ///
+    /// **Coalescing is exact `Vec3` equality with no epsilon.** Two waypoints a
+    /// centimetre apart are two places. Merging on a tolerance would be a
+    /// content edit performed by a derivation — silently moving a lane — and the
+    /// one thing this step must not do is change where anything walks. Points
+    /// that look like near-duplicates are collected in <see cref="NearMisses"/>
+    /// for a human to fix as content, before movement ever reads the graph.</summary>
+    public static LaneGraph FromRoutes(MapDef map)
+    {
+        // --- 1. Every occurrence of every waypoint, by exact position.
+        var occurrences = new Dictionary<Vec3, List<(RouteDef Route, int Index)>>();
+        foreach (var route in map.Routes)
+            for (int i = 0; i < route.Waypoints.Count; i++)
+            {
+                var at = route.Waypoints[i];
+                if (!occurrences.TryGetValue(at, out var list))
+                    occurrences[at] = list = new List<(RouteDef, int)>();
+                list.Add((route, i));
+            }
+
+        // --- 2. Which of them are nodes.
+        var isNode = new HashSet<Vec3>();
+        foreach (var (at, uses) in occurrences)
+        {
+            bool node = false;
+            var context = new HashSet<(Vec3? Prev, Vec3? Next)>();
+            foreach (var (route, i) in uses)
+            {
+                // Ends of a route are always nodes: a spawn gate and a core.
+                if (i == 0 || i == route.Waypoints.Count - 1) node = true;
+                // Both ends of a warp are nodes, so the warp is its own edge.
+                if (i > 0 && route.IsTeleportLeg(i - 1)) node = true;
+                if (route.IsTeleportLeg(i)) node = true;
+
+                context.Add((
+                    i > 0 ? route.Waypoints[i - 1] : null,
+                    i < route.Waypoints.Count - 1 ? route.Waypoints[i + 1] : null));
+            }
+            // Routes disagree about how they pass through here, so it is a fork,
+            // a join, or both.
+            if (context.Count > 1) node = true;
+            if (node) isNode.Add(at);
+        }
+
+        // --- 2b. Parallel spans need somewhere to differ.
+        //
+        // Switchyard's `ground` and `groundShort` share their spawn gate and
+        // their core and nothing in between, so both decompose to a single span
+        // from one node to the same other node — and an itinerary written as a
+        // list of nodes cannot say which of the two it means. That is not an
+        // accident of this map: a shortcut *is* a second way between the same
+        // two places, and every gated route in the game is one.
+        //
+        // So when two spans would connect the same pair, promote a waypoint in
+        // the middle of each to a node. The itineraries then differ by naming
+        // where they go, which is also the honest description — "the short way"
+        // is a route through somewhere, not a different pair of endpoints.
+        // Iterated, because promoting a waypoint re-splits the routes and can
+        // expose a new pair; it converges quickly and is capped so a pathology
+        // cannot hang the build.
+        for (int pass = 0; pass < 8; pass++)
+        {
+            var spans = new Dictionary<(Vec3 From, Vec3 To, EnemyLayer Layer), List<(RouteDef Route, int Start, int End)>>();
+            foreach (var route in map.Routes)
+            {
+                int start = 0;
+                for (int i = 1; i < route.Waypoints.Count; i++)
+                {
+                    if (!isNode.Contains(route.Waypoints[i])) continue;
+                    var key = (route.Waypoints[start], route.Waypoints[i], route.Layer);
+                    if (!spans.TryGetValue(key, out var list)) spans[key] = list = new();
+                    list.Add((route, start, i));
+                    start = i;
+                }
+            }
+
+            var promoted = new List<Vec3>();
+            foreach (var (_, group) in spans)
+            {
+                // Identical geometry is one edge, not a parallel pair.
+                var distinct = group
+                    .Select(g => string.Join(";", Enumerable.Range(g.Start, g.End - g.Start + 1)
+                        .Select(k => g.Route.Waypoints[k].ToString())))
+                    .Distinct().Count();
+                if (distinct < 2) continue;
+
+                foreach (var (route, s, e) in group)
+                {
+                    if (e - s < 2) continue;                 // no interior to promote
+                    var mid = route.Waypoints[s + (e - s) / 2];
+                    if (isNode.Add(mid)) promoted.Add(mid);
+                }
+            }
+            if (promoted.Count == 0) break;
+        }
+
+        // --- 3. Name them, in a stable order.
+        var ordered = isNode
+            .OrderBy(p => p.X).ThenBy(p => p.Y).ThenBy(p => p.Z)
+            .ToList();
+        var authored = map.LaneNodeNames.ToDictionary(n => n.At, n => n.Id);
+        var nodeId = new Dictionary<Vec3, string>();
+        for (int i = 0; i < ordered.Count; i++)
+            nodeId[ordered[i]] = authored.TryGetValue(ordered[i], out var name) ? name : $"n{i}";
+
+        var kinds = new Dictionary<Vec3, LaneNodeKind>();
+        foreach (var at in ordered) kinds[at] = LaneNodeKind.Junction;
+        foreach (var route in map.Routes)
+        {
+            kinds[route.Waypoints[0]] = LaneNodeKind.Spawn;
+            kinds[route.Waypoints[^1]] = LaneNodeKind.Core;
+            // An arrival pad is an entrance to the route in every sense the
+            // sampler already means by "apron", so it is a spawn too.
+            for (int leg = 0; leg < route.LegCount; leg++)
+                if (route.IsTeleportLeg(leg)) kinds[route.Waypoints[leg + 1]] = LaneNodeKind.Spawn;
+        }
+
+        var nodes = ordered.Select(p => new LaneNodeDef(nodeId[p], p, kinds[p])).ToList();
+
+        // --- 4. Split each route at its nodes; dedupe identical spans.
+        var edges = new List<LaneEdgeDef>();
+        var edgeByShape = new Dictionary<string, LaneEdgeDef>();
+        var itineraries = new List<ItineraryDef>();
+
+        foreach (var route in map.Routes)
+        {
+            var via = new List<string> { nodeId[route.Waypoints[0]] };
+            int start = 0;
+            for (int i = 1; i < route.Waypoints.Count; i++)
+            {
+                if (!isNode.Contains(route.Waypoints[i])) continue;
+
+                var span = new List<Vec3>();
+                for (int k = start; k <= i; k++) span.Add(route.Waypoints[k]);
+
+                bool warp = i == start + 1 && route.IsTeleportLeg(start);
+                string from = nodeId[route.Waypoints[start]];
+                string to = nodeId[route.Waypoints[i]];
+
+                // Two routes walking the same span share one edge — which is the
+                // duplication this whole decomposition exists to remove.
+                string shape = $"{from}|{to}|{route.Layer}|{(warp ? "warp" : "walk")}|"
+                    + string.Join(";", span.Select(p => $"{p.X:R},{p.Y:R},{p.Z:R}"));
+                if (!edgeByShape.TryGetValue(shape, out var edge))
+                {
+                    // Named for where it runs, not for the order it was found
+                    // in: "gate-drive" survives a waypoint being nudged, "e6"
+                    // does not, and a fixture has to be able to name an edge in
+                    // content and in save data. The suffix is for the case the
+                    // node promotion above could not separate — two spans
+                    // between the same pair with no interior to promote.
+                    string id = $"{from}-{to}";
+                    if (route.Layer == EnemyLayer.Air) id += "@air";
+                    for (int n = 2; edges.Any(x => x.Id == id); n++) id = $"{from}-{to}#{n}";
+
+                    edge = new LaneEdgeDef(id, from, to, route.Layer, span,
+                        warp ? LaneEdgeKind.Warp : LaneEdgeKind.Walk);
+                    edgeByShape[shape] = edge;
+                    edges.Add(edge);
+                }
+
+                via.Add(to);
+                start = i;
+            }
+            itineraries.Add(new ItineraryDef(route.Id, route.Layer, via));
+        }
+
+        // --- 5. Near misses: distinct points close enough to be a typo.
+        var nearMisses = new List<string>();
+        var all = occurrences.Keys.OrderBy(p => p.X).ThenBy(p => p.Y).ThenBy(p => p.Z).ToList();
+        for (int i = 0; i < all.Count; i++)
+            for (int j = i + 1; j < all.Count; j++)
+            {
+                float d = all[i].DistanceTo(all[j]);
+                if (d > 0f && d < NearMissMeters)
+                    nearMisses.Add($"({all[i].X:0.##},{all[i].Y:0.##},{all[i].Z:0.##}) and "
+                        + $"({all[j].X:0.##},{all[j].Y:0.##},{all[j].Z:0.##}) are {d:0.###} m apart");
+            }
+
+        return new LaneGraph(nodes, edges, itineraries, nearMisses);
+    }
+
+    /// <summary>Under this and not equal, two waypoints are probably meant to be
+    /// one place. Half a metre is well inside the 3.4 m lane, so nothing this
+    /// flags is a deliberate two-places-close-together.</summary>
+    public const float NearMissMeters = 0.5f;
+
+    /// <summary>Metres from each node to the nearest core, over open edges.
+    ///
+    /// Computed once per graph, from the core outwards over reversed edges —
+    /// not per enemy. One array answers four questions at once: which way an
+    /// enemy goes at a junction, how close it is to hurting you (the targeting
+    /// metric), whether a spawn can still reach the core at all (the rule that
+    /// no mutation may seal the map), and how long a run can take. Per enemy per
+    /// tick that is two array reads.
+    ///
+    /// Relaxed to a fixed point rather than run through a priority queue. The
+    /// graph is 35 edges wide at its largest, so the cost is nothing either
+    /// way, and repeated relaxation has no tie-break to get wrong — a heap
+    /// ordering two equal-distance nodes differently on two machines is exactly
+    /// the class of thing <see cref="DetMath"/> exists to keep out of the tick.</summary>
+    public float[] DistanceToCore(IReadOnlyList<bool>? edgeOpen = null)
+        => DistanceTo(n => n.Kind == LaneNodeKind.Core, edgeOpen);
+
+    /// <summary>Which edge to take out of a node, following an itinerary.
+    ///
+    /// The routing rule, in one place, because it has two callers that must not
+    /// drift: the tick, and the author-time check that asks what each itinerary
+    /// would do in each configuration a map allows. The first version of that
+    /// check compared shortest *distances* instead and reported Switchyard's
+    /// switchback gate as inert — closing it changes nothing about the distance
+    /// from the gate to the core, because the cut was already the shorter way,
+    /// while changing entirely which lane half the waves walk down. Paths are
+    /// the question; distance is only how a path gets chosen.
+    ///
+    /// The enemy heads for the next via it can still reach, falling through to
+    /// the core when it has run out or the rest are cut off, and takes the
+    /// cheapest open edge that gets there. <paramref name="extraCost"/> is what
+    /// a siege enemy pays to come through a wall; everything else passes null.</summary>
+    public int ChooseEdge(
+        ItineraryDef itinerary,
+        ref int viaCursor,
+        string atNode,
+        IReadOnlyList<bool> edgeOpen,
+        float[][] distToNode,
+        float[] distToCore,
+        Func<int, float>? extraCost = null,
+        float[][]? distToNodeForVias = null)
+    {
+        // Whether a via is still worth heading for is asked of the map as it
+        // *is*, not as a siege enemy could make it. An itinerary is a plan made
+        // for an open map; a wall makes one of its stops unreachable-as-planned,
+        // and the enemy re-plans. A Ram may then still choose to come through
+        // the wall — but that has to be a decision it makes on cost at the edge,
+        // and if the via kept insisting on the blocked stop there would be
+        // nothing to decide: only one edge leads there, so it would break
+        // through any wall of any thickness, which is the preference the
+        // pricing exists to replace.
+        var viaReach = distToNodeForVias ?? distToNode;
+        while (viaCursor < itinerary.Via.Count)
+        {
+            string via = itinerary.Via[viaCursor];
+            if (via == atNode) { viaCursor++; continue; }
+            if (float.IsPositiveInfinity(viaReach[NodeIndex[via]][NodeIndex[atNode]]))
+            {
+                viaCursor++;
+                continue;
+            }
+            break;
+        }
+
+        int target = viaCursor < itinerary.Via.Count ? NodeIndex[itinerary.Via[viaCursor]] : -1;
+
+        int best = -1;
+        float bestCost = float.MaxValue;
+        for (int e = 0; e < Edges.Count; e++)
+        {
+            var edge = Edges[e];
+            if (edge.From != atNode || edge.Layer != itinerary.Layer) continue;
+
+            float extra = extraCost?.Invoke(e) ?? 0f;
+            if (!edgeOpen[e] && extraCost is null) continue;
+            if (float.IsPositiveInfinity(extra)) continue;
+
+            float ahead = target >= 0 ? distToNode[target][NodeIndex[edge.To]]
+                                      : distToCore[NodeIndex[edge.To]];
+            if (float.IsPositiveInfinity(ahead)) continue;
+
+            float cost = edge.WalkedLength * edge.CostFactor + extra + ahead;
+            if (cost < bestCost) { bestCost = cost; best = e; }
+        }
+        return best;
+    }
+
+    /// <summary>The edges an itinerary's walkers would take, end to end, in a
+    /// given configuration. Author-time only — the tick walks it one node at a
+    /// time — and it is what "does this gate change anything" is asked of.</summary>
+    public IReadOnlyList<int> PathFor(ItineraryDef itinerary, IReadOnlyList<bool> edgeOpen)
+    {
+        var distToCore = DistanceToCore(edgeOpen);
+        var distToNode = new float[Nodes.Count][];
+        for (int i = 0; i < Nodes.Count; i++)
+            distToNode[i] = DistanceToNode(Nodes[i].Id, edgeOpen);
+
+        var path = new List<int>();
+        int cursor = 1;
+        string at = itinerary.Via[0];
+        for (int guard = 0; guard < Edges.Count + 1; guard++)
+        {
+            int e = ChooseEdge(itinerary, ref cursor, at, edgeOpen, distToNode, distToCore);
+            if (e < 0) break;
+            path.Add(e);
+            at = Edges[e].To;
+            if (Node(at).Kind == LaneNodeKind.Core) break;
+        }
+        return path;
+    }
+
+    /// <summary>Whether every spawn can still reach a core over these edges.
+    ///
+    /// The rule the mutable layer rests on, as one function. The runtime asks it
+    /// before allowing a closure and the harness asks it of every configuration
+    /// a map allows; two implementations of the same predicate is exactly how a
+    /// runtime and a validator come to disagree about what is legal.
+    ///
+    /// Asked of *every* spawn, not only the ones a wave is currently using.
+    /// Making a content invariant depend on match state is how it stops being
+    /// provable before the match starts.</summary>
+    public bool EverySpawnReachesCore(IReadOnlyList<bool>? edgeOpen = null)
+    {
+        var dist = DistanceToCore(edgeOpen);
+        for (int n = 0; n < Nodes.Count; n++)
+            if (Nodes[n].Kind == LaneNodeKind.Spawn && float.IsPositiveInfinity(dist[n]))
+                return false;
+        return true;
+    }
+
+    /// <summary>Metres from every node to one named node, over open edges.
+    ///
+    /// The same relaxation as <see cref="DistanceToCore"/>, seeded somewhere
+    /// else. Enemies head for the next place their itinerary names, not for the
+    /// core — that is what makes "the long way round" survive an edge closing
+    /// rather than collapsing to the short way the moment routing becomes a
+    /// decision.</summary>
+    public float[] DistanceToNode(string nodeId, IReadOnlyList<bool>? edgeOpen = null)
+        => DistanceTo(n => n.Id == nodeId, edgeOpen);
+
+    private float[] DistanceTo(Func<LaneNodeDef, bool> isTarget, IReadOnlyList<bool>? edgeOpen)
+    {
+        var index = NodeIndex;
+        var dist = new float[Nodes.Count];
+        for (int i = 0; i < dist.Length; i++)
+            dist[i] = isTarget(Nodes[i]) ? 0f : float.PositiveInfinity;
+
+        for (int pass = 0; pass < Nodes.Count; pass++)
+        {
+            bool changed = false;
+            for (int e = 0; e < Edges.Count; e++)
+            {
+                if (edgeOpen is not null && !edgeOpen[e]) continue;
+                var edge = Edges[e];
+                float ahead = dist[index[edge.To]];
+                if (float.IsPositiveInfinity(ahead)) continue;
+                float through = ahead + edge.WalkedLength * edge.CostFactor;
+                int from = index[edge.From];
+                if (through < dist[from]) { dist[from] = through; changed = true; }
+            }
+            if (!changed) break;
+        }
+        return dist;
+    }
+
+    /// <summary>Node id to index, for the distance array.</summary>
+    public IReadOnlyDictionary<string, int> NodeIndex => _nodeIndex ??= BuildNodeIndex();
+    private Dictionary<string, int>? _nodeIndex;
+    private Dictionary<string, int> BuildNodeIndex()
+    {
+        var index = new Dictionary<string, int>();
+        for (int i = 0; i < Nodes.Count; i++) index[Nodes[i].Id] = i;
+        return index;
+    }
+
+    /// <summary>Walk an itinerary back into the polyline it came from. The
+    /// derivation is lossless exactly when this returns the route's original
+    /// waypoints, which is what the harness gate asserts.</summary>
+    public IReadOnlyList<Vec3> Rebuild(string itineraryId)
+    {
+        var itinerary = Itineraries.First(i => i.Id == itineraryId);
+        var points = new List<Vec3>();
+        for (int i = 0; i < itinerary.Via.Count - 1; i++)
+        {
+            var edge = Edges.First(e => e.From == itinerary.Via[i]
+                && e.To == itinerary.Via[i + 1]
+                && e.Layer == itinerary.Layer);
+            // Each edge repeats the node it starts on, which the previous edge
+            // already ended on.
+            for (int k = i == 0 ? 0 : 1; k < edge.Waypoints.Count; k++)
+                points.Add(edge.Waypoints[k]);
+        }
+        return points;
+    }
+}

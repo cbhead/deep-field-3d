@@ -37,7 +37,15 @@ public sealed record MeleeDef(
     float ArcDegrees,          // half-angle either side of the swing direction
     float KnockbackMeters,
     IReadOnlyList<string> Applies,
-    IReadOnlyList<int> MasteryCosts);
+    IReadOnlyList<int> MasteryCosts)
+{
+    /// <summary>The arc as the swing test actually wants it. A cone check is a
+    /// dot product against a cosine, and the tick was computing that cosine from
+    /// degrees on every swing — a transcendental in the hot path, for a value
+    /// that is a constant of the weapon. Computed once, here, so the tick does a
+    /// comparison and nothing else. See <see cref="DetMath"/>.</summary>
+    public float CosArc { get; } = DetMath.CosDegrees(ArcDegrees);
+}
 
 public static class Melee
 {
@@ -151,7 +159,7 @@ public sealed class MeleeBuild
     }
 
     public float DamageFactor() =>
-        Product(a => a.DamageFactor) * MathF.Pow(Melee.MasteryPerLevelFactor, MasteryLevel);
+        Product(a => a.DamageFactor) * DetMath.PowInt(Melee.MasteryPerLevelFactor, MasteryLevel);
 
     public float SpeedFactor() => Product(a => a.SpeedFactor);
     public float ReachFactor() => Product(a => a.ReachFactor);

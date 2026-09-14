@@ -85,11 +85,38 @@ make design-export      # rebuild game/assets + docs from docs/design/
 
 That opens the export page in your browser — it has to be a browser, because
 the skyboxes are shaders baked to a texture on the way out — writes each file
-straight into the repo, prepares the icons and re-imports for Godot. The host
+straight into the repo, prepares the icons and re-imports for Godot.
+
+The page lists every file as it writes it, beside the viewer: folder, triangle
+count, and whether it is one of the deliberately empty `_s1` modules. The model
+on the stage is the one currently being written, and clicking any row afterwards
+loads that `.glb` back **off disk** through the host, so the index doubles as
+proof the file is really there and really parses. Filter by name, or collapse the
+panel with the button top-right. Before this the stage showed one frozen tower
+for the whole run and a drop of five hundred models looked exactly like a drop of
+none. The host
 is `tools/design-export/` (pinned three.js, a page that uploads instead of
 zipping). When design sends a new project export, unpack it over `docs/design/`
 and run the same command; `docs/ASSET-DELIVERY.md` is design's note on what
 changed.
+
+Because the geometry is code, a tweak is an edit to `docs/design/models/*.js` —
+a Drifter's head is `box(.30, .20, .30)` at a named position, not a mesh you
+drag. `ONLY=` rebuilds just the part you touched, so checking that edit costs
+one file instead of the whole drop:
+
+```sh
+make design-export ONLY=lance     # one tower: chassis and its 30 stage modules
+make design-export ONLY=drifter   # one model, by item id or by file stem
+make design-export ONLY=rifle     # both the viewmodel and the world gun
+make design-export ONLY=vfx       # a whole category — everything vfx.js builds
+```
+
+A filtered run merges its rows into `game/assets/structures/manifest.json`
+rather than replacing it — dropping the rows for models it did not build would
+take the rig limits `TowerRig` reads with them — and skips the palette, icon
+and design-system bundle, which it never rewrites anyway. A selector that
+matches nothing fails the run instead of quietly exporting zero files.
 
 ## Checking what's landed
 
@@ -110,6 +137,34 @@ exists (there is no Shade to render yet).
 The report also lists anything on disk the manifest doesn't name, which is
 almost always a filename typo — otherwise it looks identical to "not delivered
 yet".
+
+## Checking the models themselves
+
+```sh
+make model-validate         # every .glb against the rules below
+```
+
+The two checks above read file *names*. This one opens the models and checks
+what the code consumes: the `_foot → _yaw → _pitch → _muzzle` chain
+`TowerRig.Resolve` drives, the shared empties `GameRoot.MergeRig` relies on to
+put a stage module's parts in the right place, the `<id>_mount_<slot>` nodes
+`WeaponAssembly` hangs attachments from, an aura tower having no yaw to point
+with, the manifest agreeing with what is on disk, and — the rule that paid for
+the script — a stage whose manifest entry says it *adds* something having more
+triangles than the stage below it.
+
+It reads the glTF JSON directly, so it needs no Godot, no browser and no
+packages, and the whole drop takes about two seconds. CI runs it in the fast
+lane and `make check` runs it before the engine half.
+
+Everything is a **ratchet** against `docs/model-validation-baseline.tsv`: a
+violation that is *not* in the baseline fails the build, and one that disappears
+is reported so the row can be dropped and the gain locked in. Most rows are the
+twenty models that do not sit on their own origin today, several of them
+correctly — a Leaper mid-jump is airborne, a broken Barricade sags, a wall
+socket hangs off a wall. A row for one of the *contract* checks means a real
+defect somebody chose to carry, so give it a reason and a way out; those are
+restated on every run rather than passing quietly.
 
 ## Checking what the code asks for
 

@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generated": "2026-09-13T22:31:36.641Z",
+  "generated": "2026-09-14T21:47:23.502Z",
   "units": "metres",
   "up": "+Y",
   "forward": "-Z",
@@ -1889,10 +1889,21 @@
     },
     {
       "file": "tower_singularity_range_s2.glb",
-      "bytes": 236,
-      "tris": 0,
-      "parts": 0,
-      "bounds": null,
+      "bytes": 24704,
+      "tris": 468,
+      "parts": 15,
+      "bounds": {
+        "min": [
+          -0.777,
+          0.813,
+          -0.763
+        ],
+        "max": [
+          0.544,
+          0.882,
+          0.763
+        ]
+      },
       "tower": "singularity",
       "kind": "module",
       "path": "range",
@@ -1905,10 +1916,21 @@
     },
     {
       "file": "tower_singularity_range_s3.glb",
-      "bytes": 236,
-      "tris": 0,
-      "parts": 0,
-      "bounds": null,
+      "bytes": 109848,
+      "tris": 3924,
+      "parts": 18,
+      "bounds": {
+        "min": [
+          -0.777,
+          0.813,
+          -0.763
+        ],
+        "max": [
+          0.544,
+          2.707,
+          0.763
+        ]
+      },
       "tower": "singularity",
       "kind": "module",
       "path": "range",
@@ -1922,9 +1944,9 @@
     },
     {
       "file": "tower_singularity_range_s4.glb",
-      "bytes": 130292,
-      "tris": 3624,
-      "parts": 13,
+      "bytes": 239712,
+      "tris": 7548,
+      "parts": 31,
       "bounds": {
         "min": [
           -1.096,
@@ -1933,7 +1955,7 @@
         ],
         "max": [
           1.096,
-          0.14,
+          2.707,
           1.096
         ]
       },
@@ -1951,9 +1973,9 @@
     },
     {
       "file": "tower_singularity_range_s5.glb",
-      "bytes": 157356,
-      "tris": 4544,
-      "parts": 16,
+      "bytes": 266776,
+      "tris": 8468,
+      "parts": 34,
       "bounds": {
         "min": [
           -1.111,
@@ -1962,7 +1984,7 @@
         ],
         "max": [
           1.111,
-          0.281,
+          2.707,
           1.111
         ]
       },
@@ -1981,9 +2003,9 @@
     },
     {
       "file": "tower_singularity_range_s6.glb",
-      "bytes": 157356,
-      "tris": 4544,
-      "parts": 16,
+      "bytes": 314952,
+      "tris": 9608,
+      "parts": 40,
       "bounds": {
         "min": [
           -1.146,
@@ -1992,7 +2014,7 @@
         ],
         "max": [
           1.146,
-          0.281,
+          2.945,
           1.146
         ]
       },
@@ -2012,9 +2034,9 @@
     },
     {
       "file": "tower_singularity_range_s7.glb",
-      "bytes": 234184,
-      "tris": 6836,
-      "parts": 23,
+      "bytes": 391832,
+      "tris": 11900,
+      "parts": 47,
       "bounds": {
         "min": [
           -1.182,
@@ -2023,7 +2045,7 @@
         ],
         "max": [
           1.182,
-          1.459,
+          2.945,
           1.182
         ]
       },
@@ -2044,9 +2066,9 @@
     },
     {
       "file": "tower_singularity_range_s8.glb",
-      "bytes": 234212,
-      "tris": 6836,
-      "parts": 23,
+      "bytes": 489072,
+      "tris": 14420,
+      "parts": 56,
       "bounds": {
         "min": [
           -1.217,
@@ -2055,7 +2077,7 @@
         ],
         "max": [
           1.217,
-          1.459,
+          2.945,
           1.217
         ]
       },
@@ -2077,9 +2099,9 @@
     },
     {
       "file": "tower_singularity_range_s9.glb",
-      "bytes": 414168,
-      "tris": 14068,
-      "parts": 30,
+      "bytes": 669040,
+      "tris": 21652,
+      "parts": 63,
       "bounds": {
         "min": [
           -1.252,
@@ -2088,7 +2110,7 @@
         ],
         "max": [
           1.252,
-          2.51,
+          2.945,
           1.252
         ]
       },
@@ -2111,9 +2133,9 @@
     },
     {
       "file": "tower_singularity_range_s10.glb",
-      "bytes": 414140,
-      "tris": 14068,
-      "parts": 30,
+      "bytes": 717356,
+      "tris": 22792,
+      "parts": 69,
       "bounds": {
         "min": [
           -1.287,
@@ -2122,7 +2144,7 @@
         ],
         "max": [
           1.287,
-          2.51,
+          2.945,
           1.287
         ]
       },
@@ -2370,19 +2392,19 @@
     },
     {
       "file": "tower_singularity_rate_s9.glb",
-      "bytes": 612884,
-      "tris": 21780,
-      "parts": 38,
+      "bytes": 653692,
+      "tris": 22140,
+      "parts": 44,
       "bounds": {
         "min": [
-          -0.589,
+          -0.783,
           0.286,
-          -0.585
+          -0.654
         ],
         "max": [
           0.632,
           2.792,
-          0.585
+          0.774
         ]
       },
       "tower": "singularity",
@@ -2404,19 +2426,19 @@
     },
     {
       "file": "tower_singularity_rate_s10.glb",
-      "bytes": 723456,
-      "tris": 24564,
-      "parts": 48,
+      "bytes": 764264,
+      "tris": 24924,
+      "parts": 54,
       "bounds": {
         "min": [
-          -0.755,
+          -0.783,
           0.286,
           -0.755
         ],
         "max": [
           0.755,
           2.792,
-          0.755
+          0.774
         ]
       },
       "tower": "singularity",
@@ -7776,7 +7798,7 @@
     },
     {
       "file": "weapon_sidearm_vm.glb",
-      "bytes": 14413044,
+      "bytes": 14407452,
       "tris": 143106,
       "parts": 337,
       "bounds": {
@@ -7797,7 +7819,7 @@
     },
     {
       "file": "weapon_rifle_vm.glb",
-      "bytes": 16854232,
+      "bytes": 16843144,
       "tris": 197896,
       "parts": 121,
       "bounds": {
@@ -7818,7 +7840,7 @@
     },
     {
       "file": "weapon_scattergun_vm.glb",
-      "bytes": 18863296,
+      "bytes": 18863248,
       "tris": 153872,
       "parts": 115,
       "bounds": {
@@ -7839,7 +7861,7 @@
     },
     {
       "file": "weapon_emberpistol_vm.glb",
-      "bytes": 12092324,
+      "bytes": 12092276,
       "tris": 62948,
       "parts": 93,
       "bounds": {
@@ -7860,7 +7882,7 @@
     },
     {
       "file": "weapon_poisonstream_vm.glb",
-      "bytes": 12202696,
+      "bytes": 12197104,
       "tris": 87120,
       "parts": 266,
       "bounds": {
@@ -7881,7 +7903,7 @@
     },
     {
       "file": "weapon_cryosprayer_vm.glb",
-      "bytes": 13997964,
+      "bytes": 13992372,
       "tris": 76912,
       "parts": 248,
       "bounds": {
@@ -8057,7 +8079,7 @@
     },
     {
       "file": "weapon_sidearm_world.glb",
-      "bytes": 14413048,
+      "bytes": 14407456,
       "tris": 143106,
       "parts": 337,
       "bounds": {
@@ -8078,7 +8100,7 @@
     },
     {
       "file": "weapon_rifle_world.glb",
-      "bytes": 16854236,
+      "bytes": 16843148,
       "tris": 197896,
       "parts": 121,
       "bounds": {
@@ -8099,7 +8121,7 @@
     },
     {
       "file": "weapon_scattergun_world.glb",
-      "bytes": 18863300,
+      "bytes": 18863252,
       "tris": 153872,
       "parts": 115,
       "bounds": {
@@ -8120,7 +8142,7 @@
     },
     {
       "file": "weapon_emberpistol_world.glb",
-      "bytes": 12092328,
+      "bytes": 12092280,
       "tris": 62948,
       "parts": 93,
       "bounds": {
@@ -8141,7 +8163,7 @@
     },
     {
       "file": "weapon_poisonstream_world.glb",
-      "bytes": 12202700,
+      "bytes": 12197108,
       "tris": 87120,
       "parts": 266,
       "bounds": {
@@ -8162,7 +8184,7 @@
     },
     {
       "file": "weapon_cryosprayer_world.glb",
-      "bytes": 13997968,
+      "bytes": 13992376,
       "tris": 76912,
       "parts": 248,
       "bounds": {
@@ -9297,7 +9319,7 @@
     },
     {
       "file": "foundry_path_ground.glb",
-      "bytes": 3776708,
+      "bytes": 3777564,
       "tris": 3894,
       "parts": 10,
       "bounds": {
@@ -9318,7 +9340,7 @@
     },
     {
       "file": "foundry_deck.glb",
-      "bytes": 5293660,
+      "bytes": 5281240,
       "tris": 21592,
       "parts": 32,
       "bounds": {
@@ -9339,7 +9361,7 @@
     },
     {
       "file": "foundry_deck_rail.glb",
-      "bytes": 2047560,
+      "bytes": 2035140,
       "tris": 996,
       "parts": 9,
       "bounds": {
@@ -9360,7 +9382,7 @@
     },
     {
       "file": "foundry_deck_rail_v1.glb",
-      "bytes": 2034140,
+      "bytes": 2021720,
       "tris": 806,
       "parts": 9,
       "bounds": {
@@ -9382,7 +9404,7 @@
     },
     {
       "file": "foundry_deck_rail_v2.glb",
-      "bytes": 2060176,
+      "bytes": 2047756,
       "tris": 1104,
       "parts": 12,
       "bounds": {
@@ -9404,7 +9426,7 @@
     },
     {
       "file": "foundry_deck_rail_v3.glb",
-      "bytes": 2060180,
+      "bytes": 2047760,
       "tris": 1104,
       "parts": 12,
       "bounds": {
@@ -9426,7 +9448,7 @@
     },
     {
       "file": "foundry_gantry_walk.glb",
-      "bytes": 2756464,
+      "bytes": 2744044,
       "tris": 9088,
       "parts": 27,
       "bounds": {
@@ -9447,7 +9469,7 @@
     },
     {
       "file": "foundry_pillar.glb",
-      "bytes": 4629536,
+      "bytes": 4616260,
       "tris": 7930,
       "parts": 28,
       "bounds": {
@@ -9468,7 +9490,7 @@
     },
     {
       "file": "foundry_vent_tunnel.glb",
-      "bytes": 5310972,
+      "bytes": 5298552,
       "tris": 17272,
       "parts": 48,
       "bounds": {
@@ -9489,7 +9511,7 @@
     },
     {
       "file": "foundry_wall_boundary.glb",
-      "bytes": 9564200,
+      "bytes": 9550924,
       "tris": 5060,
       "parts": 52,
       "bounds": {
@@ -9552,7 +9574,7 @@
     },
     {
       "file": "foundry_dress_pipes.glb",
-      "bytes": 4420516,
+      "bytes": 4421372,
       "tris": 8768,
       "parts": 37,
       "bounds": {
@@ -9573,7 +9595,7 @@
     },
     {
       "file": "foundry_dress_gantry.glb",
-      "bytes": 4417528,
+      "bytes": 4405108,
       "tris": 11626,
       "parts": 28,
       "bounds": {
@@ -9594,7 +9616,7 @@
     },
     {
       "file": "foundry_dress_lightrig.glb",
-      "bytes": 3926004,
+      "bytes": 3913584,
       "tris": 8296,
       "parts": 42,
       "bounds": {
@@ -14498,7 +14520,7 @@
     },
     {
       "file": "melee_blade_vm.glb",
-      "bytes": 7741148,
+      "bytes": 7735556,
       "tris": 18914,
       "parts": 67,
       "bounds": {
@@ -14519,7 +14541,7 @@
     },
     {
       "file": "melee_maul_vm.glb",
-      "bytes": 12941052,
+      "bytes": 12935460,
       "tris": 37232,
       "parts": 156,
       "bounds": {
@@ -14561,7 +14583,7 @@
     },
     {
       "file": "melee_blade_world.glb",
-      "bytes": 7741152,
+      "bytes": 7735560,
       "tris": 18914,
       "parts": 67,
       "bounds": {
@@ -14582,7 +14604,7 @@
     },
     {
       "file": "melee_maul_world.glb",
-      "bytes": 12941052,
+      "bytes": 12935460,
       "tris": 37232,
       "parts": 156,
       "bounds": {
@@ -14708,7 +14730,7 @@
     },
     {
       "file": "meleemod_infusion_ember.glb",
-      "bytes": 1892560,
+      "bytes": 1887016,
       "tris": 1960,
       "parts": 9,
       "bounds": {
@@ -14729,7 +14751,7 @@
     },
     {
       "file": "meleemod_infusion_cryo.glb",
-      "bytes": 1892564,
+      "bytes": 1887020,
       "tris": 1960,
       "parts": 9,
       "bounds": {
@@ -14750,7 +14772,7 @@
     },
     {
       "file": "meleemod_infusion_volt.glb",
-      "bytes": 1892416,
+      "bytes": 1886872,
       "tris": 1960,
       "parts": 9,
       "bounds": {
@@ -14771,7 +14793,7 @@
     },
     {
       "file": "meleemod_infusion_toxin.glb",
-      "bytes": 1892580,
+      "bytes": 1887036,
       "tris": 1960,
       "parts": 9,
       "bounds": {
@@ -14792,7 +14814,7 @@
     },
     {
       "file": "weapon_sidearm_magazine.glb",
-      "bytes": 4832928,
+      "bytes": 4827384,
       "tris": 6016,
       "parts": 9,
       "bounds": {

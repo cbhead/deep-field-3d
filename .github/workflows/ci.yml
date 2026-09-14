@@ -9,7 +9,20 @@ jobs:
   # Fast lane: no engine. Sim.Core compiles standalone (a Godot type leaking
   # into the sim is a build break here), unit tests run, then the harness gates.
   sim:
-    runs-on: ubuntu-latest
+    # Two architectures, because "deterministic" used to mean "deterministic on
+    # this machine" and nothing in CI could tell the difference. Both
+    # determinism gates run two matches inside one process and the whole lane
+    # ran on one runner, so a result that differed between x64 and ARM64 would
+    # have shipped silently — and the sim was full of libm calls whose results
+    # reach the SHA-256'd event log. The transcendentals are gone (see
+    # sim/Sim.Core/Math/DetMath.cs); this is what proves they stay gone.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest      # x64
+          - os: macos-latest       # ARM64
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -21,6 +34,57 @@ jobs:
         run: dotnet test sim/Sim.Core.Tests --configuration Release
       - name: Harness gates
         run: dotnet run --project sim/Sim.Harness --configuration Release
+      - name: Model validation (the delivery contract, docs/ART-INTEGRATION.md)
+        run: ./tools/model-validate.py
+      - name: Balance baseline (numbers, for the cross-architecture compare)
+        run: dotnet run --project sim/Sim.Harness --configuration Release -- --baseline
+      # The standing form of "the neutral configuration reproduces the
+      # pre-graph hashes": a change that moves a margin or a log hash has to
+      # commit the new baseline alongside it, and say in the message whether it
+      # is a re-baseline or a regression. On ubuntu only — the committed file
+      # can match one architecture's bytes, and the job below is what says the
+      # other one agrees.
+      - name: Baseline matches the committed one
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          if git diff --exit-code -- docs/gate-baseline.tsv; then
+            echo "balance baseline unchanged"
+          else
+            echo "::error::docs/gate-baseline.tsv is stale — run 'make gate-baseline' and commit it, saying whether this is a re-baseline (margins and hashes move, verdicts do not) or a regression"
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gate-baseline-${{ matrix.os }}
+          path: docs/gate-baseline.tsv
+
+  # The check the matrix exists for: the same seeds must produce the same event
+  # logs on x64 and on ARM64, hashes included. A difference here is a
+  # non-portable operation somewhere in the tick, and the baseline's own diff
+  # names the scenario it entered through.
+  determinism-across-architectures:
+    needs: sim
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: gate-baseline-ubuntu-latest
+          path: x64
+      - uses: actions/download-artifact@v4
+        with:
+          name: gate-baseline-macos-latest
+          path: arm64
+      - name: Compare
+        run: |
+          # Drop the comment preamble; compare the rows, hashes and all.
+          grep -v '^#' x64/gate-baseline.tsv > /tmp/x64.tsv
+          grep -v '^#' arm64/gate-baseline.tsv > /tmp/arm64.tsv
+          if diff -u /tmp/x64.tsv /tmp/arm64.tsv; then
+            echo "identical on x64 and ARM64"
+          else
+            echo "::error::the sim is not machine-portable — see the diff above"
+            exit 1
+          fi
 
   # Smoke lane: headless dedicated server + headless client join on loopback.
   smoke:
@@ -41,16 +105,58 @@ jobs:
           # 4.7 and every asset stays unimported.
           godot --headless --path game --import
           godot --headless --path game --build-solutions --quit || true
+      # The client also builds a tower and reports the rounds it drew for
+      # itself. Tower projectiles do not cross the wire — a client is handed
+      # the shot and flies the rest — and the flight code is measured against
+      # the sim's own rounds by the rounds probe in the other job. What only a
+      # real join can answer is whether a client ever gets that far: whether
+      # the shot reaches it, is parsed, and reaches the branch. Placement goes
+      # over the wire too, so a pass also says the server took a client's build
+      # command and relayed the shot back.
       - name: Server + client join smoke
         run: |
           godot --headless --path game -- --server --port 8791 > server.log 2>&1 &
           SERVER_PID=$!
           sleep 6
-          godot --headless --path game --quit-after 900 -- --join 127.0.0.1:8791 > client.log 2>&1
+          godot --headless --path game --quit-after 20000 -- \
+            --join 127.0.0.1:8791 --probe-rounds /tmp/client-rounds.txt > client.log 2>&1
           curl -s http://127.0.0.1:8791/info | tee info.json
           kill $SERVER_PID || true
           grep -q '"app":"deepfield-3d"' info.json
           grep -q "\[client\] joined seat" client.log
+          cat /tmp/client-rounds.txt
+          grep -q "^PASS" /tmp/client-rounds.txt
+
+      # The info port is TCP while the game itself is ENet/UDP, so losing that
+      # one bind costs a server nothing it can feel: it hosts and plays
+      # perfectly while answering nothing, and the runbook's curl gets answered
+      # by whatever won the port instead — on a dev box, most likely one of the
+      # 2D checkouts confidently describing itself. It was silent for exactly
+      # that reason, so hold the TCP port with the UDP one left free and require
+      # a refusal rather than a blind server.
+      - name: A held info port refuses rather than serving blind
+        run: |
+          cat > /tmp/hold.py <<'PY'
+          import socket, time
+          s = socket.socket(socket.AF_INET6)
+          s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+          s.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)   # hold both families
+          s.bind(('::', 8792))
+          s.listen(1)
+          time.sleep(120)
+          PY
+          python3 /tmp/hold.py &
+          HOLD=$!
+          sleep 2
+          # --quit-after bounds the regression case: if this error is ever
+          # swallowed again, the server would otherwise sit here until the job
+          # timed out, which is the same "looks fine, does nothing" failure.
+          godot --headless --path game --quit-after 1800 -- --server --port 8792 \
+            > blind.log 2>&1 && rc=0 || rc=$?
+          kill $HOLD || true
+          cat blind.log
+          test "$rc" -ne 0
+          grep -q "cannot open the info port" blind.log
 
       # Builds one view of every enemy, tower, trap, upgrade stage, projectile
       # and hero, then checks that every asset name the code asks for is a name
@@ -99,6 +205,65 @@ jobs:
             --shot switchyard /tmp/siege.txt siege > siege.log 2>&1 || true
           tail -4 /tmp/siege.txt
           grep -q "^PASS" /tmp/siege.txt
+
+      # An effect can be delivered, imported, named correctly in the manifest
+      # and still never appear, because the code path that would draw it is
+      # unreachable or because design renamed the sub-group the client drives.
+      # Both failures are invisible from a file listing and from the usage
+      # count, and both look exactly like "we have not got to that yet". This
+      # fires one of everything through the real entry points.
+      - name: VFX probe (every effect the client can draw, draws)
+        run: |
+          godot --headless --path game --quit-after 3000 -- \
+            --shot foundry /tmp/vfx.txt vfx > vfx.log 2>&1 || true
+          cat /tmp/vfx.txt
+          grep -q "^PASS" /tmp/vfx.txt
+          ! grep -qiE "^ERROR|SCRIPT ERROR" vfx.log
+
+      # The half the probe above cannot prove. A status effect is held on an
+      # enemy by three things agreeing — the sim applying it, the snapshot's
+      # channel byte still saying so, and the view sync asking for it again
+      # every frame. A beam is drawn by a tower that never creates a
+      # projectile, which is how both beam models spent a milestone delivered
+      # and never once on screen. Neither path is reached by a solo match,
+      # because nothing in one pulls a trigger — and none of these three
+      # towers needs anyone to.
+      - name: Live effects probe (statuses, beams and the beam ramp)
+        run: |
+          godot --headless --path game --quit-after 9000 -- \
+            --shot foundry /tmp/statuses.txt statuses > statuses.log 2>&1 || true
+          tail -4 /tmp/statuses.txt
+          grep -q "^PASS" /tmp/statuses.txt
+
+      # Two things were wrong with every round in the game for four
+      # milestones and neither could be seen by anything automated: they all
+      # flew sideways, because design authors a round along -Z and nothing
+      # turned one, and they all came out of the middle of their tower rather
+      # than the barrel, because the sim has no barrel to spawn one at. Both
+      # are instant in a screenshot and invisible everywhere else. With the
+      # fixes reverted this reports 60 degrees and 0.93 m and fails.
+      - name: Rounds probe (a round points where it is going, and leaves the barrel)
+        run: |
+          godot --headless --path game --quit-after 20000 -- \
+            --shot foundry /tmp/rounds.txt rounds > rounds.log 2>&1 || true
+          tail -4 /tmp/rounds.txt
+          grep -q "^PASS" /tmp/rounds.txt
+
+      # The perimeter is drawn by one routine and made solid by another, and
+      # until this they did not agree on any map: three of the four had no
+      # solid edge at all, while MAP-AUTHORING said every map's edge was an
+      # invisible wall rather than a drop. A ray sweep at three heights, and
+      # then a player actually walked into the edge at eight points, because a
+      # ray proves a body is there and not that a capsule cannot squeeze past
+      # the seam where two of them meet.
+      - name: Containment probe (you cannot walk off any map)
+        run: |
+          for MAP in foundry switchyard spire toaster; do
+            godot --headless --path game --quit-after 3000 -- \
+              --shot $MAP /tmp/cont-$MAP.txt containment > cont-$MAP.log 2>&1 || true
+            cat /tmp/cont-$MAP.txt
+            grep -q "^PASS" /tmp/cont-$MAP.txt
+          done
 
       # A ladder that stops against the underside of the deck it serves looks
       # completely correct in the map file and from every angle in game, and

@@ -212,24 +212,29 @@ public sealed class PlayerBot
     private static Enemy? Target(World world)
     {
         Enemy? healer = null, sieging = null, front = null;
-        float healerTraveled = -1f, siegeTraveled = -1f, bestTraveled = -1f;
+        // Same metric the towers use, and for the same reason: "furthest along"
+        // is metres still to walk, not metres walked. The bot had the identical
+        // bug — on a map with routes of different lengths its "front" could be
+        // the enemy that took the long way and was least threatening.
+        float healerLeft = float.MaxValue, siegeLeft = float.MaxValue, bestLeft = float.MaxValue;
 
         foreach (var enemy in world.Enemies)
         {
             if (enemy.Dead) continue;
-            if (Enemies.All[enemy.DefId].HealPerSecond > 0f && enemy.TotalTraveled > healerTraveled)
+            float remaining = enemy.RemainingToCore(world);
+            if (Enemies.All[enemy.DefId].HealPerSecond > 0f && remaining < healerLeft)
             {
-                healerTraveled = enemy.TotalTraveled;
+                healerLeft = remaining;
                 healer = enemy;
             }
-            if (enemy.Sieging && enemy.TotalTraveled > siegeTraveled)
+            if (enemy.Sieging && remaining < siegeLeft)
             {
-                siegeTraveled = enemy.TotalTraveled;
+                siegeLeft = remaining;
                 sieging = enemy;
             }
-            if (enemy.TotalTraveled > bestTraveled)
+            if (remaining < bestLeft)
             {
-                bestTraveled = enemy.TotalTraveled;
+                bestLeft = remaining;
                 front = enemy;
             }
         }

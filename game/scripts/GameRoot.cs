@@ -89,6 +89,13 @@ public partial class GameRoot : Node3D
     private bool _shotSwing;
     private int _shotCountdown;
     private List<Vector3> _laneMouths = new();
+
+    /// <summary>The two ends of the map, kept apart from <see cref="_laneMouths"/>
+    /// because the wave beats play at one each: the portal opening is at the
+    /// gate the wave comes out of, the all-clear is at the thing it failed to
+    /// reach. Merged, they are the list scenery keeps clear of.</summary>
+    private List<(Vector3 Pos, Vector3 DownLane)> _spawnPortals = new();
+    private List<Vector3> _corePositions = new();
     private Node3D? _coreView;
     private Node3D? _coreHitView;
     private double _coreHitTimer;
@@ -128,7 +135,7 @@ public partial class GameRoot : Node3D
     private string _traversalReportPath = "";
     private int _traversalIndex = -1;
     private float _traversalTimer;
-    private readonly List<(string Id, Vector3 Base, Vector3 Deck)> _climbs = new();
+    private readonly List<(string Id, Vector3 Base, Vector3 Deck, bool Lift)> _climbs = new();
     private readonly List<string> _unreachable = new();
     private float _partyElapsed;
 
@@ -152,7 +159,11 @@ public partial class GameRoot : Node3D
     private string _hint = "";
 
     /// <summary>Client-side aim feedback source (the sim isn't here to ask).</summary>
-    private readonly Dictionary<int, (bool Burrowed, bool Shielded)> _lastSnapshotBits = new();
+    /// <summary>What each enemy looked like last frame, on either side of the
+    /// wire. Two readers: the crosshair, which has no world to ask on a
+    /// client, and the effects layer, which needs a previous value to tell a
+    /// shield popping from a shield that was never there.</summary>
+    private readonly Dictionary<int, (bool Burrowed, float Shield)> _lastSnapshotBits = new();
 
     public int LocalPlayerId => _net.LocalPlayerId;
     public GameView View => _view;
@@ -191,7 +202,7 @@ public partial class GameRoot : Node3D
         Kit.ReleaseCaches();
         AssetLibrary.ReleaseCaches();
         TowerRig.ReleaseCaches();
-        AssetManifest.ReleaseCaches();
+        DesignManifest.ReleaseCaches();
         // Same rule for the view maps this class keeps: they hold managed
         // wrappers for nodes the SceneTree is about to take away, and anything
         // still referenced when mono shuts down is reported as leaked.
@@ -219,6 +230,21 @@ public partial class GameRoot : Node3D
         _playerName = _profile.Name;
 
         var args = OS.GetCmdlineUserArgs();
+
+        // Read before anything else, because the mode flags below each return
+        // out of the parse the moment they match: --join is the first thing on
+        // a client's command line and everything after it was never looked at.
+        //
+        // A client that builds something and reports what it drew. The flight
+        // code is measured on a host by the rounds probe, which shadows the
+        // sim's own rounds with a client's; what only a real join can answer
+        // is whether a client ever gets that far — whether the shot reaches
+        // it, is parsed, and reaches the branch. Nothing else in the suite
+        // runs those.
+        int probeRounds = System.Array.IndexOf(args, "--probe-rounds");
+        if (probeRounds >= 0 && probeRounds + 1 < args.Length)
+            _clientRoundProbePath = args[probeRounds + 1];
+
         if (args.Contains("--server"))
         {
             int port = ParsePort(args);
@@ -480,9 +506,8 @@ public partial class GameRoot : Node3D
                 _world.Enemies.Add(new Enemy
                 {
                     Id = _world.NextId(), DefId = "skiff", Hp = 1000000f, MaxHp = 1000000f,
-                    RouteIndex = strandIndex, Leg = 0, LegProgress = 0.5f,
                     Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 1,
-                });
+                }.AtRouteLeg(_world, strandIndex, 0, 0.5f));
             }
             _aimReportPath = path;
             _aimReport = new List<string> { $"air tracking on {_map.Id}" };
@@ -509,8 +534,7 @@ public partial class GameRoot : Node3D
                 Id = _world.NextId(), DefId = "ram",
                 Hp = 100_000f, MaxHp = 100_000f,   // the demolition is the subject, not the kill
                 Facing = new Vec3(1, 0, 0), Bounty = 0, LeakDamage = 2,
-                RouteIndex = 0, Leg = 0, LegProgress = 0f,
-            });
+            }.AtRouteLeg(_world, 0, 0, 0f));
             _siegeReportPath = path;
             _siegeReport = new List<string> { "barricade on b1, one ram walking route 0" };
             _shotView = "eye";
@@ -579,11 +603,15 @@ public partial class GameRoot : Node3D
             if (_world.Players.TryGetValue(LocalPlayerId, out var me))
             {
                 me.Scrap[ScrapType.Alloy] = 5000;
+                me.Scrap[ScrapType.Gravium] = 12;
                 Submit(new Command.SelectWeapon(LocalPlayerId, "sidearm"));
-                for (int i = 0; i < 3; i++) Submit(new Command.PackAPunch(LocalPlayerId, "sidearm"));
+                // Four, so the card is sitting on the level-5 milestone and
+                // shows its gravium price rather than the plain one.
+                for (int i = 0; i < 4; i++) Submit(new Command.PackAPunch(LocalPlayerId, "sidearm"));
                 Step.Advance(_world);
                 var build = me.BuildFor("sidearm");
-                GD.Print($"[pap] sidearm level {build.PackLevel}, next costs {build.NextPackCost}, "
+                GD.Print($"[pap] sidearm level {build.PackLevel}, next costs {build.NextPackCost} "
+                    + $"+ {build.NextPackGravium} gravium, "
                     + $"damage x{build.DamageFactor(false):0.00}, rate x{build.RateFactor():0.00}, "
                     + $"alloy left {me.Scrap[ScrapType.Alloy]}");
                 RebuildView();
@@ -724,7 +752,13 @@ public partial class GameRoot : Node3D
             // The count is what CI ratchets on, so it goes in the file in a
             // form a script can read without parsing prose.
             report.Add($"violations={failures.Count}");
-            foreach (string failure in failures.Take(30)) report.Add(failure);
+            // Every one of them, not the first thirty. The Spire had 84 and
+            // the file showed 30, so the tail — which is where the §4.9 and
+            // §4.8 detail lived — could not be read at all. A probe that
+            // hides its own evidence is the failure mode this whole file
+            // exists to prevent; the shell script already heads what it
+            // prints, so the cap bought nothing but a shorter truth.
+            foreach (string failure in failures) report.Add(failure);
             WriteProbe(report, path, failures.Count == 0, failures.Count == 0
                 ? "PASS: every rule this probe can measure holds"
                 : $"FAIL: {failures.Count} violation(s)");
@@ -830,7 +864,26 @@ public partial class GameRoot : Node3D
                 // can begin twenty metres up, and standing the probe at y=0.6
                 // would have it climbing thin air.
                 var foot = new Vector3(centre.X, centre.Y - half + 0.6f, centre.Z);
-                _climbs.Add((Describe(area), foot, centre + new Vector3(0f, half, 0f)));
+                _climbs.Add((Describe(area), foot, centre + new Vector3(0f, half, 0f), false));
+            }
+            // Lifts too, now that `elevator` is a kind a player can actually
+            // use. A lift declared out of service (both stops the same height)
+            // is skipped rather than failed — that is an authored statement, and
+            // §4.1 already stops crediting it as a way up.
+            foreach (var area in FindAreasOfKind(AreaKinds.Elevator))
+            {
+                float bottom = (float)area.GetMeta(AreaKinds.LiftBottomMeta, 0f);
+                float top = (float)area.GetMeta(AreaKinds.LiftTopMeta, 0f);
+                if (Mathf.Abs(top - bottom) < 0.5f)
+                {
+                    _traversalReport.Add($"{Describe(area)}: out of service (both stops at {bottom:0.0} m)");
+                    continue;
+                }
+                var at = area.GlobalPosition;
+                // Standing on the bottom stop, a hand's width clear of it so
+                // the first frame is not spent resolving an overlap.
+                _climbs.Add((Describe(area), new Vector3(at.X, bottom + 0.1f, at.Z),
+                    new Vector3(at.X, top, at.Z), true));
             }
             _traversalReport.Add($"{_climbs.Count} climb(s) found");
             _traversalIndex = 0;
@@ -857,6 +910,119 @@ public partial class GameRoot : Node3D
             _reloadIndex = -1;
             _reloadTimer = 0f;
             _reloadFailures = 0;
+            return;
+        }
+
+        // The two effects a probe cannot fake, on a real enemy in a real
+        // match. Everything else here either instantiates a name or calls an
+        // entry point directly, and neither touches the paths these arrive by.
+        //
+        // A status is held by three things agreeing: the sim applying it, the
+        // snapshot's channel byte still saying so, and the view sync asking
+        // for it again every frame. A beam is drawn by a tower that never
+        // creates a projectile, off an event that was host-only until it was
+        // not. Three towers cover both and none of them needs a trigger
+        // pulled: the Singularity chills whatever walks past, the Filament
+        // burns whatever it can see, the Arc chains to a second one.
+        if (_shotView == "statuses" && _world is not null)
+        {
+            _shotView = "eye";
+            _statusReportPath = path;
+            _statusReport = new List<string> { $"live effects probe on {_map.Id}" };
+            _world.Money = 9000;
+
+            var sockets = _map.Sockets
+                .Where(so => so.Tag == SocketTag.Ground)
+                .OrderBy(so => _map.Routes
+                    .Where(r => r.Layer == EnemyLayer.Ground)
+                    .SelectMany(r => r.Waypoints)
+                    .Min(w => so.Pos.DistanceTo(w)))
+                .Take(3).ToList();
+            // Filament nearest the lane on purpose: it is the more fragile of
+            // the two beam paths, because it has no muzzle flash and therefore
+            // no muzzle node, and the beam has to start from the chassis head
+            // instead. Whichever tower the wave reaches first is the one this
+            // proves, so make it that one.
+            foreach (var (defId, socket) in new[] { "filament", "arc", "singularity" }.Zip(sockets))
+            {
+                Submit(new Command.PlaceTower(LocalPlayerId, defId, socket.Id));
+                _statusReport.Add($"{defId} on {socket.Id}");
+            }
+
+            // Deliberately no shooting tower here. A Nova alongside these three
+            // kills what the Filament was heating, and the ramp — which needs
+            // one target held for seconds — stops reaching its threshold. The
+            // rounds get their own probe rather than a softer gate on this one.
+            Submit(new Command.StartWave(LocalPlayerId));
+            return;
+        }
+
+        // Can a player leave the map? Walked rather than reasoned about: the
+        // perimeter is drawn by one routine, made solid by another, and until
+        // this the two did not agree on any map — three of the four had no
+        // solid edge at all while docs/MAP-AUTHORING.md said the edge of the
+        // playable area is an invisible wall rather than a drop.
+        if (_shotView == "containment")
+        {
+            _shotView = "eye";
+            RunContainmentProbe(path);
+            return;
+        }
+
+        // A round in flight, which is neither an effect nor a status and had
+        // two things wrong with it that a screenshot showed instantly and
+        // nothing automated could see: every round in the game flew sideways,
+        // and every one of them came out of the middle of its tower rather
+        // than out of the barrel. A Lance for a guaranteed shooter and a Nova
+        // because the mortar shell is the model both faults are unmistakable
+        // on — a brass shell has a nose and a lit fuse cap, and a thin bolt
+        // can fly backwards for four milestones without anyone noticing.
+        if (_shotView == "rounds" && _world is not null)
+        {
+            _shotView = "eye";
+            _roundReportPath = path;
+            _roundReport = new List<string> { $"rounds probe on {_map.Id}" };
+            _world.Money = 9000;
+
+            float ToRoute(SocketDef so) => _map.Routes
+                .Where(r => r.Layer == EnemyLayer.Ground)
+                .SelectMany(r => r.Waypoints)
+                .Min(w => so.Pos.DistanceTo(w));
+            var ground = _map.Sockets.Where(so => so.Tag == SocketTag.Ground).ToList();
+
+            // A mortar has a five-metre dead zone, so one built on top of the
+            // lane cannot shoot anything walking down it. Stand it off at ten:
+            // inside the sixteen it reaches, well outside the five it cannot.
+            var standOff = ground.OrderBy(so => Mathf.Abs(10f - ToRoute(so))).First();
+            Submit(new Command.PlaceTower(LocalPlayerId, "nova", standOff.Id));
+            _roundReport.Add($"nova on {standOff.Id}, {ToRoute(standOff):0.0} m from the route");
+
+            // The Lance goes *upstream* of it. Placed on the socket nearest
+            // the lane, as everything else here does, it got nothing to shoot:
+            // a Nova reaching sixteen metres clears the wave well before it
+            // walks into a Lance's twelve, and the probe sat for two minutes
+            // sampling one tower and calling it two.
+            var spawn = _map.Routes.First(r => r.Layer == EnemyLayer.Ground).Waypoints[0];
+            var upstream = ground
+                .Where(so => so != standOff && ToRoute(so) < 8f)
+                .OrderBy(so => so.Pos.DistanceTo(spawn))
+                .FirstOrDefault() ?? ground.First(so => so != standOff);
+            Submit(new Command.PlaceTower(LocalPlayerId, "lance", upstream.Id));
+            _roundReport.Add($"lance on {upstream.Id}, {ToRoute(upstream):0.0} m from the route, "
+                + $"{upstream.Pos.DistanceTo(spawn):0.0} m from the gate");
+
+            Submit(new Command.StartWave(LocalPlayerId));
+            return;
+        }
+
+        // Every effect the client can draw, drawn. Not a re-run of the asset
+        // audit: the audit instantiates names, this calls the real entry
+        // points, which is the only thing that catches an effect wired to a
+        // method nobody reaches or a sub-group design renamed.
+        if (_shotView == "vfx" && _world is not null)
+        {
+            _shotView = "eye";
+            RunVfxProbe(path);
             return;
         }
 
@@ -903,6 +1069,41 @@ public partial class GameRoot : Node3D
                     "INCONCLUSIVE: this map parks no vehicles");
             _vehicleIndex = 0;
             _vehicleTimer = 0f;
+            return;
+        }
+
+        // Flyover: the map from outside, with the interface off.
+        //
+        // Every other view in this method is of a surface or is a text probe.
+        // There was no way to simply *look* at a map, which is a strange gap
+        // in a repo whose map document opens by saying nobody designs these
+        // and the reason is that nobody can see them. On a forty-metre
+        // building with four floors and a stair through the middle of it, the
+        // difference between reviewing the level and reviewing a report about
+        // the level is the whole difference.
+        //
+        //   ./play -- --shot spire /tmp/spire.png flyover
+        if (_shotView == "flyover")
+        {
+            _shotView = "eye";
+            _shotPath = path;
+            _shotCountdown = 4;
+            // All three layers: the HUD, the overlay, and the match screens
+            // that carry the between-waves card — which is a CanvasLayer of
+            // its own and sits over the middle of every shot otherwise.
+            _hud.Visible = false;
+            _overlay.Visible = false;
+            _screens.Visible = false;
+            var eye = new Camera3D { Fov = 50, Far = 4000f };
+            AddChild(eye);
+            // Framed off the field rather than from a literal, so it suits a
+            // yard and the Toaster alike. Aimed a third of the way up: a map
+            // with height wants its height in shot, and a flat one loses
+            // nothing by being looked at from slightly above the middle.
+            float reach = Mathf.Max(_map.HalfX, _map.HalfZ) * 1.6f;
+            eye.GlobalPosition = new Vector3(-reach, reach * 0.7f, reach);
+            eye.LookAt(new Vector3(0f, _map.Id == "spire" ? 16f : 4f, 0f), Vector3.Up);
+            eye.MakeCurrent();
             return;
         }
 
@@ -1110,7 +1311,14 @@ public partial class GameRoot : Node3D
                 for (int p = 0; p < levels.Length; p++) levels[p] = level;
                 built.Add(SpawnStructureView(def.Id, Vector3.Zero, levels));
             }
-            built.Add(SpawnProjectileView(def.Id));
+            // Every tier of round, which no audit would otherwise see: tier
+            // follows the damage path and nothing in an audit buys one.
+            for (int level = 0; level <= 9; level += 3)
+            {
+                var levels = new int[def.UpgradePaths.Count];
+                for (int p = 0; p < levels.Length; p++) levels[p] = level;
+                built.Add(SpawnProjectileView(def.Id, levels));
+            }
         }
 
         foreach (var def in Traps.All.Values)
@@ -1151,6 +1359,13 @@ public partial class GameRoot : Node3D
             built.Add(AssetLibrary.Instantiate($"vfx_tracer_{def.Id}", () => new Node3D()));
         }
         foreach (string effect in new[] { "vfx_muzzle_lance", "vfx_impact_lance", "vfx_muzzle_nova", "vfx_impact_nova", "vfx_muzzle_arc", "vfx_impact_arc", "vfx_muzzle_skywatch", "vfx_impact_skywatch" })
+            built.Add(AssetLibrary.Instantiate(effect, () => new Node3D()));
+        // Every effect the client can ask for. The measurement is honest and
+        // therefore blind in one direction — a solo run never sells a tower,
+        // never triggers a reaction, never gets anything frozen — so the names
+        // are enumerated rather than waiting for a match that does all three
+        // (docs/ASSET-USAGE.md, "One blind spot").
+        foreach (string effect in Vfx.Catalogue())
             built.Add(AssetLibrary.Instantiate(effect, () => new Node3D()));
         foreach (var def in Factions.All.Values)
         {
@@ -1194,6 +1409,14 @@ public partial class GameRoot : Node3D
         return Protocol.DefaultPort;
     }
 
+    /// <summary>The likely cause of a failed bind, in terms a host can act on.
+    /// Worth naming rather than printing an errno: both 2D Deep Field checkouts
+    /// default to this same port and are routinely running on the same
+    /// machine, so "in use" is the expected case, not the exotic one.</summary>
+    private static string PortAdvice(int port) =>
+        $"something already holds :{port} — most likely one of the 2D Deep Field " +
+        $"checkouts, which default to the same port. Free it, or pass --port <n>.";
+
     // =====================================================================
     // Mode startup
     // =====================================================================
@@ -1206,13 +1429,45 @@ public partial class GameRoot : Node3D
             if (args[i] == "--map" && Maps.All.TryGetValue(args[i + 1], out var chosen))
                 _map = chosen;
         _world = new SimWorld(FreshSeed(), _map) { WaitForPlayers = true };
-        _net.HostServer(port, _world);
+
+        var hosted = _net.HostServer(port, _world);
+        if (hosted != Error.Ok)
+        {
+            GD.PrintErr($"ERROR: cannot open the game port udp:{port} ({hosted}). {PortAdvice(port)}");
+            GetTree().Quit(1);
+            return;
+        }
         _net.ServerEnqueue = c => _world.Enqueue(c);
 
         _info = new InfoServer { Name = "Info" };
         AddChild(_info);
         _info.StatusProvider = ServerInfo;
-        _info.Start(port);
+
+        var served = _info.Start(port);
+        if (served != Error.Ok)
+        {
+            // Fatal on purpose, though the match would in fact run: ENet has
+            // its port and friends could join. Two reasons it must not.
+            //
+            // A dedicated server is headless. /info is the only way it has to
+            // say what it is, so losing the bind does not make it quiet — it
+            // makes whatever *did* win the TCP port answer in its place, and on
+            // this machine that is most likely a different Deep Field
+            // confidently describing itself. The runbook's curl-before-you-
+            // invite step would pass while naming the wrong game.
+            //
+            // And a headless process that looks healthy while being wrong is
+            // the exact shape of failure this repo keeps paying for — see the
+            // flag-ordering guard in ./play, which refuses rather than let a
+            // run spin for twenty hours looking fine.
+            GD.PrintErr($"ERROR: cannot open the info port tcp:{port} ({served}). {PortAdvice(port)}");
+            GD.PrintErr("       Refusing to start: a dedicated server nobody can identify is worse " +
+                        "than one that did not start, because the curl that checks it would answer " +
+                        "for whatever holds the port instead.");
+            GetTree().Quit(1);
+            return;
+        }
+
         GD.Print($"[server] deepfield-3d dedicated on udp:{port}, map {_map.Id}, protocol v{Protocol.Version}");
     }
 
@@ -1230,16 +1485,41 @@ public partial class GameRoot : Node3D
         // factions against each other's, and start together.
         BeginLocalWorld(faction, lobby: true);
         int port = ParsePort(OS.GetCmdlineUserArgs());
-        _net.HostServer(port, _world!);
+
+        // A window has somewhere to put bad news and someone to read it, so it
+        // says what went wrong and lets the player decide. Only the headless
+        // server, which has neither, refuses outright.
+        var hosted = _net.HostServer(port, _world!);
+        if (hosted != Error.Ok)
+        {
+            string why = $"cannot host on udp:{port} ({hosted}) — {PortAdvice(port)}";
+            GD.PrintErr($"ERROR: {why}");
+            Post($"not hosting — {why}");
+            _lobby.SetStatus($"not hosting — {why}");
+            return;
+        }
         _net.ServerEnqueue = c => _world!.Enqueue(c);
 
         _info = new InfoServer { Name = "Info" };
         AddChild(_info);
         _info.StatusProvider = ServerInfo;
-        _info.Start(port);
+        var served = _info.Start(port);
+
         string invite = _info.TailscaleIp is { } ip
             ? $"invite: {ip}:{port}"
             : "no tailscale ip found — friends need your LAN ip";
+
+        // Losing this one is not fatal here: ENet has its port, so friends can
+        // still join a party that works. What is lost is the machine-readable
+        // half — mission control and the runbook's curl cannot name this
+        // server, and may name another one instead. The host is told plainly,
+        // because they are the only one who can see it.
+        if (served != Error.Ok)
+        {
+            GD.PrintErr($"ERROR: info port tcp:{port} unavailable ({served}). {PortAdvice(port)}");
+            invite += " · no /info, so mission control cannot name this server";
+        }
+
         Post($"hosting — {invite}");
         _lobby.SetStatus($"hosting — {invite} — launch when everyone has picked");
         GD.Print($"[party] hosting on udp:{port}, holding in the lobby");
@@ -1352,6 +1632,7 @@ public partial class GameRoot : Node3D
         TickWarpGates(delta);
         TickSpinners(delta);
         if (_traversalReport is not null) TickTraversalProbe(delta);
+        if (_containReport is not null) TickContainmentWalk(delta);
         if (_reloadReport is not null) TickReloadProbe(delta);
         if (_teleportReport is not null) TickTeleportProbe(delta);
         if (_vehicleReport is not null) TickVehicleProbe(delta);
@@ -1476,8 +1757,9 @@ public partial class GameRoot : Node3D
             SyncVehicles();
             SyncEnemyViewsLocal(delta);
             AimTowers(delta);
-            SyncProjectileViews();
+            SyncProjectileViews(delta);
             SyncAvatarsFromWorld();
+            SyncWorldEffects(delta);
         }
     }
 
@@ -1547,6 +1829,12 @@ public partial class GameRoot : Node3D
         SyncVehicles();
         SyncEnemyViewsRemote(delta);
         SyncAvatarsFromMeta();
+        // After the enemies: a round aims at where its target is drawn this
+        // frame, and aiming at where it was drawn last frame is a round that
+        // trails the thing it is chasing by one frame all the way in.
+        SyncClientRounds(delta);
+        SyncWorldEffects(delta);
+        TickClientRoundProbe(delta);
     }
 
     // =====================================================================
@@ -1655,15 +1943,18 @@ public partial class GameRoot : Node3D
             {
                 case SimEvent.TowerPlaced placed:
                     OnTowerPlaced(placed.TowerId, placed.DefId, placed.SocketId);
+                    OnStructureBuilt(placed.TowerId);
                     break;
                 case SimEvent.TowerUpgraded upgraded:
                     OnTowerUpgraded(upgraded.TowerId, upgraded.PathId, upgraded.NewLevel);
+                    OnStructureUpgraded(upgraded.TowerId, upgraded.NewLevel);
                     break;
                 case SimEvent.TowerSold sold:
+                    OnStructureSold(sold.TowerId);
                     ReleaseStructureView(sold.TowerId);
                     break;
                 case SimEvent.TowerFired fired:
-                    OnTowerFired(fired.TowerId);
+                    OnTowerFired(fired.TowerId, fired.TargetId);
                     break;
 
                 // A demolished structure has to leave the map, or the Ram's
@@ -1727,6 +2018,7 @@ public partial class GameRoot : Node3D
                     break;
 
                 case SimEvent.WaveStarted started:
+                    OnWaveStarted();
                     _screens.HideIntermission();
                     _lastWaveLeaks = 0;
                     SnapshotKills();
@@ -1734,6 +2026,7 @@ public partial class GameRoot : Node3D
                     Post($"wave {started.WaveIndex + 1} — {started.EnemyCount} inbound");
                     break;
                 case SimEvent.WaveCleared cleared:
+                    OnWaveCleared();
                     Post($"wave {cleared.WaveIndex + 1} cleared", UiTheme.Good);
                     break;
                 case SimEvent.EnemyLeaked leaked:
@@ -1779,10 +2072,38 @@ public partial class GameRoot : Node3D
                     OnEnemyDamaged(damaged.EnemyId, damaged.Amount, damaged.Source);
                     break;
                 case SimEvent.EnemyDied died:
-                    OnEnemyDied(died.EnemyId, died.Bounty, died.Source);
+                    OnEnemyDied(died.EnemyId, died.DefId, died.Bounty, died.Source);
+                    break;
+
+                // What is on an enemy, as opposed to whether anything is. The
+                // snapshot's status byte says which channels are busy; only
+                // this says which of the channel's statuses is the one busy
+                // with it, and shock and freeze share a channel.
+                case SimEvent.StatusApplied status:
+                    OnStatusApplied(status.EnemyId, status.StatusId);
+                    break;
+
+                case SimEvent.AbilityUsed ability:
+                    OnAbilityUsed(ability.PlayerId, ability.AbilityId,
+                        new Vector3(ability.X, ability.Y, ability.Z));
                     break;
             }
         }
+    }
+
+    /// <summary>An edge id read back as something a player can look for. Edge
+    /// ids are "from-to" by construction, so "westGate-cutMouth" becomes "the
+    /// cut mouth" — the far end, which is the bit of map the announcement is
+    /// about.</summary>
+    private string GateLabel(string gateId) =>
+        _map.OperatedGates.FirstOrDefault(g => g.Id == gateId)?.Label ?? gateId;
+
+    private static string LaneName(string edgeId)
+    {
+        int dash = edgeId.LastIndexOf('-');
+        string tail = dash >= 0 ? edgeId[(dash + 1)..] : edgeId;
+        var spaced = System.Text.RegularExpressions.Regex.Replace(tail, "([a-z])([A-Z])", "$1 $2");
+        return spaced.ToLowerInvariant();
     }
 
     private void HandleEventLine(string line)
@@ -1791,9 +2112,17 @@ public partial class GameRoot : Node3D
         if (p.Length < 2) return;
         switch (p[1])
         {
-            case "towerPlaced": OnTowerPlaced(int.Parse(p[2]), p[3], p[4]); break;
-            case "towerUpgraded": OnTowerUpgraded(int.Parse(p[2]), p[3], int.Parse(p[4])); break;
+            case "towerPlaced":
+                OnTowerPlaced(int.Parse(p[2]), p[3], p[4]);
+                OnStructureBuilt(int.Parse(p[2]));
+                break;
+            case "towerUpgraded":
+                OnTowerUpgraded(int.Parse(p[2]), p[3], int.Parse(p[4]));
+                OnStructureUpgraded(int.Parse(p[2]), int.Parse(p[4]));
+                break;
+            case "towerFired": OnTowerFired(int.Parse(p[2]), int.Parse(p[3])); break;
             case "towerSold":
+                OnStructureSold(int.Parse(p[2]));
                 ReleaseStructureView(int.Parse(p[2]));
                 break;
             case "structureDestroyed":
@@ -1812,13 +2141,17 @@ public partial class GameRoot : Node3D
                 _armory.ShowNotice(Explain(p[4]));
                 break;
             case "waveStarted":
+                OnWaveStarted();
                 _screens.HideIntermission();
                 _lastWaveLeaks = 0;
                 SnapshotKills();
                 _lastWaveEnemyCount = int.Parse(p[3]);
                 Post($"wave {int.Parse(p[2]) + 1} — {p[3]} inbound");
                 break;
-            case "waveCleared": Post($"wave {int.Parse(p[2]) + 1} cleared", UiTheme.Good); break;
+            case "waveCleared":
+                OnWaveCleared();
+                Post($"wave {int.Parse(p[2]) + 1} cleared", UiTheme.Good);
+                break;
             case "enemyLeaked":
                 _lastWaveLeaks++;
                 Post("BREACH — core hit", UiTheme.Danger);
@@ -1855,6 +2188,30 @@ public partial class GameRoot : Node3D
                     ? "DOWNED — hold on, a teammate can revive you"
                     : $"{NameOf(int.Parse(p[2]))} is down", UiTheme.Danger);
                 break;
+            // The mutable map's two announcements. A breach the player does not
+            // see coming reads as the map malfunctioning, and a lane opening
+            // somewhere they were not looking is worse — so both are said out
+            // loud, and the breach is said the moment the Ram commits rather
+            // than when the wall falls.
+            case "gateOperated":
+                RefreshGateArt(p[3], p[4] == "shut");
+                Post($"{GateLabel(p[3])} {(p[4] == "shut" ? "shut" : "open")}", UiTheme.Accent);
+                break;
+            case "gateRejected" when int.Parse(p[2]) == LocalPlayerId:
+                Post(Explain(p[4]), UiTheme.Warn);
+                break;
+            case "breachTargeted":
+                Post($"BREACH — {LaneName(p[3])}, {float.Parse(p[4],
+                    System.Globalization.CultureInfo.InvariantCulture):0}s", UiTheme.Danger);
+                break;
+            case "laneOpened":
+                Post($"{LaneName(p[2])} is open — {p[3]}", UiTheme.Danger);
+                break;
+            case "enemyStranded":
+                // Should be impossible: the sim refuses any closure that would
+                // strand anything. If it ever shows, it is a bug worth seeing.
+                Post($"enemy stranded at {p[3]}", UiTheme.Warn);
+                break;
             case "playerRevived": Post($"{NameOf(int.Parse(p[2]))} revived", UiTheme.Good); break;
             case "matchEnded": OnMatchEnded(p[2] == "victory"); break;
             case "attachmentCrafted" when int.Parse(p[2]) == LocalPlayerId:
@@ -1869,7 +2226,14 @@ public partial class GameRoot : Node3D
                 OnEnemyDamaged(int.Parse(p[2]), float.Parse(p[3],
                     System.Globalization.CultureInfo.InvariantCulture), p[4]);
                 break;
-            case "enemyDied": OnEnemyDied(int.Parse(p[2]), int.Parse(p[4]), p[5]); break;
+            case "enemyDied": OnEnemyDied(int.Parse(p[2]), p[3], int.Parse(p[4]), p[5]); break;
+            case "statusApplied": OnStatusApplied(int.Parse(p[2]), p[3]); break;
+            case "abilityUsed":
+                OnAbilityUsed(int.Parse(p[2]), p[3], new Vector3(
+                    float.Parse(p[4], System.Globalization.CultureInfo.InvariantCulture),
+                    float.Parse(p[5], System.Globalization.CultureInfo.InvariantCulture),
+                    float.Parse(p[6], System.Globalization.CultureInfo.InvariantCulture)));
+                break;
             case "enemyTeleported":
                 OnEnemyTeleported(int.Parse(p[2]), new Vector3(
                     float.Parse(p[5], System.Globalization.CultureInfo.InvariantCulture),
@@ -1902,16 +2266,333 @@ public partial class GameRoot : Node3D
     private readonly HashSet<int> _warped = new();
 
     /// <summary>Design's flash at the rig's muzzle, facing where the barrel
-    /// points. Only the host sees these: TowerFired is not relayed, and a
-    /// client's projectile views tell the same story a beat later.</summary>
-    private void OnTowerFired(int towerId)
+    /// points, and the beam for the two towers that have no round.
+    ///
+    /// This used to be host-only on the reasoning that a client's projectile
+    /// views tell the same story a beat later. True for a Lance; false for the
+    /// Arc and the Filament, which have no projectile for a client to see, so
+    /// a networked player watched two towers deal damage in total silence.
+    /// Every event's line is already on the reliable channel — nothing needed
+    /// relaying, only parsing.</summary>
+    private void OnTowerFired(int towerId, int targetId)
     {
         if (!_towerViews.TryGetValue(towerId, out var view) || !IsInstanceValid(view)) return;
         string defId = (string)view.GetMeta("def_id", "");
         if (defId.Length == 0) return;
         var rig = RigFor(towerId, view, defId);
+
+        // A beam tower has something to draw and no round to draw it with.
+        // Neither the Arc nor the Filament ever creates a projectile — a tesla
+        // arc is instant and a beam applies damage where it stands — so the
+        // projectile sync has never had anything to follow for them, and both
+        // delivered models had never been on screen. The muzzle node if the
+        // rig has one, the chassis head otherwise: the Filament has no flash
+        // and therefore no muzzle.
+        var origin = rig.Muzzle is not null && IsInstanceValid(rig.Muzzle)
+            ? rig.Muzzle.GlobalPosition
+            : view.Position + Vector3.Up * 1.5f;
+
+        if (Towers.All.TryGetValue(defId, out var def))
+        {
+            if (def.Kind is TowerKind.Beam or TowerKind.Tesla
+                && EnemyAimPoint(targetId) is { } struck)
+            {
+                Vfx.TowerBeam($"beam:{towerId}", defId, origin, struck, BeamHeat(towerId, defId, def, targetId));
+                if (def.Kind == TowerKind.Tesla) DrawChainHops(towerId, defId, def, targetId);
+            }
+            // A client has no projectiles to follow — they never crossed the
+            // wire — so it flies its own from the shot it just heard about.
+            // A host flies one too while the rounds probe is up, shadowing its
+            // own, which is how that branch gets exercised at all.
+            else if (def.ProjectileSpeed > 0f
+                && (Mode == RunMode.Client || _roundReport is not null))
+                LaunchClientRound(towerId, defId, def, targetId, view);
+        }
+
         if (rig.Muzzle is null || !IsInstanceValid(rig.Muzzle)) return;
         Vfx.TowerFired(defId, rig.Muzzle.GlobalPosition, rig.Forward);
+    }
+
+    /// <summary>A round a client is flying for itself.
+    ///
+    /// Tower projectiles have never crossed the wire, so a networked player
+    /// watched a Lance, a Nova and a Skywatch deal damage with nothing in the
+    /// air. Reconstructed rather than sent, which is this client's established
+    /// answer for cosmetic ordnance: a teammate's shot never crosses as a shot
+    /// either — <see cref="Vfx.RemoteShot"/> draws their tracer from the
+    /// damage it did.
+    ///
+    /// Everything a round's flight depends on is already here. The sim's rule
+    /// is one line — step toward the target's current position at the def's
+    /// speed, land inside the hit radius — the tower's position gives the
+    /// origin, `towerFired` gives the target, and the target's position rides
+    /// the snapshot fifteen times a second. What it costs is a flight computed
+    /// twice; what it saves is a per-projectile channel at 15 Hz for something
+    /// that cannot affect the match.</summary>
+    private sealed class ClientRound
+    {
+        public Node3D View = null!;
+        public Vector3 Pos;
+        public int TargetId;
+        public float Speed;
+        public string DefId = "";
+        public float Age;
+
+        /// <summary>The sim projectile this one is shadowing, or -1.
+        ///
+        /// Only the rounds probe sets it, and only on a host. The whole of
+        /// this class is code a networked client runs and nothing else does,
+        /// which is the kind of branch that rots: it would compile, ship, and
+        /// be wrong for everyone who joined a friend's game and nobody who
+        /// tested it. So the probe runs the real thing — same launch, same
+        /// stepping, same view — alongside the sim's own round and measures
+        /// how far apart the two get. A shadow draws nothing and plays no
+        /// impact; it exists to be compared.</summary>
+        public int ShadowOf = -1;
+    }
+
+    private readonly List<ClientRound> _clientRounds = new();
+
+    /// <summary>Rounds this client has launched for itself, ever. The client
+    /// round probe's verdict, and cheap enough to keep always.</summary>
+    private int _clientRoundsFlown;
+
+    private string _clientRoundProbePath = "";
+    private float _clientProbeElapsed;
+    private bool _clientProbeBuilt;
+
+    private void LaunchClientRound(int towerId, string defId, TowerDef def, int targetId, Node3D tower)
+    {
+        // Where the sim starts it: the tower's own position, 1.5 m up. Not the
+        // muzzle — the view launches from the muzzle and catches up, exactly
+        // as it does on a host, and both ends of that are in PlaceRoundView.
+        var origin = tower.Position + new Vector3(0f, 1.5f, 0f);
+
+        // And then one tick, because the sim has already taken one. FireTowers
+        // adds the projectile and StepTowerProjectiles moves it inside the
+        // same tick, so by the time anyone hears the event the sim's round is
+        // already a step down the lane. Starting a copy at the muzzle leaves
+        // it permanently that step behind — a metre for a Lance bolt, which is
+        // most of the gap the probe was measuring before this line existed.
+        if (RoundAimPoint(targetId) is { } firstAim)
+            StepRound(ref origin, firstAim, def.ProjectileSpeed, Balance.Dt);
+
+        var levels = _view.Structures.FirstOrDefault(st => st.Id == towerId)?.PathLevels;
+        var view = SpawnProjectileView(defId, levels);
+        LaunchFromMuzzle(view, towerId, origin);
+
+        // Shadowing the sim's own round: the one this tower just fired at this
+        // target, which the tick that raised the event has already added.
+        int shadowOf = _roundReport is null || _world is null ? -1
+            : _world.Projectiles.LastOrDefault(pr =>
+                pr.FiredBy == towerId && pr.TargetId == targetId && !pr.Dead)?.Id ?? -1;
+        if (shadowOf >= 0) view.Visible = false;
+
+        if (shadowOf < 0) _clientRoundsFlown++;
+        _clientRounds.Add(new ClientRound
+        {
+            View = view, Pos = origin, TargetId = targetId,
+            Speed = def.ProjectileSpeed, DefId = defId, ShadowOf = shadowOf,
+        });
+    }
+
+    /// <summary>Builds something on a joined client and reports the rounds it
+    /// drew. Placement goes through the wire like any other build, so a pass
+    /// also says the server accepted a client's command and relayed the shot
+    /// back — and a client with 250 credits can afford exactly this.</summary>
+    private void TickClientRoundProbe(double delta)
+    {
+        if (_clientRoundProbePath.Length == 0 || Mode != RunMode.Client) return;
+        _clientProbeElapsed += (float)delta;
+
+        if (!_clientProbeBuilt)
+        {
+            // Nothing to build on until the server's world has arrived and the
+            // level is up.
+            if (_clientProbeElapsed < 3f || _map.Sockets.Count == 0) return;
+            float ToRoute(SocketDef so) => _map.Routes
+                .Where(r => r.Layer == EnemyLayer.Ground)
+                .SelectMany(r => r.Waypoints)
+                .Min(w => so.Pos.DistanceTo(w));
+            var onLane = _map.Sockets.Where(so => so.Tag == SocketTag.Ground)
+                .OrderBy(ToRoute).First();
+            Submit(new Command.PlaceTower(LocalPlayerId, "lance", onLane.Id));
+            Submit(new Command.StartWave(LocalPlayerId));
+            GD.Print($"[client] round probe: lance on {onLane.Id}, wave away");
+            _clientProbeBuilt = true;
+            return;
+        }
+
+        // Three, not one: a single round proves the chain but leaves no way to
+        // tell a working branch from one lucky event. They arrive 1.6 a second
+        // once the wave is in range, so the extra two cost almost nothing.
+        if (_clientRoundsFlown < 3 && _clientProbeElapsed < 75f) return;
+
+        var report = new List<string>
+        {
+            $"client round probe on {_map.Id}",
+            $"{_view.Structures.Count} structure(s) visible to the client",
+            $"{_clientRoundsFlown} round(s) flown by the client itself",
+        };
+        string path = _clientRoundProbePath;
+        _clientRoundProbePath = "";
+        WriteProbe(report, path, _clientRoundsFlown >= 3,
+            _clientRoundsFlown >= 3
+                ? $"PASS: a joined client drew {_clientRoundsFlown} round(s) of its own "
+                    + $"by {_clientProbeElapsed:0}s"
+                : $"FAIL: a tower fired for 75s and the client put {_clientRoundsFlown} "
+                    + "round(s) in the air");
+    }
+
+    /// <summary>Flies every round this client is carrying, one frame.</summary>
+    private void SyncClientRounds(double delta)
+    {
+        for (int i = _clientRounds.Count - 1; i >= 0; i--)
+        {
+            var round = _clientRounds[i];
+            round.Age += (float)delta;
+
+            // The target is gone: the sim kills a round whose target died, and
+            // the view leaving the snapshot is the same news. The age cap is
+            // the belt to that brace — a round that somehow never resolves
+            // must not fly forever, and nothing on any map is more than a few
+            // seconds away at these speeds.
+            var aim = RoundAimPoint(round.TargetId);
+            bool done = aim is null || round.Age > 6f
+                || !StepRound(ref round.Pos, aim.Value, round.Speed, delta);
+
+            if (done)
+            {
+                // A shadow is drawn by nothing and lands on nothing; the round
+                // it is shadowing plays that impact.
+                if (round.ShadowOf < 0) Vfx.ProjectileLanded(round.DefId, round.Pos);
+                if (IsInstanceValid(round.View)) round.View.QueueFree();
+                _clientRounds.RemoveAt(i);
+                continue;
+            }
+            PlaceRoundView(round.View, round.Pos, delta);
+        }
+    }
+
+    /// <summary>One frame of a round's flight, mirroring
+    /// <c>Step.StepTowerProjectiles</c>: toward the target's current position
+    /// at the def's speed, landing once the next step would reach it. False
+    /// once it has landed.
+    ///
+    /// Stepped on the frame rather than on the sim's fixed tick, deliberately.
+    /// A client draws twice as often as the server ticks, and a round advanced
+    /// in 33 ms jumps would stutter visibly next to enemies that interpolate.
+    /// The two paths therefore trace very slightly different curves toward a
+    /// moving target; the rounds probe measures that gap rather than assuming
+    /// it is small.</summary>
+    private static bool StepRound(ref Vector3 pos, Vector3 aim, float speed, double delta)
+    {
+        float step = speed * (float)delta;
+        if (pos.DistanceTo(aim) <= step + Balance.ProjectileHitRadius) return false;
+        pos += (aim - pos).Normalized() * step;
+        return true;
+    }
+
+    /// <summary>How hot a beam is, 0 cold to 1 capped.
+    ///
+    /// The Filament's damage climbs the longer it holds one target and resets
+    /// the moment it switches, and until this there was no way to see that: a
+    /// beam at 3x looked exactly like a beam at 1x, which hides the entire
+    /// reason to leave the tower on one thing. Design drew the tell — a sheath
+    /// on <c>filament_beam_ramp</c> to brighten and a helix coil to spin — and
+    /// this is the number behind it.
+    ///
+    /// Counted rather than sent. The sim adds one tick to its ramp clock per
+    /// tick it holds the target and emits exactly one TowerFired for that
+    /// tick, so adding a tick per event and resetting when the target changes
+    /// is not an approximation of <c>Tower.RampSeconds</c> — it is the same
+    /// arithmetic driven by the same signal, and it works identically on a
+    /// client, which has no tower state at all. The path factors come from
+    /// <see cref="TowerMath"/>, which exists so the client and the sim answer
+    /// this kind of question the same way.</summary>
+    private readonly Dictionary<int, (int TargetId, float Seconds, double LastSeen)> _beamRamp = new();
+
+    private float BeamHeat(int towerId, string defId, TowerDef def, int targetId)
+    {
+        if (def.Kind != TowerKind.Beam) return 0f;
+
+        var was = _beamRamp.GetValueOrDefault(towerId, (TargetId: -1, Seconds: 0f, LastSeen: 0d));
+        // Switching costs the ramp, and so does dropping the beam entirely:
+        // the sim bleeds the charge off rather than letting it persist, or a
+        // beam would be free burst on the next target.
+        bool continued = was.TargetId == targetId && _effectClock - was.LastSeen < 0.25;
+        float seconds = (continued ? was.Seconds : 0f) + Balance.Dt;
+        _beamRamp[towerId] = (targetId, seconds, _effectClock);
+
+        var levels = _view.Structures.FirstOrDefault(st => st.Id == towerId)?.PathLevels
+            ?? System.Array.Empty<int>();
+        float rate = Balance.BeamRampPerSecond * TowerMath.PathFactor(def, levels, "ramp");
+        float cap = Balance.BeamRampCap * TowerMath.PathFactor(def, levels, "peak");
+        float ramp = Mathf.Min(cap, 1f + rate * seconds);
+        return cap <= 1f ? 0f : Mathf.Clamp((ramp - 1f) / (cap - 1f), 0f, 1f);
+    }
+
+    /// <summary>The rest of an Arc's chain, drawn hop by hop.
+    ///
+    /// The sim hops from the enemy it just struck to the nearest other target
+    /// in chain range, and says nothing about which — only the first target is
+    /// on the event. So the client asks the same question with the same
+    /// numbers, the way the turret aim does for <c>PickTarget</c> and the way
+    /// Overdrive does for its radius. Enemy positions on a client are a
+    /// snapshot behind, so this can occasionally pick a different second
+    /// target than the sim did; it is a cosmetic beam either way, and the
+    /// alternative is a delivered model that stays on the shelf or an event
+    /// per hop on the wire thirty times a second.</summary>
+    private void DrawChainHops(int towerId, string defId, TowerDef def, int firstTargetId)
+    {
+        int struck = firstTargetId;
+        var hit = new HashSet<int> { firstTargetId };
+        for (int hop = 0; hop < def.ChainJumps; hop++)
+        {
+            if (EnemyAimPoint(struck) is not { } from) return;
+
+            int next = -1;
+            float bestDistance = def.ChainRange;
+            foreach (var (id, view) in _enemyViews)
+            {
+                if (hit.Contains(id) || !IsInstanceValid(view)) continue;
+                float distance = view.Position.DistanceTo(from);
+                if (distance >= bestDistance) continue;
+                bestDistance = distance;
+                next = id;
+            }
+            if (next < 0 || EnemyAimPoint(next) is not { } to) return;
+
+            Vfx.TowerBeam($"beam:{towerId}:{hop}", defId, from, to);
+            hit.Add(next);
+            struck = next;
+        }
+    }
+
+    /// <summary>Where a reconstructed round is flying, which is not where a
+    /// beam points.
+    ///
+    /// A beam is drawn to look right and aims at the body — half the enemy's
+    /// own height, matching the turret convention. A round is reproducing
+    /// something the sim is doing, and the sim aims every projectile at a flat
+    /// 0.8 m above the spine base whatever it is shooting at. Using the
+    /// body-height aim here put a client's copy of a shell 0.79 m from the
+    /// sim's own by the end of its flight, nearly all of it on a Monolith,
+    /// whose body point is 2.25 m up and whose sim aim point is 0.8. Matching
+    /// the sim is free and the whole job of this number.</summary>
+    private Vector3? RoundAimPoint(int enemyId) =>
+        _enemyViews.TryGetValue(enemyId, out var view) && IsInstanceValid(view)
+            ? view.Position + new Vector3(0f, 0.8f, 0f)
+            : null;
+
+    /// <summary>Where on an enemy a beam lands. The sim keeps an enemy at its
+    /// spine base, and a beam terminating at the feet reads as pointing at the
+    /// deck under it.</summary>
+    private Vector3? EnemyAimPoint(int enemyId)
+    {
+        if (!_enemyViews.TryGetValue(enemyId, out var view) || !IsInstanceValid(view)) return null;
+        float height = view.HasMeta("head_height") ? (float)view.GetMeta("head_height") * 0.5f : 1f;
+        return view.Position + new Vector3(0f, height, 0f);
     }
 
     private void OnEnemyDamaged(int enemyId, float amount, string source)
@@ -1934,7 +2615,7 @@ public partial class GameRoot : Node3D
         }
     }
 
-    private void OnEnemyDied(int enemyId, int bounty, string source)
+    private void OnEnemyDied(int enemyId, string defId, int bounty, string source)
     {
         if (source.StartsWith("player") && int.TryParse(source[6..], out int killer))
         {
@@ -1945,8 +2626,17 @@ public partial class GameRoot : Node3D
                 Post($"+{bounty}c", UiTheme.Warn);
             }
         }
+
+        // A Cluster does not die so much as open. The Motes it spawns arrive
+        // as their own enemies a tick later and walk out of the burst, so this
+        // is drawn on the death rather than on the spawns — five separate
+        // little effects would read as five things, which is the opposite of
+        // what just happened.
+        if (defId == "cluster" && EnemyWorldPos(enemyId) is { } burst) Vfx.ClusterSplit(burst);
+
         _overheads.Remove(enemyId);
         _lastSnapshotBits.Remove(enemyId);
+        _enemyStatuses.Remove(enemyId);
     }
 
     private void OnReaction(int enemyId, string reactionId)
@@ -1955,11 +2645,102 @@ public partial class GameRoot : Node3D
         {
             "thermalShock" => "THERMAL SHOCK",
             "flashFreeze" => "FLASH FREEZE",
+            "corrode" => "CORRODE",
             _ => reactionId.ToUpperInvariant(),
         };
         var color = reactionId == "flashFreeze" ? UiTheme.Status("freeze") : UiTheme.Status("burn");
         if (EnemyWorldPos(enemyId) is { } pos) _markers.Callout(pos, label, color);
+        if (_enemyViews.TryGetValue(enemyId, out var view) && IsInstanceValid(view))
+            Vfx.Reaction(reactionId, view);
         Post(label, color);
+    }
+
+    /// <summary>Which status is sitting in each of an enemy's channels.
+    ///
+    /// The snapshot byte says a channel is occupied and nothing more, which is
+    /// enough to tint a silhouette and not enough to draw one: shock and
+    /// freeze are both hard control and they are a stagger and a lock. The
+    /// event says which; the byte says for how long. Neither half alone can
+    /// draw a status, and this is the half that has to be remembered.</summary>
+    private readonly Dictionary<int, string[]> _enemyStatuses = new();
+
+    private void OnStatusApplied(int enemyId, string statusId)
+    {
+        if (!Statuses.All.TryGetValue(statusId, out var def)) return;
+        if (!_enemyStatuses.TryGetValue(enemyId, out var channels))
+            _enemyStatuses[enemyId] = channels = new string[8];
+        channels[(int)def.Channel] = statusId;
+    }
+
+    /// <summary>A faction ability going off, wherever it went off.
+    ///
+    /// Overdrive is the one that needs a second reading of the world: the sim
+    /// buffs every tower inside the radius and says nothing about which, so
+    /// the client asks the same question with the same numbers and puts
+    /// design's crown on each answer. A tower that quietly got faster and does
+    /// not look it is a purchase the player cannot see.</summary>
+    private void OnAbilityUsed(int playerId, string abilityId, Vector3 aimPoint)
+    {
+        var hero = PlayerWorldPos(playerId) ?? aimPoint;
+        Vfx.Ability(abilityId, hero, aimPoint);
+        if (abilityId != "overdrive") return;
+
+        var faction = Factions.All.Values.FirstOrDefault(f => f.AbilityId == abilityId);
+        if (faction is null) return;
+        float radius = faction.RadiusMeters * Factions.RadiusFactor(FactionLevelOf(playerId));
+        foreach (var view in _towerViews.Values)
+        {
+            if (!IsInstanceValid(view)) continue;
+            if (Flat(view.Position).DistanceTo(Flat(hero)) > radius) continue;
+            Vfx.OverdriveCrown(view.Position, faction.DurationSeconds);
+        }
+    }
+
+    /// <summary>Where a player is, whichever side of the wire is asking.</summary>
+    private Vector3? PlayerWorldPos(int playerId)
+    {
+        if (playerId == LocalPlayerId && _player is not null) return _player.GlobalPosition;
+        if (_avatarViews.TryGetValue(playerId, out var avatar) && IsInstanceValid(avatar)) return avatar.Position;
+        return _view.Players.FirstOrDefault(p => p.Id == playerId)?.Pos;
+    }
+
+    private int FactionLevelOf(int playerId) =>
+        _view.Players.FirstOrDefault(p => p.Id == playerId)?.FactionLevel ?? 1;
+
+    /// <summary>Construction, refund and level-up, at the pad they happened on.
+    /// Three effects rather than one because they are three different pieces of
+    /// news, and design drew them in three different colours for that reason:
+    /// green going up, brass coming back, teal climbing.</summary>
+    private void OnStructureBuilt(int towerId)
+    {
+        if (StructurePos(towerId) is { } at) Vfx.TowerPlaced(at);
+    }
+
+    private void OnStructureSold(int towerId)
+    {
+        if (StructurePos(towerId) is { } at) Vfx.TowerSold(at);
+    }
+
+    private void OnStructureUpgraded(int towerId, int newLevel)
+    {
+        if (StructurePos(towerId) is { } at) Vfx.TowerUpgraded(at, newLevel);
+    }
+
+    private Vector3? StructurePos(int towerId) =>
+        _towerViews.TryGetValue(towerId, out var view) && IsInstanceValid(view) ? view.Position : null;
+
+    /// <summary>The two beats that bracket a wave, at the two ends of the map.
+    /// Both are played on every gate and every core the map has — Switchyard's
+    /// two ground routes share a mouth, so these are the deduplicated lists
+    /// the portals themselves were placed from.</summary>
+    private void OnWaveStarted()
+    {
+        foreach (var (pos, downLane) in _spawnPortals) Vfx.WaveStart(pos, downLane);
+    }
+
+    private void OnWaveCleared()
+    {
+        foreach (var core in _corePositions) Vfx.WaveClear(core);
     }
 
     private void OnMatchEnded(bool victory)
@@ -2011,6 +2792,13 @@ public partial class GameRoot : Node3D
         var where = EnemyWorldPos(enemyId)
             ?? ToGd(_map.Routes[0].Waypoints[^1]);
         _hud.FlagBreach(where, GetViewport().GetCamera3D());
+
+        // The alarm goes off at the core, not at the enemy: a life is gone
+        // wherever it happened, and the player has to be able to find the
+        // thing that lost it. The nearest core to the leak is the one it
+        // reached — Switchyard has two and they are 90 m apart.
+        if (_corePositions.Count > 0)
+            Vfx.CoreBreach(_corePositions.OrderBy(c => c.DistanceTo(where)).First());
     }
 
     private Vector3? EnemyWorldPos(int enemyId) =>
@@ -2031,6 +2819,14 @@ public partial class GameRoot : Node3D
         "unknownTower" => "unknown structure",
         "wrongSocketTag" => "wrong socket type for that",
         "trapSocket" => "that plate takes traps",
+        // Not a failure the player did wrong — a rule of the map, stated as
+        // one. It is the only refusal that is about the shape of the level
+        // rather than about the thing being built.
+        "wouldSeal" => "that would leave the wave nowhere to walk",
+        "notNear" => "too far away",
+        "cooldown" => "the gate is still resetting",
+        "blocked" => "something is standing in the gateway",
+        "unknownGate" => "no gate there",
         "maxLevel" => "already at max level",
         "unknownPath" => "no such upgrade path",
         "factionTaken" => "another player already has that faction",
@@ -2190,17 +2986,82 @@ public partial class GameRoot : Node3D
             byte bits = Protocol.PackStatusBits(enemy);
             TintEnemy(view, enemy.Hp / enemy.MaxHp, bits);
 
-            float maxShield = Enemies.All[enemy.DefId].Shield;
-            float shieldFraction = maxShield > 0f
-                ? enemy.Shield / (maxShield * (enemy.MaxHp / Enemies.All[enemy.DefId].Hp))
-                : 0f;
+            float shieldFraction = Protocol.ShieldFraction(enemy);
             UpdateEnemyStates(view, enemy.Burrowed, shieldFraction);
             UpdateOverhead(enemy.Id, view, enemy.Hp / enemy.MaxHp, shieldFraction,
                 bits, enemy.Burrowed);
+            SyncEnemyEffects(enemy.Id, view, bits, shieldFraction, enemy.Burrowed);
         }
         SweepViews(_enemyViews, _world.Enemies.Select(e => e.Id));
         SweepOverheads(_world.Enemies.Select(e => e.Id));
     }
+
+    /// <summary>The effects that belong to an enemy rather than to a moment:
+    /// what is burning it, what is left of its shield, whether it is under the
+    /// ground. Driven from the same three numbers on both sides of the wire —
+    /// the host reads them off the world, a client off the snapshot — so a
+    /// co-op party is looking at the same enemy.
+    ///
+    /// Held effects are asked for again every frame they should exist and
+    /// swept at the end of the frame; the transitions (a shield popping, a
+    /// Mole breaking ground) are one-shots fired off the change. Both need the
+    /// previous frame, which is what <see cref="_lastSnapshotBits"/> is.</summary>
+    private void SyncEnemyEffects(int enemyId, Node3D view, byte statusBits,
+        float shieldFraction, bool burrowed)
+    {
+        var last = _lastSnapshotBits.GetValueOrDefault(enemyId, (Burrowed: burrowed, Shield: shieldFraction));
+        _lastSnapshotBits[enemyId] = (burrowed, shieldFraction);
+
+        // Design authors every status effect around a 1.8 m body. A Monolith
+        // is two and a half times that and a Mote about half, and a flame
+        // tongue the size of the thing it is on reads as a different effect.
+        float scale = Mathf.Clamp(
+            (view.HasMeta("head_height") ? (float)view.GetMeta("head_height") : 1.9f) / 1.9f,
+            0.5f, 2.4f);
+
+        // Nothing is drawn on something that is underground: the Mole's whole
+        // window is that you cannot touch it, and a burn still licking up out
+        // of a dirt mound says the opposite.
+        if (!burrowed)
+        {
+            var channels = _enemyStatuses.GetValueOrDefault(enemyId);
+            for (int c = 0; c < 8; c++)
+            {
+                if ((statusBits & (1 << c)) == 0) continue;
+                string statusId = channels?[c] ?? DefaultStatusFor((Channel)c);
+                if (statusId.Length == 0) continue;
+                Vfx.StatusHeld($"status:{enemyId}:{c}", view, statusId, scale);
+            }
+        }
+
+        // The shield: gone is a burst, growing back is held for as long as it
+        // grows. A Warden whose bubble is climbing is a window closing, and
+        // that is the half a player can still do something about.
+        if (last.Shield > 0.02f && shieldFraction <= 0.02f) Vfx.ShieldPopped(view);
+        else if (shieldFraction > last.Shield + 0.0005f && shieldFraction < 0.999f)
+            Vfx.ShieldRegen($"shield:{enemyId}", view);
+
+        if (burrowed != last.Burrowed) Vfx.BurrowSpray(view.Position);
+    }
+
+    /// <summary>What to draw for a channel nobody told us the status of.
+    ///
+    /// A client that joined mid-burn has the bit and not the event, and every
+    /// channel but one holds exactly one status, so the channel names it. The
+    /// exception is Control, which is a 0.25 s stagger or a 1.2 s lock; a
+    /// stagger is the safer guess because it is the one that ends before
+    /// anyone reads it wrong.</summary>
+    private static string DefaultStatusFor(Channel channel) => channel switch
+    {
+        Channel.Movement => "chill",
+        Channel.Thermal => "burn",
+        Channel.Toxin => "poison",
+        Channel.Defense => "shred",
+        Channel.Vulnerability => "mark",
+        Channel.Control => "shock",
+        Channel.Detection => "reveal",
+        _ => "",
+    };
 
     /// <summary>Attaches (once) and updates the billboarded bar/status cluster
     /// above an enemy. Overheads live under the enemy view so they follow it and
@@ -2221,9 +3082,16 @@ public partial class GameRoot : Node3D
         overhead.Set(hpFraction, shieldFraction, statusBits, burrowed, distance);
     }
 
+    /// <summary>Drops the per-enemy bookkeeping for anything no longer in the
+    /// world. Death is evented and a leak is not, so this rather than the
+    /// event is what keeps the tables the size of the wave.</summary>
     private void SweepOverheads(IEnumerable<int> liveIds)
     {
         var live = new HashSet<int>(liveIds);
+        foreach (int id in _enemyStatuses.Keys.Where(id => !live.Contains(id)).ToList())
+            _enemyStatuses.Remove(id);
+        foreach (int id in _lastSnapshotBits.Keys.Where(id => !live.Contains(id)).ToList())
+            _lastSnapshotBits.Remove(id);
         foreach (int id in _overheads.Keys.Where(id => !live.Contains(id)).ToList())
             _overheads.Remove(id);
     }
@@ -2471,36 +3339,354 @@ public partial class GameRoot : Node3D
             else TurnTowards(view, GodotYaw(snap.Yaw), delta);
             TintEnemy(view, snap.HpFraction, snap.StatusBits);
 
-            // Snapshots carry no shield channel of their own; a Warden that
-            // still has shield reads as full hp with the shield bit unset, so
-            // the client shows hp only and lets the crosshair report shielded.
-            bool burrowed = snap.HpFraction <= 0f;
-            UpdateEnemyStates(view, burrowed, 0f);
-            UpdateOverhead(snap.Id, view, snap.HpFraction, 0f, snap.StatusBits, burrowed);
-            _lastSnapshotBits[snap.Id] = (burrowed, Shielded: false);
+            // Shield and burrow ride the snapshot from protocol 5 on. Before
+            // that a client drew no bubble at all and inferred "underground"
+            // from hp reaching zero, which is the reading for "dead".
+            UpdateEnemyStates(view, snap.Burrowed, snap.ShieldFraction);
+            UpdateOverhead(snap.Id, view, snap.HpFraction, snap.ShieldFraction,
+                snap.StatusBits, snap.Burrowed);
+            SyncEnemyEffects(snap.Id, view, snap.StatusBits, snap.ShieldFraction, snap.Burrowed);
         }
         SweepViews(_enemyViews, newest.Enemies.Select(s => s.Id));
         SweepOverheads(newest.Enemies.Select(s => s.Id));
     }
 
-    private void SyncProjectileViews()
+    // =====================================================================
+    // Effects the world drives, as opposed to the ones an event fires
+    // =====================================================================
+
+    private double _effectClock;
+    private readonly Dictionary<int, double> _detectorNext = new();
+
+    /// <summary>The per-frame half of the effects layer, run in every mode
+    /// that draws. Everything here is a standing fact rather than a moment: a
+    /// Detector is sweeping, someone is being picked up. The sweep at the end
+    /// is what makes held effects safe — anything that stopped being true this
+    /// frame stops being drawn.</summary>
+    private void SyncWorldEffects(double delta)
+    {
+        _effectClock += delta;
+        // Normally empty on a host; the rounds probe fills it with shadows of
+        // the sim's own rounds so the client's flight code is actually run.
+        if (_clientRounds.Count > 0) SyncClientRounds(delta);
+        TickDetectorPulses();
+        TickReviveBeams();
+        Vfx.SweepHeld();
+        TickStatusProbe(delta);
+        TickRoundProbe(delta);
+    }
+
+    private int _roundAimed;
+
+    /// <summary>Where a round is, if one is far enough from the tower that
+    /// fired it to be worth photographing.</summary>
+    private Vector3? MidFlightRound()
     {
         foreach (var projectile in _world!.Projectiles)
         {
+            if (projectile.Dead) continue;
+            if (!_projectileViews.TryGetValue(projectile.Id, out var view) || !IsInstanceValid(view)) continue;
+            if (!_towerViews.TryGetValue(projectile.FiredBy, out var tower) || !IsInstanceValid(tower)) continue;
+            if (view.Position.DistanceTo(tower.Position) > 2.5f) return view.Position;
+        }
+        return null;
+    }
+
+    private List<string>? _roundReport;
+    private string _roundReportPath = "";
+    private float _roundElapsed;
+
+    private void TickRoundProbe(double delta)
+    {
+        if (_roundReport is null || _world is null) return;
+
+        SampleRounds(delta);
+        float was = _roundElapsed;
+        _roundElapsed += (float)delta;
+        if (Mathf.FloorToInt(_roundElapsed / 5f) > Mathf.FloorToInt(was / 5f))
+        {
+            _roundReport.Add($"{_roundElapsed:0}s enemies={_world.Enemies.Count} "
+                + $"rounds sampled={_roundSamples} from {string.Join("/", _roundTowers)}");
+            if (_world.Enemies.Count == 0) Submit(new Command.StartWave(LocalPlayerId));
+        }
+
+        // Both towers, or the Nova could quietly stop firing and a Lance's
+        // thin bolt would carry the verdict for the shell the report is about.
+        bool enough = _roundTowers.Count >= 2 && _roundSamples > 60;
+        if (!enough && _roundElapsed < 120f) return;
+
+        // Windowed, hold on for a frame with a shell actually in the air and
+        // the camera pointed at it: the picture this probe is for is a round
+        // mid-flight, and the numbers below are equally true of a frame that
+        // happens to have none in it. Aiming the frame before capturing
+        // matters — a camera moved this frame is pointed somewhere else in the
+        // frame that gets photographed. Bounded, so a run that never catches
+        // one still writes its verdict.
+        if (enough && _roundElapsed < 125f && DisplayServer.GetName() != "headless")
+        {
+            if (MidFlightRound() is not { } shell) { _roundAimed = 0; return; }
+            AimAt(new Vec3(shell.X, shell.Y, shell.Z), back: 7f, height: 2.5f);
+            if (_roundAimed++ < 2) return;
+        }
+
+        var report = _roundReport;
+        _roundReport = null;
+        report.Add($"{_roundSamples} sample(s) from {string.Join(", ", _roundTowers)}");
+        report.Add($"worst heading error: {_roundWorstHeading:0.0} deg off what the round was flying at");
+        report.Add($"closest a round got to the muzzle it left: {_roundNearestMuzzle:0.00} m");
+        report.Add($"client-flown copies compared {_roundDriftSamples} time(s); "
+            + $"worst gap from the sim's own round: {_roundWorstDrift:0.00} m");
+        if (DisplayServer.GetName() == "headless")
+        {
+            report.Add($"headless run — no frame to write for {_roundReportPath}.png");
+        }
+        else
+        {
+            var image = GetViewport().GetTexture().GetImage();
+            image.SavePng(_roundReportPath + ".png");
+            report.Add($"wrote {_roundReportPath}.png ({image.GetWidth()}x{image.GetHeight()})");
+        }
+
+        // Twenty degrees is generous for a round that should be pointing at
+        // the thing it is about to hit, and two orders of magnitude away from
+        // the ninety this was written to catch. A third of a metre is the same
+        // margin on the muzzle: a shell launched from the barrel is touching
+        // it, one launched from the chassis centre is a metre below it.
+        bool aimed = _roundWorstHeading < 20f;
+        bool fromBarrel = _roundNearestMuzzle < 0.35f;
+        // A metre on a round in flight is nothing a player can see and an
+        // order of magnitude below the distance between two enemies, but it is
+        // tight enough to catch a reconstruction that has the wrong speed, the
+        // wrong origin or the wrong target — every one of which diverges by
+        // metres within the first half-second.
+        bool together = _roundDriftSamples > 0 && _roundWorstDrift < 1f;
+        WriteProbe(report, _roundReportPath, enough && aimed && fromBarrel && together,
+            !enough
+                ? $"FAIL: only {_roundSamples} round sample(s) from {_roundTowers.Count} tower(s) in two minutes"
+                : !aimed
+                    ? $"FAIL: a round flew {_roundWorstHeading:0} deg off what it was aimed at"
+                    : !fromBarrel
+                        ? $"FAIL: no round got closer than {_roundNearestMuzzle:0.00} m to the muzzle it left"
+                        : !together
+                            ? (_roundDriftSamples == 0
+                                ? "FAIL: no client-flown round was ever compared against the sim's"
+                                : $"FAIL: a client's reconstructed round drifted {_roundWorstDrift:0.00} m "
+                                    + "from the sim's own")
+                            : $"PASS: rounds point where they are going ({_roundWorstHeading:0.0} deg worst), "
+                                + $"leave the barrel ({_roundNearestMuzzle:0.00} m) and a client's copy "
+                                + $"stays within {_roundWorstDrift:0.00} m");
+    }
+
+    private List<string>? _statusReport;
+    private string _statusReportPath = "";
+    private float _statusElapsed;
+    private int _statusPeak;
+    private readonly SortedSet<string> _statusSeen = new();
+    private readonly SortedSet<string> _beamsSeen = new();
+    private float _roundWorstHeading;
+    private float _roundNearestMuzzle = float.MaxValue;
+    private int _roundSamples;
+    private readonly SortedSet<string> _roundTowers = new();
+
+    /// <summary>Measures the two things that were wrong about a round in
+    /// flight, both of which a screenshot shows instantly and nothing
+    /// automated could see.
+    ///
+    /// **Where it starts.** The sim spawns a round at the tower's centre,
+    /// because it has no barrel to spawn it at, so a Nova shell appeared out
+    /// of the middle of the chassis a metre below the muzzle flash. The
+    /// nearest a round ever gets to the muzzle it came out of is the
+    /// measurement: one launched from the barrel is touching it, one launched
+    /// from the chassis centre never gets closer than the offset between them.
+    ///
+    /// **Which way it points.** Design authors every round along −Z and
+    /// nothing turned one, so all of them flew sideways. Unmistakable on a
+    /// brass mortar shell with a lit fuse on the back; on a thin bolt it read
+    /// as a slightly odd streak, which is how it survived four milestones.
+    /// The angle between where a round points and what it is flying at is the
+    /// measurement, sampled only once it has caught up with itself — during
+    /// the lead the drawn position is deliberately not the real one.</summary>
+    private float _roundWorstDrift;
+    private int _roundDriftSamples;
+
+    private void SampleRounds(double delta)
+    {
+        _ = delta;
+        // How far the client's own flight has got from the sim's. Both are
+        // real: the sim's round is the sim's, and the shadow is the same
+        // LaunchClientRound / SyncClientRounds a networked player runs.
+        foreach (var round in _clientRounds)
+        {
+            if (round.ShadowOf < 0) continue;
+            var real = _world!.Projectiles.FirstOrDefault(pr => pr.Id == round.ShadowOf && !pr.Dead);
+            if (real is null) continue;
+            _roundWorstDrift = Mathf.Max(_roundWorstDrift, round.Pos.DistanceTo(ToGd(real.Pos)));
+            _roundDriftSamples++;
+        }
+
+        foreach (var projectile in _world!.Projectiles)
+        {
+            if (projectile.Dead) continue;
+            if (!_projectileViews.TryGetValue(projectile.Id, out var view) || !IsInstanceValid(view)) continue;
+
+            if (_towerViews.TryGetValue(projectile.FiredBy, out var tower) && IsInstanceValid(tower)
+                && RigFor(projectile.FiredBy, tower, (string)tower.GetMeta("def_id", "")).Muzzle is { } muzzle
+                && IsInstanceValid(muzzle))
+                _roundNearestMuzzle = Mathf.Min(_roundNearestMuzzle, view.Position.DistanceTo(muzzle.GlobalPosition));
+            _roundTowers.Add((string)view.GetMeta("def_id", "?"));
+
+            if ((float)view.GetMeta("muzzle_lead", 0f) > 0f) continue;
+            var target = _world.Enemies.FirstOrDefault(e => e.Id == projectile.TargetId && !e.Dead);
+            if (target is null) continue;
+
+            var aim = ToGd(target.Pos) + new Vector3(0f, 0.8f, 0f) - view.Position;
+            if (aim.LengthSquared() < 1e-4f) continue;
+            float off = Mathf.RadToDeg((-view.GlobalTransform.Basis.Z).AngleTo(aim));
+            _roundWorstHeading = Mathf.Max(_roundWorstHeading, off);
+            _roundSamples++;
+        }
+    }
+
+    /// <summary>Watches for status effects appearing on live enemies and says
+    /// which ones did. Stops itself either way — a verification run that can
+    /// outlive the thing it verifies is how eight Godot processes once ran for
+    /// a day.</summary>
+    private void TickStatusProbe(double delta)
+    {
+        if (_statusReport is null || _world is null) return;
+
+        foreach (string key in Vfx.HeldKeys)
+        {
+            if (key.StartsWith("status:")) _statusSeen.Add(key.Split(':')[^1]);
+            else if (key.StartsWith("beam:")
+                && int.TryParse(key.Split(':')[1], out int beamTower)
+                && _towerViews.TryGetValue(beamTower, out var beamView) && IsInstanceValid(beamView))
+                _beamsSeen.Add((string)beamView.GetMeta("def_id", "?"));
+        }
+
+        // The peak, not this frame's count, and any channel rather than one:
+        // an enemy is inside a 9 m aura for about a second of a minute-long
+        // walk, and a five-second sample that catches none of them reads as a
+        // contradiction next to a pass that says a status was held.
+        _statusPeak = Mathf.Max(_statusPeak,
+            _world.Enemies.Count(e => Protocol.PackStatusBits(e) != 0));
+
+        float was = _statusElapsed;
+        _statusElapsed += (float)delta;
+        if (Mathf.FloorToInt(_statusElapsed / 5f) > Mathf.FloorToInt(was / 5f))
+        {
+            _statusReport.Add($"{_statusElapsed:0}s enemies={_world.Enemies.Count} "
+                + $"afflicted at once, most so far={_statusPeak} "
+                + $"beams from {string.Join("/", _beamsSeen)} "
+                + $"ramp {Vfx.PeakBeamHeat:0%}");
+            if (_world.Enemies.Count == 0) Submit(new Command.StartWave(LocalPlayerId));
+        }
+
+        // A quarter of the cap, and deliberately not more. The ramp needs
+        // 3.3 seconds on one target to cap, and a Foundry drifter has 20 hp —
+        // it dies to the beam in about two, taking the ramp back to nothing
+        // with it. That is the Filament working as designed ("the answer to
+        // one big thing and actively bad against a swarm"), so a threshold
+        // that expects the cap here would be asserting the tower is broken.
+        // A quarter is about a second of held beam: enough to tell a ramp that
+        // climbs from one that is wired and stuck at zero, which is the thing
+        // this cannot see any other way — both draw an identical beam.
+        bool done = _statusSeen.Count > 0 && _beamsSeen.Count > 0 && Vfx.PeakBeamHeat >= 0.25f;
+        if (!done && _statusElapsed < 90f) return;
+
+        var report = _statusReport;
+        _statusReport = null;
+        string drew = string.Join(", ",
+            _statusSeen.Select(c => DefaultStatusFor((Channel)int.Parse(c))));
+        report.Add($"statuses held: {(drew.Length > 0 ? drew : "none")} "
+            + $"(most afflicted at once: {_statusPeak})");
+        // One beam is enough to pass: the Arc and the Filament go through the
+        // same TowerBeam call and differ only in the chain hops after it, and
+        // requiring both would make this fail whenever the wave dies before it
+        // reaches the third socket.
+        report.Add($"beams drawn by: {(_beamsSeen.Count > 0 ? string.Join(", ", _beamsSeen) : "nothing")}");
+        report.Add($"hottest the Filament's ramp got: {Vfx.PeakBeamHeat:0%} of its cap");
+        WriteProbe(report, _statusReportPath, done,
+            done
+                ? $"PASS: statuses, beams and the beam ramp all drawn on live enemies by {_statusElapsed:0}s"
+                : _statusSeen.Count == 0
+                    ? "FAIL: a wave walked through a Singularity and no status was ever held"
+                    : _beamsSeen.Count == 0
+                        ? "FAIL: a Filament and an Arc fired and no beam was ever drawn"
+                        : "FAIL: a beam was drawn and its ramp never brightened");
+    }
+
+    /// <summary>The Detector's reveal sweep, on design's two-second period.
+    ///
+    /// Not an event, because the sim does not emit one: an aura tower reapplies
+    /// its status every tick, thirty times a second, and a pulse per tick is
+    /// not a pulse. Staggered per tower id so a pair covering the same junction
+    /// sweeps rather than strobes.</summary>
+    private void TickDetectorPulses()
+    {
+        const double Period = 2.0;
+        foreach (var (id, view) in _towerViews)
+        {
+            if (!IsInstanceValid(view) || (string)view.GetMeta("def_id", "") != "detector") continue;
+            if (!_detectorNext.TryGetValue(id, out double next))
+                _detectorNext[id] = next = _effectClock + Period * (id * 0.37 % 1.0);
+            if (_effectClock < next) continue;
+
+            _detectorNext[id] = _effectClock + Period;
+            var levels = _view.Structures.FirstOrDefault(st => st.Id == id)?.PathLevels
+                ?? System.Array.Empty<int>();
+            Vfx.DetectorPulse(view.Position,
+                TowerMath.Range(Towers.Detector, levels, _map, _view.Wave), (float)Period);
+        }
+
+        foreach (int id in _detectorNext.Keys.Where(k => !_towerViews.ContainsKey(k)).ToList())
+            _detectorNext.Remove(id);
+        foreach (int id in _beamRamp.Keys.Where(k => !_towerViews.ContainsKey(k)).ToList())
+            _beamRamp.Remove(id);
+    }
+
+    /// <summary>The revive column over anyone who is being picked up.
+    ///
+    /// Driven off progress rather than off someone holding a key, which is
+    /// what makes it work for the whole party: the sim's revive clock rides
+    /// the meta channel, so the teammate covering the door sees the same ring
+    /// filling as the one crouched over the body. It also decays on its own
+    /// when the hold stops, so the column fades instead of blinking out.</summary>
+    private void TickReviveBeams()
+    {
+        foreach (var player in _view.Players)
+        {
+            if (!player.Downed || !player.Connected || player.ReviveProgress <= 0.002f) continue;
+            Vfx.ReviveBeam($"revive:{player.Id}", player.Pos + Vector3.Up * 0.1f, player.ReviveProgress);
+        }
+    }
+
+    private void SyncProjectileViews(double delta)
+    {
+        foreach (var projectile in _world!.Projectiles)
+        {
+            var here = ToGd(projectile.Pos);
             if (!_projectileViews.TryGetValue(projectile.Id, out var view))
             {
-                string firedBy = _world.Towers.FirstOrDefault(t => t.Id == projectile.FiredBy)?.DefId ?? "lance";
-                view = SpawnProjectileView(firedBy);
+                var firedBy = _world.Towers.FirstOrDefault(t => t.Id == projectile.FiredBy);
+                view = SpawnProjectileView(firedBy?.DefId ?? "lance", firedBy?.PathLevels);
                 _projectileViews[projectile.Id] = view;
+                LaunchFromMuzzle(view, projectile.FiredBy, here);
             }
-            view.Position = ToGd(projectile.Pos);
+
+            PlaceRoundView(view, here, delta);
         }
         // A round that is no longer in the sim landed this tick; its view's
         // last position is the hit, and design's impact goes there.
         var live = new HashSet<int>(_world.Projectiles.Select(p => p.Id));
         foreach (var (id, view) in _projectileViews)
             if (!live.Contains(id) && IsInstanceValid(view))
-                Vfx.ProjectileLanded((string)view.GetMeta("def_id", "lance"), view.Position);
+                // The sim's last position, not the view's: for the fifth of a
+                // second a round is still catching up with itself out of the
+                // barrel, those are not the same point, and the splash belongs
+                // where the round actually was.
+                Vfx.ProjectileLanded((string)view.GetMeta("def_id", "lance"),
+                    (Vector3)view.GetMeta("last_pos", view.Position));
         SweepViews(_projectileViews, _world.Projectiles.Select(p => p.Id));
 
         foreach (var trap in _world.Traps)
@@ -2692,15 +3878,20 @@ public partial class GameRoot : Node3D
             if (def.RangeMeters <= 0f) continue;      // a barricade has nothing to aim
             var rig = RigFor(tower.Id, view, tower.DefId);
 
+            // The same "first" the sim picks on — metres still to walk, not
+            // metres walked. This mirrors Step.PickTarget independently, so it
+            // has to mirror the metric too: a turret aiming by one rule at a
+            // target chosen by another points at the wrong enemy.
             Enemy? best = null;
-            float bestTraveled = -1f;
+            float bestRemaining = float.MaxValue;
             foreach (var enemy in _world.Enemies)
             {
                 if (enemy.Dead || enemy.Burrowed) continue;
                 if (!def.TargetLayers.Contains(Enemies.All[enemy.DefId].Layer)) continue;
                 if (tower.Pos.DistanceTo(enemy.Pos) > def.RangeMeters * 1.15f) continue;
-                if (enemy.TotalTraveled <= bestTraveled) continue;
-                bestTraveled = enemy.TotalTraveled;
+                float remaining = enemy.RemainingToCore(_world);
+                if (remaining >= bestRemaining) continue;
+                bestRemaining = remaining;
                 best = enemy;
             }
             if (best is null)                         // hold the last heading
@@ -3029,7 +4220,10 @@ public partial class GameRoot : Node3D
     private static string Describe(Area3D area)
     {
         var p = area.GlobalPosition;
-        return $"ladder at ({p.X:0.#}, {p.Y:0.#}, {p.Z:0.#})";
+        // The kind, not the word "ladder": this probe walks lifts too now, and
+        // a report calling one of them a ladder is a report you cannot act on.
+        string kind = (string)area.GetMeta("kind", "climb");
+        return $"{kind} at ({p.X:0.#}, {p.Y:0.#}, {p.Z:0.#})";
     }
 
     /// <summary>Somewhere to step off at the top: the nearest wall socket
@@ -3037,28 +4231,54 @@ public partial class GameRoot : Node3D
     /// just lets go and sees whether the player is left standing.</summary>
     private Vector3? StepOffTarget(Vector3 head)
     {
-        Vector3? best = null;
-        float bestDistance = 10f * 10f;
-        foreach (var socket in _map.Sockets)
+        // Ask the floor, not the build pads. This looked for the nearest wall
+        // socket within ten metres, which is a proxy and a poor one: it
+        // certifies a ladder that happens to have a pad beside it and reports
+        // an identical ladder without one as going nowhere. Four of the
+        // Spire's six read that way, and the difference between the two that
+        // passed and the four that did not was entirely where the generator
+        // had put pads. What the rule asks is whether there is a deck at the
+        // top of the climb, so sweep for a deck.
+        var space = GetWorld3D().DirectSpaceState;
+        var space3 = space;
+        bool FloorAt(Vector3 at)
         {
-            if (socket.Tag != SocketTag.Wall) continue;
-            var pos = ToGd(socket.Pos);
-            if (Mathf.Abs(pos.Y - head.Y) > 4f) continue;
-            float distance = (pos with { Y = 0f } - head with { Y = 0f }).LengthSquared();
-            if (distance >= bestDistance) continue;
-            bestDistance = distance;
-            best = pos;
+            var down = PhysicsRayQueryParameters3D.Create(
+                at + new Vector3(0, 0.5f, 0), at - new Vector3(0, 3.5f, 0), collisionMask: 1);
+            return space3.IntersectRay(down).Count > 0;
         }
-        return best;
+
+        // From two metres out: nearer than that and the target is inside the
+        // ladder's own trigger volume, so you step to the edge of the rungs,
+        // stay latched to them and never fall onto anything — which reports as
+        // the ladder going nowhere. Further out is worse in the other
+        // direction: the probe walks *to* the target, so aiming six metres
+        // across a four-metre deck steps off the far side of it.
+        for (float reach = 2f; reach <= 5f; reach += 0.5f)
+            for (int step = 0; step < 16; step++)
+            {
+                float angle = Mathf.Tau * step / 16f;
+                var dir = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+                // Confirmed half a metre further on, so the target is a deck
+                // rather than the lip of one.
+                if (!FloorAt(head + dir * reach) || !FloorAt(head + dir * (reach + 0.5f))) continue;
+                return head + dir * reach;
+            }
+        return null;
     }
 
     /// <summary>Every ladder volume in the level, in a stable order.</summary>
-    private List<Area3D> FindLadderAreas()
+    private List<Area3D> FindLadderAreas() => FindAreasOfKind(AreaKinds.Ladder);
+
+    /// <summary>Every traversal volume of one kind, in a stable order — the
+    /// probes walk them one at a time and their report has to read the same way
+    /// twice.</summary>
+    private List<Area3D> FindAreasOfKind(string kind)
     {
         var found = new List<Area3D>();
         void Walk(Node n)
         {
-            if (n is Area3D area && (string)area.GetMeta("kind", "") == "ladder") found.Add(area);
+            if (n is Area3D area && (string)area.GetMeta("kind", "") == kind) found.Add(area);
             foreach (var child in n.GetChildren()) Walk(child);
         }
         Walk(this);
@@ -3484,15 +4704,33 @@ public partial class GameRoot : Node3D
         if (_traversalTimer <= 0f)
         {
             _player.GlobalPosition = climb.Base;
-            _player.ClimbHeld = true;
+            // A ladder is held; a lift is pressed. HoldingBuild is the same
+            // hook the vehicle probe boards with, and it is what E does.
+            _player.ClimbHeld = !climb.Lift;
+            _player.HoldingBuild = climb.Lift;
             _player.WalkHeld = Vector3.Zero;
         }
         _traversalTimer += (float)delta;
 
+        // Hold the press across a few frames before letting go. Setting it and
+        // clearing it inside one tick is setting it never: Player reads the
+        // hook in its own _PhysicsProcess, so the press has to outlive the
+        // frame that made it. The lift drives itself once boarded.
+        if (climb.Lift && _traversalTimer > 0.3f) _player.HoldingBuild = false;
+
+        // A lift is timed by its own shaft rather than by a flat window: at
+        // 3 m/s the Spire's would want thirteen seconds, and the four a ladder
+        // needs would have reported every lift as stopping short.
+        float rideSeconds = climb.Lift
+            ? Mathf.Abs(climb.Deck.Y - climb.Base.Y) / 3f + 2f
+            : 4f;
+
         // Climb, then walk at the deck this ladder serves and let go: if there
         // is something to stand on, they end up standing on it at its height.
-        if (_traversalTimer < 4f) return;
-        if (_traversalTimer < 6.5f)
+        if (_traversalTimer < rideSeconds) return;
+        // A lift puts you on its own deck — there is nothing to step off onto,
+        // and walking would only carry you off it.
+        if (!climb.Lift && _traversalTimer < rideSeconds + 2.5f)
         {
             _player.ClimbHeld = false;
             // Step off toward whatever the rungs' head is next to.
@@ -3508,13 +4746,310 @@ public partial class GameRoot : Node3D
         float reached = _player.GlobalPosition.Y;
         // Two metres of slack: the step off lands you on the deck, which sits
         // a little under the head of the rungs.
-        bool landed = _player.Standing && reached >= climb.Deck.Y - 2f;
-        _traversalReport.Add($"{climb.Id}: rungs end at {climb.Deck.Y:0.0} m, " +
+        // A ladder is asked whether there is a deck at the top to stand on; a
+        // lift is asked whether it arrives. The car is the floor on a lift, so
+        // requiring IsOnFloor() there measures the resting contact against a
+        // static body the ride itself repositioned, which is not the question
+        // and does not answer reliably. Whether the top stop is level with
+        // something walkable is §4.1's job, and it is checked there.
+        bool landed = climb.Lift
+            ? Mathf.Abs(reached - climb.Deck.Y) < 0.5f
+            : _player.Standing && reached >= climb.Deck.Y - 2f;
+        string ends = climb.Lift ? "top stop" : "rungs end";
+        _traversalReport.Add($"{climb.Id}: {ends} at {climb.Deck.Y:0.0} m, " +
             $"left standing at {reached:0.0} m " + (landed ? "-> lands on it" : "-> GOES NOWHERE"));
         if (!landed)
-            _unreachable.Add($"{climb.Id} tops out at {reached:0.0} m for rungs ending at {climb.Deck.Y:0.0} m");
+            _unreachable.Add($"{climb.Id} tops out at {reached:0.0} m for a {ends} at {climb.Deck.Y:0.0} m");
         _traversalIndex++;
         _traversalTimer = 0f;
+    }
+
+    /// <summary>Fires one of everything and says what showed up.
+    ///
+    /// The thing this catches that nothing else does: an effect can be
+    /// delivered, imported, named correctly in the manifest and still never
+    /// appear, because the code path that would draw it is unreachable or
+    /// because design renamed the sub-group the client drives. Both failures
+    /// are invisible from a file listing and from the usage count, and both
+    /// look exactly like "we have not got to that yet".</summary>
+    private void RunVfxProbe(string path)
+    {
+        // Two frames apart on purpose. Everything is fired on the first and
+        // counted on the second, so what the report counts is what survived a
+        // frame of _Process rather than what was handed to AddChild — a burst
+        // whose life is shorter than a frame is not an effect.
+        // The wave has to be running before anything is fired: a fresh match
+        // sits in intermission, that panel rides the phase rather than an
+        // event, and it draws over exactly the middle of the screen the
+        // effects are in. Every other review preset starts a wave for the
+        // same reason.
+        Stage(0, () => Submit(new Command.StartWave(LocalPlayerId)));
+        Stage(4, () => FireEveryEffect());
+        Stage(3, () => ReportEveryEffect(path));
+    }
+
+    private Node3D? _vfxAnchor;
+    private int _vfxLiveBefore;
+
+    private void FireEveryEffect()
+    {
+        // On a build socket, not in front of the hero: the hero spawns on the
+        // Foundry's gantry, and a set of 6-13 m ground rings fired up there is
+        // a set of ground rings on the other side of a wall. A socket is open
+        // ground beside the lane by definition, which is the same reason every
+        // other review preset aims at one.
+        var socket = BuildableSocket();
+        var anchor = new Node3D { Position = ToGd(socket.Pos) };
+        AddChild(anchor);
+        _vfxAnchor = anchor;
+        var at = anchor.Position;
+        // Far enough back and high enough up that the ground rings read as
+        // rings: several of these are authored at 6-13 m and seen from eye
+        // height at four paces they are a horizon line.
+        AimAt(new Vec3(at.X, at.Y, at.Z), back: 12f, height: 5f);
+
+        _vfxLiveBefore = Vfx.LiveCount;
+        foreach (var status in Statuses.All.Values)
+            Vfx.StatusHeld($"probe:{status.Id}", anchor, status.Id, 1f);
+        foreach (var reaction in Reactions.All) Vfx.Reaction(reaction.Id, anchor);
+        foreach (var faction in Factions.All.Values)
+            Vfx.Ability(faction.AbilityId, at, at + new Vector3(3f, 0f, 0f));
+        Vfx.OverdriveCrown(at, 4f);
+
+        Vfx.TowerPlaced(at);
+        Vfx.TowerSold(at);
+        for (int level = 1; level <= 10; level += 3) Vfx.TowerUpgraded(at, level);
+        Vfx.DetectorPulse(at, Towers.Detector.RangeMeters, 2f);
+
+        Vfx.WaveStart(at, Vector3.Forward);
+        Vfx.WaveClear(at);
+        Vfx.CoreBreach(at);
+
+        Vfx.ShieldPopped(anchor);
+        Vfx.ShieldRegen("probe:regen", anchor);
+        Vfx.BurrowSpray(at);
+        Vfx.ClusterSplit(at);
+        Vfx.ReviveBeam("probe:revive", at, 0.5f);
+        Vfx.Teleport(at);
+        Vfx.EnemyWarp(at);
+
+        foreach (var def in Towers.All.Values)
+        {
+            Vfx.TowerFired(def.Id, at + Vector3.Up, Vector3.Forward);
+            Vfx.ProjectileLanded(def.Id, at);
+            if (def.Kind is TowerKind.Beam or TowerKind.Tesla)
+                Vfx.TowerBeam($"probe:beam:{def.Id}", def.Id,
+                    at + Vector3.Up, at + Vector3.Up + Vector3.Forward * 6f);
+        }
+        foreach (var ammo in Ammo.All.Values)
+            Vfx.GunShot(at + Vector3.Up, at + Vector3.Up + Vector3.Forward * 6f, ammo.Id, true);
+    }
+
+    private void ReportEveryEffect(string path)
+    {
+        var report = new List<string> { $"vfx probe on {_map.Id}" };
+        report.Add($"{Vfx.LiveCount - _vfxLiveBefore} effect node(s) live a frame after one of everything");
+
+        // Which names came back with design's model behind them, and which
+        // fell through. A name that is on disk and did not resolve is the
+        // expensive case — it means the drop landed and Godot never imported
+        // it, which is silent and renders as nothing at all.
+        // Only towers that actually fire something have a flash and an
+        // impact: an aura has no muzzle, and reporting one missing for the
+        // Singularity every run is how a report stops being read. Ammo ids
+        // are camelCase and design's filenames are not — the lower-casing is
+        // the same one AssetLibrary does, and leaving it out here reported
+        // hollowPoint missing while the game was drawing it.
+        var wanted = Vfx.Catalogue()
+            .Concat(Towers.All.Values
+                .Where(d => d.ProjectileSpeed > 0f || d.Kind == TowerKind.Tesla)
+                .SelectMany(d => new[] { $"vfx_muzzle_{d.Id}", $"vfx_impact_{d.Id}" }))
+            .Concat(Ammo.All.Values.Select(a => $"vfx_tracer_{a.Id}"))
+            // The two towers with no round. Neither has ever been drawn and
+            // neither would show up in a list built from muzzles and impacts.
+            .Concat(new[] { "proj_arc_beam", "proj_filament_beam" })
+            .Select(n => n.ToLowerInvariant())
+            .Distinct().OrderBy(n => n, System.StringComparer.Ordinal).ToList();
+
+        var resolved = new HashSet<string>(AssetLibrary.Resolved);
+        var undelivered = new List<string>();
+        foreach (string name in wanted)
+        {
+            if (resolved.Contains(name)) continue;
+            undelivered.Add(name);
+            report.Add($"  no model: {name} -> {AssetLibrary.PathFor(name)}");
+        }
+        report.Add($"{wanted.Count - undelivered.Count}/{wanted.Count} effect names drew design's model");
+
+        // A picture of the whole set, for the review this document exists for.
+        // Headless has no framebuffer and says so rather than logging an
+        // engine ERROR, which CI reads as a failed build.
+        if (DisplayServer.GetName() == "headless")
+        {
+            report.Add($"headless run — no frame to write for {path}.png");
+        }
+        else
+        {
+            var image = GetViewport().GetTexture().GetImage();
+            image.SavePng(path + ".png");
+            report.Add($"wrote {path}.png ({image.GetWidth()}x{image.GetHeight()})");
+        }
+
+        bool drew = Vfx.LiveCount > _vfxLiveBefore;
+        _vfxAnchor?.QueueFree();
+        WriteProbe(report, path, drew,
+            drew
+                ? $"PASS: every effect entry point draws, {undelivered.Count} name(s) still to be modelled"
+                : "FAIL: the effects layer drew nothing at all");
+    }
+
+    /// <summary>Walks the inside of the map's perimeter and asks, at every
+    /// step, whether a player standing there could keep walking outward.
+    ///
+    /// Cast outward from just inside the edge rather than outward from the
+    /// middle: a ray from the centre stops at the first crate it meets and
+    /// reports a contained map that a player can stroll out of ten metres
+    /// further on. Starting at the edge is the same question the player asks
+    /// with their feet.</summary>
+    private void RunContainmentProbe(string path)
+    {
+        const float inset = 1.0f, reach = 5f, step = 2f;
+        var report = new List<string>
+        {
+            $"containment probe on {_map.Id}, {_map.FieldX:0} x {_map.FieldZ:0} m field",
+        };
+
+        if (_containment.HalfX <= 0f)
+        {
+            WriteProbe(report, path, false,
+                "FAIL: this map built no containment at all — a player walks off the edge");
+            return;
+        }
+        report.Add($"tightest containment ring: {_containment.HalfX * 2:0} x {_containment.HalfZ * 2:0} m");
+
+        var space = GetWorld3D().DirectSpaceState;
+        bool Solid(Vector3 from, Vector3 outward)
+        {
+            var query = PhysicsRayQueryParameters3D.Create(from, from + outward * reach, 1);
+            query.CollideWithAreas = false;
+            query.CollideWithBodies = true;
+            return space.IntersectRay(query).Count > 0;
+        }
+
+        int open = 0, total = 0;
+        float worstRun = 0f, run = 0f;
+        var worstAt = Vector3.Zero;
+
+        // Three heights, because the edge has to hold at every level a player
+        // can stand at. An eight-metre box is a solid wall from the deck and a
+        // kerb from the Spire's fortieth metre, and only the third of these
+        // can tell the difference.
+        float[] heights = { 1.0f, 11.0f, 41.0f };
+
+        void Side(Vector3 from, Vector3 to, Vector3 outward)
+        {
+            int count = Mathf.Max(1, Mathf.RoundToInt(from.DistanceTo(to) / step));
+            for (int i = 0; i <= count; i++)
+            {
+                var foot = from.Lerp(to, (float)i / count);
+                foreach (float h in heights)
+                {
+                    total++;
+                    if (Solid(foot + Vector3.Up * h, outward)) { run = 0f; continue; }
+                    open++;
+                    run += step;
+                    if (run > worstRun) { worstRun = run; worstAt = foot + Vector3.Up * h; }
+                }
+            }
+        }
+
+        float x = _containment.HalfX - inset, z = _containment.HalfZ - inset;
+        Side(new Vector3(-x, 0, -z), new Vector3(x, 0, -z), Vector3.Forward);
+        Side(new Vector3(-x, 0, z), new Vector3(x, 0, z), Vector3.Back);
+        Side(new Vector3(-x, 0, -z), new Vector3(-x, 0, z), Vector3.Left);
+        Side(new Vector3(x, 0, -z), new Vector3(x, 0, z), Vector3.Right);
+
+        report.Add($"{total - open}/{total} steps around the perimeter are blocked");
+        if (open > 0)
+        {
+            report.Add($"longest way out: {worstRun:0} m of open edge "
+                + $"around ({worstAt.X:0}, {worstAt.Z:0}) at {worstAt.Y:0} m up");
+            WriteProbe(report, path, false,
+                $"FAIL: {open} of {total} rays around the edge found nothing to stop a player");
+            return;
+        }
+        report.Add($"every one of {total} rays at 1, 11 and 41 m up hits something");
+
+        // And now with feet. A ray proves a body is there; it does not prove a
+        // capsule cannot squeeze past a corner, ride a slope over the top, or
+        // slip through the seam where two boxes meet. Walking is the question
+        // the player asks, so the probe asks it the same way.
+        _containReport = report;
+        _containReportPath = path;
+        _containIndex = 0;
+        _containTimer = 0f;
+        _containWorst = 0f;
+    }
+
+    private List<string>? _containReport;
+    private string _containReportPath = "";
+    private int _containIndex = -1;
+    private float _containTimer, _containWorst;
+    private Vector3 _containWorstAt;
+
+    /// <summary>Walks a player into the edge at eight points around it and
+    /// measures how far past it they get. Zero is the only passing answer;
+    /// what this is here to catch is a metre, which is a corner seam, and
+    /// twenty, which is no wall at all.</summary>
+    private void TickContainmentWalk(double delta)
+    {
+        if (_containReport is null || _player is null) return;
+
+        const int points = 8;
+        const float startInset = 4f, walkSeconds = 1.2f;
+
+        if (_containIndex >= points)
+        {
+            var report = _containReport;
+            _containReport = null;
+            _player.WalkHeld = Vector3.Zero;
+            report.Add($"walked into the edge at {points} points; furthest anyone got past it: "
+                + $"{_containWorst:0.00} m at ({_containWorstAt.X:0}, {_containWorstAt.Z:0})");
+            bool held = _containWorst < 0.5f;
+            WriteProbe(report, _containReportPath, held,
+                held
+                    ? $"PASS: the edge is solid the whole way round and nobody walked through it"
+                    : $"FAIL: a player walked {_containWorst:0.00} m past the edge "
+                        + $"at ({_containWorstAt.X:0}, {_containWorstAt.Z:0})");
+            return;
+        }
+
+        // Eight points: the four side midpoints and the four corners, which is
+        // where a box ring is weakest — two faces meeting is a seam, and a
+        // seam is where a capsule gets through if anywhere.
+        float a = _containIndex / (float)points * Mathf.Tau;
+        var outward = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)).Normalized();
+        var on = new Vector3(
+            Mathf.Clamp(outward.X * _containment.HalfX * 2f, -_containment.HalfX, _containment.HalfX),
+            0f,
+            Mathf.Clamp(outward.Z * _containment.HalfZ * 2f, -_containment.HalfZ, _containment.HalfZ));
+
+        if (_containTimer <= 0f)
+        {
+            _player.GlobalPosition = on - outward * startInset + Vector3.Up * 1.2f;
+            _player.WalkHeld = outward;
+        }
+        _containTimer += (float)delta;
+
+        var p = _player.GlobalPosition;
+        float past = Mathf.Max(
+            Mathf.Abs(p.X) - _containment.HalfX,
+            Mathf.Abs(p.Z) - _containment.HalfZ);
+        if (past > _containWorst) { _containWorst = past; _containWorstAt = p; }
+
+        if (_containTimer < walkSeconds) return;
+        _containTimer = 0f;
+        _containIndex++;
     }
 
     private void WriteProbe(List<string> report, string path, bool pass, string verdict)
@@ -3541,6 +5076,19 @@ public partial class GameRoot : Node3D
     private void BuildLevel(MapDef map)
     {
         int nodesBefore = GetTree().GetNodeCount();
+        // Effects belong to the match that was running, and half of them are
+        // keyed by enemy id — a loaded save reuses those ids, so a burn left
+        // over from the previous world would reattach itself to a different
+        // enemy on a different map.
+        Vfx.Clear();
+        foreach (var round in _clientRounds)
+            if (IsInstanceValid(round.View)) round.View.QueueFree();
+        _clientRounds.Clear();
+        _containment = default;
+        _enemyStatuses.Clear();
+        _lastSnapshotBits.Clear();
+        _detectorNext.Clear();
+        _beamRamp.Clear();
         BuildEnvironment(map);
 
         // Ground slab — one collider, dressed with the 20 m terrain tiles.
@@ -3656,25 +5204,47 @@ public partial class GameRoot : Node3D
         // one part with nothing to thin, and mounting its 230 pieces one
         // subtree at a time was 700 nodes of the same ground.
         bool borrowed = laneModule != $"{map.Id}_path_ground";
-        bool instancedLane = borrowed || AssetManifest.Instanced(laneModule);
+        bool instancedLane = borrowed || DesignManifest.Instanced(laneModule);
         var laneRuns = new List<Transform3D>();
-        foreach (var route in map.Routes)
+
+        // Laid once per *edge* rather than once per route leg. Routes overlap,
+        // and the roadway used to be drawn once for each route that walks a
+        // stretch — the Toaster's `direct` shares every metre it has with
+        // `long`, so a third of that map's road was two or three boxes stacked
+        // in the same place, z-fighting with themselves and paying for the draw
+        // each time. The graph already knows a shared span is one lane; this is
+        // the client catching up with it.
+        var laneGraph = LaneGraph.FromRoutes(map);
+        foreach (var edge in laneGraph.Edges)
         {
-            bool air = route.Layer == EnemyLayer.Air;
+            // A warp is not walked, so there is no road to draw. Laying one
+            // would paint a two-hundred-metre diagonal of roadway across the
+            // fields, through the buildings, joining two pads that are
+            // deliberately nowhere near each other.
+            if (edge.Kind == LaneEdgeKind.Warp) continue;
+
+            bool air = edge.Layer == EnemyLayer.Air;
             var color = air ? new Color(0.5f, 0.6f, 0.9f, 0.25f) : new Color(0.2f, 0.22f, 0.27f);
-            for (int i = 0; i < route.Waypoints.Count - 1; i++)
+            for (int i = 0; i < edge.Waypoints.Count - 1; i++)
             {
-                // A warp leg is not walked, so there is no road to draw. Laying
-                // one would paint a two-hundred-metre diagonal of roadway
-                // across the fields, through the buildings, joining two pads
-                // that are deliberately nowhere near each other.
-                if (route.IsTeleportLeg(i)) continue;
-                var a = ToGd(route.Waypoints[i]);
-                var b = ToGd(route.Waypoints[i + 1]);
-                var mid = (a + b) * 0.5f + new Vector3(0, air ? 0f : 0.06f, 0);
-                var box = AddStaticBox(mid, new Vector3((b - a).Length(), air ? 0.15f : 0.1f, air ? 1.2f : 3.4f), color, layer: 0, transparent: air);
+                var a = ToGd(edge.Waypoints[i]);
+                var b = ToGd(edge.Waypoints[i + 1]);
+                // The leg's own frame, pitch and all. Yaw alone was enough
+                // for three maps because their lanes are flat; on a lane that
+                // climbs it lays a fourteen-metre slab of roadway flat across
+                // the middle of a flight, hanging out of both ends of it. A
+                // level leg gives back exactly the yaw this used to apply, so
+                // nothing flat moves by so much as a millimetre.
                 var horizontal = b - a;
-                box.Rotation = new Vector3(0, Mathf.Atan2(-horizontal.Z, horizontal.X), 0);
+                var along = horizontal.Normalized();
+                var flank = along.Cross(Vector3.Up);
+                var frame = flank.LengthSquared() < 1e-6f
+                    ? Basis.Identity
+                    : new Basis(along, flank.Normalized().Cross(along).Normalized(),
+                        flank.Normalized());
+                var mid = (a + b) * 0.5f + (frame * Vector3.Up) * (air ? 0f : 0.06f);
+                var box = AddStaticBox(mid, new Vector3((b - a).Length(), air ? 0.15f : 0.1f, air ? 1.2f : 3.4f), color, layer: 0, transparent: air);
+                box.Basis = frame;
 
                 // The ground lane becomes real roadway. The air lane keeps its
                 // faint ribbon: pylons are placed separately, standing on the
@@ -3691,8 +5261,24 @@ public partial class GameRoot : Node3D
                 }
                 else if (!air)
                 {
-                    MapKit.MountRun(box, laneModule, (b - a).Length(), 4f,
-                        alongX: true, MapKit.GroundLocal(box), 0f,
+                    // Indoors gets the indoor module where a map ships one.
+                    // Design's note for it is specific: it is the route "where
+                    // it crosses a floor plate" — a worn traffic band with
+                    // hazard edges rather than asphalt and kerbs, because
+                    // kerbs inside an office are a road drawn in a room.
+                    string module = laneModule;
+                    if (!borrowed && AssetLibrary.Has($"{map.Id}_path_interior")
+                        && mid.Y > 1f && Mathf.Abs(mid.X) <= 20f && Mathf.Abs(mid.Z) <= 20f)
+                        module = $"{map.Id}_path_interior";
+                    // Under the slab's own face, not at world zero.
+                    // `GroundLocal` draws a module at y 0 whatever the body it
+                    // is mounted on, which is exactly right for a lane on the
+                    // ground and draws a lane ten metres up down at the
+                    // plaza. For a flat leg at ground level the two are the
+                    // same number to the centimetre, so nothing already flat
+                    // moves.
+                    MapKit.MountRun(box, module, (b - a).Length(), 4f,
+                        alongX: true, -0.06f, 0f,
                         "lane_marker", "lane_marker_cap");
                     // Switchyard's lane module carries a rail down its centre,
                     // and the routes it is laid along turn square corners —
@@ -3702,10 +5288,16 @@ public partial class GameRoot : Node3D
                     // actual track is laid as track in BuildSwitchyardRailway.
                     if (map.Id == "switchyard") MapKit.HideNamed(box, "lane_track");
                 }
-            }
 
-            if (air) BuildAirLaneSupports(route);
+                if (!_laneBodies.TryGetValue(edge.Id, out var run))
+                    _laneBodies[edge.Id] = run = new List<Node3D>();
+                run.Add(box);
+            }
         }
+
+        // Air supports are per strand, and a strand is one edge.
+        foreach (var route in map.Routes)
+            if (route.Layer == EnemyLayer.Air) BuildAirLaneSupports(route);
 
         if (laneRuns.Count > 0)
             GD.Print($"[map] lanes: {laneRuns.Count} pieces of {laneModule} in {MapKit.Instanced(this, laneModule, laneRuns, castShadow: false)} multimesh(es)");
@@ -3751,6 +5343,14 @@ public partial class GameRoot : Node3D
         if (map.Id == "spire") BuildSpireStructures();
         if (map.Id == "toaster") BuildToasterStructures(map);
 
+        // Every map, not just the one this was written for. A map may add a
+        // tighter ring of its own — the Toaster stops you at the inside of its
+        // treeline rather than letting you wander into it — but the field's
+        // own edge is always solid, so no map can ship without one by
+        // forgetting to ask.
+        BuildContainment(map.HalfX, map.HalfZ);
+        BuildOperatedGates(map);
+
         BuildVehicles(map);
 
         // Armory station.
@@ -3782,6 +5382,7 @@ public partial class GameRoot : Node3D
     {
         var gates = new List<Vector3>();
         var cores = new List<Vector3>();
+        _spawnPortals.Clear();
 
         foreach (var route in map.Routes)
         {
@@ -3793,6 +5394,7 @@ public partial class GameRoot : Node3D
             if (!gates.Any(p => p.DistanceTo(start) < 4f))
             {
                 gates.Add(start);
+                _spawnPortals.Add((start, outbound));
                 MapKit.Prop(this, "shared_spawn_portal", start, MapKit.YawTowards(outbound));
             }
 
@@ -3809,6 +5411,7 @@ public partial class GameRoot : Node3D
                 if (struck is not null) { struck.Name = "CoreHit"; struck.Visible = false; _coreHitView = struck; }
             }
         }
+        _corePositions = cores;
         _laneMouths = gates.Concat(cores).ToList();
     }
 
@@ -4263,10 +5866,13 @@ public partial class GameRoot : Node3D
         controlPad.AddChild(MakeArea("controlPoint", new BoxShape3D { Size = new Vector3(3f, 1.5f, 3f) }));
         MapKit.Mount(controlPad, "shared_controlpoint_neutral", MapKit.GroundLocal(controlPad));
 
-        // Perimeter sized to the lane: the ground route runs x −40 → +36, so
-        // the wall stands two metres past each mouth and the gates read as
-        // openings in it. Everything else is dressing at layer 0.
-        BuildBoundary("foundry_wall_boundary", 42f, 30f);
+        // The perimeter is the edge of the map, not a ring drawn near the
+        // middle of it. It used to be sized to the lane — 42 x 30 inside a
+        // 110 x 80 field — which left a thirteen-metre band of bare deck
+        // outside the wall on each side and a wall that plainly did not
+        // enclose the yard. The gates lose their openings in it and stand in
+        // the yard instead, which is how every other map's gate already reads.
+        BuildBoundary("foundry_wall_boundary", _map.HalfX, _map.HalfZ);
 
         // Dressing clusters where the theme wants it — the melt floor west, the
         // gantry over the yard, pipe runs hugging the walls — and every piece
@@ -4352,7 +5958,12 @@ public partial class GameRoot : Node3D
                 var at = from.Lerp(to, (i + 0.5f) / count);
                 // Leave a hole where enemies come in or the core sits.
                 if (_laneMouths.Any(m => Flat(m).DistanceTo(Flat(at)) < 7f)) continue;
-                MapKit.Prop(this, asset, at, yaw);
+                // Cycled, so a street frontage does not repeat on a lattice —
+                // the failure design named when it shipped four ground floors
+                // for this piece. A kit with only the base asset draws every
+                // segment from it, as before.
+                string face = $"{asset}_v{1 + (i + (int)yaw / 90) % 3}";
+                MapKit.Prop(this, AssetLibrary.Has(face) ? face : asset, at, yaw);
             }
         }
 
@@ -4362,6 +5973,11 @@ public partial class GameRoot : Node3D
         Run(new Vector3(halfX, 0, -halfZ), new Vector3(halfX, 0, halfZ), -90f);
     }
 
+    /// <summary>The tightest containment ring this level built, for the probe
+    /// that checks there is one. Zero means nothing was built, which is what
+    /// three of the four maps were.</summary>
+    private (float HalfX, float HalfZ) _containment;
+
     /// <summary>An invisible wall at the edge of the playable field.
     ///
     /// The perimeter has always been decoration — boundary wall props with no
@@ -4370,20 +5986,41 @@ public partial class GameRoot : Node3D
     /// the far side of. On a map three hundred metres across, with vehicles
     /// that do twenty metres a second, it is not: the edge has to be a thing
     /// you hit. Hidden rather than drawn, because what the player should see
-    /// there is the treeline.</summary>
+    /// there is the treeline, or the boundary wall, or whatever that map puts
+    /// at its edge.
+    ///
+    /// It was written for the Toaster and only the Toaster ever called it, so
+    /// the other three maps had no solid edge at all while MAP-AUTHORING §"can
+    /// now build" said every map's edge was an invisible wall. Every map gets
+    /// one now, from <see cref="BuildLevel"/>.</summary>
     private void BuildContainment(float halfX, float halfZ)
     {
-        const float thickness = 1f, height = 8f;
+        // Tall enough to stand on the highest thing the map has. Eight metres
+        // was written against a farm whose roofs are three: on the Spire,
+        // whose decks go to forty, it was a knee-high kerb you stepped over on
+        // your way off the building. The box is invisible and static, so its
+        // height costs a number in a struct — there is no reason to be mean
+        // with it. It starts below grade too, so nothing slips under.
+        const float thickness = 1f, top = 120f, bottom = -4f;
+        const float height = top - bottom;
+        float y = (top + bottom) * 0.5f;
+
         foreach (var (at, size) in new (Vector3, Vector3)[]
         {
-            (new Vector3(0, height * 0.5f, -halfZ), new Vector3(halfX * 2f + thickness, height, thickness)),
-            (new Vector3(0, height * 0.5f, halfZ), new Vector3(halfX * 2f + thickness, height, thickness)),
-            (new Vector3(-halfX, height * 0.5f, 0), new Vector3(thickness, height, halfZ * 2f + thickness)),
-            (new Vector3(halfX, height * 0.5f, 0), new Vector3(thickness, height, halfZ * 2f + thickness)),
+            (new Vector3(0, y, -halfZ), new Vector3(halfX * 2f + thickness, height, thickness)),
+            (new Vector3(0, y, halfZ), new Vector3(halfX * 2f + thickness, height, thickness)),
+            (new Vector3(-halfX, y, 0), new Vector3(thickness, height, halfZ * 2f + thickness)),
+            (new Vector3(halfX, y, 0), new Vector3(thickness, height, halfZ * 2f + thickness)),
         })
         {
             MapKit.HideBox(AddStaticBox(at, size, new Color(0.3f, 0.3f, 0.3f), layer: 1));
         }
+
+        // The innermost ring is the one a player actually stops at, and the
+        // one the probe has to sample just inside of.
+        _containment = _containment.HalfX <= 0f
+            ? (halfX, halfZ)
+            : (Mathf.Min(_containment.HalfX, halfX), Mathf.Min(_containment.HalfZ, halfZ));
     }
 
     /// <summary>Ground clutter on a fixed lattice — deterministic placement so
@@ -4415,134 +6052,504 @@ public partial class GameRoot : Node3D
         GD.Print($"[map] scatter {asset}: {placed} placed, {refused} refused for clearance");
     }
 
-    /// <summary>Three tiers: mid deck over the yard, catwalk over the air lane.
-    /// Ladders chain tier to tier; the launcher skips straight to the deck.</summary>
-    /// <summary>The Spire: five floor plates, the stair well that threads them,
-    /// the fire escape up the east face, and the roof the core sits on.
-    ///
-    /// Built as real collision because the whole map is a traversal problem —
-    /// on Foundry a player who falls lands on the yard, here they land five
-    /// storeys down and have to climb again, and that cost is the point.
-    ///
-    /// This is also where M3's traversal set debuts: a cargo lift that actually
-    /// serves the height, a pair of teleport pads for the rotation the lift is
-    /// too slow for, and two sniper nests that only pay if you commit to
-    /// reaching them.</summary>
-    private void BuildSpireStructures()
+    // =====================================================================
+    // The Spire
+    // =====================================================================
+    //
+    // A redesign, not a repair. The map carried eighty-four validator
+    // violations and they had one cause: the routes climb a building that was
+    // built out of solid slabs. The stair walked through the curtain wall,
+    // rose into the underside of every plate above it and finished under the
+    // roof; the cargo lift's shaft ran up through four storeys of concrete,
+    // which is why it was marked out of service rather than fixed; and the
+    // sockets, generated along those routes, hung in the air beside four
+    // flights that had never been built at all. See MAP-AUTHORING.md §7.
+
+    /// <summary>A rectangle, in world metres. Used in plan for floors and
+    /// roofs, and in elevation — (along, up) rather than (x, z) — for the
+    /// curtain wall, because the algebra a wall with a doorway in it needs is
+    /// the same algebra a floor with a stair well in it needs.</summary>
+    private readonly record struct Slab(float A0, float B0, float A1, float B1)
     {
-        // Floor plates. The atrium is left open so the stair reads as a well
-        // rather than as five separate rooms.
-        for (int floor = 1; floor <= 4; floor++)
-        {
-            float y = floor * 10f;
-            foreach (var (cx, cz, sx, sz) in new[]
-            {
-                (-13f, 0f, 12f, 40f),      // west wing
-                (13f, 0f, 12f, 40f),       // east wing
-                (0f, -15f, 14f, 10f),      // north bridge
-                (0f, 15f, 14f, 10f),       // south bridge
-            })
-            {
-                var plate = AddStaticBox(new Vector3(cx, y - 0.2f, cz),
-                    new Vector3(sx, 0.4f, sz), new Color(0.42f, 0.45f, 0.52f), layer: 1);
-                MapKit.MountRun(plate, "spire_floor", Mathf.Max(sx, sz), 4f,
-                    alongX: sx >= sz, MapKit.GroundLocal(plate));
-            }
-        }
-
-        // Exterior shell: four faces with the east one cut away for the fire
-        // escape, so the outside route is visible from inside the building.
-        foreach (var (cx, cz, sx, sz) in new[]
-        {
-            (0f, -20f, 40f, 1f),
-            (-20f, 0f, 1f, 40f),
-            (0f, 20f, 40f, 1f),
-        })
-        {
-            var wall = AddStaticBox(new Vector3(cx, 20f, cz),
-                new Vector3(sx, 40f, sz), new Color(0.34f, 0.36f, 0.42f), layer: 1);
-            MapKit.MountRun(wall, "spire_facade", Mathf.Max(sx, sz), 8f,
-                alongX: sx >= sz, MapKit.GroundLocal(wall));
-            MapKit.NoShadow(wall);
-        }
-
-        // Fire escape: the zigzag the escape route walks, as real landings.
-        foreach (float y in new[] { 10f, 20f, 30f })
-        {
-            var landing = AddStaticBox(new Vector3(20f, y - 0.2f, 10f - (y - 10f) * 0.8f),
-                new Vector3(6f, 0.4f, 8f), new Color(0.5f, 0.42f, 0.3f), layer: 1);
-            MapKit.MountRun(landing, "spire_fireescape", 8f, 3f, alongX: false,
-                MapKit.GroundLocal(landing));
-        }
-
-        // Roof and the core it carries.
-        var roof = AddStaticBox(new Vector3(0f, 39.8f, 0f), new Vector3(40f, 0.4f, 40f),
-            new Color(0.4f, 0.43f, 0.5f), layer: 1);
-        MapKit.MountRun(roof, "spire_roof", 40f, 8f, alongX: true, MapKit.GroundLocal(roof));
-
-        // --- M3 traversal debut ------------------------------------------
-
-        // Cargo lift: the honest way to the top and slow enough that taking it
-        // is a decision. Serves the full height of the shaft.
-        var liftShaft = AddStaticBox(new Vector3(-17f, 20f, -17f), new Vector3(5f, 40f, 5f),
-            new Color(0.3f, 0.32f, 0.38f), layer: 0);
-        MapKit.MountRun(liftShaft, "shared_elevator_shaft", 40f, 5f, alongX: false,
-            MapKit.GroundLocal(liftShaft));
-        MapKit.NoShadow(liftShaft);
-        var lift = AddStaticBox(new Vector3(-17f, 0.6f, -17f), new Vector3(4f, 0.4f, 4f),
-            new Color(0.62f, 0.55f, 0.28f), layer: 1);
-        lift.AddChild(MakeArea("elevator", new BoxShape3D { Size = new Vector3(4.4f, 3f, 4.4f) }));
-        MapKit.Mount(lift, "shared_elevator", MapKit.GroundLocal(lift));
-
-        // Teleport pads: lobby to roof and back, for the rotation the lift is
-        // too slow to serve. Paired, so using one is committing to the other end.
-        AddTeleportPad("padGround", "LOBBY", new Vector3(-24f, 0.2f, -6f));
-        AddTeleportPad("padRoof", "ROOF", new Vector3(-6f, 40.2f, 12f));
-
-        // Sniper nests: reachable only by committing to the climb, and they see
-        // the stair well the ground floor cannot. The plan's rule that every map
-        // has a vantage towers cannot cover and a traversing hero can.
-        foreach (var pos in new[] { new Vector3(17f, 30.2f, -17f), new Vector3(-17f, 30.2f, 17f) })
-        {
-            var nest = AddStaticBox(pos, new Vector3(5f, 0.4f, 5f),
-                new Color(0.45f, 0.4f, 0.3f), layer: 1);
-            nest.AddChild(MakeArea("nest", new BoxShape3D { Size = new Vector3(5f, 3f, 5f) }));
-            MapKit.Mount(nest, "shared_snipernest", MapKit.GroundLocal(nest));
-        }
-
-        // Ladders between floors on the west side, so the stair is not the only
-        // way up on foot and a downed player has a route back.
-        //
-        // The west wing runs to x=-19, and these stood at exactly x=-19: every
-        // one of the four climbed into the underside of the floor it served and
-        // stopped two metres short, on a map whose entire shape is climbing.
-        // The rungs belong just clear of the edge — same fix as Foundry's deck
-        // ladder and both of Switchyard's, all found by the traversal probe.
-        for (int floor = 0; floor < 4; floor++)
-        {
-            var ladder = AddStaticBox(new Vector3(-20f, floor * 10f + 5f, 6f),
-                new Vector3(1.2f, 10f, 0.15f), new Color(0.7f, 0.6f, 0.3f), layer: 0);
-            ladder.AddChild(MakeArea("ladder", new BoxShape3D { Size = new Vector3(1.6f, 11f, 1.6f) }));
-            MapKit.Mount(ladder, "shared_ladder", MapKit.GroundLocal(ladder));
-        }
-
-        // One zipline down, because a map that is only climbable is a map you
-        // spend the intermission walking.
-        var anchor = AddStaticBox(new Vector3(6f, 40.5f, -14f), new Vector3(1f, 1.4f, 1f),
-            new Color(0.55f, 0.5f, 0.35f), layer: 0);
-        var spireZip = MakeArea("zipline", new BoxShape3D { Size = new Vector3(2.4f, 2.6f, 2.4f) });
-        // "zip_to" on the body, where nothing reads it. The player reads
-        // "zip_end" off the Area, so the one zipline down from a forty-metre
-        // roof has never carried anyone since the day it was written.
-        spireZip.SetMeta("zip_end", new Vector3(-26f, 1f, -6f));
-        anchor.AddChild(spireZip);
-        // The post stands on the roof (top 40.07) and its mate on the plaza;
-        // the old mount put the roof post's art at grade, forty metres under
-        // the pad it serves.
-        DressZipline(anchor, null, new Vector3(6f, 40.87f, -14f), new Vector3(-26f, 1f, -6f),
-            new Vector3(6f, 40.07f, -14f), new Vector3(-26f, 0f, -6f));
+        public float SpanA => A1 - A0;
+        public float SpanB => B1 - B0;
+        public float MidA => (A0 + A1) * 0.5f;
+        public float MidB => (B0 + B1) * 0.5f;
     }
 
+    /// <summary>Everything in <paramref name="rects"/> that is not inside
+    /// <paramref name="hole"/>, as rectangles.
+    ///
+    /// This is the one primitive the Spire was missing, and twenty-four of its
+    /// violations were its absence: a floor is a rectangle with holes in it.
+    /// Up to four pieces per rect, and slivers are dropped rather than emitted
+    /// as colliders too thin to stand on.</summary>
+    private static List<Slab> Punch(IReadOnlyList<Slab> rects, Slab hole)
+    {
+        var kept = new List<Slab>();
+        foreach (var r in rects)
+        {
+            if (hole.A1 <= r.A0 || hole.A0 >= r.A1 || hole.B1 <= r.B0 || hole.B0 >= r.B1)
+            {
+                kept.Add(r);
+                continue;
+            }
+            if (r.B0 < hole.B0) kept.Add(r with { B1 = hole.B0 });
+            if (r.B1 > hole.B1) kept.Add(r with { B0 = hole.B1 });
+            float b0 = Mathf.Max(r.B0, hole.B0), b1 = Mathf.Min(r.B1, hole.B1);
+            if (r.A0 < hole.A0) kept.Add(new Slab(r.A0, b0, hole.A0, b1));
+            if (r.A1 > hole.A1) kept.Add(new Slab(hole.A1, b0, r.A1, b1));
+        }
+        kept.RemoveAll(s => s.SpanA < 0.05f || s.SpanB < 0.05f);
+        return kept;
+    }
+
+    private static List<Slab> Punch(IReadOnlyList<Slab> rects, IEnumerable<Slab> holes)
+    {
+        var kept = rects.ToList();
+        foreach (var hole in holes) kept = Punch(kept, hole);
+        return kept;
+    }
+
+    private const float SpireSlabThickness = 0.4f;
+
+    /// <summary>The office floors in plan, before anything is cut out.</summary>
+    private static readonly Slab SpireFloorPlan = new(-19f, -20f, 19f, 20f);
+
+    /// <summary>The light well the stair spirals around, open plaza to roof.
+    /// It is also the players' way down: nothing here takes falling damage, so
+    /// stepping into the atrium is a free ride to the lobby and the cost of it
+    /// is the forty metres you have to climb again.</summary>
+    private static readonly Slab SpireAtrium = new(-7f, -10f, 7f, 10f);
+
+    /// <summary>The lift's shaft, in the atrium's north-west corner. That
+    /// corner is the whole reason the lift works at all: the atrium is void
+    /// from the plaza to the roof, so the car pierces no floor plate on its
+    /// way up and the only opening it needs is in the roof.</summary>
+    private static readonly Slab SpireLiftShaft = new(-7f, -10f, -3f, -6f);
+
+    /// <summary>The stair, as the four legs the route climbs. Design authored
+    /// `spire_stairwell` against exactly these: a 10 m rise over runs of 10,
+    /// 10, 18 and 14 metres, with the note "stretch X for the 18 m and 14 m
+    /// legs". The kit has always known the shape of this stair; the map is
+    /// only now built to it.</summary>
+    private static readonly (Vector3 From, Vector3 To)[] SpireFlights =
+    {
+        (new Vector3(-14f,  0f, -14f), new Vector3( -4f, 10f, -14f)),
+        (new Vector3( 14f, 10f, -14f), new Vector3( 14f, 20f,  -4f)),
+        (new Vector3( 14f, 20f,  14f), new Vector3( -4f, 30f,  14f)),
+        (new Vector3(-14f, 30f,  14f), new Vector3(-14f, 40f,   0f)),
+    };
+
+    /// <summary>The Spire: forty metres, the core on the roof, and the first
+    /// map here whose design problem is a section rather than a plan.
+    ///
+    /// Enemies climb at walking pace through a fixed spiral and cannot take a
+    /// short cut. A player can be on any floor in seconds — the lift up, the
+    /// atrium down — so the asymmetry the map is built on is that the defence
+    /// is mobile and the attack is not. Towers are spread thin across four
+    /// levels by necessity; your body is the concentration you move to
+    /// whichever floor is losing. That is the question this map asks, and it
+    /// is a different one from Switchyard's "which lane do I fortify".
+    ///
+    /// Circulation, and why each piece exists:
+    ///   - the lift is an express, lobby to roof and back, and slow enough
+    ///     that boarding it is a decision;
+    ///   - two ladders on opposite corners of the atrium are the local stops
+    ///     the express does not make (one alone leaves the far corner of a
+    ///     forty-metre plate outside §4.1's thirty-metre reach);
+    ///   - the atrium is the way down, free and instant, and the fare is the
+    ///     climb back;
+    ///   - the teleport pair is the rotation the lift is too slow for, and the
+    ///     roof end of it is also what keeps the roof's south-east corner
+    ///     inside a traversal exit's reach.</summary>
+    private void BuildSpireStructures()
+    {
+        BuildSpireFloors();
+        BuildSpireFacade();
+        BuildSpireStair();
+        BuildSpireFireEscape();
+        BuildSpireRoof();
+        BuildSpireTraversal();
+
+        // The city block the plaza sits in, and its street furniture. Both
+        // shipped with the kit and neither had ever been placed.
+        BuildBoundary("spire_wall_boundary", _map.HalfX, _map.HalfZ);
+        ScatterTerrain("spire_terrain_scatter", 46f, 34f);
+        BuildSpireStreet();
+    }
+
+    /// <summary>The three office floors, each a plate with the atrium and one
+    /// stair well cut out of it.
+    ///
+    /// The well is not decoration. Without it the flight beneath rises into
+    /// the plate's underside two metres short of the floor it serves, which is
+    /// what §4.10 was reporting on three of the four flights, and what the
+    /// out-of-service comment on the lift was describing in prose.</summary>
+    private void BuildSpireFloors()
+    {
+        foreach (var (y, well) in new[]
+        {
+            // Each well is the stretch where the flight below comes within
+            // three metres of the plate — measured off the lane, not eyeballed.
+            // The plate keeps every other metre, because every metre it keeps
+            // is somewhere a pad can stand.
+            (10f, new Slab(-11f, -18f, -4f, -10f)),
+            (20f, new Slab( 11f, -13f, 19f,  -4f)),
+            (30f, new Slab( -4f,  10f,  5f,  18f)),
+        })
+            foreach (var plate in Punch(new[] { SpireFloorPlan }, new[] { SpireAtrium, well }))
+                SpireDeck(plate, y, "spire_floor", 12f, new Color(0.42f, 0.45f, 0.52f));
+    }
+
+    /// <summary>One piece of floor: a collider whose top is at
+    /// <paramref name="topY"/>, tiled with design's bays.
+    ///
+    /// The bay is 4 m along its run and 12 m across, and a plate cut around a
+    /// well is not 12 m across anywhere in particular, so the across axis is
+    /// scaled to the piece and the 4 m repeat is left alone. That is the
+    /// difference between tiling a shape and stretching one bay over it — and
+    /// it is what lets the floor have holes in it at all.</summary>
+    private void SpireDeck(Slab s, float topY, string asset, float bayAcross, Color color)
+    {
+        var centre = new Vector3(s.MidA, topY - SpireSlabThickness * 0.5f, s.MidB);
+        var body = AddStaticBox(centre, new Vector3(s.SpanA, SpireSlabThickness, s.SpanB),
+            color, layer: 1);
+        if (!AssetLibrary.Has(asset)) return;
+
+        bool alongA = s.SpanA >= s.SpanB;
+        float run = alongA ? s.SpanA : s.SpanB;
+        float across = alongA ? s.SpanB : s.SpanA;
+        int count = Mathf.Max(1, Mathf.RoundToInt(run / 4f));
+        float step = run / count;
+        // The bay is authored 4 along X and 12 along Z. Turned a quarter it
+        // runs along Z instead, which puts its 12 m axis across the run either
+        // way — which is what design's "wings run 10 bays along Z (rotate 90°)"
+        // is describing.
+        var spin = new Basis(Vector3.Up, alongA ? 0f : Mathf.Pi * 0.5f);
+        var fit = spin * Basis.FromScale(new Vector3(step / 4f, 1f, across / bayAcross));
+
+        var at = new List<Transform3D>(count);
+        for (int i = 0; i < count; i++)
+        {
+            float offset = -run * 0.5f + step * (i + 0.5f);
+            at.Add(new Transform3D(fit, centre
+                + (alongA ? new Vector3(offset, 0f, 0f) : new Vector3(0f, 0f, offset))));
+        }
+        if (MapKit.Instanced(this, asset, at) > 0) MapKit.HideBox(body);
+    }
+
+    /// <summary>The curtain wall on three faces, with its two doorways cut out
+    /// of the collision and not only out of the art.
+    ///
+    /// Both ground routes walked through solid wall before this. Eleven §4.8
+    /// violations were the west face; the escape's entire ground leg was
+    /// another eleven, because it had been laid at z 18 — a metre and a half
+    /// off the south face, with a lane three and a half metres wide.
+    ///
+    /// The two lobby bays are where they are because the kit says so: "the
+    /// main door at z 0 and the service door the fire-escape route uses at
+    /// z 16". The bay already draws a 6 m opening between its piers; all that
+    /// was ever missing was a hole in the thing you walk into. The east face
+    /// stays open, which is design's call and a good one — it is what makes
+    /// the outside climb visible from inside the building.</summary>
+    private void BuildSpireFacade()
+    {
+        var doors = new[]
+        {
+            new Slab(-3f, 0f,  3f, 5.6f),    // main door, on the stair route
+            new Slab(13f, 0f, 19f, 5.6f),    // service door, on the escape route
+        };
+        SpireFace(new Vector3(-1f, 0f, 0f), doors, 0f, 16f);            // west
+        SpireFace(new Vector3(0f, 0f, -1f), System.Array.Empty<Slab>());        // north
+        SpireFace(new Vector3(0f, 0f, 1f), System.Array.Empty<Slab>());         // south
+    }
+
+    /// <summary>One face: five 8 m bays of curtain wall, and collision with
+    /// the doorways punched out. <paramref name="lobbyAt"/> names the bay
+    /// offsets that get the entrance module instead of the blank one.</summary>
+    private void SpireFace(Vector3 outward, IReadOnlyList<Slab> doors, params float[] lobbyAt)
+    {
+        bool alongZ = Mathf.Abs(outward.X) > 0.5f;
+        float fixedAt = (alongZ ? outward.X : outward.Z) * 20f;
+        bool dressed = AssetLibrary.Has("spire_facade");
+
+        foreach (var panel in Punch(new[] { new Slab(-20f, 0f, 20f, 40f) }, doors))
+        {
+            var centre = alongZ
+                ? new Vector3(fixedAt, panel.MidB, panel.MidA)
+                : new Vector3(panel.MidA, panel.MidB, fixedAt);
+            var size = alongZ
+                ? new Vector3(1f, panel.SpanB, panel.SpanA)
+                : new Vector3(panel.SpanA, panel.SpanB, 1f);
+            var body = AddStaticBox(centre, size, new Color(0.34f, 0.36f, 0.42f), layer: 1);
+            MapKit.NoShadow(body);
+            if (dressed) MapKit.HideBox(body);
+        }
+
+        if (!dressed) return;
+        float yaw = MapKit.YawTowards(outward);
+        for (int i = 0; i < 5; i++)
+        {
+            float offset = -16f + i * 8f;
+            string asset = lobbyAt.Any(l => Mathf.Abs(l - offset) < 0.5f)
+                && AssetLibrary.Has("spire_lobby") ? "spire_lobby" : "spire_facade";
+            MapKit.Prop(this, asset, alongZ
+                ? new Vector3(fixedAt, 0f, offset)
+                : new Vector3(offset, 0f, fixedAt), yaw);
+        }
+    }
+
+    /// <summary>The four interior flights, as geometry for the first time.
+    ///
+    /// Thirty-two of the map's §4.9 violations were sockets standing beside
+    /// these: the plan generated pads six metres off every leg without asking
+    /// whether the leg had been built, so two thirds of the deck pads on this
+    /// map hung in open air halfway up a stair that did not exist.</summary>
+    private void BuildSpireStair()
+    {
+        foreach (var (from, to) in SpireFlights)
+            SpireFlight(from, to, 3.4f, "spire_stairwell", artRunsAlongX: true, nativeRun: 10f);
+    }
+
+    /// <summary>The fire escape: the outside climb, bolted to the open east
+    /// face, and the half of the map that is visible from everywhere.
+    ///
+    /// Two flights and two landings rather than the three landings that were
+    /// here before — the third stood at y 30 on a route that re-enters the
+    /// building at y 20, so it served nothing and never had.</summary>
+    private void BuildSpireFireEscape()
+    {
+        foreach (var (y, deck) in new[]
+        {
+            (10f, new Slab(17f,  4f, 23f, 12f)),
+            (20f, new Slab(17f, -4f, 23f,  4f)),
+        })
+            SpireGrating(deck, y);
+
+        foreach (var (from, to) in new[]
+        {
+            (new Vector3(20f,  0f, 16f), new Vector3(20f, 10f, 8f)),
+            (new Vector3(20f, 10f,  8f), new Vector3(20f, 20f, 0f)),
+        })
+            SpireFlight(from, to, 3f, "spire_fireescape_flight", artRunsAlongX: false, nativeRun: 8f);
+    }
+
+    /// <summary>A steel grating deck with its top at <paramref name="topY"/> —
+    /// the fire escape's landings, and the lip at the head of each atrium
+    /// ladder. Same piece, same reason: somewhere to stand that is not the
+    /// floor plate.</summary>
+    private void SpireGrating(Slab deck, float topY)
+    {
+        var body = AddStaticBox(new Vector3(deck.MidA, topY - SpireSlabThickness * 0.5f, deck.MidB),
+            new Vector3(deck.SpanA, SpireSlabThickness, deck.SpanB),
+            new Color(0.5f, 0.42f, 0.3f), layer: 1);
+        MapKit.MountRun(body, "spire_fireescape", deck.SpanB, 3f, alongX: false, 0f);
+    }
+
+    /// <summary>A flight: a sloped collider whose top surface is exactly the
+    /// lane the enemies walk, with design's flight laid along it.
+    ///
+    /// "Exactly" is load-bearing. The clearance rule measures a 3.4 m box from
+    /// 30 cm above the lane, so a stair standing even slightly proud of its
+    /// own route reports as solid geometry blocking it — a flight that failed
+    /// the rule it exists to satisfy.</summary>
+    private void SpireFlight(Vector3 from, Vector3 to, float width, string asset,
+        bool artRunsAlongX, float nativeRun)
+    {
+        var delta = to - from;
+        var flat = new Vector3(delta.X, 0f, delta.Z);
+        float run = flat.Length();
+        const float thickness = 0.5f;
+
+        // A frame with X along the flight and Y along its normal, so the slab
+        // hangs under the walking line rather than beside it.
+        var along = delta.Normalized();
+        var side = along.Cross(Vector3.Up).Normalized();
+        var up = side.Cross(along).Normalized();
+
+        var body = AddStaticBox((from + to) * 0.5f - up * (thickness * 0.5f),
+            new Vector3(delta.Length(), thickness, width),
+            new Color(0.5f, 0.52f, 0.58f), layer: 1);
+        body.Basis = new Basis(along, up, side);
+
+        float k = run / nativeRun;
+        // `spire_stairwell` climbs along +X from its bottom step;
+        // `spire_fireescape_flight` climbs toward −Z from its bottom tread.
+        float yaw = artRunsAlongX ? MapKit.YawAlongX(flat) : MapKit.YawTowards(-flat);
+        var scale = artRunsAlongX ? new Vector3(k, 1f, 1f) : new Vector3(1f, 1f, k);
+        if (MapKit.Prop(this, asset, from, yaw, scale) is not null) MapKit.HideBox(body);
+    }
+
+    /// <summary>The roof: the core's ground, and the only floor on this map
+    /// that is a destination rather than a landing.
+    ///
+    /// The slab is ours and design's bays sit on top of it with their own
+    /// slab hidden, because the slab is the piece with the holes in it and a
+    /// roof you can see but fall through is worse than a roof with no art.
+    /// Everything else the bay carries — gravel, parapets, the drain, the
+    /// vents, the skylight — is design's and stays.</summary>
+    private void BuildSpireRoof()
+    {
+        var wells = new[]
+        {
+            // Where the top flight comes out. It stops short of z 0 because
+            // the route walks the roof along z 0 from the stair head to the
+            // core, and an opening under that line is a hole in the lane
+            // rather than a way out of the building.
+            new Slab(-18f, 0.5f, -10f, 7f),
+            SpireLiftShaft,
+        };
+        foreach (var piece in Punch(new[] { new Slab(-20f, -20f, 20f, 20f) }, wells))
+            AddStaticBox(new Vector3(piece.MidA, 40f - SpireSlabThickness * 0.5f, piece.MidB),
+                new Vector3(piece.SpanA, SpireSlabThickness, piece.SpanB),
+                new Color(0.21f, 0.2f, 0.18f), layer: 1);
+
+        if (!AssetLibrary.Has("spire_roof")) return;
+        int plain = 0;
+        for (int i = 0; i < 5; i++)
+        {
+            float x = -16f + i * 8f;
+            // The skylight is a feature of the atrium, not of the module, so
+            // it goes on the one bay that is over the atrium. Design's note
+            // says place it on a single bay and says exactly why.
+            // The skylight bay, then the plain bays cycled through the
+            // variants so five bays of roof are not one bay five times — the
+            // same reason the terrain tiler cycles its four.
+            string asset = Mathf.IsZeroApprox(x) && AssetLibrary.Has("spire_roof_v1")
+                ? "spire_roof_v1"
+                : (plain++ % 3) switch { 1 => "spire_roof_v2", 2 => "spire_roof_v3", _ => "spire_roof" };
+            if (!AssetLibrary.Has(asset)) asset = "spire_roof";
+            if (MapKit.Prop(this, asset, new Vector3(x, 0f, 0f)) is not { } bay) continue;
+            MapKit.HideNamed(bay, "roof_slab");
+            // The service walkway runs the bay's whole length 2.4 m off its
+            // centre, so on these two it would bridge the stair well.
+            if (x < -3f) MapKit.HideNamed(bay, "roof_walkway");
+        }
+
+        // The bays carry their own parapets on the Z edges only; the X ends
+        // are a separate piece, five runs each.
+        for (int i = 0; i < 5; i++)
+            foreach (float x in new[] { -20f, 20f })
+                MapKit.Prop(this, "spire_roof_parapet", new Vector3(x, 0f, -16f + i * 8f), 90f);
+
+        // Roof plant. The mast tops out at 52 m, so it goes in the corner the
+        // air lane does not come over.
+        MapKit.Prop(this, "spire_hvac", new Vector3(-15f, 40f, -16f), 18f);
+        MapKit.Prop(this, "spire_hvac", new Vector3(-15f, 40f, -10f), -12f);
+        MapKit.Prop(this, "spire_watertank", new Vector3(15f, 40f, -16f));
+        MapKit.Prop(this, "spire_antenna", new Vector3(-16f, 40f, 16f));
+    }
+
+    /// <summary>Kerbside traffic on the street outside, and the lane the
+    /// routes take across the plaza. Dressing only, and kept off the routes:
+    /// the cars carry no collision and design's own note says never within
+    /// 3 m of a route, socket or station.</summary>
+    private void BuildSpireStreet()
+    {
+        if (!AssetLibrary.Has("spire_dress_car")) return;
+        int v = 0;
+        foreach (var (at, yaw) in new[]
+        {
+            (new Vector3(-44f, 0f, -26f), 90f), (new Vector3(-44f, 0f, -20f), 90f),
+            (new Vector3(-44f, 0f,  26f), 90f), (new Vector3( 44f, 0f, -14f), -90f),
+            (new Vector3( 30f, 0f, -31f),  0f), (new Vector3(-12f, 0f, -31f), 0f),
+            (new Vector3( 12f, 0f,  31f),  0f), (new Vector3(-30f, 0f,  31f), 0f),
+        })
+        {
+            string asset = v == 0 ? "spire_dress_car" : $"spire_dress_car_v{v}";
+            MapKit.Prop(this, AssetLibrary.Has(asset) ? asset : "spire_dress_car", at, yaw);
+            v = (v + 1) % 4;
+        }
+    }
+
+    /// <summary>Every way a player moves vertically on this map.</summary>
+    private void BuildSpireTraversal()
+    {
+        // The lift, running the building's full height for the first time.
+        var shaft = AddStaticBox(new Vector3(-5f, 20f, -8f), new Vector3(4f, 40f, 4f),
+            new Color(0.3f, 0.32f, 0.38f), layer: 0);
+        MapKit.MountRun(shaft, "shared_elevator_shaft", 40f, 5f, alongX: false,
+            MapKit.GroundLocal(shaft));
+        MapKit.NoShadow(shaft);
+
+        // Both stops are the Y a player *stands* at, which is 1.2 m over the
+        // floor: the car is placed under their feet, not at them. The old
+        // pair were the car body's own height and both the same, which is how
+        // a lift declares itself out of service — and this one was.
+        var car = AddStaticBox(new Vector3(-5f, -0.2f, -8f), new Vector3(3.6f, 0.4f, 3.6f),
+            new Color(0.62f, 0.55f, 0.28f), layer: 1);
+        // The car's volume, not a slab at its feet: a rider standing on the
+        // deck has to be inside it, and a 3 m box centred on a body 20 cm
+        // thick leaves them a tenth of a metre of margin at the bottom stop.
+        var lift = MakeArea(AreaKinds.Elevator, new BoxShape3D { Size = new Vector3(4f, 4.5f, 4f) });
+        lift.Position = new Vector3(0f, 1.5f, 0f);
+        lift.SetMeta(AreaKinds.LiftBottomMeta, 0f);      // the plaza
+        lift.SetMeta(AreaKinds.LiftTopMeta, 40f);        // the roof
+        car.AddChild(lift);
+        MapKit.Mount(car, "shared_elevator", MapKit.GroundLocal(car));
+
+        // The local stops the express does not make, on opposite corners of
+        // the atrium. One alone leaves the far corner of a forty-metre plate
+        // outside §4.1's thirty-metre reach; two diagonal ones cover it.
+        //
+        // Staggered by storey, not stacked. A ladder's trigger volume has to
+        // reach a little past its rungs at both ends or you cannot grab it
+        // from the floor below or let go at the floor above — and two of those
+        // volumes at the same spot on consecutive storeys overlap, so they
+        // chain: hold E at the plaza and you are carried straight past floor
+        // one to wherever you happen to let go. The traversal probe reads that
+        // as four of six ladders going nowhere, and it is right to. Six metres
+        // of offset on the middle pair is enough that no two ever touch, and
+        // it turns the climb into a spiral round the atrium — which is what
+        // the enemies' stair is doing on the other side of the void.
+        foreach (var (x, near, far) in new[] { (6f, -8f, -2f), (-6f, 8f, 2f) })
+            for (int floor = 0; floor < 3; floor++)
+            {
+                float z = floor == 1 ? far : near;
+                var ladder = AddStaticBox(new Vector3(x, floor * 10f + 5f, z),
+                    new Vector3(1.2f, 10f, 0.15f), new Color(0.7f, 0.6f, 0.3f), layer: 0);
+                // A metre and a half of hold past the floor it serves. These
+                // rungs are in the void — that is where an atrium ladder goes
+                // — so you top out beside the plate rather than over it and
+                // have to cross the last metre. Stopping level with the floor
+                // gives you no time to: you are already falling as you step,
+                // and the probe reads it as a ladder that goes nowhere because
+                // that is what it does. Not two metres, which is what this was
+                // first: the probe allows a climb to finish two metres under
+                // the head of its rungs, and an overhang of exactly two spends
+                // the whole allowance and lands on the comparison itself.
+                var grip = MakeArea(AreaKinds.Ladder,
+                    new BoxShape3D { Size = new Vector3(1.6f, 12f, 1.6f) });
+                grip.Position = new Vector3(0f, 0.5f, 0f);
+                ladder.AddChild(grip);
+                // Not GroundLocal: a ladder that starts twenty metres up wants
+                // its rungs there, and GroundLocal would draw all six of these
+                // on top of each other at the plaza.
+                MapKit.Mount(ladder, "shared_ladder", -5f);
+            }
+
+        // The rotation the lift is too slow for. The roof end doubles as the
+        // traversal exit that keeps the roof's south-east corner in reach.
+        AddTeleportPad("padGround", "LOBBY", new Vector3(-14f, 0.2f, 6f));
+        AddTeleportPad("padRoof", "ROOF", new Vector3(6f, 40.2f, 6f));
+
+        // One way down that is not the atrium, out over the open east face —
+        // the three walled faces would put the rider through a curtain wall.
+        var anchor = AddStaticBox(new Vector3(14f, 40.7f, 0f), new Vector3(1f, 1.4f, 1f),
+            new Color(0.55f, 0.5f, 0.35f), layer: 0);
+        var zip = MakeArea(AreaKinds.Zipline, new BoxShape3D { Size = new Vector3(2.4f, 2.6f, 2.4f) });
+        zip.SetMeta("zip_end", new Vector3(32f, 1.2f, 0f));
+        anchor.AddChild(zip);
+        // Both posts full size and facing each other, the cable strung from
+        // their own sheaves: the roof post stands on the plate at 40, its
+        // mate on the plaza where the ride line ends.
+        DressZipline(anchor, null, new Vector3(14f, 40.7f, 0f), new Vector3(32f, 1.2f, 0f),
+            new Vector3(14f, 40f, 0f), new Vector3(32f, 0f, 0f));
+    }
+
+    /// <summary>Three tiers: mid deck over the yard, catwalk over the air lane.
+    /// Ladders chain tier to tier; the launcher skips straight to the deck.</summary>
     private void BuildSwitchyardStructures()
     {
         // Mid deck (y=5), moved north from z=-18 to sit over the long route's
@@ -4893,12 +6900,24 @@ public partial class GameRoot : Node3D
     /// what the apron is measured against: a straight-line distance from the
     /// spawn gate says nothing on a route that leaves the gate and comes back
     /// past it two hundred metres later.</summary>
-    private List<(RouteDef Route, Vector3 At, float Since)> RouteSamples()
+    /// <summary>Every lane, every four metres, with the direction the lane is
+    /// running at that point.
+    ///
+    /// The direction is what the Spire needed. Three maps' lanes are flat, so
+    /// every clearance question could be asked of a horizontal band and nobody
+    /// noticed the band was an assumption; the fourth map's lanes climb at up
+    /// to forty-five degrees, and a rule that measures straight up is asking
+    /// about a different volume from the one the enemy walks through.</summary>
+    private List<(RouteDef Route, Vector3 At, float Since, Vector3 Along)> RouteSamples()
     {
-        var samples = new List<(RouteDef, Vector3, float)>();
+        var samples = new List<(RouteDef, Vector3, float, Vector3)>();
         foreach (var route in _map.Routes)
             foreach (var sample in route.Samples(4f))
-                samples.Add((route, ToGd(sample.At), sample.MetersSinceEntry));
+            {
+                var leg = ToGd(route.Waypoints[sample.Leg + 1]) - ToGd(route.Waypoints[sample.Leg]);
+                samples.Add((route, ToGd(sample.At), sample.MetersSinceEntry,
+                    leg.LengthSquared() > 1e-6f ? leg.Normalized() : Vector3.Right));
+            }
         return samples;
     }
 
@@ -4959,12 +6978,32 @@ public partial class GameRoot : Node3D
             if (n is Area3D area)
             {
                 string kind = (string)area.GetMeta("kind", "");
+                // A kind may only be counted as a way up if Player actually
+                // does something about it. This is the check that would have
+                // caught the elevator: it was credited here for three
+                // milestones and no handler for it has ever existed.
+                if (System.Array.IndexOf(AreaKinds.Traversal, kind) >= 0
+                    && System.Array.IndexOf(AreaKinds.Handled, kind) < 0)
+                {
+                    failures.Add($"§4.1 '{kind}' is credited as traversal and has no handler");
+                    return;
+                }
                 // Where this piece of traversal leaves you.
-                if (kind == "ladder")
+                if (kind == AreaKinds.Ladder)
                     tops.Add(area.GlobalPosition + new Vector3(0, LadderHalfHeight(area), 0));
-                else if (kind == "zipline" && area.HasMeta("zip_end"))
+                else if (kind == AreaKinds.Zipline && area.HasMeta("zip_end"))
                     tops.Add((Vector3)area.GetMeta("zip_end"));
-                else if (kind is "launcher" or "teleporter" or "elevator")
+                else if (kind == AreaKinds.Elevator)
+                {
+                    // The car's declared top stop, not the tube's height and not
+                    // where the car is parked. A lift whose stops are the same
+                    // height goes nowhere and is credited with nothing.
+                    float bottom = (float)area.GetMeta(AreaKinds.LiftBottomMeta, 0f);
+                    float top = (float)area.GetMeta(AreaKinds.LiftTopMeta, 0f);
+                    if (Mathf.Abs(top - bottom) >= 0.5f)
+                        tops.Add(area.GlobalPosition with { Y = top });
+                }
+                else if (kind is AreaKinds.Launcher or AreaKinds.Teleporter)
                     tops.Add(area.GlobalPosition);
             }
             foreach (var child in n.GetChildren()) Walk(child);
@@ -4987,7 +7026,7 @@ public partial class GameRoot : Node3D
     /// <summary>§4.4 and §4.5 — every stretch of every lane is within reach of
     /// at least three build pads, so there is a choice about how to answer it
     /// rather than one forced tower.</summary>
-    private void RuleRoutesAreCovered(List<(RouteDef Route, Vector3 At, float Since)> samples,
+    private void RuleRoutesAreCovered(List<(RouteDef Route, Vector3 At, float Since, Vector3 Along)> samples,
         List<(SocketDef Def, Vector3 At)> sockets, List<string> report, List<string> failures)
     {
         const int Want = 3;
@@ -5003,7 +7042,7 @@ public partial class GameRoot : Node3D
             // there is a problem and being able to place a socket.
             var spans = new List<(Vector3 From, Vector3 To, int Worst)>();
             (Vector3 From, Vector3 To, int Worst)? open = null;
-            foreach (var (r, at, since) in samples)
+            foreach (var (r, at, since, _) in samples)
             {
                 if (r.Id != route.Id) continue;
                 if (since < SpawnApron) continue;
@@ -5046,7 +7085,7 @@ public partial class GameRoot : Node3D
     ///
     /// §4.5 stays a pass/fail on total coverage; this is the breakdown that
     /// says whether a player who never climbs has an answer at all.</summary>
-    private void ReportAirAnswers(List<(RouteDef Route, Vector3 At, float Since)> samples,
+    private void ReportAirAnswers(List<(RouteDef Route, Vector3 At, float Since, Vector3 Along)> samples,
         List<(SocketDef Def, Vector3 At)> sockets, List<string> report)
     {
         var air = samples.Where(s => s.Route.Layer == EnemyLayer.Air).ToList();
@@ -5080,7 +7119,7 @@ public partial class GameRoot : Node3D
     /// <summary>§4.6 — a pad that reaches no lane at any point is a pad nobody
     /// will ever build on, and it is usually a sign the lane moved and the pad
     /// did not.</summary>
-    private void RuleNoSocketCoversNothing(List<(RouteDef Route, Vector3 At, float Since)> samples,
+    private void RuleNoSocketCoversNothing(List<(RouteDef Route, Vector3 At, float Since, Vector3 Along)> samples,
         List<(SocketDef Def, Vector3 At)> sockets, List<string> report, List<string> failures)
     {
         int dead = 0;
@@ -5096,7 +7135,7 @@ public partial class GameRoot : Node3D
     /// <summary>§4.7 — closing a shortcut must not hand the player a long way
     /// round that nothing covers. The gate is the map's central decision; it is
     /// only a decision if both answers are playable.</summary>
-    private void RuleFallbackIsCovered(List<(RouteDef Route, Vector3 At, float Since)> samples,
+    private void RuleFallbackIsCovered(List<(RouteDef Route, Vector3 At, float Since, Vector3 Along)> samples,
         List<(SocketDef Def, Vector3 At)> sockets, List<string> report, List<string> failures)
     {
         var gated = _map.Routes.Where(r => r.BarricadeGate is not null).ToList();
@@ -5112,7 +7151,7 @@ public partial class GameRoot : Node3D
                 continue;
             }
             int thin = 0, count = 0;
-            foreach (var (r, at, since) in samples)
+            foreach (var (r, at, since, _) in samples)
             {
                 if (r.Id != fallback.Id) continue;
                 if (since < SpawnApron) continue;
@@ -5165,8 +7204,24 @@ public partial class GameRoot : Node3D
     /// anything; it just means the map does not know where its own gameplay
     /// is. Solid geometry in a lane is worse — it is a wall enemies walk
     /// through, which is how the Switchyard retaining walls read before they
-    /// were moved to the perimeter.</summary>
-    private void RuleLanesAreClear(List<(RouteDef Route, Vector3 At, float Since)> samples,
+    /// were moved to the perimeter.
+    ///
+    /// **Both volumes are measured off the lane's own pitch, not off a
+    /// horizontal band.** That distinction is invisible on a flat map and
+    /// decides the whole of a vertical one. A 3.4 m box centred 1.1 m
+    /// vertically above a climbing lane reaches 1.7 m forward along the run,
+    /// where the stair carrying that lane has already risen 1.7 m — so the
+    /// stair intersects the box, and the rule reports the flight as an
+    /// obstruction of the route it exists to carry. It is not satisfiable by
+    /// any ramp over about twenty-five degrees: as written it did not forbid
+    /// walls in lanes, it forbade lanes that climb. Three maps' lanes are flat
+    /// and the fourth had never been built, which is why a rule that cannot be
+    /// passed survived four milestones.
+    ///
+    /// On a level leg the frame below is the identity and the queries are the
+    /// ones that have always run, to the bit — Foundry, Switchyard and the
+    /// Toaster report exactly what they reported before.</summary>
+    private void RuleLanesAreClear(List<(RouteDef Route, Vector3 At, float Since, Vector3 Along)> samples,
         List<string> report, List<string> failures)
     {
         var space = GetWorld3D().DirectSpaceState;
@@ -5176,15 +7231,57 @@ public partial class GameRoot : Node3D
         // — the report was written and the process still aborted after it.
         var box = new BoxShape3D { Size = new Vector3(3.4f, 1.6f, 3.4f) };
         var shape = new PhysicsShapeQueryParameters3D { Shape = box, CollisionMask = 1 };
-        int blocked = 0, lowClearance = 0, count = 0;
-        foreach (var (route, at, _) in samples)
+
+        // What each sample is standing on. A lane's own floor is not an
+        // obstruction of it, and on a map that climbs there is no other way to
+        // say so: at the corner where a flat leg meets a flight, the flight is
+        // the lane a metre and a half ahead and inside the corridor's own
+        // cross-section, so any volume test wide enough to be a lane is wide
+        // enough to catch the stair carrying it.
+        var floors = new List<ulong>(samples.Count);
+        foreach (var (route, at, _, _) in samples)
+            floors.Add(route.Layer != EnemyLayer.Ground ? 0UL : FloorUnder(space, at));
+
+        int blocked = 0, lowClearance = 0, count = 0, structure = 0;
+        for (int i = 0; i < samples.Count; i++)
         {
+            var (route, at, _, along) = samples[i];
             if (route.Layer != EnemyLayer.Ground) continue;
             count++;
 
+            // The lane's own frame: X down the run, Y off its surface. A level
+            // leg gives back the identity, so nothing flat moves.
+            var side = along.Cross(Vector3.Up);
+            var frame = side.LengthSquared() < 1e-6f
+                ? Basis.Identity
+                : new Basis(along, side.Normalized().Cross(along).Normalized(), side.Normalized());
+            var overhead = frame * Vector3.Up;
+
+            // Whatever holds this lane up within a couple of samples either
+            // way. Two is eight metres, which is the corner plus the run into
+            // and out of it, and short enough that a wall further down the
+            // lane is still a wall.
+            var carrying = new HashSet<ulong>();
+            for (int j = Mathf.Max(0, i - 2); j <= Mathf.Min(samples.Count - 1, i + 2); j++)
+                if (samples[j].Route.Id == route.Id && floors[j] != 0UL) carrying.Add(floors[j]);
+
             // Knee to head height, across the lane's own width.
-            shape.Transform = new Transform3D(Basis.Identity, at + new Vector3(0, 1.1f, 0));
-            if (space.IntersectShape(shape, maxResults: 1).Count > 0)
+            shape.Transform = new Transform3D(frame, at + overhead * 1.1f);
+            // Two exemptions, and each says something true on its own. A body
+            // holding this lane up is not blocking it — that is `carrying`,
+            // and it is what lets a flight exist at all. A body whose highest
+            // point is under the clearance band is floor, whoever's lane it
+            // belongs to: the fire escape's landing sits level with floor
+            // one's plate, and the tilted band at that corner dips under the
+            // plate next door for a metre and a half. Neither exemption can
+            // hide a wall, because a wall is above the lane and holds nothing
+            // up.
+            var hits = space.IntersectShape(shape, maxResults: 8);
+            var offending = hits
+                .Where(h => !carrying.Contains(BodyId(h)) && TopOf(h) > at.Y + 0.3f)
+                .ToList();
+            if (offending.Count == 0 && hits.Count > 0) structure++;
+            if (offending.Count > 0)
             {
                 blocked++;
                 failures.Add($"§4.8 lane {route.Id} is blocked by solid geometry "
@@ -5193,7 +7290,7 @@ public partial class GameRoot : Node3D
 
             // Three metres of headroom: a player and an enemy both pass.
             var up = PhysicsRayQueryParameters3D.Create(
-                at + new Vector3(0, 2f, 0), at + new Vector3(0, 3f, 0), collisionMask: 1);
+                at + overhead * 2f, at + overhead * 3f, collisionMask: 1);
             if (space.IntersectRay(up).Count > 0)
             {
                 lowClearance++;
@@ -5209,9 +7306,46 @@ public partial class GameRoot : Node3D
         shape.Dispose();
         box.Dispose();
 
-        report.Add($"§4.8/§4.10 lanes clear — {count - blocked}/{count} unobstructed, "
+        report.Add($"§4.8/§4.10 lanes clear — {count - blocked}/{count} unobstructed "
+            + $"({structure} on the lane's own structure), "
             + $"{count - lowClearance}/{count} with headroom");
     }
+
+    /// <summary>The body holding the lane up at a point, as an instance id, or
+    /// 0 where the lane is over nothing.</summary>
+    private static ulong FloorUnder(PhysicsDirectSpaceState3D space, Vector3 at)
+    {
+        var down = PhysicsRayQueryParameters3D.Create(
+            at + new Vector3(0, 0.5f, 0), at - new Vector3(0, 1.2f, 0), collisionMask: 1);
+        var hit = space.IntersectRay(down);
+        return hit.Count > 0 && hit["collider"].As<GodotObject>() is { } body
+            ? body.GetInstanceId() : 0UL;
+    }
+
+    /// <summary>The highest point of a hit body's collision, in world metres.
+    /// A body this cannot measure returns +infinity, so an unmeasurable shape
+    /// is treated as an obstruction rather than waved through.</summary>
+    private static float TopOf(Godot.Collections.Dictionary hit)
+    {
+        if (!hit.TryGetValue("collider", out var collider)
+            || collider.As<GodotObject>() is not Node3D body) return float.MaxValue;
+        float top = float.MinValue;
+        foreach (var child in body.GetChildren())
+        {
+            if (child is not CollisionShape3D shape || shape.Shape is not BoxShape3D box) continue;
+            var at = shape.GlobalTransform;
+            for (int corner = 0; corner < 8; corner++)
+                top = Mathf.Max(top, (at * (new Vector3(
+                    (corner & 1) == 0 ? -box.Size.X : box.Size.X,
+                    (corner & 2) == 0 ? -box.Size.Y : box.Size.Y,
+                    (corner & 4) == 0 ? -box.Size.Z : box.Size.Z) * 0.5f)).Y);
+        }
+        return top == float.MinValue ? float.MaxValue : top;
+    }
+
+    private static ulong BodyId(Godot.Collections.Dictionary hit) =>
+        hit.TryGetValue("collider", out var collider) && collider.As<GodotObject>() is { } body
+            ? body.GetInstanceId() : 0UL;
 
     /// <summary>True if any ground route other than <paramref name="exceptId"/>
     /// passes within <paramref name="radius"/> of a point. The cutting has to
@@ -5291,6 +7425,58 @@ public partial class GameRoot : Node3D
             new Color(0.34f, 0.35f, 0.4f), layer: 1);
     }
 
+    /// <summary>The map's levers, on the socket layer so the same interaction
+    /// ray that finds a build pad finds a door.</summary>
+    private void BuildOperatedGates(MapDef map)
+    {
+        foreach (var lever in map.OperatedGates)
+        {
+            var body = new StaticBody3D { CollisionLayer = 1 << 3, CollisionMask = 0 };
+            body.AddChild(new CollisionShape3D
+            {
+                Shape = new BoxShape3D { Size = new Vector3(2.2f, 2.6f, 2.2f) },
+            });
+            body.Position = ToGd(lever.At) + new Vector3(0, 1.3f, 0);
+            body.SetMeta("gate_id", lever.Id);
+            AddChild(body);
+            _gateBodies[lever.Id] = body;
+
+            if (!MapKit.Mount(body, "shared_gate_operated", -1.3f))
+                body.AddChild(new MeshInstance3D
+                {
+                    Mesh = new BoxMesh { Size = new Vector3(2f, 2.4f, 0.4f) },
+                });
+            RefreshGateArt(lever.Id, shut: false);
+        }
+    }
+
+    /// <summary>The roadway of each lane edge, so a shut lane can stop looking
+    /// like an open road.</summary>
+    private readonly Dictionary<string, List<Node3D>> _laneBodies = new();
+
+    private readonly Dictionary<string, StaticBody3D> _gateBodies = new();
+    private readonly HashSet<string> _shutGates = new();
+
+    /// <summary>A shut gate stands across its lane; an open one lies flat
+    /// beside it. One model, rotated, because the state has to be readable from
+    /// across the yard and a colour change is not.</summary>
+    private void RefreshGateArt(string gateId, bool shut)
+    {
+        if (!_gateBodies.TryGetValue(gateId, out var body)) return;
+        if (shut) _shutGates.Add(gateId); else _shutGates.Remove(gateId);
+        body.RotationDegrees = new Vector3(shut ? 0f : -80f, body.RotationDegrees.Y, 0f);
+    }
+
+    /// <summary>What the crosshair says at a lever.</summary>
+    public string GateHint(string gateId)
+    {
+        var lever = _map.OperatedGates.FirstOrDefault(g => g.Id == gateId);
+        if (lever is null) return "";
+        return _shutGates.Contains(gateId)
+            ? $"[E] open the {lever.Label.ToLowerInvariant()}"
+            : $"[E] shut the {lever.Label.ToLowerInvariant()}";
+    }
+
     private static Area3D MakeArea(string kind, Shape3D shape)
     {
         var area = new Area3D { CollisionLayer = 1 << 5, CollisionMask = 1 << 4 };
@@ -5357,6 +7543,11 @@ public partial class GameRoot : Node3D
         return body;
     }
 
+    /// <summary>How far an overhead bar floats above the model's own top. The
+    /// Drifter is the reference grunt and sat 0.19 m clear under the old
+    /// multiplier, so matching it leaves the roster looking as it did.</summary>
+    private const float OverheadClearance = 0.2f;
+
     private Node3D SpawnEnemyView(int enemyId, string defId)
     {
         var root = new TintableView();
@@ -5395,9 +7586,16 @@ public partial class GameRoot : Node3D
         area.SetMeta("enemy_id", enemyId);
         root.AddChild(area);
 
-        // Overheads sit just above the silhouette; scale drives the offset so a
-        // Monolith's bar doesn't sit inside its chest.
-        root.SetMeta("head_height", 1.9f * scale);
+        // Overheads sit just above the silhouette. The multiplier below was
+        // calibrated against the graybox capsule, and the delivered art does not
+        // agree with it: a Ram's bar sat 0.26 m inside its head, a Monolith's and
+        // an Aegis's floated 0.6 m clear, and a Skiff's hung 1.2 m over a craft
+        // half a metre tall. Design measures every model on the way out, so take
+        // the height from the manifest and keep the multiplier for the enemies
+        // still standing on a graybox.
+        root.SetMeta("head_height", DesignManifest.TryBounds(bodyAsset, out _, out var top)
+            ? top.Y + OverheadClearance
+            : 1.9f * scale);
         root.SetMeta("def_id", defId);
 
         AddChild(root);
@@ -5437,11 +7635,99 @@ public partial class GameRoot : Node3D
         return root;
     }
 
-    /// <summary>Each tower's round is its own asset (proj_lance_bolt,
-    /// proj_nova_shell, …) so a Nova shell never reads as a Lance bolt.</summary>
-    private Node3D SpawnProjectileView(string towerDefId)
+    /// <summary>Puts a round's view where the round is, pointing where it is
+    /// going. Shared by the two paths that have a round to draw: a host
+    /// reading the sim's own projectiles, and a client flying its own copy.
+    ///
+    /// Design authors every round along −Z — the Nova shell's nose and the
+    /// Lance slug's tip are both at the −Z end — and nothing here had ever
+    /// turned one, so every round in the game flew sideways. On a brass mortar
+    /// shell with a lit fuse cap on the back that is unmistakable; on a thin
+    /// blue bolt it read as a slightly odd streak, which is why it survived.
+    ///
+    /// The lead is the other half: the sim starts a round at the tower's
+    /// centre because it has no barrel to start it at — where the muzzle is
+    /// depends on the rig's yaw and pitch, which are a client animation the
+    /// sim knows nothing about — so the view launches from the barrel and
+    /// closes the gap over the first fraction of its flight. It is the same
+    /// place the muzzle flash already happens, so the round comes out of the
+    /// flash instead of out of the middle of the tower.</summary>
+    private static void PlaceRoundView(Node3D view, Vector3 at, double delta)
     {
-        string asset = towerDefId switch
+        var travelled = at - (Vector3)view.GetMeta("last_pos", at);
+        if (travelled.LengthSquared() > 1e-6f)
+            view.LookAt(at + travelled, Mathf.Abs(travelled.Normalized().Dot(Vector3.Up)) > 0.99f
+                ? Vector3.Forward : Vector3.Up);
+        view.SetMeta("last_pos", at);
+
+        float lead = (float)view.GetMeta("muzzle_lead", 0f);
+        if (lead > 0f)
+        {
+            lead = Mathf.Max(0f, lead - (float)delta / MuzzleLeadSeconds);
+            view.SetMeta("muzzle_lead", lead);
+            var offset = (Vector3)view.GetMeta("muzzle_offset", Vector3.Zero);
+            // Eased out, so the round is quickest to rejoin its own round at
+            // the start and imperceptible by the end.
+            at += offset * (lead * lead);
+        }
+        view.Position = at;
+    }
+
+    /// <summary>How long a round takes to rejoin the sim's own round after
+    /// leaving the barrel. A Nova shell travels 14 m/s and the gap between the
+    /// chassis centre and the barrel tip is about a metre, so a fifth of a
+    /// second closes it inside the first three metres of flight — long enough
+    /// to read as coming out of the barrel, short enough that nothing about
+    /// where the round actually is has visibly moved.</summary>
+    private const float MuzzleLeadSeconds = 0.2f;
+
+    /// <summary>Starts a round's view at the barrel it came out of.</summary>
+    private void LaunchFromMuzzle(Node3D view, int towerId, Vector3 simPos)
+    {
+        if (!_towerViews.TryGetValue(towerId, out var tower) || !IsInstanceValid(tower)) return;
+        string defId = (string)tower.GetMeta("def_id", "");
+        if (defId.Length == 0) return;
+
+        var rig = RigFor(towerId, tower, defId);
+        if (rig.Muzzle is null || !IsInstanceValid(rig.Muzzle)) return;
+
+        var offset = rig.Muzzle.GlobalPosition - simPos;
+        // A graybox tower has no muzzle node and resolves to the view itself,
+        // which would fling the round at the tower's foot. Anything further
+        // out than a tower is wide is not a barrel tip.
+        if (offset.LengthSquared() > 9f) return;
+
+        view.SetMeta("muzzle_offset", offset);
+        view.SetMeta("muzzle_lead", 1f);
+        view.Position = simPos + offset;
+
+        // Pointed down the barrel for its first frame. The heading otherwise
+        // comes from how far the round moved since last frame, and on the
+        // frame it is created there is no last frame — seeding it from the
+        // muzzle offset instead would point a fresh round backwards.
+        if (rig.Forward.LengthSquared() > 1e-6f)
+            view.LookAt(view.Position + rig.Forward,
+                Mathf.Abs(rig.Forward.Normalized().Dot(Vector3.Up)) > 0.99f ? Vector3.Forward : Vector3.Up);
+    }
+
+    /// <summary>Each tower's round is its own asset (proj_lance_bolt,
+    /// proj_nova_shell, …) so a Nova shell never reads as a Lance bolt — and
+    /// its own tier, so a maxed Lance does not fire the round it fired at
+    /// level one.</summary>
+    private Node3D SpawnProjectileView(string towerDefId, IReadOnlyList<int>? pathLevels = null)
+    {
+        string asset = ProjectileAsset(towerDefId, ProjectileTier(towerDefId, pathLevels));
+
+        var root = new Node3D();
+        root.SetMeta("def_id", towerDefId);
+        root.AddChild(AssetLibrary.Instantiate(asset, () => Placeholders.Projectile(towerDefId)));
+        AddChild(root);
+        return root;
+    }
+
+    private static string ProjectileAsset(string towerDefId, int tier)
+    {
+        string stem = towerDefId switch
         {
             "nova" => "proj_nova_shell",
             "arc" => "proj_arc_beam",
@@ -5449,12 +7735,28 @@ public partial class GameRoot : Node3D
             "filament" => "proj_filament_beam",
             _ => "proj_lance_bolt",
         };
+        if (tier <= 1) return stem;
+        string tiered = $"{stem}_t{tier}";
+        return AssetLibrary.Has(tiered) ? tiered : stem;
+    }
 
-        var root = new Node3D();
-        root.SetMeta("def_id", towerDefId);
-        root.AddChild(AssetLibrary.Instantiate(asset, () => Placeholders.Projectile(towerDefId)));
-        AddChild(root);
-        return root;
+    /// <summary>Which round this tower is firing now.
+    ///
+    /// Design's rule, from projectiles.js: the tier follows the damage path,
+    /// level 7 buys T2 and level 10 buys T3. Sim path levels count purchases
+    /// rather than levels — a tower at PathLevels 0 is level 1, which is why
+    /// stage modules ask for level+1 — so the thresholds are 6 and 9 here.
+    /// Towers whose paths are not called "damage" (the Detector, the Filament)
+    /// have no tiered rounds and never leave tier 1.</summary>
+    private static int ProjectileTier(string towerDefId, IReadOnlyList<int>? pathLevels)
+    {
+        if (pathLevels is null || !Towers.All.TryGetValue(towerDefId, out var def)) return 1;
+        for (int i = 0; i < def.UpgradePaths.Count && i < pathLevels.Count; i++)
+        {
+            if (def.UpgradePaths[i].Id != "damage") continue;
+            return pathLevels[i] >= 9 ? 3 : pathLevels[i] >= 6 ? 2 : 1;
+        }
+        return 1;
     }
 
     // =====================================================================
@@ -5768,11 +8070,11 @@ public partial class GameRoot : Node3D
             return;
         }
 
-        // Client: the snapshot's status bits are what we have.
+        // Client: the snapshot's state bits are what we have.
         if (_lastSnapshotBits.TryGetValue(enemyId, out var snap))
         {
             if (snap.Burrowed) _hud.SetCrosshair(CrosshairState.Burrowed);
-            else if (snap.Shielded) _hud.SetCrosshair(CrosshairState.Shielded);
+            else if (snap.Shield > 0.02f) _hud.SetCrosshair(CrosshairState.Shielded);
             else _hud.SetCrosshair(CrosshairState.Neutral);
         }
     }

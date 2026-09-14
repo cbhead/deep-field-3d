@@ -514,7 +514,7 @@ public partial class GameRoot
                 ? "toaster_road_asphalt" : "toaster_road_gravel";
             var color = road.Kind == Surface.Asphalt
                 ? new Color(0.18f, 0.18f, 0.2f) : new Color(0.55f, 0.5f, 0.42f);
-            float moduleWidth = AssetManifest.Width(asset, road.Kind == Surface.Asphalt ? 6f : 4f);
+            float moduleWidth = DesignManifest.Width(asset, road.Kind == Surface.Asphalt ? 6f : 4f);
             int rowCount = Mathf.Max(1, Mathf.RoundToInt(road.Width / moduleWidth));
             // Asphalt sits a centimetre proud of gravel so their junction
             // is a road crossing a drive rather than z-fighting.

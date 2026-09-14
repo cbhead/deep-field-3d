@@ -8,6 +8,7 @@
 //   GET  /vendor/<path>   -> tools/design-export/node_modules/<path> (three.js, pinned)
 //   GET  /<path>          -> docs/design/<path> (models, icons, tokens, design docs)
 //   PUT  /out/<path>      -> <repo>/<path>  (game/assets/…, docs/…; directories created)
+//   GET  /out/<path>      -> <repo>/<path>  (a filtered run reads the manifest back to merge it)
 //   POST /log             -> OUT_DIR/export.log (progress and errors from the page)
 //   GET  /status          -> JSON summary, polled by the script
 import http from 'node:http';
@@ -71,6 +72,12 @@ http.createServer(async (req, res) => {
       res.writeHead(200); res.end('ok');
       return;
     }
+    if (req.method === 'GET' && rel.startsWith('/out/')) {
+      const file = safe(OUT, rel.slice('/out/'.length));
+      if (!file) { res.writeHead(400); res.end(); return; }
+      serveFile(res, file);
+      return;
+    }
     if (req.method === 'POST' && rel === '/log') {
       log((await readBody(req)).toString('utf8'));
       res.writeHead(200); res.end('ok');
@@ -95,6 +102,7 @@ http.createServer(async (req, res) => {
       // is an index rather than the page itself.
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
       res.end('<h3>Deep Field design export host</h3><ul><li><a href="/export.html">Export everything into the repo</a></li>'
+        + '<li><a href="/export.html?only=lance">Export one tower — <code>?only=&lt;tower|item|stem&gt;</code>, comma-separated</a></li>'
         + '<li><a href="/export.html?only=hands">Export the hand poses only</a></li></ul>');
       return;
     }

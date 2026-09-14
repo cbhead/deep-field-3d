@@ -173,34 +173,18 @@ public sealed class TowerRig
     // Manifest: design's limits, keyed by tower id
     // ---------------------------------------------------------------------
 
-    private const string ManifestPath = "res://assets/structures/manifest.json";
     private static Dictionary<string, Spec>? _manifest;
 
-    /// <summary>Rig rows from design's <c>manifest.json</c>. The file is design's
-    /// receipt for the drop (bounds, tri counts, rig node names, limits) and
-    /// ships next to the models, so the numbers live in one place. Absent or
-    /// unreadable, every rigged tower falls back to <see cref="Spec.Default"/>
-    /// and says so once.</summary>
+    /// <summary>Rig rows from design's <c>manifest.json</c>, read through
+    /// <see cref="DesignManifest"/> so there is one reader of that file rather
+    /// than two. Absent or unreadable, every rigged tower falls back to
+    /// <see cref="Spec.Default"/>.</summary>
     private static Dictionary<string, Spec> Manifest => _manifest ??= LoadManifest();
 
     private static Dictionary<string, Spec> LoadManifest()
     {
         var specs = new Dictionary<string, Spec>();
-        if (!FileAccess.FileExists(ManifestPath))
-        {
-            GD.Print($"[rig] {ManifestPath} not found; rigged towers use default limits");
-            return specs;
-        }
-        using var file = FileAccess.Open(ManifestPath, FileAccess.ModeFlags.Read);
-        var json = new Json();
-        if (file is null || json.Parse(file.GetAsText()) != Error.Ok)
-        {
-            GD.PushWarning($"[rig] could not parse {ManifestPath}; rigged towers use default limits");
-            return specs;
-        }
-        var root = json.Data.AsGodotDictionary();
-        if (!root.TryGetValue("files", out var files)) return specs;
-        foreach (var entry in files.AsGodotArray())
+        foreach (var entry in DesignManifest.Files)
         {
             var row = entry.AsGodotDictionary();
             if (!row.TryGetValue("kind", out var kind) || kind.AsString() != "chassis") continue;

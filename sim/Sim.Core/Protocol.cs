@@ -9,13 +9,18 @@ namespace DeepField.Sim;
 /// Lives in Sim.Core so packing round-trips are fast-lane testable.</summary>
 public static class Protocol
 {
-    /// <summary>Bumped to 2 when melee joined the command vocabulary, and to 3
-    /// when vehicles did. An older client cannot send a swing and a newer one
-    /// would send verbs the old server parses as null — silently dropping every
-    /// melee action, or leaving a player apparently sitting in a vehicle that
-    /// never moves, rather than refusing the connection, which is exactly the
-    /// failure this number exists to make loud.</summary>
-    public const int Version = 3;
+    /// <summary>Bumped to 2 when melee joined the command vocabulary, to 3 when
+    /// vehicles did, and to 4 for the lane levers. An older client cannot send a
+    /// swing and a newer one would send verbs the old server parses as null —
+    /// silently dropping every melee action, leaving a player apparently sitting
+    /// in a vehicle that never moves, or flipping a gate that never moves,
+    /// rather than refusing the connection, which is exactly the failure this
+    /// number exists to make loud.
+    ///
+    /// 5 is the enemy snapshot growing a state byte, which is worse than a
+    /// dropped command: a client reading 20-byte records out of a 19-byte
+    /// stream does not fail, it draws the wave in the wrong places.</summary>
+    public const int Version = 5;
 
     /// <summary>Human-readable build identity, sent alongside the protocol
     /// number. The number decides compatibility — determinism requires an exact
@@ -29,6 +34,16 @@ public static class Protocol
     // 4 players on a tailnet; tighten when it's actually a problem).
     // Layout: tick i64 | count u16 | per enemy:
     //   id i32 | defIndex u8 | pos 3×f32 | yaw u8 | hpFrac u8 | statusBits u8
+    //   | shieldFrac u8 | stateBits u8
+    //
+    // The last two are what a status channel cannot carry: shield and burrow
+    // are not statuses, they are facts about the body, and the client needs
+    // both to draw it. Before they existed a networked Warden never showed
+    // its bubble or its shield bar, and a burrowed Mole was inferred from hp
+    // reaching zero — which is not "underground", it is "dead", and the two
+    // are drawn differently for a reason. Shield is a fraction rather than a
+    // flag because the effect that matters is the one in between: a bubble
+    // growing back is the window closing, and a bit cannot say that.
     // ------------------------------------------------------------------
 
     public static readonly IReadOnlyList<string> EnemyDefOrder =
@@ -38,10 +53,21 @@ public static class Protocol
         EnemyDefOrder.Select((id, i) => (id, i))
             .ToDictionary(x => x.id, x => (byte)x.i);
 
-    public const int BytesPerEnemy = 4 + 1 + 12 + 1 + 1 + 1;
+    public const int BytesPerEnemy = 4 + 1 + 12 + 1 + 1 + 1 + 1 + 1;
+
+    [System.Flags]
+    public enum EnemyState : byte
+    {
+        None = 0,
+        Burrowed = 1 << 0,
+    }
 
     public sealed record EnemySnap(
-        int Id, string DefId, Vec3 Pos, float Yaw, float HpFraction, byte StatusBits);
+        int Id, string DefId, Vec3 Pos, float Yaw, float HpFraction, byte StatusBits,
+        float ShieldFraction, byte StateBits)
+    {
+        public bool Burrowed => (StateBits & (byte)EnemyState.Burrowed) != 0;
+    }
 
     public static byte[] PackEnemies(World w)
     {
@@ -63,6 +89,8 @@ public static class Protocol
             span[offset + 17] = PackYaw(e.Facing);
             span[offset + 18] = (byte)System.Math.Clamp((int)(e.Hp / e.MaxHp * 255f), 0, 255);
             span[offset + 19] = PackStatusBits(e);
+            span[offset + 20] = (byte)System.Math.Clamp((int)(ShieldFraction(e) * 255f), 0, 255);
+            span[offset + 21] = PackStateBits(e);
             offset += BytesPerEnemy;
         }
         return buffer;
@@ -86,12 +114,21 @@ public static class Protocol
                     BinaryPrimitives.ReadSingleLittleEndian(data[(offset + 13)..])),
                 UnpackYaw(data[offset + 17]),
                 data[offset + 18] / 255f,
-                data[offset + 19]));
+                data[offset + 19],
+                data[offset + 20] / 255f,
+                data[offset + 21]));
             offset += BytesPerEnemy;
         }
         return (tick, snaps);
     }
 
+    /// <summary>The one transcendental left in Sim.Core, and it is allowed to
+    /// stay: this quantises a facing to a single byte for the snapshot wire and
+    /// its result never enters world state, the event log, or any decision the
+    /// tick makes. A one-ulp difference between two machines' libm cannot even
+    /// change the byte in all but a vanishing set of cases, and if it did the
+    /// cost is a remote enemy drawn a degree and a half off. Everything that
+    /// *does* feed the log was moved off libm — see <see cref="DetMath"/>.</summary>
     private static byte PackYaw(Vec3 facing)
     {
         float yaw = MathF.Atan2(facing.X, facing.Z);            // [-π, π]
@@ -100,6 +137,31 @@ public static class Protocol
 
     private static float UnpackYaw(byte packed) =>
         packed / 255f * 2f * MathF.PI - MathF.PI;
+
+    /// <summary>Body states that are not statuses. One flag so far; the byte
+    /// is there because the next one will not want a protocol bump.</summary>
+    public static byte PackStateBits(Enemy e)
+    {
+        byte bits = 0;
+        if (e.Burrowed) bits |= (byte)EnemyState.Burrowed;
+        return bits;
+    }
+
+    /// <summary>How much of this enemy's shield is left, 0..1.
+    ///
+    /// Wave scaling multiplies an enemy's hp by a factor and its shield with
+    /// it, so the denominator is the def's shield scaled the same way — the
+    /// hp ratio *is* that factor. Shared with the client rather than
+    /// recomputed there, because a host and a client disagreeing about what
+    /// "full shield" means is a bubble that pops on one screen and not the
+    /// other.</summary>
+    public static float ShieldFraction(Enemy e)
+    {
+        float baseShield = Enemies.All[e.DefId].Shield;
+        if (baseShield <= 0f) return 0f;
+        float hpFactor = e.MaxHp / Enemies.All[e.DefId].Hp;
+        return System.Math.Clamp(e.Shield / (baseShield * hpFactor), 0f, 1f);
+    }
 
     public static byte PackStatusBits(Enemy e)
     {
@@ -122,6 +184,7 @@ public static class Protocol
         Command.Launch c => $"launch|{c.PlayerId}",
         Command.PlayerSync c => $"sync|{c.PlayerId}|{F(c.Pos.X)}|{F(c.Pos.Y)}|{F(c.Pos.Z)}",
         Command.PlaceTower c => $"place|{c.PlayerId}|{c.TowerId}|{c.SocketId}",
+        Command.OperateGate c => $"gate|{c.PlayerId}|{c.GateId}",
         Command.SellTower c => $"sell|{c.PlayerId}|{c.TowerId}",
         Command.UpgradeTower c => $"upgrade|{c.PlayerId}|{c.TowerId}|{c.PathIndex}",
         Command.StartWave c => $"startWave|{c.PlayerId}",
@@ -158,6 +221,7 @@ public static class Protocol
                 "launch" => new Command.Launch(int.Parse(p[1])),
                 "sync" => new Command.PlayerSync(int.Parse(p[1]), new Vec3(Pf(p[2]), Pf(p[3]), Pf(p[4]))),
                 "place" => new Command.PlaceTower(int.Parse(p[1]), p[2], p[3]),
+                "gate" => new Command.OperateGate(int.Parse(p[1]), p[2]),
                 "sell" => new Command.SellTower(int.Parse(p[1]), int.Parse(p[2])),
                 "upgrade" => new Command.UpgradeTower(int.Parse(p[1]), int.Parse(p[2]), int.Parse(p[3])),
                 "startWave" => new Command.StartWave(int.Parse(p[1])),
@@ -196,6 +260,7 @@ public static class Protocol
         Command.Launch c => c.PlayerId == seatPlayerId,
         Command.PlayerSync c => c.PlayerId == seatPlayerId,
         Command.PlaceTower c => c.PlayerId == seatPlayerId,
+        Command.OperateGate c => c.PlayerId == seatPlayerId,
         Command.SellTower c => c.PlayerId == seatPlayerId,
         Command.UpgradeTower c => c.PlayerId == seatPlayerId,
         Command.StartWave c => c.PlayerId == seatPlayerId,

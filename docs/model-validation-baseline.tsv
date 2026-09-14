@@ -1,0 +1,34 @@
+# What the delivered art does not satisfy today.
+# tools/model-validate.py fails on a violation that is NOT listed here, so
+# this is a ratchet: fix a model and drop its row in the same commit, and the
+# gain is locked in. Regenerate with: tools/model-validate.py --refresh
+#
+# Most rows are pivot conventions, and several are correct as they stand — a
+# Leaper mid-jump is airborne, a broken Barricade sags, a wall socket hangs
+# off a wall. A row for a *contract* check is different: that is a real defect
+# someone chose to carry, so give it a reason and a way out. Those are
+# restated on every run rather than passing quietly.
+#
+# check	file	note
+manifest/parts	toaster_skybox.glb	counted as 0 because the mesh still carries userData.gizmo — triCount and countMeshes in tower-kit.js skip gizmo meshes, and bakeSkies() only clears the flag on a sky it re-bakes. This one ships a pre-baked MeshBasicMaterial, so it never goes through bakeSkies and keeps the flag, while the exporter writes the mesh normally. The other three skyboxes agree with their rows exactly. Fix upstream: clear gizmo on the toaster sky in toaster.js, or have the stat helpers not skip a mesh that is actually exported.
+manifest/tris	toaster_skybox.glb	counted as 0 because the mesh still carries userData.gizmo — triCount and countMeshes in tower-kit.js skip gizmo meshes, and bakeSkies() only clears the flag on a sky it re-bakes. This one ships a pre-baked MeshBasicMaterial, so it never goes through bakeSkies and keeps the flag, while the exporter writes the mesh normally. The other three skyboxes agree with their rows exactly. Fix upstream: clear gizmo on the toaster sky in toaster.js, or have the stat helpers not skip a mesh that is actually exported.
+pivot/off-centre	enemy_mole_burrowed.glb	correct — a mound around the hole, offset to the surfacing point
+pivot/off-ground	enemy_carapace_plate.glb	sits -0.024 m off its own origin
+pivot/off-ground	enemy_leaper_airborne.glb	correct — mid-jump, it is not on the ground
+pivot/off-ground	enemy_mole_burrowed.glb	correct — a mound around the hole, offset to the surfacing point
+pivot/off-ground	enemy_mole_surfaced.glb	correct — half out of the ground
+pivot/off-ground	enemy_ram.glb	sits -0.043 m off its own origin
+pivot/off-ground	enemy_ram_enraged.glb	sits -0.043 m off its own origin
+pivot/off-ground	enemy_skiff.glb	sits -0.050 m off its own origin
+pivot/off-ground	enemy_warden_shield.glb	correct — the bubble encloses the Warden, so it starts below its feet
+pivot/off-ground	hero_ember_downed.glb	sits -0.068 m off its own origin
+pivot/off-ground	hero_forge_downed.glb	sits -0.068 m off its own origin
+pivot/off-ground	hero_glacier_downed.glb	sits -0.088 m off its own origin
+pivot/off-ground	hero_specter_downed.glb	sits -0.068 m off its own origin
+pivot/off-ground	hero_tempest_downed.glb	sits -0.068 m off its own origin
+pivot/off-ground	pickup_primecore.glb	sits -0.088 m off its own origin
+pivot/off-ground	socket_wall_base.glb	correct — a wall socket hangs off a wall, not a floor
+pivot/off-ground	socket_wall_empty.glb	correct — a wall socket hangs off a wall, not a floor
+pivot/off-ground	tower_barricade.glb	the slab overhangs its slot by 38 mm
+pivot/off-ground	tower_barricade_broken.glb	correct — the wreck sags below the slot
+pivot/off-ground	tower_barricade_damaged.glb	correct — sags, less

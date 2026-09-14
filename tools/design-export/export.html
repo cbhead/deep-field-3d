@@ -9,20 +9,48 @@
     "three": "/vendor/three/build/three.module.js",
     "three/addons/controls/OrbitControls.js": "/vendor/three/examples/jsm/controls/OrbitControls.js",
     "three/addons/exporters/OBJExporter.js": "/vendor/three/examples/jsm/exporters/OBJExporter.js",
-    "three/addons/exporters/GLTFExporter.js": "/vendor/three/examples/jsm/exporters/GLTFExporter.js"
+    "three/addons/exporters/GLTFExporter.js": "/vendor/three/examples/jsm/exporters/GLTFExporter.js",
+    "three/addons/loaders/GLTFLoader.js": "/vendor/three/examples/jsm/loaders/GLTFLoader.js"
   }
 }
 </script>
 <style>
   html,body{margin:0;height:100%;background:#0D1119;color:#c3ccd8;font:13px/1.5 monospace}
-  body{display:grid;grid-template-rows:1fr auto;height:100%}
-  three-d-stage{width:100%;height:100%;display:block;min-height:320px}
+  body{display:grid;grid-template-columns:1fr var(--aside,320px);grid-template-rows:1fr auto;height:100%}
+  body.wide{--aside:0px}
+  three-d-stage{width:100%;height:100%;display:block;min-height:320px;grid-column:1;grid-row:1}
   three-d-stage:not(:defined){visibility:hidden}
-  #status{padding:8px 12px;border-top:1px solid #333;white-space:pre-wrap;max-height:40vh;overflow:auto}
+  #files{grid-column:2;grid-row:1;border-left:1px solid #333;display:flex;flex-direction:column;overflow:hidden}
+  body.wide #files{display:none}
+  #files header{padding:6px 34px 6px 8px;border-bottom:1px solid #333;display:flex;gap:6px;align-items:center}
+  #files header b{font-weight:600;color:#e6edf5}
+  #filter{flex:1;min-width:0;background:#161b26;border:1px solid #333;color:inherit;font:inherit;padding:3px 6px;border-radius:3px}
+  #filter:focus{outline:1px solid #4a6a9a}
+  #toggle{position:fixed;top:6px;right:8px;z-index:5;background:#161b26;border:1px solid #333;color:inherit;font:inherit;cursor:pointer;padding:3px 7px;border-radius:3px;opacity:.85}
+  #toggle:hover{opacity:1}
+  #list{overflow:auto;flex:1;padding-bottom:12px}
+  #list .grp{position:sticky;top:0;background:#0D1119;color:#7e8b9e;padding:5px 8px 2px;border-bottom:1px solid #222}
+  #list a{display:flex;gap:8px;padding:2px 8px;color:inherit;text-decoration:none;cursor:pointer;white-space:nowrap}
+  /* an explicit display beats the UA's [hidden] rule, so the filter needs this */
+  #list a[hidden],#list .grp[hidden]{display:none}
+  #list a:hover{background:#182030}
+  #list a.on{background:#23324a;color:#fff}
+  #list a.empty span.n{color:#6b7686}
+  #list a span.n{flex:1;overflow:hidden;text-overflow:ellipsis}
+  #list a span.t{color:#7e8b9e;font-size:11px}
+  #status{grid-column:1/-1;grid-row:2;padding:8px 12px;border-top:1px solid #333;white-space:pre-wrap;max-height:30vh;overflow:auto}
 </style>
 </head>
 <body>
 <three-d-stage name="deepfield_tower_pack" background="#0D1119"></three-d-stage>
+<button id="toggle" title="hide the index">›</button>
+<aside id="files">
+  <header>
+    <b id="count">0</b>
+    <input id="filter" placeholder="filter…" autocomplete="off" spellcheck="false">
+  </header>
+  <div id="list"></div>
+</aside>
 <pre id="status">Loading models…</pre>
 <script src="./three-d-stage.js"></script>
 <script type="module">
@@ -36,6 +64,56 @@
    them, one file per hand pose from the item's own `poses` list, and the five reload props lifted out of the
    weapon viewmodels. */
 const post = (s) => fetch('/log', { method: 'POST', body: s }).catch(() => {});
+
+/* Every file this run wrote, listed beside the viewer and clickable. The page
+   used to show one frozen Lance — `stage.setObject` was called once, before the
+   loop, and `add()` never touched the stage again — so a run that wrote five
+   hundred models looked identical to one that wrote nothing, and there was no
+   way to see any of them without digging through game/assets/ by hand.
+   Clicking a row loads that .glb back off disk through the host's GET /out/,
+   which also proves the file is really there and really parses. */
+const EXPORTED = [];
+const listEl = document.getElementById('list');
+const countEl = document.getElementById('count');
+const filterEl = document.getElementById('filter');
+let lastGroup = null, currentRow = null;
+
+const addRow = (rec) => {
+  const folder = rec.path.split('/').slice(0, -1).join('/');
+  if (folder !== lastGroup) {
+    lastGroup = folder;
+    const h = document.createElement('div');
+    h.className = 'grp';
+    h.textContent = folder.replace(/^game\/assets\//, '');
+    listEl.append(h);
+  }
+  const a = document.createElement('a');
+  a.className = rec.parts ? '' : 'empty';
+  a.title = `${rec.path} · ${rec.bytes.toLocaleString()} bytes · ${rec.parts} part(s)`;
+  a.innerHTML = '<span class="n"></span><span class="t"></span>';
+  a.querySelector('.n').textContent = rec.name.replace(/\.glb$/, '');
+  a.querySelector('.t').textContent = rec.parts ? `${rec.tris}▲` : 'empty';
+  a.onclick = () => show(rec, a);
+  rec.el = a;
+  listEl.append(a);
+  countEl.textContent = EXPORTED.length;
+};
+
+filterEl.oninput = () => {
+  const q = filterEl.value.trim().toLowerCase();
+  for (const rec of EXPORTED) if (rec.el) rec.el.hidden = q && !rec.name.toLowerCase().includes(q);
+  for (const h of listEl.querySelectorAll('.grp')) {
+    let n = h.nextElementSibling, any = false;
+    while (n && !n.classList.contains('grp')) { if (!n.hidden) any = true; n = n.nextElementSibling; }
+    h.hidden = !any;
+  }
+};
+
+document.getElementById('toggle').onclick = (e) => {
+  const hidden = document.body.classList.toggle('wide');
+  e.target.textContent = hidden ? '‹' : '›';
+  e.target.title = hidden ? 'show the index' : 'hide the index';
+};
 const status = document.getElementById('status');
 const say = (s) => { status.textContent = s; post(s); };
 window.addEventListener('error', (e) => say('ERROR ' + (e.error?.stack || e.message)));
@@ -72,12 +150,12 @@ const ICONS = [
   'icon_path_damage', 'icon_path_range', 'icon_path_rate'];
 const EXTRA = [
   { dir: 'enemies/', items: ENEMIES, kind: 'enemy' }, { dir: 'traps/', items: TRAPS, kind: 'trap' }, { dir: 'towers/', items: PROJECTILES, kind: 'projectile' },
-  { dir: 'weapons/', items: WEAPONS, kind: 'weapon' }, { dir: 'weapons/', items: WEAPONS.filter((w) => w.worldFile).map((w) => ({ ...w, file: w.worldFile, id: w.id + '_world' })), kind: 'weapon_world' },
+  { dir: 'weapons/', items: WEAPONS, kind: 'weapon' }, { dir: 'weapons/', items: WEAPONS.filter((w) => w.worldFile).map((w) => ({ ...w, file: w.worldFile, id: w.id + '_world', baseId: w.id })), kind: 'weapon_world' },
   { dir: 'heroes/', items: HEROES, kind: 'hero' }, { dir: 'maps/foundry/', items: FOUNDRY, kind: 'map_foundry' }, { dir: 'maps/switchyard/', items: SWITCHYARD, kind: 'map_switchyard' }, { dir: 'maps/spire/', items: SPIRE, kind: 'map_spire' }, { dir: 'maps/toaster/', items: TOASTER, kind: 'map_toaster' }, { dir: 'vehicles/', items: VEHICLES, kind: 'vehicle' }, { dir: 'shared/', items: SHARED, kind: 'shared' }, { dir: 'vfx/', items: VFX, kind: 'vfx' }, { dir: 'economy/', items: PICKUPS, kind: 'pickup' }, { dir: 'weapons/', items: ATTACHMENTS, kind: 'attachment' }, { dir: 'weapons/', items: AMMO, kind: 'ammo' }, { dir: 'weapons/', items: TRACERS, kind: 'tracer' },
   /* Melee platforms: a viewmodel and a world model each, like the guns. The
      modules are built per host — edge and grip geometry follow the host — so
      the exported file is the blade fit; the Gunsmith page shows all three. */
-  { dir: 'weapons/', items: MELEE, kind: 'melee' }, { dir: 'weapons/', items: MELEE.map((w) => ({ ...w, file: w.worldFile, id: w.id + '_world' })), kind: 'melee_world' },
+  { dir: 'weapons/', items: MELEE, kind: 'melee' }, { dir: 'weapons/', items: MELEE.map((w) => ({ ...w, file: w.worldFile, id: w.id + '_world', baseId: w.id })), kind: 'melee_world' },
   { dir: 'weapons/', items: MELEE_MODS, kind: 'meleemod' }];
 /* How many variants past v0 a kit entry has. Design's page writes v1..v3 for
    every entry with a buildVariant, which is right for the four-way tiles and
@@ -104,7 +182,6 @@ const RELOAD_PROPS = [
   ['scattergun', 'scattergun_shell', 'weapon_scattergun_magazine.glb', 'A loaded 12-gauge hull under the requested filename so nothing falls back to a placeholder. This gun has no detachable magazine; see `weapon_scattergun_shell.glb`, which is the same file under the name that tells the truth.'],
   ['scattergun', 'scattergun_shell', 'weapon_scattergun_shell.glb', 'Loaded 12-gauge hull: brass head with rim and extractor groove, full-length body, folded six-point crimp cut into the dome as ridges. Origin at the rim face so a reload pushes it in along +Z at `scattergun_mount_loadport`. Distinct from `scattergun_case`, which is fired — open mouth, no crimp.'],
 ];
-const EXTRA_COUNT = EXTRA.reduce((a, c) => a + c.items.reduce((n, it) => n + 1 + variantsOf(it) + (it.poses ? it.poses.length - 1 : 0), 0), 0) + RELOAD_PROPS.length;
 const ROUTES = [['enemy_', 'enemies'], ['boss_', 'enemies'], ['tower_', 'structures'], ['trap_', 'structures'], ['socket_', 'structures'], ['weapon_', 'weapons'], ['melee_', 'weapons'], ['meleemod_', 'weapons'], ['attach_', 'weapons'], ['ammo_', 'weapons'], ['hands_', 'weapons'], ['hero_', 'heroes'], ['proj_', 'vfx'], ['vfx_', 'vfx'], ['pickup_', 'economy'], ['foundry_', 'maps'], ['switchyard_', 'maps'], ['spire_', 'maps'], ['toaster_', 'maps'], ['vehicle_', 'vehicles'], ['shared_', 'maps'], ['prop_', 'maps'], ['ui_', 'ui']];
 const routeFor = (file) => 'game/assets/' + (ROUTES.find(([p]) => file.startsWith(p))?.[1] || 'misc') + '/' + file;
 const TOWERS = (await Promise.all(MODS.map((m) => import(`./models/${m}.js`)))).map((m) => m.TOWER);
@@ -131,7 +208,13 @@ function visBox(root) {
   return b;
 }
 function pruneToPath(model, id, path) {
-  const re = new RegExp(`^${id}_up_${path}_l\\d+$`);
+  // The `$` used to close this pattern, which dropped every increment a tower
+  // names per part rather than as one group: the Singularity mirrors its
+  // per-arm copies onto <id>_up_<path>_l<N>_arm<i> (singularity.js cue()), so
+  // six of its twenty range/rate stages exported identical to the stage below
+  // them — an upgrade you bought and could not see. Match the level, then a
+  // boundary: a suffixed child belongs to the same increment.
+  const re = new RegExp(`^${id}_up_${path}_l\\d+(?:_|$)`);
   const keep = (o, under) => {
     if (!o.visible && o !== model) return false;
     const u = under || re.test(o.name);
@@ -150,16 +233,11 @@ function chassis(t, variant) {
   m.rotation.y = Math.PI;
   return m;
 }
-function fileList() {
-  const out = [];
-  for (const t of TOWERS) {
-    if (t.id === 'barricade') { out.push('tower_barricade.glb', 'tower_barricade_damaged.glb', 'tower_barricade_broken.glb'); continue; }
-    out.push(`tower_${t.id}_chassis.glb`);
-    for (const p of t.paths) for (let s = 1; s <= 10; s++) out.push(`tower_${t.id}_${p.id}_s${s}.glb`);
-  }
-  return out;
-}
-const FILES = fileList();
+/** What each contributes to the progress total: a tower is a chassis plus ten
+ *  stages per path (the barricade is three states); an item is its build, plus
+ *  three more if it has variants, plus one per extra pose. */
+const towerFileCount = (t) => (t.id === 'barricade' ? 3 : 1 + t.paths.length * 10);
+const itemFileCount = (it) => 1 + variantsOf(it) + (it.poses ? it.poses.length - 1 : 0);
 stage.setObject(chassis(TOWERS[0]));
 
 const glb = async (obj) => new Uint8Array(await exporter.parseAsync(obj, { binary: true, trs: true, onlyVisible: true }));
@@ -194,29 +272,104 @@ async function bakeSkies(obj) {
   return obj;
 }
 const tick = () => new Promise((r) => setTimeout(r, 0));
+const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+const loader = new GLTFLoader();
+let lastShown = 0;
+
+/** Put an object on the stage and mark its row, without disturbing the export. */
+function preview(obj, rec) {
+  try { stage.setObject(obj); } catch { return; }
+  if (currentRow) currentRow.classList.remove('on');
+  currentRow = rec?.el || null;
+  if (currentRow) {
+    currentRow.classList.add('on');
+    currentRow.scrollIntoView({ block: 'nearest' });
+  }
+}
+
+/** Load an exported file back off disk and show it. The host serves the repo at
+ *  GET /out/, so this reads the actual bytes that were written. */
+async function show(rec, el) {
+  try {
+    const res = await fetch('/out/' + rec.path);
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    const gltf = await loader.parseAsync(await res.arrayBuffer(), '');
+    preview(gltf.scene, { el });
+    say(`${rec.path} · ${rec.bytes.toLocaleString()} bytes · ${rec.parts} part(s) · ${rec.tris} tris`);
+  } catch (err) {
+    say(`could not open ${rec.path}: ${err.message}`);
+  }
+}
 const bounds = (o) => { const b = visBox(o); return b.isEmpty() ? null : { min: b.min.toArray().map((v) => +v.toFixed(3)), max: b.max.toArray().map((v) => +v.toFixed(3)) }; };
 const text = async (p) => { const r = await fetch(p); if (!r.ok) throw new Error(`fetch ${p}: ${r.status}`); return new Uint8Array(await r.arrayBuffer()); };
+const readJson = async (p) => { const r = await fetch(p); return r.ok ? r.json() : null; };
 const put = async (name, data) => {
   const r = await fetch('/out/' + name, { method: 'PUT', body: data });
   if (!r.ok) throw new Error(`PUT ${name}: ${r.status}`);
 };
 
-const TOTAL = FILES.length + EXTRA_COUNT;
-say(`Ready — ${TOTAL} GLB files; starting`);
+/* The delivery note is design's to rewrite, but the repo appends its own "Integration record"
+   section — what actually landed on the code side — and a full run used to overwrite the file and
+   delete it. It already ate the 2026-09-07 record once. Carry every record across onto the fresh
+   note instead. (A zip drop unpacked by hand still clobbers it; only this path can protect it.) */
+const putDeliveryNote = async (srcPath, destPath) => {
+  const fresh = new TextDecoder().decode(await text(srcPath)).replace(/\s*$/, '');
+  const res = await fetch('/out/' + destPath);
+  const prev = res.ok ? await res.text() : '';
+  const at = prev.search(/^## Integration record/m);
+  const keep = at < 0 || /^## Integration record/m.test(fresh) ? '' : prev.slice(at).replace(/\s*$/, '');
+  const out = keep ? `${fresh}\n\n---\n\n${keep}\n` : `${fresh}\n`;
+  await put(destPath, new TextEncoder().encode(out));
+};
+
+/* `?only=<sel>[,<sel>…]` rebuilds part of the drop instead of all of it, so a tweak to one model
+   costs one export rather than five hundred. A selector is a tower id (`lance` — its chassis and
+   thirty stage modules), a category (`vfx`, `enemy`, `map_toaster`, `vehicle` — everything one
+   source module builds), or an item id or file stem (`drifter`, `enemy_drifter`, `rifle` for the
+   viewmodel and the world gun alike, `hands` for a hand set and every pose it ships).
+   A selector matching nothing is an error: a silent empty run looks just like a successful one. */
+const ONLY = (new URLSearchParams(location.search).get('only') || '').split(',').map((s) => s.trim()).filter(Boolean);
+const PARTIAL = ONLY.length > 0;
+const stemOf = (file) => file.split('/').pop().replace(/\.glb$/, '');
+const matchedSel = new Set();
+const wanted = (...keys) => {
+  if (!PARTIAL) return true;
+  let hit = false;
+  for (const s of ONLY) if (keys.includes(s)) { matchedSel.add(s); hit = true; }
+  return hit;
+};
+const TOWERS_SEL = TOWERS.filter((t) => wanted(t.id, `tower_${t.id}`));
+const EXTRA_SEL = EXTRA.map((c) => ({ ...c, items: c.items.filter((it) => wanted(c.kind, it.id, it.baseId, stemOf(it.file))) })).filter((c) => c.items.length);
+const RELOAD_SEL = RELOAD_PROPS.filter(([wid, , file]) => wanted('weapon_reload', wid, stemOf(file)));
+const TOTAL = TOWERS_SEL.reduce((a, t) => a + towerFileCount(t), 0)
+  + EXTRA_SEL.reduce((a, c) => a + c.items.reduce((n, it) => n + itemFileCount(it), 0), 0)
+  + RELOAD_SEL.length;
+say(`Ready — ${TOTAL} GLB file${TOTAL === 1 ? '' : 's'}${PARTIAL ? ` (only: ${ONLY.join(', ')})` : ''}; starting`);
 const manifest = { version: '1.0', generated: new Date().toISOString(), units: 'metres', up: '+Y', forward: '-Z', files: [] };
 let done = 0;
 const add = async (name, obj, meta) => {
   obj.name = name.split('/').pop().replace(/\.glb$/, '');
   obj = await bakeSkies(obj);
   const data = await glb(obj);
-  await put(routeFor(name), data);
-  manifest.files.push({ file: name, bytes: data.length, tris: triCount(obj), parts: countMeshes(obj), bounds: bounds(obj), ...meta });
+  const route = routeFor(name);
+  await put(route, data);
+  const tris = triCount(obj), parts = countMeshes(obj);
+  manifest.files.push({ file: name, bytes: data.length, tris, parts, bounds: bounds(obj), ...meta });
+  const rec = { name: name.split('/').pop(), path: route, bytes: data.length, tris, parts };
+  EXPORTED.push(rec);
+  addRow(rec);
+  // A frozen preview says nothing about whether the run is working. Showing the
+  // model being written does, and throttling keeps it from thrashing the GPU on
+  // a run that writes a file every forty milliseconds.
+  if (parts && performance.now() - lastShown > 120) { lastShown = performance.now(); preview(obj, rec); }
   done++;
   say(`${done} / ${TOTAL} · ${name} · ${data.length} bytes`);
   await tick();
 };
 try {
-  for (const t of TOWERS) {
+  const unmatched = ONLY.filter((s) => !matchedSel.has(s));
+  if (unmatched.length) throw new Error(`--only matched nothing: ${unmatched.join(', ')}`);
+  for (const t of TOWERS_SEL) {
     const rigMeta = t.rig ? { rig: { yaw: t.id + '_yaw', pitch: t.id + '_pitch', muzzle: t.id + '_muzzle', yawLimits: t.rig.yaw, pitchLimits: t.rig.pitch, traverseDegPerSec: t.rig.traverse, elevateDegPerSec: t.rig.elevate, pitchSign: -1 } } : { spin: t.id + '_spin' };
     if (t.id === 'barricade') {
       for (const [file, v] of [['tower_barricade.glb', null], ['tower_barricade_damaged.glb', 'damaged'], ['tower_barricade_broken.glb', 'broken']])
@@ -233,7 +386,7 @@ try {
       await add(`tower_${t.id}_${p.id}_s${s}.glb`, staged, { tower: t.id, kind: 'module', path: p.id, stage: s, breakpoint: [4, 7, 10].includes(s), adds: p.steps[s] || null, increments: Array.from({ length: s - 1 }, (_, i) => `${t.id}_up_${p.id}_l${i + 2}`) });
     }
   }
-  for (const c of EXTRA) for (const it of c.items) {
+  for (const c of EXTRA_SEL) for (const it of c.items) {
     const m = it.build(kit);
     /* Linear modules carry their run axis, repeat length and width
        (FORWARD-MANIFEST-switchyard, "Conventions we need stated on
@@ -272,7 +425,7 @@ try {
       await add(it.file.replace(/\.glb$/, `_${p}.glb`), pm, { kind: c.kind, id: `${it.id}_${p}`, pose: p, offhandOnly: ['magout', 'magin', 'charge'].includes(p) || undefined, note: it.note });
     }
   }
-  for (const [wid, node, file, note] of RELOAD_PROPS) {
+  for (const [wid, node, file, note] of RELOAD_SEL) {
     const src = WEAPONS.find((x) => x.id === wid).build(kit);
     const n = src.getObjectByName(node);
     if (!n) { say(`WARN reload prop node missing: ${node}`); continue; }
@@ -281,19 +434,35 @@ try {
     n.traverse((o) => { o.visible = true; });
     await add(file, n, { kind: 'weapon_reload', id: file.replace(/\.glb$/, ''), weapon: wid, source: node, note });
   }
-  say('Bundling palette, icons, manifest, design system…');
+  /* A filtered run rewrites only the rows it rebuilt, in place. Replacing the file outright would
+     strip every row for a model this run did not build — including the rig limits and slew rates
+     TowerRig reads back for each chassis, which would quietly reset every tower to its defaults.
+     Existing order is kept so the diff shows what changed rather than the whole file. */
+  if (PARTIAL) {
+    const prev = await readJson('/out/game/assets/structures/manifest.json');
+    if (prev?.files?.length) {
+      const mine = new Map(manifest.files.map((f) => [f.file, f]));
+      const had = new Set(prev.files.map((f) => f.file));
+      manifest.files = [...prev.files.map((f) => mine.get(f.file) ?? f), ...manifest.files.filter((f) => !had.has(f.file))];
+    }
+  }
+  say('Writing manifest…');
   await put('game/assets/structures/manifest.json', new TextEncoder().encode(JSON.stringify(manifest, null, 2)));
+
+  if (!PARTIAL) {
+  say('Bundling palette, icons, design system…');
   await put('docs/forward-manifest.json', await text('game/assets/forward-manifest.json'));
   await put('game/assets/brand/README.md', await text('game/assets/brand/README.md'));
   for (const n of ['logo_mark.svg', 'logo_mark_mono.svg', 'logo_horizontal.svg', 'logo_horizontal_onbrass.svg', 'logo_stacked.svg']) await put('game/assets/brand/' + n, await text('game/assets/brand/' + n));
   for (const s of [16, 32, 48, 64, 128, 256, 512, 1024]) await put(`game/assets/brand/appicon_${s}.png`, await text(`game/assets/brand/appicon_${s}.png`));
   for (const [p, n] of [['game/assets/palette.json', 'docs/palette.json'], ['game/assets/palette.md', 'docs/PALETTE.md'], ['game/assets/towers/README.md', 'game/assets/structures/README-towers.md'], ['docs/ASSET-DELIVERY.md', 'docs/ASSET-DELIVERY.md']])
-    await put(n, await text(p));
+    await (n === 'docs/ASSET-DELIVERY.md' ? putDeliveryNote(p, n) : put(n, await text(p)));
   for (const i of ICONS) await put(`game/assets/ui/${i}.svg`, await text(`game/assets/ui/${i}.svg`));
   for (const t of ['base', 'colors', 'effects', 'fonts', 'spacing', 'typography']) await put(`docs/design-system/${t}.css`, await text(`ds/tokens/${t}.css`));
   // ui-screens.html imports ui-screens-v2.js since the 2026-09-12 drop; a viewer copied without it is a blank page.
   for (const f of ['ui-kit.css', 'ui-screens.js', 'ui-screens-v2.js', 'ui-branding.js', 'ui-weapon-view.js']) await put('docs/design-system/' + f, await text(f));
   await put('docs/design-system/ui-screens.html', new TextEncoder().encode((await (await fetch('Deep Field 3D - UI Screens.html')).text()).replaceAll('ds/tokens/', '')));
+  }
   say(`DONE — ${done} GLB files exported`);
 } catch (err) {
   say('ERROR export failed: ' + (err.stack || err.message));

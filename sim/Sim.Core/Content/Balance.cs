@@ -83,6 +83,20 @@ public static class Balance
     public const float PackDamagePerLevel = 1.25f;
     public const float PackRatePerLevel = 1.12f;
 
+    /// <summary>Every fifth level also wants Gravium, and more of it each time:
+    /// four at level 5, eight at 10, twelve at 15.
+    ///
+    /// Alloy alone made the largest sink in the game a one-currency sink, and
+    /// left the three rarer types with nothing to do in it. Gravium is the
+    /// scarcest thing on the floor — one from a Monolith, one from a Ram — and
+    /// a player has banked about six by the end of Foundry's campaign and
+    /// thirty by wave 20, against the three or four a tower's own level 10
+    /// breakpoint wants. So the milestone is a real decision between the bench
+    /// and the towers rather than a second price tag, which is the same shape
+    /// as the upgrade grid's own breakpoints.</summary>
+    public const int PackGraviumEvery = 5;
+    public const int PackGraviumPerStep = 4;
+
     public const float IntermissionSeconds = 8f;
     public const float ProjectileHitRadius = 0.4f;
 
@@ -153,6 +167,25 @@ public static class Balance
     /// Ram could break, forever. A stalemate is the one outcome a siege enemy
     /// must not have — killing it has to be the way out.</summary>
     public const float MeleeRepairFactor = 0.35f;
+
+    /// <summary>How much a siege enemy discounts a wall when deciding whether
+    /// to break it or walk round.
+    ///
+    /// Pricing the wall in metres-not-walked is the right comparison, and on
+    /// its own it produced a coin flip. Switchyard's barricade is 300 hp, a Ram
+    /// does 14 dps and walks at 1.7 m/s, so chewing through costs 36.4 m of
+    /// walking — against a detour of 35.8 m. Two per cent apart, and the answer
+    /// it landed on was "go round", which quietly inverts the enemy: the Ram
+    /// exists to break the barricade, and the map's lesson is that the wall
+    /// turns everything except the thing sent to open it.
+    ///
+    /// So a siege enemy values breaking above the time it costs. That is not a
+    /// fudge to reach a preferred answer, it is the enemy's identity stated as
+    /// a number — and it stays a comparison, so a wall thick enough is still
+    /// worth walking round. At 0.6 the shipped barricade costs 21.8 m against
+    /// that 35.8 m detour and gets broken, and it would take about 490 hp to
+    /// change its mind.</summary>
+    public const float SiegeBreachBias = 0.6f;
 
     public const float BurrowCycleMeters = 14f;
     public const float BurrowedMeters = 8f;

@@ -251,8 +251,10 @@ vehicle_dagator	vehicles	yes
 vehicle_grnmchn	vehicles	yes
 vehicle_vehickle	vehicles	yes
 vfx_ability_chainsurge	vfx	no
+vfx_ability_cryofield	vfx	yes
 vfx_ability_ignitionwave	vfx	no
 vfx_ability_overdrive	vfx	no
+vfx_ability_revealpulse	vfx	yes
 vfx_burrow_spray	vfx	no
 vfx_cluster_split	vfx	no
 vfx_core_breach	vfx	no
@@ -269,6 +271,7 @@ vfx_muzzle_nova	vfx	no
 vfx_muzzle_skywatch	vfx	no
 vfx_nullifier_tether	vfx	no
 vfx_overclock_link	vfx	no
+vfx_reaction_corrode	vfx	yes
 vfx_reaction_flashfreeze	vfx	no
 vfx_reaction_thermalshock	vfx	no
 vfx_revive_beam	vfx	no
