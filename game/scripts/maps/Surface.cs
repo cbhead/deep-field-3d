@@ -19,7 +19,10 @@ public enum Surface
     Water,
 }
 
-public sealed record SurfaceRoad(Surface Kind, Vector3[] Points, float Width);
+/// <summary>A made road. <paramref name="Apron"/> marks a yard laid in the
+/// same material as the drive that crosses it, drawn a hair lower so the two
+/// do not fight; the surface lookup treats it as the road it is made of.</summary>
+public sealed record SurfaceRoad(Surface Kind, Vector3[] Points, float Width, bool Apron = false);
 
 public static class Surfaces
 {

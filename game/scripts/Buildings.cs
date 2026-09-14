@@ -104,8 +104,21 @@ public partial class GameRoot
         // colliders stay exactly as they are and only the boxes stop drawing.
         if (shellAsset is not null && MapKit.Prop(this, shellAsset, centre) is not null)
             foreach (var body in made) MapKit.HideBox(body);
-        if (roofAsset is not null)
-            MapKit.Prop(this, roofAsset, centre + new Vector3(0, roofY + 0.15f, 0));
+        // The roof file is authored either from its own eave (the 2026-09-12
+        // set: mounted on the roof line) or from grade like the shell (the
+        // 2026-09-13 replacements, whose deck sits at local 6.3 on the barn).
+        // Measured rather than assumed: a roof whose lowest part is already
+        // above half the wall height is in building space and goes at the
+        // building's origin, or it floats a storey over its own walls.
+        if (roofAsset is not null && MapKit.Prop(this, roofAsset, centre + new Vector3(0, roofY + 0.15f, 0)) is { } roof)
+        {
+            float lowest = float.MaxValue;
+            var toRoof = roof.GlobalTransform.AffineInverse();
+            foreach (var child in roof.FindChildren("*", nameof(MeshInstance3D), true, false))
+                if (child is MeshInstance3D piece && piece.Mesh is not null)
+                    lowest = Mathf.Min(lowest, (toRoof * piece.GlobalTransform * piece.GetAabb()).Position.Y);
+            if (lowest < float.MaxValue && lowest > wallHeight * 0.5f) roof.Position = centre;
+        }
         GD.Print($"[map] {name}: {made.Count} volume(s), roof at {roofY:0.0} m");
     }
 

@@ -32,6 +32,8 @@ public static class AssetLibrary
         ("trap_", "structures"),
         ("socket_", "structures"),
         ("weapon_", "weapons"),
+        ("melee_", "weapons"),
+        ("meleemod_", "weapons"),
         ("attach_", "weapons"),
         ("ammo_", "weapons"),
         ("hands_", "weapons"),
@@ -108,11 +110,36 @@ public static class AssetLibrary
                 : null;
             scene = found is null ? null : GD.Load<PackedScene>(found);
             Cache[asset] = scene;
+            if (scene?.Instantiate() is Node3D first) { HonourVertexColours(first); first.Free(); }
         }
 
         if (scene is null) return null;
         ResolvedNames.Add(asset);
         return scene.Instantiate() as Node3D;
+    }
+
+    /// <summary>Design paints variation into vertex colour where it can — a
+    /// tile's mown strip and scrape, the hay stubble's mower widths, the
+    /// track's two ruts, the pasture's clumps — because a hundred copies of one
+    /// tile is wallpaper otherwise and vertex colour is free. three.js
+    /// multiplies COLOR_0 into the albedo whenever a geometry carries it;
+    /// Godot's importer keeps the attribute and leaves the material's
+    /// <c>vertex_color_use_as_albedo</c> off, so every one of those files
+    /// rendered as its plain texture and two whole tile variants were
+    /// invisible. Materials are shared resources, so this runs once per
+    /// scene on first load and every later instance sees it.</summary>
+    private static void HonourVertexColours(Node3D root)
+    {
+        foreach (var child in root.FindChildren("*", nameof(MeshInstance3D), true, false))
+        {
+            if (child is not MeshInstance3D piece || piece.Mesh is not ArrayMesh mesh) continue;
+            for (int i = 0; i < mesh.GetSurfaceCount(); i++)
+            {
+                if ((mesh.SurfaceGetFormat(i) & Mesh.ArrayFormat.FormatColor) == 0) continue;
+                if ((piece.GetSurfaceOverrideMaterial(i) ?? mesh.SurfaceGetMaterial(i)) is BaseMaterial3D material)
+                    material.VertexColorUseAsAlbedo = true;
+            }
+        }
     }
 
     /// <summary>Design's model, or the graybox that stands in for it.</summary>

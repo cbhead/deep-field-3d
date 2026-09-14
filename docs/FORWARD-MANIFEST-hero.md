@@ -90,15 +90,19 @@ one, which is what the client does today.
 
 ## P2 — the Toaster's last piece
 
-### E. The enemy lane — `toaster_path_ground.glb`
+### E. The enemy lane — `toaster_path_ground.glb` · **delivered 2026-09-13**
 
 Every map's enemy lane is dressed with `<map>_path_ground`; the commission
-never asked for the Toaster's, so the client lays the gravel road module along
-the lanes instead. It reads as a farm track and it is nearly right. **Ask:** a
-4 m module of worn track — two tyre ruts in trodden grass, no kerb, 3.4 m wide
-— `run: "+X", repeat: 4.0, width: 3.4`, instanced. Where the lane runs down the
-county road it is drawn over the asphalt and should be a metre narrower than
-the carriageway, as this is.
+never asked for the Toaster's, so the client laid the gravel road module along
+the lanes instead. **Delivered** in the 2026-09-13 drop as asked — a 4 m module
+of worn track, two tyre ruts in trodden grass, no kerb, 3.4 m wide,
+`run: "+X", repeat: 4.0, width: 3.4`, `instanced: true` — and the client now
+lays it along every walked leg as one instanced draw (230 pieces in one
+multimesh; the manifest's `instanced` flag is what routes a map's own lane
+module down that path instead of the per-segment mount). The same drop
+brought the rest of the Toaster's uplift — field tiles by region, four fenced
+fields, the farmstead set, power lines, the rebuilt building shells — all
+placed by the rules in design's level file rather than from a coordinate list.
 
 ### F. Three notes, not asks
 
@@ -114,6 +118,37 @@ the carriageway, as this is.
   `scattergun_shell` template; it does not (128 nodes, none by that name). The
   client uses the standalone `weapon_scattergun_shell.glb` for the reload, which
   is the file to keep.
+
+### G. Notes from the 2026-09-13 drop
+
+- **Vertex colour above 1.0 clamps in the engine.** `toaster_terrain_v5`'s
+  stubble is painted as COLOR_0 up to 1.28 and the pasture's clumps as a
+  spread either side of 1.0; Godot stores vertex colour 8-bit, so anything
+  over white is white. Grass carries almost no blue, so clamping the stubble's
+  (1.23, 1.09, 0.67) to (1, 1, 0.67) changes nothing you can see: in-engine
+  the hayfield and the pasture are the lawn tile. The two field tiles need to
+  be albedo variants of the shared set, not multipliers on it. Related: the engine's importer leaves
+  vertex colour OFF by default; the client now switches it on for every
+  surface that carries the attribute (`AssetLibrary.HonourVertexColours`), so
+  the mown strip, the scrape, the ruts and the field tiles all show for the
+  first time. Nothing to change on your side for that.
+- **The export page never writes `_v4` and `_v5`.** Its variant loop is
+  `v = 1..3` for every `buildVariant`, so the two field tiles were authored
+  and never exported; our copy of the page carries a `VARIANTS` table
+  (terrain 5, grain bin 1, utility pole 1). A `variants:` count on the entry
+  would let the page do it itself.
+- **The roof files changed frame without saying so.** The 2026-09-12 roofs
+  were authored from their own eave; the 2026-09-13 replacements are authored
+  from grade like the shells (the barn's deck at local 6.3). Placed at the
+  roof line, every roof floated a storey above its walls. The client now
+  measures which convention a roof uses; a line in the delivery note when an
+  origin convention changes would be cheaper than the afternoon.
+- **`docs/ASSET-DELIVERY.md` did not change** between the 2026-09-11 and
+  2026-09-13 zips even though toaster.js, levels.js, melee-hero.js and
+  sprayer-hero.js all did; `forward-manifest.json` carried the real summary.
+  The note is what gets read first — please regenerate it per drop.
+- **`support.js`** (a generated dc-runtime bundle) ships at the zip root and
+  nothing in the project references it; it is not vendored.
 
 ---
 

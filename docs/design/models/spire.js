@@ -26,10 +26,20 @@ export function makeSpireMats(THREE, mats) {
   mat('paint_yellow', 0xd8b04a, { roughness: .7 });
   mat('paint_white', 0xd9dbe0, { roughness: .7 });
   mat('curtain_glass', 0x16283a, { roughness: .12, metalness: .55 });
+  /* Glazing has to read LIGHTER than the hole next to it, or a solid panel and
+     an open light are the same black strip from the plaza — which is exactly
+     what happened when the solid lights were first cut in. `curtain_glass`
+     stays as the dark pane for the awnings and sliders hung IN an opening
+     (silhouetted against daylight, so dark is right). The two below are for
+     glazing that must be seen as glazing: sky reflection, and the opaque
+     shadow-box panel that fills the lower half of a real curtain-wall bay. */
+  mat('glass_sky', 0x93a9c0, { roughness: .09, metalness: .5 });
+  mat('glass_spandrel', 0x6d7f90, { roughness: .34, metalness: .25 });
   mat('office_lit', 0xffe2b0, { roughness: .3, emissive: new THREE.Color(0xffd79a), emissiveIntensity: .75 });
-  mat('office_dim', 0x2a3a4a, { roughness: .3, emissive: new THREE.Color(0x3a5570), emissiveIntensity: .25 });
+  mat('office_dim', 0x46607a, { roughness: .3, emissive: new THREE.Color(0x4a6c8c), emissiveIntensity: .3 });
   mat('mullion', 0x3a3f4a, { roughness: .45, metalness: .7 });
   mat('spandrel', 0x8a8e96, { roughness: .8, metalness: .05 });
+  mat('spandrel_alt', 0x767b85, { roughness: .82, metalness: .05 });
   mat('escape_steel', 0x4a4f58, { roughness: .5, metalness: .7 });
   mat('escape_rust', 0x7a4a2c, { roughness: .9, metalness: .15 });
   mat('grating', 0x5a606b, { roughness: .6, metalness: .55 });
@@ -41,6 +51,19 @@ export function makeSpireMats(THREE, mats) {
   mat('lamp_white', 0xe8f0ff, { roughness: .3, emissive: new THREE.Color(0xdbe6ff), emissiveIntensity: 1.1 });
   mat('sodium', 0xffb35c, { roughness: .3, emissive: new THREE.Color(0xff9a2e), emissiveIntensity: 1.2 });
   mat('beacon_red', 0xff2e4a, { roughness: .3, emissive: new THREE.Color(0xff2e4a), emissiveIntensity: 1.4 });
+  // Painted steel pipe. A sprinkler main IS red, but it is oxide paint on
+  // steel, not a beacon: `beacon_red` is emissive and belongs to the mast lamp
+  // and the core, and a self-lit stripe under every bay of a 115-bay floor
+  // plate outshone the ceiling troughs that are supposed to light it. This
+  // reads as pipe — low saturation, a little sheen, no emission — and sits in
+  // the same family as the rust and the trim.
+  mat('pipe_oxide', 0x7a4038, { roughness: .62, metalness: .35 });
+  // Office floor finish. The corridor runner is a shade or two darker than the
+  // screed either side of it, which is how a real office marks circulation and
+  // is what makes the lane legible without a single painted mark on it.
+  mat('carpet_corridor', 0x3f4550, { roughness: .97, metalness: 0 });
+  mat('carpet_corridor_alt', 0x474e5a, { roughness: .97, metalness: 0 });
+  mat('carpet_seam', 0x343a44, { roughness: .98, metalness: 0 });
   return mats;
 }
 
@@ -167,20 +190,31 @@ P({ id: 'spire_wall_boundary', label: 'Street frontage (10 m)', size: '10×13.4 
   build(K) { return frontage(K, 'spire_wall_boundary', 0); },
   buildVariant(K, v = 0) { return frontage(K, 'spire_wall_boundary', v % 4); } });
 
-/* Interior lane module 4 (X) × 3.4 (Z): the route, painted on a floor plate. */
-P({ id: 'spire_path_interior', label: 'Interior lane module (4 m)', size: '4×3.4 m', swatch: '#d8b04a', stats: { Lane: '3.4 m', Height: '3 cm', Repeat: 'along route' },
-  note: 'One 4 m run of the route where it crosses a floor plate: a dark traffic band worn through the screed, hazard-yellow edge lines flush with the band, one direction arrow and four recessed floor studs. Every mark is symmetric about the lane centre and tiles on the 4 m repeat, with the studs 2 m apart in pairs. No centre line — that would imply two-way traffic on a one-way enemy lane. The arrow (1.4 m shaft, barbs swept back from the tip) points local −X because the layer rotates each module by atan2(d.x,d.z)+90°, which maps local +X against the direction of travel. The band is what makes the lane read at a distance — white paint alone disappears on pale concrete. Three centimetres tall so it lays straight onto a slab; lay it along the flat legs at every level, the way `spire_path_ground` handles the street.',
+/* Interior lane module 4 (X) × 3.4 (Z): the route, as office flooring. */
+P({ id: 'spire_path_interior', label: 'Interior lane module (4 m)', size: '4×3.4 m', swatch: '#3f4550', stats: { Lane: '3.4 m', Height: '3 cm', Tile: '500 mm', Repeat: 'along route' },
+  note: 'One 4 m run of the route where it crosses a floor plate — and INSIDE it is a building, not a roadway. The asphalt band, hazard-yellow edge lines, direction arrow and cat’s-eye studs are gone: a traffic arrow on an office plate read as a control rather than as where you are (§4.16), and nothing about a carriageway belongs above the lobby. What replaces them is the way a real office marks circulation: a 500 mm carpet-tile runner a couple of shades darker than the screed either side, laid in alternating rows so the pile catches light in bands, seams on the tile grid so it tiles at any 4 m join, a slim brushed-aluminium transition trim down both long edges where the carpet meets the screed, two flush floor boxes on the grid, PAIRED across the lane rather than set diagonally — this module was remade once already because two marks on opposite corners read as dots wandering side to side over a 40 m run instead of as a corridor. Contrast does the work paint used to: the runner reads as the walked line from across a 40 m plate, which is the whole reason this module exists. Three centimetres tall so it lays straight onto a slab; lay it along the flat legs at every level, the way `spire_path_ground` handles the street.',
   build(K) {
     const { part, grp, box, cyl, mats } = K, g = grp('spire_path_interior');
-    g.add(part('lane_band', box(4, .008, 3.4), mats.asphalt, [0, .012, 0]));
-    for (const s of [-1, 1]) g.add(part(`lane_edge${s}`, box(4, .014, .16), mats.paint_yellow, [0, .019, s * 1.62]));
-    // No centre line: it would imply two-way traffic, and its dashes ran into
-    // the arrow shaft to read as one long barbed line. Edge lines, one arrow and
-    // the studs carry the lane.
-    g.add(part('lane_arrow_shaft', box(1.4, .016, .14), mats.paint_white, [0, .022, 0]));
-    for (const s of [-1, 1]) g.add(part(`lane_arrow_barb${s}`, box(.64, .016, .14), mats.paint_white, [-.45, .022, s * .2], [0, -s * .675, 0]));
-    // Studs in pairs across the lane, 2 m apart along it.
-    for (const x of [-1, 1]) for (const s of [-1, 1]) g.add(part(`lane_stud${x}_${s}`, cyl(.09, .09, .024, 10), mats.lamp_white, [x, .022, s * 1.35]));
+    // The runner. Rows of tile alternate tone the way a quarter-turned carpet
+    // tile does — eight 500 mm rows to the module, so the banding continues
+    // across every join instead of restarting at it.
+    for (let i = 0; i < 8; i++) g.add(part('lane_tile_row' + i, box(.5, .008, 3.4),
+      i % 2 ? mats.carpet_corridor_alt : mats.carpet_corridor, [-1.75 + i * .5, .012, 0]));
+    // Seams on the 500 mm grid, both ways.
+    for (let i = 0; i < 8; i++) g.add(part('lane_seam_x' + i, box(.008, .002, 3.4), mats.carpet_seam, [-2 + i * .5, .017, 0]));
+    for (const z of [-1.5, -1, -.5, 0, .5, 1, 1.5]) g.add(part('lane_seam_z' + z, box(4, .002, .008), mats.carpet_seam, [0, .017, z]));
+    // Transition trim where the carpet meets the screed — the office answer to
+    // an edge line, and the piece that actually stops the runner’s edge fraying
+    // visually at this scale.
+    for (const s of [-1, 1]) g.add(part(`lane_trim${s}`, box(4, .014, .06), mats.mullion, [0, .019, s * 1.67]));
+    // Flush floor boxes: power and data, lids level with the pile, and PAIRED
+    // across the lane on the seam cross — symmetric about the centre line, or a
+    // 40 m run reads as dots wandering from side to side. The frame IS the lid:
+    // a brighter metal cap at 200 mm is the cat’s-eye stud back again.
+    // Local X runs ALONG the lane and Z across it, so the pair mirrors across
+    // the centre at one station: paired along X tiled into a dashed centre line
+    // every 1.8 m, the mark this module had deleted once already.
+    for (const s of [-1, 1]) g.add(part('lane_floorbox' + s, box(.26, .012, .26), mats.trim, [0, .019, s * 1.1]));
     return g;
   } });
 
@@ -194,40 +228,183 @@ P({ id: 'spire_floor', label: 'Floor bay (4 m)', size: '4×12 m', swatch: '#8a8e
     g.add(part('floor_tape', box(4, .006, .1), mats.paint_yellow, [0, .222, 0]));
     for (const s of [-1, 1]) { g.add(part(`floor_edge_beam${s}`, box(4, .6, .3), mats.concrete_dark, [0, -.3, s * 5.85])); g.add(part(`floor_column${s}`, box(.5, 9.6, .5), mats.concrete_dark, [0, -5.0, s * 5.6])); g.add(part(`floor_column_cap${s}`, box(.7, .2, .7), mats.concrete, [0, -.3, s * 5.6])); }
     g.add(part('floor_trough', box(3.6, .1, .5), mats.trim, [0, -.25, 0])); g.add(part('floor_trough_lamp', box(3.4, .03, .3), mats.lamp_white, [0, -.31, 0]));
-    g.add(part('floor_sprinkler', cyl(.05, .05, 11.4, 8), mats.beacon_red, [1.2, -.3, 0], [Math.PI / 2, 0, 0]));
-    for (const z of [-4, 0, 4]) g.add(part('floor_sprinkler_head' + z, cyl(.03, .05, .12, 8), mats.chrome, [1.2, -.42, z]));
+    g.add(part('floor_sprinkler', cyl(.05, .05, 11.4, 8), mats.pipe_oxide, [1.2, -.42, 0], [Math.PI / 2, 0, 0]));
+    for (const z of [-4, 0, 4]) { g.add(part('floor_sprinkler_drop' + z, cyl(.028, .028, .1, 8), mats.pipe_oxide, [1.2, -.49, z])); g.add(part('floor_sprinkler_head' + z, cyl(.022, .04, .09, 8), mats.trim, [1.2, -.53, z])); }
     return g;
   } });
 
-/* Facade bay 8 (X) × 40 (Y) × 1: curtain wall over four spandrel bands, lit windows per bay. */
+/* Facade bay 8 (X) × 40 (Y) × 1: curtain wall with an OPEN window band per
+   storey — the wall is solid and the openings are void, because towers stand
+   inside these and shoot out through them. */
 function facade(K, id, seed, o = {}) {
-  const { part, grp, box, mats } = K, g = grp(id);
-  g.add(part(id + '_plinth', box(8, 1.2, 1.05), mats.concrete_dark, [0, .6, 0]));
+  const { part, grp, box, mats } = K, g = grp(id), ap = [], D = 1.4;   // half the door width
+  /* A doorway is a NOTCH in the storey's upstand rather than a hole in the
+     middle of a wall: the window band above is already open, so cutting the
+     1 m sill (or the 1.2 m plinth, at grade) over 2.8 m turns that storey's
+     opening into something you can walk through. That is what the east face
+     needs — the escape's ground leg crosses it at z 16, its re-entry at z 0 on
+     floor two, and the landing gates open onto the plate at z 8 and z 0. */
+  const door = o.doorAt ?? -1;
+  /* Open-light patterns, 1 = void and 0 = glazed. Every row leaves at least
+     one of each, so no storey is sealed and none is stripped bare. */
+  const LIGHTS = [[1, 0, 0, 1], [0, 1, 1, 0], [1, 1, 0, 0], [0, 0, 1, 1],
+    [1, 0, 1, 0], [0, 1, 0, 1], [1, 1, 0, 1], [1, 0, 1, 1]];
+  let prevPat = -1;
+  // Band tone ALTERNATES up the bay, with the starting tone hashed per bay: a
+  // coin flip per storey landed on one tone four storeys running, so the
+  // variation it was added for did not exist.
+  const phase = h(seed, 100) < .5 ? 0 : 1;
+  if (door === 0) for (const s of [-1, 1]) g.add(part(`${id}_plinth${s}`, box((8 - 2 * D) / 2, 1.2, 1.05), mats.concrete_dark, [s * (D + (8 - 2 * D) / 4), .6, 0]));
+  else g.add(part(id + '_plinth', box(8, 1.2, 1.05), mats.concrete_dark, [0, .6, 0]));
   for (let f = 0; f < 4; f++) {
-    const y0 = 1.2 + f * 9.7 + (f === 0 ? 0 : 0);
-    g.add(part(`${id}_spandrel${f}`, box(8, 1.4, 1.0), mats.spandrel, [0, y0 + 9.0, 0]));
-    g.add(part(`${id}_slab_edge${f}`, box(8.02, .3, 1.02), mats.concrete_dark, [0, y0 + 8.35, 0]));
-    if (o.lobby && f === 0) continue;
-    for (let i = 0; i < 4; i++) { const lit = h(seed, f * 4 + i); g.add(part(`${id}_glass${f}_${i}`, box(1.84, 7.0, .3), lit < .3 ? mats.office_lit : lit < .55 ? mats.office_dim : mats.curtain_glass, [-3 + i * 2, y0 + 4.6, 0])); }
-    for (let i = 0; i <= 4; i++) g.add(part(`${id}_mullion${f}_${i}`, box(.16, 7.2, .5), mats.mullion, [-4 + i * 2, y0 + 4.6, .2]));
-    g.add(part(`${id}_transom${f}`, box(8, .16, .5), mats.mullion, [0, y0 + 2.4, .2]));
+    /* Storeys are tied to the FLOOR PLATES (y 0 / 10 / 20 / 30), not to a
+       façade pitch of its own. The old bay divided 40 m into four 9.7 m bands,
+       which put storey one's glazing 1.9 m above the plate it belongs to — a
+       tower standing on that floor would have been firing into masonry. */
+    const y = f * 10, dr = f === door, stub = (8 - 2 * D) / 2, sx = D + stub / 2;
+    /* The spandrel band runs 8.2..10.0 — it already stops exactly ON the floor
+       line of the storey above, so a door bay leaves it alone: it is the wall
+       UNDER the threshold. Only the 0.3 m slab edge, which stands 0.15 m proud
+       of that line, is the lip, and only it gets notched. (part() chamfers a
+       box inward and never inflates it, so these numbers are the box.) */
+    g.add(part(id + '_spandrel' + f, box(8, 1.8, 1.0), (f + phase) % 2 ? mats.spandrel : mats.spandrel_alt, [0, y + 9.1, 0]));
+    if (f + 1 === door) for (const s of [-1, 1]) g.add(part(id + `_slab_edge${f}_${s}`, box(stub, .3, 1.02), mats.concrete_dark, [s * (sx + .01), y + 10, 0]));
+    else g.add(part(id + `_slab_edge${f}`, box(8.02, .3, 1.02), mats.concrete_dark, [0, y + 10, 0]));
+    if (o.lobby && f === 0) { ap.push({ at: [0, 2.2, 0], size: [5.2, 4.0] }); continue; }
+    // The sill is a 1 m upstand: a guard at a 30 m opening, and low enough that
+    // a tower a metre inside the glass line has its muzzle over it. On the
+    // ground storey the plinth is the upstand. A door storey gets two stubs.
+    if (f > 0 && dr) for (const s of [-1, 1]) g.add(part(`${id}_sill${f}_${s}`, box((8 - 2 * D) / 2, .8, 1.0), mats.concrete_dark, [s * (D + (8 - 2 * D) / 4), y + .6, 0]));
+    else if (f > 0) g.add(part(`${id}_sill${f}`, box(8, .8, 1.0), mats.concrete_dark, [0, y + .6, 0]));
+    const sill = f === 0 ? 1.2 : y + 1.0, head = y + 7.8, hh = head - sill, cy = (sill + head) / 2;
+    if (dr) for (const s of [-1, 1]) g.add(part(`${id}_cill${f}_${s}`, box((8 - 2 * D) / 2, .08, 1.12), mats.mullion, [s * (D + (8 - 2 * D) / 4), sill + .04, .04]));
+    else g.add(part(`${id}_cill${f}`, box(8.02, .08, 1.12), mats.mullion, [0, sill + .04, .04]));
+    g.add(part(`${id}_lintel${f}`, box(8, .4, 1.0), mats.spandrel, [0, y + 8.0, 0]));
+    /* ── Which lights are open, and which are glazed solid ──────────────
+       A curtain wall is not a missing wall. Every storey has four 1.84 m
+       lights in the mullion grid, and only SOME of them are void: the rest
+       carry fixed glazing, which is what makes this read as an office block
+       from the plaza rather than as a multi-storey car park. The pattern is a
+       hashed pick per storey, never the same two storeys running, and every
+       pattern leaves at least one light open and at least one glazed — so a
+       tower has a line out of every floor, and no floor looks stripped. */
+    let pi = Math.floor(h(seed, 60 + f) * LIGHTS.length) % LIGHTS.length;
+    if (pi === prevPat) pi = (pi + 3) % LIGHTS.length;
+    prevPat = pi;
+    const open = LIGHTS[pi].slice();
+    // A doorway's own two lights are open whatever the pattern says.
+    if (dr) { open[1] = 1; open[2] = 1; }
+    for (let i = 0; i <= 4; i++) {
+      const x = -4 + i * 2;
+      // A mullion in the doorway is a post in a doorway; the door's own jambs
+      // stand at its edges instead.
+      if (dr && Math.abs(x) < D) continue;
+      g.add(part(id + '_mullion' + f + '_' + i, box(.16, hh, .5), mats.mullion, [x, cy, .2]));
+    }
+    g.add(part(id + '_transom' + f, box(8, .16, .5), mats.mullion, [0, cy + 1.4, .2]));
+    g.add(part(id + '_reveal' + f, box(7.68, .1, 1.0), mats.concrete_dark, [0, head - .05, 0]));
+    if (dr) {
+      for (const s of [-1, 1]) g.add(part(id + '_jamb' + f + '_' + s, box(.18, 3.0 + (f === 0 ? 1.2 : 1.0) - 1.0, 1.06), mats.mullion, [s * D, y + 1.5, 0]));
+      // 1.9 m deep, not 1.3: the wall is 1.05 m thick and the plates stop at
+      // x 19, so a threshold that only spans the wall leaves a 0.35 m hole in
+      // the floor between the plate edge and the doorway. This laps both.
+      g.add(part(id + '_threshold' + f, box(2 * D, .06, 1.9), mats.trim, [0, y + .03, 0]));
+      g.add(part(id + '_threshold_nose' + f, box(2 * D, .05, .08), mats.paint_yellow, [0, y + .035, .92]));
+    }
+    const mid = cy + 1.4;   // the transom line: every light splits on it
+    for (let i = 0; i < 4; i++) {
+      const x = -3 + i * 2, r = h(seed, f * 4 + i);
+      if (open[i]) {
+        /* An OPEN light still reads as a window a building opened: some carry
+           their awning pane hinged out at the transom, some have the sliding
+           pane parked against a jamb. */
+        if (r < .45) {
+          /* A top-hung VENT, not the whole pane thrown wide. The full-height
+             leaf reached z 1.11 (and 0.84 after the first trim), so on the east
+             face it passed through the fire escape's inner stringer and
+             handrail at x 20.72 — and the escape only moved out to x 21.8 to
+             get clear of the floor plates, so it cannot give the ground back.
+             A 0.9 m vent cracked 22° tops out at z 0.49, inside the wall's own
+             outer face at 0.525: nothing on any face protrudes, which is also
+             what a curtain wall actually opens with. */
+          g.add(part(id + '_awning' + f + '_' + i, box(1.84, .9, .05), mats.curtain_glass, [x, cy + 2.1, .30], [-.38, 0, 0]));
+          g.add(part(id + '_awning_stay' + f + '_' + i, box(.04, .5, .04), mats.mullion, [x + .8, cy + 1.95, .22], [-.38, 0, 0]));
+        } else if (r < .62 && !(dr && Math.abs(x) < D + 1)) {
+          g.add(part(id + '_slider' + f + '_' + i, box(.86, hh - .2, .06), mats.curtain_glass, [x + .49, cy, .22]));
+        }
+        continue;
+      }
+      /* A SOLID light: fixed glazing in the grid, split on the transom into an
+         upper and a lower pane with a glazing bead down each jamb, so it reads
+         as a glazed unit set INTO the wall rather than a panel stuck over the
+         hole. What varies is what the pane is doing — sky reflection, a lit
+         office, a dim one — hashed per light, so the elevation is a scatter of
+         occupied and empty rooms the way a real block is at dusk. */
+      const t = h(seed, 80 + f * 4 + i);
+      const pane = t < .24 ? mats.office_lit : t < .5 ? mats.office_dim : mats.glass_sky;
+      // The lower pane is the SHADOW BOX: opaque insulated panel behind glass,
+      // which is what a curtain wall carries from floor to desk height and is
+      // the half that makes the light read solid rather than dark.
+      g.add(part(id + '_pane' + f + '_' + i + '_lo', box(1.84, mid - sill - .16, .06), mats.glass_spandrel, [x, (sill + mid) / 2, .2]));
+      g.add(part(id + '_pane' + f + '_' + i + '_hi', box(1.84, head - mid - .16, .06), pane, [x, (mid + head) / 2, .2]));
+      for (const s of [-1, 1]) g.add(part(id + '_bead' + f + '_' + i + '_' + s, box(.05, hh - .1, .1), mats.mullion, [x + s * .9, cy, .25]));
+      // Blinds half-drawn on the occupied ones: the detail that says offices
+      // behind the glass rather than a glass wall.
+      if (t < .5) g.add(part(id + '_blind' + f + '_' + i, box(1.7, 1.3, .03), mats.paint_white, [x, head - .85, .13]));
+    }
+    // Occupied at night, seen THROUGH the open lights rather than reflected
+    // off a pane: a strip on the reveal soffit, set back inside the wall.
+    const lit = h(seed, 40 + f);
+    g.add(part(id + '_soffit_lamp' + f, box(7.4, .12, .08), lit < .35 ? mats.lamp_white : lit < .6 ? mats.office_dim : mats.trim, [0, head - .3, -.38]));
+    /* The sight contract: one entry per RUN of adjacent open lights, not one
+       per storey. A tower behind a glazed light has no shot, and the whole
+       point of listing apertures is that the sim can tell the difference. */
+    for (let i = 0; i < 4; i++) {
+      if (!open[i]) continue;
+      let j = i; while (j + 1 < 4 && open[j + 1]) j++;
+      const x0 = -3 + i * 2 - .92, x1 = -3 + j * 2 + .92, w = x1 - x0;
+      // A door storey's opening runs from the floor, not from the sill.
+      ap.push(dr && x0 < D && x1 > -D
+        ? { at: [(x0 + x1) / 2, (y + head) / 2, 0], size: [w, head - y], door: [2 * D, 3.0] }
+        : { at: [(x0 + x1) / 2, cy, 0], size: [w, hh] });
+      i = j;
+    }
   }
   g.add(part(id + '_parapet', box(8, .6, 1.1), mats.concrete_dark, [0, 40.3, 0]));
+  /* The sight contract, declared by the art rather than guessed by the sim:
+     each entry is an opening in the wall plane (local z 0, outward +Z before
+     the placement yaw), centre and clear size in metres. A tower inside can
+     see an enemy only through one of these, which is why the wall is solid
+     everywhere else and why the openings are listed rather than implied. */
+  g.userData.apertures = ap;
+  g.userData.wall = { plane: 'z', thickness: 1.0, outward: [0, 0, 1] };
   return g;
 }
-P({ id: 'spire_facade', label: 'Facade bay (8 m)', size: '8×40 m', swatch: '#16283a', stats: { Storeys: '4', Glass: 'curtain wall', Lit: 'per bay' },
-  note: 'One 8 m bay of the exterior curtain wall, ground to parapet: stone plinth, four storeys of dark glazing in steel mullions over concrete spandrel bands, a scatter of lit and dimmed offices so the block reads occupied at night. Five bays per face; the east face is left open for the fire escape. Lay along-Z faces with yaw 90.',
-  build(K) { return facade(K, 'spire_facade', 3); } });
+P({ id: 'spire_facade', label: 'Facade bay (8 m)', size: '8×40 m', swatch: '#16283a', stats: { Storeys: '4', Lights: '4 × 1.84 m', Open: '1–3 per storey', Variants: 'door at storey 0–2' },
+  note: 'One 8 m bay of the exterior wall, ground to parapet, and it is a WALL with windows in it. Each storey carries four 1.84 m lights in the mullion grid; a hashed pattern per storey decides which are void and which are glazed solid, never the same two storeys running, and every pattern leaves at least one of each — so a tower has a line out of every floor and no elevation looks stripped. Towers stand inside this building and fire out through the open lights, and the sim only lets a tower hit what it can see through one, so the glazed lights matter as much as the voids: a solid light is fixed glazing split on the transom into two panes with a glazing bead down each jamb, set into the reveal rather than stuck over it, and what the pane is DOING varies per light — sky reflection, a lit office, a dim one, blinds half-drawn on the occupied ones — so the block reads as a scatter of rooms at dusk the way a real office building does. Open lights keep the awning pane hinged out at the transom or the slider parked at a jamb. Storeys are pinned to the FLOOR PLATES at y 0/10/20/30, not to a facade pitch of their own: the old bay divided 40 m into four 9.7 m bands and put floor one’s glazing 1.9 m above the plate, so a tower on that floor was aiming into masonry. A 1 m sill upstand guards each opening and still clears a muzzle a metre inside the glass line. VARIANTS 1–3 notch the upstand over 2.8 m to make that storey’s opening a DOORWAY — jambs, threshold and hazard nose, no mullion in the way, and its two lights forced open — at storey 0, 1 and 2 respectively: the east (back) wall needs one at grade where the escape’s ground leg leaves the building, one at floor one where the landing gate lands, and one at floor two where the escape route walks back in. `userData.apertures` lists one entry per RUN of adjacent open lights (centre + clear size, wall plane local z 0; a door run also carries its `door` clear size) so both the collision punch and the line-of-sight test are built from the art rather than from numbers copied into C#. Five bays per face, all four faces. Lay along-Z faces with yaw 90.',
+  build(K) { return facade(K, 'spire_facade', 3); },
+  buildVariant(K, v = 0) { return facade(K, 'spire_facade', 3, v > 0 ? { doorAt: v - 1 } : {}); } });
 
-P({ id: 'spire_lobby', label: 'Lobby bay (8 m)', size: '8×40 m', swatch: '#ff4f7a', stats: { Door: '6×4 m', Canopy: '2.5 m', Sign: 'neon' },
-  note: 'Facade bay with the street entrance: a 6 m glazed opening with revolving-door drums, a cantilevered canopy with downlights, a neon SPIRE sign and a pair of bollards. Storeys 2–4 match `spire_facade`. Used twice on the west face: the main door at z 0 and the service door the fire-escape route uses at z 16.',
+P({ id: 'spire_lobby', label: 'Lobby bay (8 m)', size: '8×40 m', swatch: '#ff4f7a', stats: { Door: '5.2×4 m clear', Canopy: '2.5 m', Sign: 'neon' },
+  note: 'Facade bay with the street entrance, and the doorway is a CLEAR 5.2 × 4 m opening: the revolving drums that stood in it are gone. Both ground routes walk through this bay and a tower in the lobby fires out through it, so anything in the aperture is either an obstruction to the lane or cover the enemy did not earn — the entrance doors instead stand swung open against the piers, which is also what a building under siege looks like. Piers, header, a fixed transom light over the door, a cantilevered canopy with downlights, a neon SPIRE sign, bollards. Storeys 2–4 match `spire_facade`, open windows included, and the doorway is declared in `userData.apertures` with them. Used twice on the west face: the main door at z 0 and the service door the fire-escape route uses at z 16.',
   build(K) {
     const { part, grp, box, cyl, mats } = K, g = facade(K, 'spire_lobby', 9, { lobby: true });
     g.remove(g.getObjectByName('spire_lobby_plinth'));
     for (const s of [-1, 1]) g.add(part(`lobby_pier${s}`, box(1.0, 5.6, 1.05), mats.concrete_dark, [s * 3.5, 2.8, 0]));
-    g.add(part('lobby_header', box(8, 1.2, 1.05), mats.concrete_dark, [0, 6.2, 0]));
+    // Header runs from the transom light all the way to the storey's spandrel.
+    // It is 2.6 m, not 1.2: the lobby branch skips the storey loop before the
+    // facade's lintel is added, so a 1.2 m header left a 1 m x 8 m slot of open
+    // wall above the door that was in nobody's aperture list — a second window
+    // on the face both ground routes walk in through.
+    g.add(part('lobby_header', box(8, 2.6, 1.05), mats.concrete_dark, [0, 6.9, 0]));
     g.add(part('lobby_glass_upper', box(6, 1.4, .2), mats.office_lit, [0, 4.9, 0]));
-    for (const x of [-1.5, 1.5]) { g.add(part('lobby_drum' + x, cyl(1.1, 1.1, 3.9, 20), mats.curtain_glass, [x, 1.95, 0])); g.add(part('lobby_drum_cap' + x, cyl(1.15, 1.15, .15, 20), mats.mullion, [x, 3.95, 0])); g.add(part('lobby_drum_axis' + x, cyl(.06, .06, 3.9, 8), mats.chrome, [x, 1.95, 0])); }
+    // Door frame, and both leaves swung back against the piers: the 5.2 m
+    // between them is void, so the lane walks through and a tower inside has
+    // the street. A revolving drum in a doorway is a 2.2 m column of glass
+    // standing in both.
+    for (const s of [-1, 1]) g.add(part(`lobby_door_jamb${s}`, box(.14, 4.1, .6), mats.mullion, [s * 2.75, 2.05, .1]));
+    g.add(part('lobby_door_head', box(5.8, .16, .6), mats.mullion, [0, 4.18, .1]));
+    for (const s of [-1, 1]) { g.add(part(`lobby_door_leaf${s}`, box(1.3, 3.9, .06), mats.curtain_glass, [s * 3.05, 1.95, .62], [0, s * 1.28, 0])); g.add(part(`lobby_door_rail${s}`, box(1.3, .1, .09), mats.chrome, [s * 3.05, 1.1, .62], [0, s * 1.28, 0])); }
     g.add(part('lobby_floor', box(6, .12, 1.0), mats.spandrel, [0, .06, 0]));
     g.add(part('lobby_canopy', box(7.2, .25, 2.5), mats.mullion, [0, 5.4, 1.4]));
     for (const x of [-2.4, 0, 2.4]) g.add(part('lobby_downlight' + x, cyl(.18, .18, .04, 12), mats.lamp_white, [x, 5.26, 1.6]));
@@ -260,26 +437,71 @@ P({ id: 'spire_roof_parapet', label: 'Roof parapet (8 m)', size: '8×1.3 m', swa
     return g;
   } });
 
-/* Fire escape: landing segment 3 (Z) × 6 (X) and a 10 m flight. */
-P({ id: 'spire_fireescape', label: 'Fire-escape landing (3 m)', size: '6×3 m', swatch: '#7a4a2c', stats: { Deck: 'grating', Rail: '1.1 m', Segments: '3 per landing' },
-  note: 'One 3 m segment of an 8 m landing on the east face: steel grating deck on channel stringers, tube handrail with mesh infill on both long edges, rust-streaked wall brackets. Deck top at +0.2 — mount at the landing centre.',
-  build(K) {
-    const { part, grp, box, cyl, mats } = K, g = grp('spire_fireescape');
-    g.add(part('escape_deck', box(6, .08, 3), mats.grating, [0, .16, 0]));
-    for (let i = 0; i < 12; i++) g.add(part('escape_bar' + i, box(6, .03, .04), mats.trim, [0, .21, -1.4 + i * .25]));
-    for (const s of [-1, 1]) { g.add(part(`escape_stringer${s}`, box(.2, .4, 3), mats.escape_steel, [s * 2.9, -.05, 0])); g.add(part(`escape_bracket${s}`, box(.15, .8, .3), mats.escape_rust, [s * 2.9, -.45, 0], [0, 0, s * .5])); }
-    for (const s of [-1, 1]) { for (const z of [-1.4, 1.4]) g.add(part(`escape_post${s}${z}`, box(.08, 1.1, .08), mats.escape_steel, [s * 2.95, .75, z])); g.add(part(`escape_rail${s}`, cyl(.03, .03, 3, 8), mats.escape_rust, [s * 2.95, 1.3, 0], [Math.PI / 2, 0, 0])); g.add(part(`escape_mesh${s}`, box(.02, .8, 2.8), mats.grating, [s * 2.95, .7, 0])); }
+/* Fire escape: landing segment 3 (Z) × 2.4 (X), and a 10 m flight. */
+P({ id: 'spire_fireescape', label: 'Fire-escape landing (3 m)', size: '2.4×3 m', swatch: '#7a4a2c', stats: { Deck: 'grating', Width: '2.4 m', Rail: '1.1 m', Gate: 'variant 1', Segments: '3 per landing' },
+  note: 'One 3 m segment of an 8 m landing bolted to the east wall: steel grating deck on channel stringers, tube handrail with mesh infill on both long edges, rust-streaked brackets on the building side. TWO POINT FOUR metres wide, not six: at six and mounted on the route line at x 20 the landing reached 3 m past the plate edge at x 19, so half of every landing and its whole inner handrail stood inside the office floor. Mounted at x 21.8 the deck runs 20.6–23.0 — clear of the back wall (whose outer face is 20.525) with its brackets bolting onto it, which is how a fire escape hangs. Variant 1 is the GATE segment: the inner rail is split around a 1.4 m opening with a lap plate onto the wall threshold and a grab stanchion each side, so a player steps out through the wall\u2019s doorway onto the escape instead of climbing over the rail. Place it as the middle segment of each landing, plain ones either side. Deck top at +0.2 — mount at the landing centre.',
+  build(K) { return this.buildVariant(K, 0); },
+  buildVariant(K, v = 0) {
+    const { part, grp, box, cyl, mats } = K, g = grp('spire_fireescape'), W = 1.2;
+    g.add(part('escape_deck', box(2.4, .08, 3), mats.grating, [0, .16, 0]));
+    for (let i = 0; i < 12; i++) g.add(part('escape_bar' + i, box(2.4, .03, .04), mats.trim, [0, .21, -1.4 + i * .25]));
+    for (const s of [-1, 1]) { g.add(part(`escape_stringer${s}`, box(.2, .4, 3), mats.escape_steel, [s * 1.1, -.05, 0])); }
+    // Brackets bolt to the building, so they are on the inner side only.
+    for (const z of [-1.1, 1.1]) g.add(part('escape_bracket' + z, box(.15, .8, .3), mats.escape_rust, [-1.1, -.45, z], [0, 0, -.5]));
+    /* Handrails. The street side is continuous on every segment; the building
+       side is continuous on a plain segment and split on the gate. */
+    g.add(part('escape_post_o1', box(.08, 1.1, .08), mats.escape_steel, [W, .75, -1.4]));
+    g.add(part('escape_post_o2', box(.08, 1.1, .08), mats.escape_steel, [W, .75, 1.4]));
+    g.add(part('escape_rail_o', cyl(.03, .03, 3, 8), mats.escape_rust, [W, 1.3, 0], [Math.PI / 2, 0, 0]));
+    g.add(part('escape_mesh_o', box(.02, .8, 2.8), mats.grating, [W, .7, 0]));
+    if (v === 1) {
+      /* The gate: a 1.4 m gap on the building side, a threshold plate over the
+         joint onto the floor plate, and a grab stanchion each side of the
+         opening — the thing you hold instead of the rail that used to be in
+         the way. Rails and mesh stop 0.7 m short of the centre either side. */
+      for (const s of [-1, 1]) {
+        g.add(part(`escape_post_g${s}`, box(.08, 1.1, .08), mats.escape_steel, [-W, .75, s * 1.4]));
+        g.add(part(`escape_stanchion${s}`, cyl(.045, .045, 1.14, 8), mats.escape_steel, [-W, .77, s * .7]));
+        g.add(part(`escape_rail_g${s}`, cyl(.03, .03, .7, 8), mats.escape_rust, [-W, 1.3, s * 1.05], [Math.PI / 2, 0, 0]));
+        g.add(part(`escape_mesh_g${s}`, box(.02, .8, .68), mats.grating, [-W, .7, s * 1.05]));
+      }
+      g.add(part('escape_threshold', box(.5, .05, 1.4), mats.trim, [-1.15, .19, 0]));
+      g.add(part('escape_threshold_nose', box(.06, .05, 1.4), mats.paint_yellow, [-1.37, .192, 0]));
+    } else {
+      g.add(part('escape_post_i1', box(.08, 1.1, .08), mats.escape_steel, [-W, .75, -1.4]));
+      g.add(part('escape_post_i2', box(.08, 1.1, .08), mats.escape_steel, [-W, .75, 1.4]));
+      g.add(part('escape_rail_i', cyl(.03, .03, 3, 8), mats.escape_rust, [-W, 1.3, 0], [Math.PI / 2, 0, 0]));
+      g.add(part('escape_mesh_i', box(.02, .8, 2.8), mats.grating, [-W, .7, 0]));
+    }
     return g;
   } });
 
-P({ id: 'spire_fireescape_flight', label: 'Fire-escape flight (10 m rise)', size: '3×8×10 m', swatch: '#4a4f58', stats: { Rise: '10 m', Run: '8 m (−Z)', Treads: '25' },
-  note: 'The zigzag run between landings: two steel stringers, 25 open treads with a hazard nose, handrails both sides and an anchor bracket at each end. Origin at the bottom tread centre; climbs +10 m over 8 m toward −Z. Place at (19, 0, 18) and (20, 10, 10) for the escape route legs.',
+P({ id: 'spire_fireescape_flight', label: 'Fire-escape flight (10 m rise)', size: '2.2×8×10 m', swatch: '#4a4f58', stats: { Rise: '10 m', Run: '8 m (−Z)', Width: '2.2 m', Treads: '25' },
+  note: 'The zigzag run between landings: two steel stringers, 25 open treads with a hazard nose, handrails both sides and an anchor bracket at each end. Origin at the bottom tread centre; climbs +10 m over 8 m toward −Z. TWO POINT TWO metres wide, matching the landing: at 2.8 m and mounted on the route line at x 20 the flight was 3.3 m over its rails, so its inner stringer, handrail and both end anchors crossed the plate edge at x 19 and stood proud through the office floor at every arrival. Mount at x 21.8 with the landings, outboard of the back wall — the whole escape then runs 20.6–23.0 and the route climbs on the treads.',
   build(K) {
     const { part, grp, box, cyl, mats } = K, g = grp('spire_fireescape_flight'), n = 25, dz = -8 / n, dy = 10 / n, ang = Math.atan2(10, 8);
-    for (const s of [-1, 1]) g.add(part(`flight_stringer${s}`, box(.16, .5, Math.hypot(8, 10)), mats.escape_steel, [s * 1.45, 5, -4], [-ang, 0, 0]));
-    for (let i = 0; i < n; i++) { const y = (i + .5) * dy, z = (i + .5) * dz; g.add(part('flight_tread' + i, box(2.8, .05, .34), mats.grating, [0, y, z])); g.add(part('flight_nose' + i, box(2.8, .05, .06), mats.paint_yellow, [0, y + .002, z - .16])); }
-    for (const s of [-1, 1]) { g.add(part(`flight_rail${s}`, cyl(.03, .03, Math.hypot(8, 10), 8), mats.escape_rust, [s * 1.5, 6.1, -4], [-ang + Math.PI / 2, 0, 0])); for (let i = 0; i < 5; i++) g.add(part(`flight_post${s}${i}`, box(.06, 1.05, .06), mats.escape_steel, [s * 1.5, (i + .5) * 2 + .5, -(i + .5) * 1.6])); }
-    for (const [y, z] of [[0, 0], [10, -8]]) g.add(part(`flight_anchor${y}`, box(3.2, .3, .4), mats.escape_rust, [0, y + .1, z]));
+    /* The flight's own line is (0, +10, −8): it rises as it runs toward −Z, and
+       every sloped part has to lie along THAT line. Rx(θ) carries a box's local
+       +Z to (0, −sinθ, cosθ), so the tilt is +ang and not −ang — the negative
+       laid the stringers and the rails up toward +Z, mirrored about the treads
+       they carry, which is why the handrail ran diagonally across its own posts
+       instead of capping them. Rx(θ) carries a cylinder's local +Y to
+       (0, cosθ, sinθ), so a rail wants ang − π/2 by the same arithmetic. */
+    /* Stringers hang UNDER the walking line rather than being centred on it.
+       A 0.5 m box on the line (0.86 m once part() has inflated it) stands a
+       third of a metre proud of the landing deck at each flight head, and at
+       the head of flight one that is exactly across the gate opening a player
+       steps out of the door into. Offset half a metre down the slope normal
+       (0, 8, 10)/L and trimmed 0.5 m so the ends stop inside the anchors:
+       treads on top, steel beneath, nothing above the deck it lands on. */
+    const SL = Math.hypot(8, 10), off = .5;
+    for (const s of [-1, 1]) g.add(part(`flight_stringer${s}`, box(.16, .5, SL - .5), mats.escape_steel, [s * 1.0, 5 - off * 8 / SL, -4 - off * 10 / SL], [ang, 0, 0]));
+    for (let i = 0; i < n; i++) { const y = (i + .5) * dy, z = (i + .5) * dz; g.add(part('flight_tread' + i, box(2.2, .05, .34), mats.grating, [0, y, z])); g.add(part('flight_nose' + i, box(2.2, .05, .06), mats.paint_yellow, [0, y + .002, z - .16])); }
+    for (const s of [-1, 1]) { g.add(part(`flight_rail${s}`, cyl(.03, .03, Math.hypot(8, 10), 8), mats.escape_rust, [s * 1.05, 6.1, -4], [ang - Math.PI / 2, 0, 0])); for (let i = 0; i < 5; i++) g.add(part(`flight_post${s}${i}`, box(.06, 1.05, .06), mats.escape_steel, [s * 1.05, (i + .5) * 2 + .5, -(i + .5) * 1.6])); }
+    // Anchor plates centred ON the tread line, not 0.1 m over it: the route
+    // arrives across these, and a 0.3 m bracket standing proud of the landing
+    // deck is a lip in the lane at every flight head.
+    for (const [y, z] of [[0, 0], [10, -8]]) g.add(part(`flight_anchor${y}`, box(2.3, .12, .4), mats.escape_rust, [0, y, z]));
     return g;
   } });
 

@@ -20,7 +20,8 @@
             "enemy_leaper_airborne.glb"
           ],
           "icon": "icon_enemy_leaper",
-          "note": "Jumps barricades; _windup is the tell pose, _airborne the arc pose."
+          "note": "DELIVERED — enemy_leaper / _windup / _airborne in game/assets/enemies (Roster, enemies.js). _windup is the tell pose, _airborne the arc pose.",
+          "status": "delivered"
         },
         {
           "id": "ram",
@@ -28,7 +29,8 @@
             "enemy_ram_enraged.glb"
           ],
           "icon": "icon_enemy_ram",
-          "note": "enemy_ram delivered (Roster); _enraged swaps the head plate + engine emissive to threat red."
+          "note": "DELIVERED — enemy_ram and enemy_ram_enraged both in game/assets/enemies; _enraged swaps the head plate + engine emissive to threat red.",
+          "status": "delivered"
         },
         {
           "id": "carapace",
@@ -37,7 +39,8 @@
             "enemy_carapace_plate.glb"
           ],
           "icon": "icon_enemy_carapace",
-          "note": "Detachable plates over glowing weak points — plates get shot OFF; plate is its own mesh with a socket name per slot (carapace_plate_0…5)."
+          "note": "DELIVERED — enemy_carapace + enemy_carapace_plate in game/assets/enemies. Plates are shot OFF: the plate is its own mesh with a socket name per slot (carapace_plate_0…5).",
+          "status": "delivered"
         },
         {
           "id": "boss_frame01",
@@ -47,7 +50,8 @@
             "boss_frame01_p3.glb"
           ],
           "icon": "icon_boss_frame01",
-          "note": "Arena scale (≈12 m). Per-phase variants shed armour and expose more core."
+          "note": "Arena scale (≈12 m). Per-phase variants shed armour and expose more core. Not in the sim yet (no Boss row in Sim.Core/Content) — next design pass; will be built to the hero standard (loft/sweep/revolve), not the box vocabulary.",
+          "status": "planned"
         }
       ],
       "statuses": [
@@ -57,7 +61,9 @@
           "files": [
             "vfx_status_stun.glb"
           ],
-          "icon": "icon_status_stun"
+          "icon": "icon_status_stun",
+          "status": "delivered",
+          "note": "DELIVERED — vfx_status_stun in game/assets/vfx (vfx.js)."
         }
       ],
       "towers": [
@@ -67,7 +73,8 @@
             "vfx_filament_ramp (client emissive drive on proj_filament_beam_ramp)"
           ],
           "icon": "icon_tower_filament",
-          "note": "Chassis, stages and proj_filament_beam delivered; only the ramp treatment remains."
+          "note": "No further file: proj_filament_beam (delivered) already carries the `filament_beam_ramp` emissive part the client drives 0.3 → 2.0 as heat ramps. Client work only.",
+          "status": "no-model"
         },
         {
           "id": "overclock",
@@ -75,7 +82,8 @@
             "vfx_overclock_link.glb"
           ],
           "icon": "icon_tower_overclock",
-          "note": "Chassis + stages delivered; link lines to every fed tower remain. Buff-orange."
+          "note": "DELIVERED — vfx_overclock_link in game/assets/vfx: unit-length −Z conduit with `link_pulse` bead the client slides source → target. Buff-orange.",
+          "status": "delivered"
         }
       ],
       "weapons": [
@@ -86,7 +94,8 @@
             "weapon_poisonstream_world.glb"
           ],
           "icon": "icon_weapon_poisonstream",
-          "note": "Carried from M3."
+          "note": "AUTHORED IN DESIGN 2026-09-13 (models/sprayer-hero.js, Gunsmith · Platforms) to the hero standard; export pending. Paintball-marker architecture on a chemical applicator: DLC body, fluted + ported nitride barrel, brass fan tip, 40-dose glass reservoir as `poisonstream_magazine` pulling UP off `_mount_magwell`, rear gas bottle as `_stock`, braided line to the ASA. `_slide_assembly` recoil 12 mm, no eject. All seven mounts. Stats from Weapons.cs (2.8 · 6/s · 18 m · 40).",
+          "status": "authored-in-design"
         },
         {
           "id": "lmg",
@@ -95,7 +104,8 @@
             "weapon_lmg_world.glb"
           ],
           "icon": "icon_weapon_lmg",
-          "note": "Carried from M3."
+          "note": "Carried from M3. HELD: no row in Sim.Core/Content/Weapons.cs yet. Add the WeaponDef (damage, rate, range, magazine, applies) and design builds it to the hero standard against those numbers — the armoury has been burned before by modelling ahead of the stat row.",
+          "status": "planned"
         },
         {
           "id": "burstdmr",
@@ -104,7 +114,8 @@
             "weapon_burstdmr_world.glb"
           ],
           "icon": "icon_weapon_burstdmr",
-          "note": "Carried from M3."
+          "note": "Carried from M3. HELD: no row in Sim.Core/Content/Weapons.cs yet. Add the WeaponDef (damage, rate, range, magazine, applies) and design builds it to the hero standard against those numbers — the armoury has been burned before by modelling ahead of the stat row.",
+          "status": "planned"
         },
         {
           "id": "cryosprayer",
@@ -112,7 +123,9 @@
             "weapon_cryosprayer_vm.glb",
             "weapon_cryosprayer_world.glb"
           ],
-          "icon": "icon_weapon_cryosprayer"
+          "icon": "icon_weapon_cryosprayer",
+          "status": "authored-in-design",
+          "note": "AUTHORED IN DESIGN 2026-09-13 (models/sprayer-hero.js) to the hero standard; export pending. CO₂-extinguisher / cryogen-line reference: bead-blast valve block with ribs cut in, 230 mm stainless lance, slotted horn 72 mm at the mouth, rime as matte dielectric crust. 45-dose horizontal dewar as `cryosprayer_magazine` on a front manifold, pulling FORWARD off `_mount_magwell`; tube stock as `_stock`. `_slide_assembly` recoil 6 mm. Stats from Weapons.cs (2.2 · 7/s · 14 m · 45)."
         },
         {
           "id": "flakcannon",
@@ -120,7 +133,9 @@
             "weapon_flakcannon_vm.glb",
             "weapon_flakcannon_world.glb"
           ],
-          "icon": "icon_weapon_flakcannon"
+          "icon": "icon_weapon_flakcannon",
+          "status": "planned",
+          "note": "HELD: no row in Sim.Core/Content/Weapons.cs yet. Add the WeaponDef (damage, rate, range, magazine, applies) and design builds it to the hero standard against those numbers — the armoury has been burned before by modelling ahead of the stat row."
         },
         {
           "id": "chargesniper",
@@ -128,7 +143,9 @@
             "weapon_chargesniper_vm.glb",
             "weapon_chargesniper_world.glb"
           ],
-          "icon": "icon_weapon_chargesniper"
+          "icon": "icon_weapon_chargesniper",
+          "status": "planned",
+          "note": "HELD: no row in Sim.Core/Content/Weapons.cs yet. Add the WeaponDef (damage, rate, range, magazine, applies) and design builds it to the hero standard against those numbers — the armoury has been burned before by modelling ahead of the stat row."
         },
         {
           "id": "autoscattergun",
@@ -136,7 +153,9 @@
             "weapon_autoscattergun_vm.glb",
             "weapon_autoscattergun_world.glb"
           ],
-          "icon": "icon_weapon_autoscattergun"
+          "icon": "icon_weapon_autoscattergun",
+          "status": "planned",
+          "note": "HELD: no row in Sim.Core/Content/Weapons.cs yet. Add the WeaponDef (damage, rate, range, magazine, applies) and design builds it to the hero standard against those numbers — the armoury has been burned before by modelling ahead of the stat row."
         }
       ],
       "melee": [
@@ -146,7 +165,9 @@
             "melee_blade_vm.glb",
             "melee_blade_world.glb"
           ],
-          "icon": "icon_melee_blade"
+          "icon": "icon_melee_blade",
+          "status": "authored-in-design",
+          "note": "AUTHORED IN DESIGN 2026-09-13 (models/melee-hero.js, Gunsmith · Melee) — 560 mm clip-point short sword, fuller cut in, `blade_edge` bright part, oval guard, G10 grip, steel pommel; five mounts (edge · grip · infusion · counterweight · chargecell). Stats from Melee.cs."
         },
         {
           "id": "maul",
@@ -154,7 +175,9 @@
             "melee_maul_vm.glb",
             "melee_maul_world.glb"
           ],
-          "icon": "icon_melee_maul"
+          "icon": "icon_melee_maul",
+          "status": "authored-in-design",
+          "note": "AUTHORED IN DESIGN 2026-09-13 — 10 lb double-faced forged sledge, crowned faces, charge-cell pocket milled into the top face, 810 mm fibreglass haft with overstrike collar and two overmoulded grips. Stats from Melee.cs."
         },
         {
           "id": "spear",
@@ -162,18 +185,24 @@
             "melee_spear_vm.glb",
             "melee_spear_world.glb"
           ],
-          "icon": "icon_melee_spear"
+          "icon": "icon_melee_spear",
+          "status": "authored-in-design",
+          "note": "AUTHORED IN DESIGN 2026-09-13 — 2.24 m boar spear, 320 mm leaf head on a median ridge (`spear_edge` = both edges), coned socket with wings and through-pin, cord grips, butt spike. Stats from Melee.cs."
         },
         {
           "id": "meleemods",
           "files": [
-            "meleemod_edge_<name>.glb",
-            "meleemod_grip_<name>.glb",
-            "meleemod_infusion_<name>.glb",
-            "meleemod_counterweight_<name>.glb",
-            "meleemod_chargecell_<name>.glb"
+            "meleemod_edge_honed.glb",
+            "meleemod_edge_serrated.glb",
+            "meleemod_grip_balanced.glb",
+            "meleemod_counterweight_heavy.glb",
+            "meleemod_infusion_ember.glb",
+            "meleemod_infusion_cryo.glb",
+            "meleemod_infusion_volt.glb",
+            "meleemod_infusion_toxin.glb"
           ],
-          "note": "Five visible module slots on every melee viewmodel — same mount-node convention as the gunsmith (<w>_mount_<slot>)."
+          "note": "AUTHORED IN DESIGN 2026-09-13 — the eight modules Melee.cs actually sells (honedEdge, serratedEdge, balancedGrip, heavyWeight, ember/cryo/volt/toxinCore), one file each, origin ON the mount (`<w>_mount_<slot>`, same convention as the gunsmith). Edge and grip modules REPLACE `<w>_edge` / `<w>_grip` and are fitted per host (the exported file is the blade fit; the Gunsmith builds all three); counterweight and infusion cores attach to any host. No chargeCell attachment exists in the sim yet — the mount is there, the module list is empty.",
+          "status": "authored-in-design"
         }
       ],
       "elites": [
@@ -182,7 +211,9 @@
           "files": [
             "elite_swift (leg-fin attach + trail)"
           ],
-          "icon": "icon_elite_swift"
+          "icon": "icon_elite_swift",
+          "status": "delivered",
+          "note": "DELIVERED — `elite_swift` overlay builder in ELITES (enemies.js): leg-fin attach + trail, venom-green."
         }
       ],
       "conditions": [
@@ -192,7 +223,8 @@
             "cond_fog (fog volume + desaturated sky treatment)"
           ],
           "icon": "icon_cond_fog",
-          "note": "Tower range −25%; Detector/sightline relays matter. Carried from M3."
+          "note": "Tower range −25%; Detector/sightline relays matter. Carried from M3.",
+          "status": "planned"
         },
         {
           "id": "night",
@@ -202,21 +234,24 @@
             "enemy eye-glow treatment"
           ],
           "icon": "icon_cond_night",
-          "note": "Carried from M3."
+          "note": "Carried from M3.",
+          "status": "planned"
         },
         {
           "id": "storm",
           "files": [
             "cond_storm (sky + lightning rig + wind cloth)"
           ],
-          "icon": "icon_cond_storm"
+          "icon": "icon_cond_storm",
+          "status": "planned"
         },
         {
           "id": "heatwave",
           "files": [
             "cond_heatwave (heat-haze post + ember sky)"
           ],
-          "icon": "icon_cond_heatwave"
+          "icon": "icon_cond_heatwave",
+          "status": "planned"
         }
       ],
       "map_elements": [
@@ -225,19 +260,25 @@
           "files": [
             "shared_floodgate.glb",
             "vfx_lanewash.glb"
-          ]
+          ],
+          "status": "delivered",
+          "note": "DELIVERED — shared_floodgate + vfx_lanewash in game/assets."
         },
         {
           "id": "crusher",
           "files": [
             "shared_crusher.glb"
-          ]
+          ],
+          "status": "delivered",
+          "note": "DELIVERED — shared_crusher in game/assets/maps."
         },
         {
           "id": "gate_operated",
           "files": [
             "shared_gate_operated.glb"
-          ]
+          ],
+          "status": "delivered",
+          "note": "DELIVERED — shared_gate_operated in game/assets/maps."
         },
         {
           "id": "wall_destructible",
@@ -245,14 +286,18 @@
             "shared_wall_destructible.glb",
             "shared_wall_destructible_broken.glb",
             "shared_wall_destructible_debris.glb"
-          ]
+          ],
+          "status": "delivered",
+          "note": "DELIVERED — shared_wall_destructible / _broken / _debris in game/assets/maps."
         },
         {
           "id": "props",
           "files": [
             "prop_barrel_explosive.glb",
             "prop_container_droppable.glb"
-          ]
+          ],
+          "status": "delivered",
+          "note": "DELIVERED — prop_barrel_explosive + prop_container_droppable in game/assets/maps."
         },
         {
           "id": "warp_gate",
@@ -261,7 +306,8 @@
             "shared_warp_gate_active.glb",
             "vfx_teleport_burst.glb"
           ],
-          "note": "A new silhouette, and specifically NOT a flat pad: the player has been taught on this same map that a flat 3 m hex means stand-here-and-hold-E, so a flat enemy gate would say that and mean the opposite — §4.12 forbids decoration reading as a control. Vertical: 4.5 m ring/arch on a 0.3 m plinth, 3 m clear opening facing ±Z, ≤2,500 tris / ≤12 parts. _active carries an emissive MASK part named warp_membrane for the code to pulse."
+          "note": "A new silhouette, and specifically NOT a flat pad: the player has been taught on this same map that a flat 3 m hex means stand-here-and-hold-E, so a flat enemy gate would say that and mean the opposite — §4.12 forbids decoration reading as a control. Vertical: 4.5 m ring/arch on a 0.3 m plinth, 3 m clear opening facing ±Z, ≤2,500 tris / ≤12 parts. _active carries an emissive MASK part named warp_membrane for the code to pulse.",
+          "status": "delivered"
         },
         {
           "id": "switchyard_morph",
@@ -269,45 +315,30 @@
             "switchyard_bridge_intact.glb",
             "switchyard_bridge_collapsed.glb"
           ],
-          "note": "Map-morph states; same footprint, swap on event."
+          "note": "Map-morph states; same footprint, swap on event. OPEN (FORWARD-MANIFEST-switchyard §G): if this is the same structure as the 17 m overbridge over the running line (5 m deck, 7 m soffit), say so and design builds both states from one bridge — plate-girder deck on piers outside the outermost track, _collapsed as the dropped span with sheared girder ends. Next design pass.",
+          "status": "planned"
         }
       ],
       "maps": [
         {
-          "id": "toaster_terrain",
+          "id": "toaster_path_ground",
           "files": [
-            "toaster_terrain.glb",
-            "toaster_terrain_v1.glb",
-            "toaster_terrain_v2.glb",
-            "toaster_terrain_v3.glb",
-            "toaster_terrain_scatter.glb",
-            "toaster_understory.glb"
+            "toaster_path_ground.glb"
           ],
-          "note": "20 m dry-autumn-grass tile in four variants, ≤900 tris / ≤4 parts each, one shared 2048² set; relief ≤0.15 m and exactly 0 within 2 m of every edge. 128 instanced placements, so the tile carries no road, fence or grass tuft — tufts are the scatter clump (≤400/4, cap now 140)."
+          "note": "THE ENEMY LANE (FORWARD-MANIFEST-hero §E, now built). 4 m module, run \"+X\", repeat 4.0, width 3.4: two tyre-and-boot ruts 1.5 m apart in trodden grass, no kerb, ≤200 tris / 1 part, y 0.06. Same grass material as the terrain tile with the wear in vertex colour, so its edges vanish into the field and only the track shows. CLIENT: lay it along every WALKED leg of direct/long/west exactly as other maps lay <map>_path_ground — skip the teleport legs (long 11 & 20, west 11) — instead of the gravel road module. Where the lane runs down the county road it sits over the asphalt a metre narrower than the carriageway. ~160 placements, instanced.",
+          "status": "authored-in-design"
         },
         {
-          "id": "toaster_roads",
+          "id": "toaster_terrain_fields",
           "files": [
-            "toaster_road_asphalt.glb",
-            "toaster_road_gravel.glb",
-            "toaster_road_arc.glb"
+            "toaster_terrain_v4.glb",
+            "toaster_terrain_v5.glb"
           ],
-          "note": "Linear modules: asphalt run +X repeat 4.0 width 6.0 top y 0.05 (≤200/2); gravel width 4.0 top y 0.04 (≤150/1); 30° arc, origin at the centre of curvature, radius 12 (≤200/1). Vehicle handling reads the road CENTRE LINES, so the art must sit on the line. Note that the network in the brief is four disconnected fragments — the barn drive stops 19 m short of the barn and dies 8 m off the county road, the county road ends in open field, the south road starts and stops 100 m inside each boundary, and the circular drive sat 22 m from the house it serves. Every authored vertex is kept and the gaps closed by extension, so the delivered network is one connected graph reaching all four buildings; three bends were added to keep carriageway out of the Vehickle and Grnmchn footprints. Interior bends are filleted — two runs butting at a vertex leave a notch on the outside of the turn as wide as the turn is sharp."
+          "note": "Two FIELD variants of the 20 m tile, same contract as v0–v3 (≤900 tris, relief ≤0.15 m, dead flat 2 m in): v4 rough grazed pasture (clumpy yellow-green sward, stock-worn paths), v5 cut hay stubble in 3 m mower widths along +X with a raked windrow every third pass. CLIENT: assign by REGION, not by the hash — levels.js `fields`: v5 for tiles wholly inside x 80…140 / z −20…60 (the hayfield), v4 for x −140…−20 / z −60…−20 (the pasture); everything else keeps the v0–v3 cycle. Tile-aligned, because a variant is a whole tile.",
+          "status": "authored-in-design"
         },
         {
-          "id": "toaster_trees",
-          "files": [
-            "toaster_tree_oak.glb",
-            "toaster_tree_maple.glb",
-            "toaster_tree_pine.glb",
-            "toaster_tree_oak_lod1.glb",
-            "toaster_tree_maple_lod1.glb",
-            "toaster_tree_pine_lod1.glb"
-          ],
-          "note": "~780 placements now, ~1,500 dressed — the most instanced thing on the map. Closed-canopy second-growth hardwood: trunks run bare and near-vertical for more than half their height and the crowns start where they reach the light, which is what the street views show and what an open-grown specimen tree is not. LOD0 ≤600 tris and EXACTLY 2 parts (_trunk, _canopy) because culling acts on a multimesh's whole box; LOD1 ≤40 tris, 1 part, sized off a measured build of LOD0 so the 90 m swap does not change the outline. Shared 1024² leaf atlas, alphaMode MASK; lodSwitch 90."
-        },
-        {
-          "id": "toaster_buildings",
+          "id": "toaster_buildings_v2",
           "files": [
             "toaster_barn_shell.glb",
             "toaster_barn_roof.glb",
@@ -318,45 +349,64 @@
             "toaster_house_grnmchn_shell.glb",
             "toaster_house_grnmchn_roof.glb"
           ],
-          "note": "Shell + roof per building (the roof is stood on, so it carries its own collider). All four are BRICK — red-brown on the main house and the shed, browner on the ranch, buff on the south house — with stucco gable fields above the eaves, which is the two-tone that gives these rooflines their read. Barn 30×21 eaves 6.0; three houses 19×28 / 34×26 / 24×30, eaves 3.4. Each roof carries ONE 6×6 m flat at the stated height, placed at the ladder head (a corner on all four), with the rest a real 28° gabled roof split into bays across X — three parallel gables ridging at 6.4 m on the main house. The contract asks for a flat AREA, not a flat roof, and allows pitched slopes to 30°; reading it the other way is what made the first pass look like four sheds with lids. Projecting cross-gabled entry bays with brick arches on the three houses, trimmed back to 0.9–1.8 m where §4.8 lane clearance needs it. Walls 0.3 thick, interior floor top y 0.15, clear height ≥3.0, door OPENINGS only (the shed's second bay is a closed white leaf, not an opening), windows in the texture. ≤6,000/12 per shell, ≤1,500/3 per roof."
+          "note": "REPLACEMENTS for the delivered eight — same ids, same centres, same door offsets, same roof deck heights, so no collider or socket moves. What changed: casings are FRAMES (head, jambs, sill) proud of the face instead of a slab centred in the opening (every window read as a blank stucco square, every doorway as a panel); window pane env response cut .55→.18 so panes no longer mirror the sky white; concrete steps at every person door except the three the lane passes within 3.5 m of (barn N, vehickle entry, grnmchn entry — `nosteps`); gutters and corner downspouts; chimneys through the slope (buggy 1, vehickle 2, grnmchn 1, in the shell brick); sliding-door rails over both barn bays; barn pitch 6°→12° (ridge 9.2 m) with two louvred ridge cupolas — the 6° lid read as flat from every angle the game uses; gable ENDS are now wall (stucco on the houses, brick on the barn) in a separate `_gable` part rather than shingle closers. Shell ≤7,000 tris / 14 parts (+_gutters, +steps in _foundation); roof ≤2,000 / 6 parts (+_gable, +_chimney or _cupola). Barn roof collider: the flat 6×6 deck at local (12, −7.5) is unchanged at 6.3; the ridge is now 9.2, so any roof-bounds check that assumed ≤6.5 needs the new height.",
+          "status": "authored-in-design"
         },
         {
-          "id": "toaster_interiors",
+          "id": "toaster_fields",
           "files": [
-            "toaster_dress_workbench.glb",
-            "toaster_dress_shelving.glb",
-            "toaster_dress_furniture_living.glb",
-            "toaster_dress_furniture_kitchen.glb"
+            "toaster_fence_wire.glb",
+            "toaster_gate_farm.glb",
+            "toaster_hedgerow.glb",
+            "toaster_tree_oak_open.glb",
+            "toaster_tree_apple.glb",
+            "toaster_crop_rows.glb"
           ],
-          "note": "Placed by the level file rather than baked into the shells, so rooms arrange around the teleport pads and sockets. ≤1,500 tris, ≤8 parts each."
+          "note": "What divides 320 m of lawn into a property. fence_wire: 5-strand on a steel T-post, run \"+X\", repeat 4.0, width 0.1, 1.3 high, ≤120/2, INSTANCED (~180) — posts on the module end so runs share posts. gate_farm: 4 m galvanised tube gate between timber posts, same module length, drops into a run in place of one module; hung shut (an open gate is an opening the sim does not know). hedgerow: 4 m of overgrown field hedge, MASK cards two greens + bare stems, run \"+X\", repeat 4.0, width 1.8, ≤400/3, instanced (~18). tree_oak_open: open-grown hedgerow oak, 16 m, crown r 7.5, 2 parts, `userData.plan = \"round\"` (measure clearance from centre less radius — as a box its corners reached r√2), placed ONE AT A TIME (~10), never by the belt lattice. tree_apple: 4.6 m orchard tree, r 2.4, 2 parts, 16 in the orchard. crop_rows: 10×10 m module, 13 ridged soybean rows on 760 mm centres along +X, plants as MASK cards, ≤700/2, instanced, 12 fill the crop field. CLIENT (ToasterLevel.BuildToasterDressing): four enclosures as fence RUNS — pasture (−118,−60)→(−24,−60)→(−24,−28)→(−118,−28), gates at module 4 of the E side and 12 of the N side; orchard (−146,−36)→(−122,−36)→(−122,−60), gate at module 3; crop field (−41,7)→(−9,7)→(−9,49)→(−41,49), gate at module 4 of the S side; hayfield (85,−16)→(85,62)→(146,62)→(146,−16), gates at module 9 of the W side and 7 of the S side. Hedgerow x 82, z −12…58 every 4 m, yaw π/2 ±0.05 alternating; oaks at (86,−10) (82,40) (82,58) (−30,−35) (−48,−52) (−100,−44) (−72,−57) (−20,61) (−75,60) (112,−30) (38,−40); orchard 4×4 on 6 m centres from (−143,−57); crop 3×4 modules from (−35,13) on 10 m. All through the same Clear() rule, plus a new refusal: nothing generated may land inside a building volume (footprint + own radius + 1 m) — the first drop stood two propane tanks and two woodpiles inside walls because nothing checked.",
+          "status": "authored-in-design"
         },
         {
-          "id": "toaster_pond",
+          "id": "toaster_farmstead",
           "files": [
-            "toaster_pond.glb",
-            "toaster_dock.glb"
+            "toaster_grain_bin.glb",
+            "toaster_grain_bin_v1.glb",
+            "toaster_fuel_tank.glb",
+            "toaster_windmill.glb",
+            "toaster_stock_tank.glb",
+            "toaster_bale_feeder.glb",
+            "toaster_shed_small.glb",
+            "toaster_garden_plot.glb",
+            "toaster_clothesline.glb",
+            "toaster_hay_wagon.glb",
+            "toaster_reeds.glb"
           ],
-          "note": "Drawn UPWARD, not dug — the ground is one flat slab: an ELLIPTICAL basin (36 × 30, long axis north-east, measured off the aerial rather than assumed round), riprap bank ring r 15–18 rising to 0.5 m, an opaque dark water ring at y 0.15, and a big bare island of r 9.6 filling most of the middle. The pond on this property reads as a ring of water round an island, not as a lake. ≤2,500 tris, 3 parts named pond_bank / pond_water / pond_island, no collision. Dock optional."
+          "note": "The things a farm has BETWEEN its buildings. grain_bin: corrugated galvanised bin on a concrete pad, stiffener rings every 950 mm, 30° cone, side ladder, unloading auger; 5.5 dia × 5.2 eave (v1 7.3 × 7.0), ≤3,000/3, turned from one profile. fuel_tank: red gravity diesel tank on a rusted steel stand, 2.3×1.0 at 2.6 m, ≤900/3. windmill: Aermotor-pattern pump mill, 10 m four-leg lattice tower, 2.5 m 18-blade wheel, tail vane, ≤5,000/6 — the wheel is ONE part named `toaster_windmill_wheel` and the group declares `userData.spin = { part, axis: [0,0,1], rpm: 14 }`; the client may turn it (setInterval, not rAF — CLAUDE.md viewer rule). stock_tank: 2.4 dia galvanised, water at y 0.5, fill pipe. bale_feeder: 2.4 m tube ring with a bale stood in it. shed_small: 3.6×2.4×2.4 board shed under corrugated lean-to, door ajar on +Z, nest box on +X (hen house / garden shed). garden_plot: 4 raised beds + low wire, 8×7.4. clothesline: 8 m, 3 sagging lines, washing. hay_wagon: 2.4×7.2×2.9, five bales aboard — DRESSING, no rig. reeds: cattail clump, 2 m, ≤200/2, instanced on the pond shelf. CLIENT placements (levels.js `place`, all clearance-checked): bin#1 (−137,50) yaw .4; bin (−137,59.5) 1.1; fuel (−127,38); windmill (−85,−46); stock_tank (−81,−46); feeders (−60,−50) and (−100,−36) .8; shed_small (110,−58) π and (36,52) π; gardens (26,53) and (−134,−30); clotheslines (14,50) and (112,−48) π/2; wagon (100,44) .3; reeds on r 16.2 from the pond centre at angles .35 .95 1.6 3.55 4.25 4.95 5.6 6.05 (none dock-side, none where the lane passes).",
+          "status": "authored-in-design"
         },
         {
-          "id": "toaster_skybox",
+          "id": "toaster_powerlines",
           "files": [
-            "toaster_skybox.glb"
+            "toaster_utility_pole.glb",
+            "toaster_utility_pole_v1.glb"
           ],
-          "note": "700 m dome, overcast late-autumn afternoon, sun 24° elevation / 220° azimuth. Treeline silhouette baked into the horizon band so the belt meets the sky. Bake 2048×1024 — half the existing two, which are 9 MB each for no gain here."
+          "note": "10 m treated pole, single 2.2 m crossarm, three insulators (outer ±0.95 at 9.6, pin at 10.2); v1 adds a pole-mounted transformer. ≤600/3. CLIENT: poles every 36 m down the county road and every 40 m down the south road, 5.5 m off the centreline on the right-hand side of travel, every third pole v1; each through Clear() (verge class — kerb test, not the 2 m road margin). Then CONDUCTORS between consecutive poles that were actually placed: three per span from the pole's own attachment points, catenary sag = min(1.8, 0.00065·span² + 0.25) — ~0.9 m on a 36 m span, 16 mm radius, 6 segments per span; design builds them in `buildToasterWires(K, lines)` off the placed-pole list, so a refused pole shortens a span rather than leaving wire over nothing. No wire dips below 8.5 m; §4.10 headroom is never in question.",
+          "status": "authored-in-design"
         },
         {
-          "id": "toaster_dressing",
+          "id": "toaster_roads_v2",
           "files": [
-            "toaster_fence_wood.glb",
-            "toaster_mailbox.glb",
-            "toaster_woodpile.glb",
-            "toaster_hay_bale.glb",
-            "toaster_propane_tank.glb",
-            "toaster_wreck_pickup.glb",
-            "toaster_leaf_pile.glb"
+            "(no new files — ToasterLayout.Roads + BuildToasterRoads)"
           ],
-          "note": "Fence is a linear module (run +X, repeat 4.0, width 0.2); bales and leaf piles instance. The wrecked pickup is DRESSING, no rig. Nothing here may sit within 3 m of a route, socket, pad, spawn, armory or hero station — the code refuses and logs those placements."
+          "note": "Two layout changes on the made roads. (1) SHED APRON: 8 m of the drive's gravel across the whole +Z front of the barn, centreline (−122,68.5)→(−90,68.5), width 8, kind `apron` — drawn as two rows of the 4 m gravel module 15 mm under the drive so the two gravels do not fight. Surface lookup: gravel. (2) The road builder lays rows for any `width` wider than its module, and the bend fillet scales in Z to match. The wreck moved off the new apron to (−128,63) yaw 1.2; propane tanks now at (44,47.5), (−146.4,−12), (105,−50); woodpiles (−120,40), (106,−42) — the four old coordinates were inside building footprints.",
+          "status": "authored-in-design"
+        },
+        {
+          "id": "toaster_level_v2",
+          "files": [
+            "(no new files — ToasterLayout.cs, ToasterLevel.cs, docs/map-validation-baseline.tsv)"
+          ],
+          "note": "The level as re-authored in models/levels.js: routes, sockets, stations, spawn, core, teleport legs and vehicle parking UNCHANGED (sim truth in Maps.cs is untouched). Everything above is design; validators at 0 with 84 sockets (Crowded 0 · Perched 0 · Uncovered 0 · Headroom 0 · Off-lane 0 · Stranded 0). Fence/hedge/pole/crop/orchard rows are generated by RULE in levels.js (`fence()`, `poleLine()`) against the same clearance test the client refuses on — port the rules, not a coordinate list. Ratchet: the toaster row of map-validation-baseline.tsv stays at 0; dressing count rises from ~130 to ~560 placements, of which ~420 are in eight instanced sets (wire, hedgerow, crop, apple, reeds, bale, scatter, understory).",
+          "status": "authored-in-design"
         }
       ],
       "vehicles": [
@@ -365,28 +415,32 @@
           "files": [
             "vehicle_buggy.glb"
           ],
-          "note": "Rear-engined saloon, 2 seats abreast, hull 1.55×1.5×4.1, wheel r 0.29, steer_wheel, eye 1.15. Farm-kept, faded paint, one dented wing."
+          "note": "Rear-engined saloon, 2 seats abreast, hull 1.55×1.5×4.1, wheel r 0.29, steer_wheel, eye 1.15. Farm-kept, faded paint, one dented wing.",
+          "status": "delivered"
         },
         {
           "id": "dagator",
           "files": [
             "vehicle_dagator.glb"
           ],
-          "note": "Utility vehicle, hull 1.5×1.85×2.9, wheel r 0.31, bench seat, roll cage, open bed with strapped tarp, light bar, eye 1.0. Lives in the barn and is driven through its 5×4 door."
+          "note": "Utility vehicle, hull 1.5×1.85×2.9, wheel r 0.31, bench seat, roll cage, open bed with strapped tarp, light bar, eye 1.0. Lives in the barn and is driven through its 5×4 door.",
+          "status": "delivered"
         },
         {
           "id": "grnmchn",
           "files": [
             "vehicle_grnmchn.glb"
           ],
-          "note": "Motorised drift trike, hull 0.9×0.9×1.9. Front wheel_0 r 0.25 on a fork that is also the steering node; rear wheel_1/_2 r ~0.13 in plastic drift sleeves. Steers by TWO LEVERS (steer_lever_l/_r pivoting about Y at the fork), not a wheel — which is why it spins on the spot. Eye 0.75, the lowest on the map. Green."
+          "note": "Motorised drift trike, hull 0.9×0.9×1.9. Front wheel_0 r 0.25 on a fork that is also the steering node; rear wheel_1/_2 r ~0.13 in plastic drift sleeves. Steers by TWO LEVERS (steer_lever_l/_r pivoting about Y at the fork), not a wheel — which is why it spins on the spot. Eye 0.75, the lowest on the map. Green.",
+          "status": "delivered"
         },
         {
           "id": "vehickle",
           "files": [
             "vehicle_vehickle.glb"
           ],
-          "note": "Sport quad, hull 1.16×1.13×1.85, wheel r 0.28, steer_bars, saddle eye 1.05. Fastest thing on the map at 22 m/s."
+          "note": "Sport quad, hull 1.16×1.13×1.85, wheel r 0.28, steer_bars, saddle eye 1.05. Fastest thing on the map at 22 m/s.",
+          "status": "delivered"
         },
         {
           "id": "vehicle_hands",
@@ -394,7 +448,8 @@
             "hands_<set>_wheel.glb",
             "hands_<set>_bars.glb"
           ],
-          "note": "Two poses through the existing HAND_POSES mechanism, six sets each. wheel: ten-and-two on a 0.38 m rim, origin at the hub, viewmodel frame. bars: grips 0.7 m apart, used by the quad and the trike's levers. Not blocking; wheel first if only one is affordable."
+          "note": "Two poses through the existing HAND_POSES mechanism, six sets each. wheel: ten-and-two on a 0.38 m rim, origin at the hub, viewmodel frame. bars: grips 0.7 m apart, used by the quad and the trike's levers. Not blocking; wheel first if only one is affordable.",
+          "status": "planned"
         }
       ],
       "pickups": [
@@ -403,9 +458,16 @@
           "files": [
             "pickup_primecore.glb"
           ],
-          "note": "Boss drop; soul-violet, must read as the rarest thing on the floor."
+          "note": "DELIVERED — pickup_primecore in game/assets/economy. Boss drop; soul-violet.",
+          "status": "delivered"
         }
-      ]
+      ],
+      "status_key": {
+        "delivered": "file in game/assets/",
+        "authored-in-design": "built in docs/design models/*.js, on the Asset Export page; awaiting `make design-export`",
+        "planned": "not started",
+        "no-model": "client work only, no file"
+      }
     },
     "M5": {
       "theme": "Tether, phasing, late weapons, cold",
@@ -516,9 +578,13 @@
         "shared_warp_gate_idle / _active (vertical arch, warp_membrane part)",
         "vfx_teleport_burst",
         "vehicle_buggy / _dagator / _grnmchn / _vehickle (full rig blocks, hull-checked)",
-        "toaster level authored in models/levels.js against Maps.Toaster — 82 sockets, 4 routes, 738 trees"
+        "toaster level authored in models/levels.js against Maps.Toaster — 82 sockets, 4 routes, 738 trees",
+        "Toaster uplift 2026-09-13 authored in design (docs/design/models/toaster.js + levels.js): 18 new pieces, 8 rebuilt building files, lane track, field tiles, four fenced fields, power lines — see M4 · maps for the client work",
+        "M4 sweep 2026-09-13 — already in game/assets but unrecorded here: enemy_leaper (×3), enemy_ram_enraged, enemy_carapace + _plate, vfx_status_stun, vfx_overclock_link, vfx_lanewash, shared_floodgate / _crusher / _gate_operated / _wall_destructible (×3), prop_barrel_explosive, prop_container_droppable, pickup_primecore; elite_swift overlay in enemies.js",
+        "Melee 2026-09-13 authored in design (models/melee-hero.js): melee_blade / _maul / _spear (vm + world) + the eight meleemod_* files Melee.cs sells — hero standard, five mount slots each",
+        "Stream weapons 2026-09-13 authored in design (models/sprayer-hero.js): weapon_poisonstream + weapon_cryosprayer (vm + world) — hero standard, _magazine + _mount_magwell + _slide_assembly per ASSET-DELIVERY Ask D"
       ],
-      "note": "The specs under M4 above are the delivered contract, not a plan: every file was measured against its budget and every vehicle against its hull. NOT delivered: hands_<set>_wheel and hands_<set>_bars (V5), which the commission itself marks not blocking."
+      "note": "The specs under M4 above are the delivered contract, not a plan: every file was measured against its budget and every vehicle against its hull. NOT delivered: hands_<set>_wheel and hands_<set>_bars (V5), which the commission itself marks not blocking; boss_frame01; the five ranged platforms with no Weapons.cs row (lmg, burstdmr, flakcannon, chargesniper, autoscattergun); the four condition rigs + vfx_flashlight_cone; switchyard_bridge_intact/_collapsed (open question §G). Every M4 entry now carries a `status` field — see M4.status_key."
     },
     "M3": {
       "date": "2026-09-07",

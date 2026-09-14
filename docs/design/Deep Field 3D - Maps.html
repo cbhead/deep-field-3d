@@ -129,7 +129,7 @@ import { FOUNDRY, makeFoundryMats } from './models/foundry.js';
 import { SHARED } from './models/shared.js';
 import { SWITCHYARD, makeSwitchyardMats } from './models/switchyard.js';
 import { SPIRE, makeSpireMats } from './models/spire.js';
-import { TOASTER, makeToasterMats, buildToasterBelt, buildToasterRoads, buildToasterDrive } from './models/toaster.js';
+import { TOASTER, makeToasterMats, buildToasterBelt, buildToasterRoads, buildToasterDrive, buildToasterWires } from './models/toaster.js';
 import { VEHICLES, makeVehicleMats } from './models/vehicles.js';
 import { LEVELS, roadKeepOut } from './models/levels.js';
 import { applyAtmosphere, clearAtmosphere } from './models/atmosphere.js';
@@ -240,7 +240,11 @@ function buildAssembly(L) {
   // Terrain tiles.
   const kit = L.kit, TERRAIN = ALL[kit + '_terrain'], WALL = ALL[kit + '_wall_boundary'] || ALL[kit + '_retainingwall'], ROAD = ALL[kit + '_path_ground'];
   const nx = Math.ceil(W / 20), nz = Math.ceil(H / 20);
-  for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) { const t = TERRAIN.buildVariant ? TERRAIN.buildVariant(K, (i * 3 + j * 2 + (i * j)) % 4) : TERRAIN.build(K); t.position.set(-W / 2 + 10 + i * 20, 0, -H / 2 + 10 + j * 20); t.scale.set(Math.min(1, (W / 2 - (-W / 2 + i * 20)) / 20), 1, Math.min(1, (H / 2 - (-H / 2 + j * 20)) / 20)); t.position.x = -W / 2 + i * 20 + 10 * t.scale.x; t.position.z = -H / 2 + j * 20 + 10 * t.scale.z;
+  for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
+    // Field zones (Toaster): a tile wholly inside a named field takes that
+    // field's variant — pasture, stubble — instead of a lawn variant.
+    const cx = -W / 2 + 10 + i * 20, cz = -H / 2 + 10 + j * 20, zone = (L.fields || []).find((f) => cx > f.x[0] && cx < f.x[1] && cz > f.z[0] && cz < f.z[1]);
+    const t = TERRAIN.buildVariant ? TERRAIN.buildVariant(K, zone ? zone.variant : (i * 3 + j * 2 + (i * j)) % 4) : TERRAIN.build(K); t.position.set(-W / 2 + 10 + i * 20, 0, -H / 2 + 10 + j * 20); t.scale.set(Math.min(1, (W / 2 - (-W / 2 + i * 20)) / 20), 1, Math.min(1, (H / 2 - (-H / 2 + j * 20)) / 20)); t.position.x = -W / 2 + i * 20 + 10 * t.scale.x; t.position.z = -H / 2 + j * 20 + 10 * t.scale.z;
     // Every tile's furniture gets walked on every map — this used to sit inside
     // the indoor branch, so on the two maps without an `indoor` field the grid's
     // props were never looked at. Flush or standing is measured, not listed:
@@ -280,6 +284,8 @@ function buildAssembly(L) {
   // these same centre lines, so the art is laid on the line by construction.
   if (L.vroads) g.add(buildToasterRoads(K, L.vroads, ALL));
   if (L.drive) g.add(buildToasterDrive(K, L.drive, ALL));
+  // Power lines, strung between the poles the level's generator actually placed.
+  if (L.powerlines) g.add(buildToasterWires(K, L.powerlines));
   /* The treeline. Laid by rule rather than listed: about 780 trees on the
      same hashed 3.5 m lattice the client uses, merged to one mesh per species
      per LOD — the viewer's equivalent of the multimesh, and the only way a
@@ -321,6 +327,9 @@ function buildAssembly(L) {
   for (const name of roads) {
     const rt = L.routes[name]; if (!rt) continue;
     for (let i = 0; i < rt.length - 1; i++) {
+      // A teleport leg is not walked, so it gets no lane — laid, it is 200 m
+      // of track across the whole property between two warp gates.
+      if (((L.teleportLegs || {})[name] || []).includes(i)) continue;
       const a = new THREE.Vector3(...rt[i]), b = new THREE.Vector3(...rt[i + 1]);
       if (a.y !== b.y) continue;
       const key = [a.toArray(), b.toArray()].map((p) => p.join()).sort().join('|');
@@ -384,8 +393,24 @@ function buildAssembly(L) {
       p.rotation.y = Math.atan2(d.x, d.z) + Math.PI / 2; p.scale.x = (len / n) / 4; noShadow(p); g.add(p);
     }
   }
-  // Zipline cable.
-  if (L.zipline) { const [a, b] = L.zipline.map((p) => new THREE.Vector3(...p)); const c = ALL.shared_zipline_cable.build(K); c.position.copy(a); c.lookAt(b); c.rotateY(Math.PI); c.scale.z = a.distanceTo(b); g.add(c); }
+  /* Zipline cable. Strung between the sheave nodes of the anchors that are
+     actually standing in the scene (`shared_zipline_anchor` publishes its
+     sheave in `userData.zip`), not between a hand-typed pair of endpoints:
+     the typed pair was a third description of one cable and the only one that
+     met neither post. `L.zipline` stays as a fallback for a map that draws a
+     line with no anchors placed. */
+  {
+    g.updateMatrixWorld(true);
+    const sheaves = [];
+    g.traverse((o) => { if (o.name === 'zip_sheave') sheaves.push(o.getWorldPosition(new THREE.Vector3())); });
+    const ends = sheaves.length === 2 ? sheaves
+      : (L.zipline ? L.zipline.map((p) => new THREE.Vector3(...p)) : null);
+    if (ends) {
+      const [a, b] = ends[0].y >= ends[1].y ? ends : [ends[1], ends[0]];   // always top → bottom
+      const c = ALL.shared_zipline_cable.build(K);
+      c.position.copy(a); c.lookAt(b); c.rotateY(Math.PI); c.scale.z = a.distanceTo(b); g.add(c);
+    }
+  }
   if (el('showSky').checked) g.add(ALL[kit + '_skybox'].build(K));
   // Sim truth overlays.
   if (el('showRoutes').checked) {
@@ -479,7 +504,7 @@ function buildAssembly(L) {
   // while its body straddled the lane. Exclusions are by surface kind — what a
   // route runs on, through or ends at — a shorter and more stable list than
   // enumerating every prop that might stand somewhere.
-  const SURFACE = /_terrain$|_floor$|_roof$|_roof_parapet$|_deck$|_deck_rail$|_middeck$|_catwalk$|_gantry_walk$|_stairwell$|_fireescape$|_fireescape_flight$|_path_ground$|_path_interior$|_cut_channel$|_facade$|_lobby$|_wall_boundary$|_retainingwall$|_vent_tunnel$|^shared_vent_grate$|^shared_ladder|^shared_spawn_portal$|^shared_core$|^shared_armory_kiosk$|^shared_zipline_cable$|^shared_controlpoint|^shared_warp_gate|^shared_teleporter_pad|^toaster_roads$|^toaster_drive$|^socket_/;
+  const SURFACE = /_terrain$|_floor$|_roof$|_roof_parapet$|_deck$|_deck_rail$|_middeck$|_catwalk$|_gantry_walk$|_stairwell$|_fireescape$|_fireescape_flight$|_path_ground$|_path_interior$|_cut_channel$|_facade$|_lobby$|_wall_boundary$|_retainingwall$|_vent_tunnel$|^shared_vent_grate$|^shared_ladder|^shared_spawn_portal$|^shared_core$|^shared_armory_kiosk$|^shared_zipline_cable$|^shared_controlpoint|^shared_warp_gate|^shared_teleporter_pad|^toaster_roads$|^toaster_drive$|^toaster_wires$|^socket_/;
   g.updateMatrixWorld(true);
   const bb = new THREE.Box3(), probe = new THREE.Vector3(), crowded = [];
   for (const o of g.children) {

@@ -45,6 +45,19 @@ public partial class Player : CharacterBody3D
     private Vector3 _viewModelRest;
     private float _recoil;
 
+    // --- Melee -------------------------------------------------------------
+    /// <summary>The melee platform, shown for the length of a swing in place
+    /// of the gun. Built once per (platform, build) like the gun rig and kept
+    /// hidden between swings; the motion is procedural like every animation
+    /// here — a slash across for a blade, a chop for the maul, a thrust for
+    /// the spear, and the wrench swings like a blade.</summary>
+    private Node3D? _meleeRig;
+    private string _meleeRigFor = "";
+    private double _swing = -1;
+    private double _swingLength = 0.4;
+    private string _swingKind = "slash";
+    private static readonly Vector3 MeleeRest = new(0.24f, -0.28f, -0.42f);
+
     /// <summary>The gun in your hands, assembled the way the armory assembles
     /// it: design's viewmodel with the modules you fitted on their mounts, and
     /// the faction's hands in the pose that platform is held in.
@@ -136,6 +149,7 @@ public partial class Player : CharacterBody3D
             _reload.Tick((float)delta);
             if (_reload.Finished) _reload = null;
         }
+        TickSwing(delta);
     }
 
     /// <summary>The sim started a reload on the weapon in these hands. The
@@ -574,8 +588,81 @@ public partial class Player : CharacterBody3D
             var aim = _camera.GlobalPosition + (-_camera.GlobalTransform.Basis.Z) * melee.ReachMeters;
             _root.Submit(new Command.PlayerMelee(_root.LocalPlayerId,
                 new Vec3(aim.X, aim.Y, aim.Z)));
+            BeginSwing(melee);
         }
     }
+
+    /// <summary>Start the swing's viewmodel: the platform in hand with the
+    /// modules the sim has fitted to it. Cosmetic and local — the sim has
+    /// already been sent the swing, and resolves it from the aim point alone.</summary>
+    private void BeginSwing(MeleeDef melee)
+    {
+        var fitted = _root.CurrentMeleeBuild();
+        string key = $"{melee.Id}|" + string.Join(",", fitted.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}={kv.Value}"));
+        if (_meleeRigFor != key || !GodotObject.IsInstanceValid(_meleeRig))
+        {
+            if (GodotObject.IsInstanceValid(_meleeRig)) _meleeRig!.QueueFree();
+            _meleeRig = null;
+            _meleeRigFor = key;
+            if (MeleeAssembly.Build(melee.Id, fitted, world: false) is { } host)
+            {
+                var rig = new Node3D { Position = MeleeRest, Visible = false };
+                rig.AddChild(host);
+                MapKit.NoShadow(rig);
+                _camera.AddChild(rig);
+                _meleeRig = rig;
+            }
+        }
+        if (_meleeRig is null) { GD.Print($"[swing] {melee.Id}: no model ({MeleeAssembly.AssetFor(melee.Id, false)})"); return; }
+        _swingKind = melee.Id switch { "maul" => "chop", "spear" => "thrust", _ => "slash" };
+        // A swing takes most of its own cadence and never more than half a
+        // second, so a slow platform reads as heavy and a fast one as quick.
+        _swingLength = Mathf.Min(0.5, 0.8 / melee.SwingsPerSecond);
+        _swing = 0;
+        if (GodotObject.IsInstanceValid(_viewModel)) _viewModel!.Visible = false;
+        _meleeRig.Visible = true;
+    }
+
+    private void TickSwing(double delta)
+    {
+        if (_swing < 0 || _meleeRig is null || !GodotObject.IsInstanceValid(_meleeRig)) return;
+        _swing += delta;
+        float u = (float)(_swing / _swingLength);
+        if (u >= 1f)
+        {
+            _swing = -1;
+            _meleeRig.Visible = false;
+            if (GodotObject.IsInstanceValid(_viewModel)) _viewModel!.Visible = true;
+            return;
+        }
+        // Ease out of the wind-up and into the follow-through.
+        float e = 1f - (1f - u) * (1f - u);
+        switch (_swingKind)
+        {
+            case "chop":
+                // Raised, then brought down through the aim point.
+                _meleeRig.Rotation = new Vector3(Mathf.Lerp(0.9f, -0.45f, e), 0.15f, 0f);
+                _meleeRig.Position = MeleeRest + new Vector3(0f, Mathf.Lerp(0.12f, -0.08f, e), Mathf.Lerp(0.05f, -0.15f, e));
+                break;
+            case "thrust":
+                // Drawn back, driven forward, pulled back to the guard.
+                float reach = Mathf.Sin(u * Mathf.Pi);
+                _meleeRig.Rotation = new Vector3(0.05f, 0.1f * (1f - reach), 0f);
+                _meleeRig.Position = MeleeRest + new Vector3(-0.06f * reach, 0.02f * reach, -0.55f * reach + 0.12f * (1f - reach));
+                break;
+            default:
+                // Across the body, right to left, dipping through the middle.
+                _meleeRig.Rotation = new Vector3(Mathf.Sin(u * Mathf.Pi) * -0.35f, Mathf.Lerp(0.7f, -0.9f, e), Mathf.Lerp(0.3f, -0.4f, e));
+                _meleeRig.Position = MeleeRest + new Vector3(Mathf.Lerp(0.12f, -0.18f, e), Mathf.Sin(u * Mathf.Pi) * -0.06f, -0.08f * Mathf.Sin(u * Mathf.Pi));
+                break;
+        }
+    }
+
+    /// <summary>For the review shots: swing the platform in hand without
+    /// asking the sim.</summary>
+    public void SwingForReview() => BeginSwing(Melee.All[_root.CurrentMeleeId()]);
+    public bool Swinging => _swing >= 0;
+    public bool HasMeleeModel => _meleeRig is not null && GodotObject.IsInstanceValid(_meleeRig);
 
     // =====================================================================
     // Aim + contextual surfaces

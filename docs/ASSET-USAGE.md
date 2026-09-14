@@ -1,6 +1,6 @@
 # Asset usage
 
-**612 delivered · 434 consumed · 178 unused** — regenerate with `make usage`.
+**663 delivered · 480 consumed · 183 unused** — regenerate with `make usage`.
 
 `asset-report.sh` answers *has design shipped it*. This answers the question that
 rots silently: an asset can be delivered, imported, and never referenced by a
@@ -26,6 +26,24 @@ One blind spot, recorded rather than papered over: a solo match builds nothing
 and nothing gets hurt, so state variants the code *does* request — a spent trap
 plate, a half-demolished barricade — never come up in the measurement. They are
 marked `wired=yes` in the manifest by reading the code, and show as unused here.
+
+## What the 2026-09-13 drop added to the unused list
+
+The drop (the Toaster uplift, the melee platforms and modules, the two stream
+weapons, the Foundry rail variants, the Spire's rebuilt kit) took the count
+from 178 to 183: 51 new files, 45 of them consumed on arrival. The six that
+are not are all one thing:
+
+| Group | Count | Why |
+|---|---|---|
+| `spire_facade_v1`…`_v3`, `spire_fireescape_v1`…`_v3` | 6 | The door-notched facade bays and the escape's gate landing for design's regenerated Spire level (`docs/design/models/levels.js`, which now mirrors `Maps.Spire`). They join the twenty Spire pieces below: `BuildSpireStructures` still mounts the plain bays, and adopting the authored Spire is its own change. Listed `wired=no` in the manifest. |
+
+Everything else the drop delivered is requested by a code path this report
+sees: the 23 new Toaster pieces by the solo match (`ToasterLevel`), the six
+melee models and eight modules by the asset audit and the swing viewmodel,
+the four stream-weapon files by the armory pass over `Weapons.All`, the three
+rail variants by the Foundry deck, and `weapon_wrench_vm` — delivered in
+2026-09-07 and unused until now — by the wrench's swing.
 
 ## What the 2026-09-12 drop added to the unused list
 

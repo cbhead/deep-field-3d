@@ -174,6 +174,36 @@ and the viewmodel picks the pose by platform. Muzzle flash, tracer and impact
 come from `Vfx.cs` the instant the trigger is pulled — the sim decides
 separately whether the shot hurt.
 
+**Props can carry a moving-parts contract too.** A delivered group may declare
+`userData.spin = { part, axis, rpm }` (the Toaster's windmill does, on
+`toaster_windmill_wheel`) and the level turns that node about that axis without
+knowing its geometry — the weapons' recoil contract applied to scenery
+(`ToasterLevel.ArmSpin`). The zipline anchor declares its sheave the same way:
+`userData.zip = { sheave, out }` in local metres, and `GameRoot.DressZipline`
+places both posts full size, yaws each to face the other (the sheave sits out
+along local +Z, so a post pointing anywhere else hangs its cable off the side
+of its own wheel) and strings the cable between the two sheave nodes. The ride
+line the player follows hangs 0.8 m under the cable at both ends.
+
+**Melee is assembled like a gun.** `melee_<id>_vm.glb` / `_world.glb` for the
+three platforms Melee.cs sells (the wrench is the tool platform in the weapon
+kit, `weapon_wrench_vm`), with modules `meleemod_<slot>_<look>.glb` on the
+host's `<id>_mount_<slot>` nodes — `edge`, `grip`, `infusion`, `counterweight`,
+`chargecell`. Edge and grip modules REPLACE the host's own `<id>_edge` /
+`<id>_grip` parts; a counterweight or a core infusion attaches beside them.
+`MeleeAssembly` maps the sim's attachment ids (`honedEdge`, `emberCore`…) to
+design's file names and builds the rig; the swing (`Player.BeginSwing`) shows
+it in place of the gun for the length of one swing — a slash for a blade, a
+chop for the maul, a thrust for the spear. Design exports each module in its
+blade fit; the maul and spear fits exist only in design's Gunsmith page.
+
+**Variants past v3 need saying.** Design's export page writes `_v1`…`_v3` for
+every entry with a `buildVariant`, which is right for the four-way tiles and
+wrong on the Toaster: its terrain gained `_v4` and `_v5` (the pasture and the
+hay stubble, assigned by region), and the grain bin and utility pole have two
+looks, not four. `tools/design-export/export.html` carries a `VARIANTS` table
+for exactly those; a new entry with an odd variant count needs a row there.
+
 **Effects are meshes, not particles.** Design's `vfx_*` files are static hero
 frames the client scales, turns and fades over a short life, with named
 sub-groups (`_spin`, `_pulse`, `_rise`) it can drive without lookups. Towers

@@ -1,8 +1,8 @@
 /**
  * Deep Field 3D — The Toaster environment kit.
  *
- * Commissioned in docs/FORWARD-MANIFEST-toaster.md. A rural property in late
- * autumn at 320 × 160 m — six times the area of any map before it — built and
+ * Commissioned in docs/FORWARD-MANIFEST-toaster.md. A rural property on a
+ * clear summer afternoon at 320 × 160 m — six times the area of any map before it — built and
  * playable upstream today as grayboxes, at zero §4 violations. This file is
  * the art for it.
  *
@@ -68,7 +68,7 @@ const tx = (THREE, c, rep = 1, srgb = false) => {
 /**
  * The leaf-card atlas: one 1024² sheet, four cells, shared by all three
  * canopies and by the three LOD1 billboards. Drawn near-white so a single
- * sheet can be tinted to oak amber, maple scarlet and pine green rather than
+ * sheet can be tinted to three summer greens — oak, maple and pine — rather than
  * baking three — the manifest asks for one atlas, and one atlas is also one
  * texture bind across ~1,500 instanced trees.
  *
@@ -261,15 +261,21 @@ export function makeToasterMats(THREE, mats) {
   };
   /* MASK, not blend: alphaTest with transparent:false keeps leaves in the
      opaque pass, which is the only way ~1,500 instanced canopies are
-     affordable. DoubleSide because a card is a card from both faces. */
+     affordable. DoubleSide because a card is a card from both faces. The
+     threshold is LOW (.34): mipmapping averages a leaf's alpha toward zero
+     with distance, and at .5 a crown forty metres off eroded to a cloud of
+     dots around bare limbs. */
   const leafMat = (name, color, cell) => std(name, {
-    color, map: leafTex(cell), alphaTest: .5, transparent: false, side: THREE.DoubleSide,
+    color, map: leafTex(cell), alphaTest: .34, transparent: false, side: THREE.DoubleSide,
     roughness: .88, envMapIntensity: .05,
   });
-  leafMat('toa_leaf_oak', 0xb07a33, [0, 0]);
-  leafMat('toa_leaf_maple', 0xb8452a, [1, 1]);
-  leafMat('toa_leaf_pine', 0x46583a, [0, 1]);
-  leafMat('toa_leaf_edge', 0xa8712f, [1, 0]);
+  /* Three greens that differ in VALUE and warmth, not in hue alone: a mid
+     yellow-green oak, a lighter fresher maple, and a dark blue-green conifer.
+     Read at 90 m the belt has to have depth in it. */
+  leafMat('toa_leaf_oak', 0x5f8a34, [0, 0]);
+  leafMat('toa_leaf_maple', 0x74a03e, [1, 1]);
+  leafMat('toa_leaf_pine', 0x33543a, [0, 1]);
+  leafMat('toa_leaf_edge', 0x6e9a40, [1, 0]);
 
   const boardMat = (name, color, rep, o = {}) => std(name, { color, map: tx(THREE, CACHE.board, rep, true), roughness: .96, envMapIntensity: .05, ...o });
   boardMat('toa_timber_red', 0x8a4030, 1.4);      // oxide-red board, dressing only
@@ -301,15 +307,29 @@ export function makeToasterMats(THREE, mats) {
   std('toa_floorboard', { color: 0x7c6448, map: tx(THREE, CACHE.board, 3.0, true), roughness: .82, envMapIntensity: .12 });
   /* Windows are opaque and slightly emissive rather than glass: the manifest
      forbids transparency anywhere in this kit, and a dark pane with a warm
-     inner glow reads better at 90 m than a mirror would. */
-  std('toa_window', { color: 0x27303a, roughness: .28, metalness: .1, envMapIntensity: .55, emissive: new THREE.Color(0xffc98a), emissiveIntensity: .22 });
-  std('toa_water', { color: 0x243033, roughness: .12, metalness: .08, envMapIntensity: .9 });
+     inner glow reads better at 90 m than a mirror would. envMapIntensity is
+     kept LOW: at .55 the smooth dark pane mirrored the studio box at every
+     glancing angle and every window on the property read as a cream square. */
+  std('toa_window', { color: 0x161c24, roughness: .42, metalness: .05, envMapIntensity: .18, emissive: new THREE.Color(0xffc98a), emissiveIntensity: .05 });
+  std('toa_water', { color: 0x2f5563, roughness: .12, metalness: .08, envMapIntensity: .9 });
   std('toa_riprap', { color: 0x6f6a5e, roughness: .96, envMapIntensity: .07 });
+  // Water-tumbled stone: the same rock as riprap but rounded and burnished, so
+  // it differs from it in roughness rather than in lightness. Wet variant is
+  // the same colour again, darkened in vertex colour, with a damp sheen.
+  std('toa_riverrock', { color: 0x8b877c, roughness: .58, metalness: .04, envMapIntensity: .16 });
+  std('toa_riverrock_wet', { color: 0x7b776d, roughness: .24, metalness: .06, envMapIntensity: .34 });
   std('toa_hay', { color: 0xb49a55, roughness: .98, envMapIntensity: .04 });
   std('toa_tarp', { color: 0x4d5a4a, roughness: .78, envMapIntensity: .1 });
   std('toa_rust', { color: 0x7a4228, roughness: .92, metalness: .15, envMapIntensity: .18 });
   std('toa_paint_faded', { color: 0x8c9aa0, roughness: .72, metalness: .05, envMapIntensity: .35 });
   std('toa_tank', { color: 0xcfcdc4, roughness: .55, metalness: .2, envMapIntensity: .4 });
+  // Galvanised steel — bins, gates, wire, the mill. One finish, differing
+  // from the propane tank's enamel in roughness and response, not in value.
+  std('toa_galv', { color: 0x9da19c, roughness: .46, metalness: .7, envMapIntensity: .5 });
+  std('toa_galv_ds', { color: 0x9da19c, roughness: .46, metalness: .7, envMapIntensity: .5, side: THREE.DoubleSide });
+  std('toa_tpost', { color: 0x3c4a3c, roughness: .72, metalness: .35, envMapIntensity: .2 });
+  std('toa_red_paint', { color: 0x8a2c22, roughness: .58, metalness: .1, envMapIntensity: .3 });
+  std('toa_linen', { color: 0xe6e2d8, roughness: .96, envMapIntensity: .04, side: THREE.DoubleSide });
   std('toa_dirt', { color: 0x6b5a44, roughness: .98, envMapIntensity: .05 });
   std('toa_glow', { color: 0xffd9a0, roughness: .4, emissive: new THREE.Color(0xffc07a), emissiveIntensity: 1.3, envMapIntensity: 0 });
   std('toa_warp_frame', { color: 0x2b2e36, roughness: .48, metalness: .6, envMapIntensity: .45 });
@@ -326,7 +346,7 @@ export function makeToasterMats(THREE, mats) {
   // of the FRAME that changes between states.
   std('toa_warp_rim', { color: 0xff6a70, roughness: .35, emissive: new THREE.Color(0xff3a44), emissiveIntensity: 2.1, envMapIntensity: 0 });
   std('toa_warp_dark', { color: 0x1a1c22, roughness: .7, metalness: .3, envMapIntensity: .2 });
-  std('toa_sky', { color: 0x9aa0a6, roughness: 1, metalness: 0, side: THREE.BackSide, envMapIntensity: 0 });
+  std('toa_sky', { color: 0x8ab4dc, roughness: 1, metalness: 0, side: THREE.BackSide, envMapIntensity: 0 });
   return mats;
 }
 
@@ -400,15 +420,29 @@ function terrainTile(K, v) {
       const bare = 1 - smooth(1.8, 3.4, Math.hypot(x + 4.5, z + 2.5));
       r = lerp(r, 1.05, bare); gr = lerp(gr, .82, bare); b = lerp(b, .62, bare); y = lerp(y, y * .4 - .03, bare);
     } else if (v === 2) {
-      // Leaf drift banked against nothing in particular, as they do.
+      // A patch burnt off by the sun, as a field does where the soil is thin.
       const drift = (1 - smooth(2.2, 5.4, Math.hypot(x - 2, z - 3.2))) * (.6 + .4 * vnoise(x, z));
-      r = lerp(r, 1.22, drift); gr = lerp(gr, .78, drift); b = lerp(b, .5, drift); y += drift * .05;
+      r = lerp(r, 1.16, drift); gr = lerp(gr, 1.02, drift); b = lerp(b, .68, drift); y += drift * .05;
     } else if (v === 3) {
       // Tyre ruts running along +X, damped out at the seams like everything.
       for (const rz of [-.9, .9]) {
         const rut = 1 - smooth(.35, .95, Math.abs(z - rz));
         y -= rut * .06 * damp; r = lerp(r, .86, rut * .8); gr = lerp(gr, .84, rut * .8); b = lerp(b, .8, rut * .8);
       }
+    } else if (v === 4) {
+      // Rough pasture: grazed unevenly, so the sward is clumpy and yellower,
+      // with the paler lines the stock wear walking to water.
+      const clump = vnoise(x * .7 + 3, z * .7 - 5), track = 1 - smooth(.5, 1.4, Math.abs(vnoise(x * .11, z * .11 + 2) - .5) * 14);
+      y += (clump - .5) * .07;
+      r = lerp(1.0, 1.12, clump); gr = lerp(.9, 1.0, clump); b = lerp(.6, .74, clump);
+      r = lerp(r, .92, track * .7); gr = lerp(gr, .86, track * .7); b = lerp(b, .66, track * .7);
+    } else if (v === 5) {
+      // Cut hayfield: pale gold stubble in 3 m mower widths along +X, with a
+      // raked windrow every third pass where the baler has not been yet.
+      const pass = ((z + 10) % 3 + 3) % 3, band = 1 - smooth(.3, .7, Math.abs(pass - 1.5));
+      const wr = Math.floor((z + 10) / 3) % 3 === 1 ? band : 0;
+      y = y * .3 + wr * .09;
+      r = 1.24 - band * .06 + wr * .1; gr = 1.1 - band * .05 + wr * .04; b = .68 - band * .03 - wr * .04;
     }
     p.setY(i, y * damp);
     col[i * 3] = r; col[i * 3 + 1] = gr; col[i * 3 + 2] = b;
@@ -433,12 +467,12 @@ function terrainTile(K, v) {
 }
 
 P({
-  id: 'toaster_terrain', label: 'Terrain tile (20 m)', size: '20×20 m', swatch: '#92844e',
+  id: 'toaster_terrain', label: 'Terrain tile (20 m)', size: '20×20 m', swatch: '#6d8f45',
   instanced: true, budgetTris: 900, budgetParts: 4,
-  stats: { Tile: '20×20', Relief: '≤0.15 m', Seam: 'flat 2 m in', Variants: '4' },
-  note: 'Dry autumn grass, 20 m, in four variants off one shared albedo/roughness/normal set. Relief is ≤0.15 m and damped to EXACTLY zero from 8 m out so tiles seam and roads lie flat. 128 instanced placements, so the tile carries no road, no fence and no grass tuft — a tuft a metre is fifty thousand parts, and tufts are `toaster_terrain_scatter`. v0 plain; v1 a mown strip and a bare scrape; v2 a leaf drift and a fallen branch (the only furniture true at a 20 m repeat); v3 tyre ruts along +X. Variation that can ride in vertex colour does, because it is free and because a hundred and twenty-eight copies of one tile is wallpaper at any rotation.',
+  stats: { Tile: '20×20', Relief: '≤0.15 m', Seam: 'flat 2 m in', Variants: '6' },
+  note: 'Green summer pasture, 20 m, in four variants off one shared albedo/roughness/normal set. Relief is ≤0.15 m and damped to EXACTLY zero from 8 m out so tiles seam and roads lie flat. 128 instanced placements, so the tile carries no road, no fence and no grass tuft — a tuft a metre is fifty thousand parts, and tufts are `toaster_terrain_scatter`. v0 plain; v1 a mown strip and a bare scrape; v2 a sun-burnt patch and a fallen branch (the only furniture true at a 20 m repeat); v3 tyre ruts along +X. Variation that can ride in vertex colour does, because it is free and because a hundred and twenty-eight copies of one tile is wallpaper at any rotation. v4 and v5 are FIELD tiles rather than lawn — rough grazed pasture, and cut hay stubble in 3 m mower widths with a windrow every third pass — assigned by region in the level file (`fields`), so the property reads as fields divided by fences rather than one mown park.',
   build(K) { return this.buildVariant(K, 0); },
-  buildVariant(K, v = 0) { return terrainTile(K, v % 4); },
+  buildVariant(K, v = 0) { return terrainTile(K, v % 6); },
 });
 
 /**
@@ -554,11 +588,55 @@ P({
    act on a multimesh's whole bounding box, so the belt is cut into 40 m cells
    and every extra part multiplies the number of them. */
 
+/**
+ * The enemy lane: a worn two-rut track, 3.4 m wide, in trodden grass. Asked
+ * for in FORWARD-MANIFEST-hero §E — every other map dresses its lane with
+ * `<map>_path_ground` and this one was laying the gravel road module. The
+ * module is the SAME grass material as the tile with the wear in vertex
+ * colour, so its edges are invisible against the field and only the ruts
+ * show: the line twelve waves walk reads as exactly that, not as tarmac
+ * across a hayfield. Where the lane runs down the county road it lies over the
+ * asphalt a metre narrower than the carriageway.
+ */
+P({
+  id: 'toaster_path_ground', label: 'Lane module — worn track', size: '4×3.4 m', swatch: '#7d6f4c',
+  instanced: true, budgetTris: 200, budgetParts: 1, run: '+X', repeat: 4.0, width: 3.4,
+  stats: { Run: '+X · 4 m', Width: '3.4 m', Ruts: '2 · 1.5 m track', Top: 'y 0.06' },
+  note: 'The enemy lane, 4 m of it: two tyre-and-boot ruts 1.5 m apart in trodden grass, no kerb, 3.4 m wide. Same grass material as the terrain tile, with the wear — bare earth in the ruts, bruised grass between — carried in vertex colour, so the module\u2019s edges vanish into the field and only the track shows. Laid along every walked route at y 0.06; over the county road it sits on the asphalt a metre narrower than the carriageway. Instanced, about 230 placements.',
+  build(K) {
+    const { THREE, grp, mats } = K, g = grp('toaster_path_ground');
+    const W = 3.4, L = 4, geo = new THREE.PlaneGeometry(L, W, 4, 14); geo.rotateX(-Math.PI / 2);
+    const p = geo.attributes.position, col = new Float32Array(p.count * 3);
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), z = p.getZ(i);
+      const rut = 1 - smooth(.16, .44, Math.abs(Math.abs(z) - .75));
+      const wear = 1 - smooth(1.15, 1.7, Math.abs(z));
+      p.setY(i, -rut * .05 + (vnoise(x * 2.1, z * 2.1) - .5) * .012 * wear);
+      // Bare earth in the rut, bruised grass between, untouched at the edge.
+      const r = lerp(1, lerp(.94, .8, rut), wear), gg = lerp(1, lerp(.88, .62, rut), wear), b = lerp(1, lerp(.68, .4, rut), wear);
+      col[i * 3] = r; col[i * 3 + 1] = gg; col[i * 3 + 2] = b;
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    geo.computeVertexNormals();
+    const uv = geo.attributes.uv;   // same 0.08 repeats/m as the tile, so the grass lines up
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * L * .08, uv.getY(i) * W * .08);
+    const m = new THREE.Mesh(geo, mats.toa_grass); m.name = 'toaster_path_ground_surface';
+    m.receiveShadow = true; g.add(m);
+    return g;
+  },
+});
+
 const SPECIES = {
   oak: { h: 14, r: 5.5, trunk: .52, fork: .54, limbs: 7, tiers: 4, leaf: 'toa_leaf_oak', bark: 'toa_bark', cards: 52, lean: .06 },
   maple: { h: 12, r: 4.5, trunk: .42, fork: .56, limbs: 6, tiers: 4, leaf: 'toa_leaf_maple', bark: 'toa_bark', cards: 46, lean: .05 },
   pine: { h: 16, r: 3.0, trunk: .40, fork: .30, limbs: 9, tiers: 7, leaf: 'toa_leaf_pine', bark: 'toa_bark_pine', cards: 56, lean: .03 },
+  /* Open-grown trees, which the belt does not have: a hedgerow oak that forked
+     low and spread because nothing shaded it, and an orchard apple. Placed
+     one at a time by the level file, never by the belt lattice. */
+  oak_open: { h: 16, r: 7.5, trunk: .78, fork: .34, limbs: 8, tiers: 4, leaf: 'toa_leaf_oak', bark: 'toa_bark', cards: 300, core: 60, lean: .1, limbLen: .55 },
+  apple: { h: 4.6, r: 2.4, trunk: .2, fork: .3, limbs: 5, tiers: 3, leaf: 'toa_leaf_maple', bark: 'toa_bark', cards: 34, core: 8, lean: .08, limbLen: .6 },
 };
+const BELT = ['oak', 'maple', 'pine'];
 /* Fork fractions are high and the lean is small because this is closed-canopy
    second-growth hardwood, not parkland: in the street views the trunks run
    bare and near-vertical for more than half their height and the crowns only
@@ -579,7 +657,7 @@ function buildTree(K, id, key) {
   for (let i = 0; i < S.limbs; i++) {
     const a = (i / S.limbs) * Math.PI * 2 + H, t = i / S.limbs;
     const y = forkY + (S.h - forkY) * (conifer ? .12 + t * .62 : .06 + t * .5);
-    const len = conifer ? S.r * (1 - t * .55) : S.r * (.62 + hash(i, 3) * .4);
+    const len = (conifer ? S.r * (1 - t * .55) : S.r * (.62 + hash(i, 3) * .4)) * (S.limbLen ?? 1);
     const droop = conifer ? .95 : .55 + hash(i, 9) * .5;
     cyl.push([S.trunk * .05, S.trunk * .17, len, Math.cos(a) * len * .42, y + len * .14, Math.sin(a) * len * .42,
       -Math.sin(a) * droop, Math.cos(a) * droop, 5]);
@@ -627,6 +705,16 @@ function buildTree(K, id, key) {
         [.84 + hash(i, 4) * .34, .88 + hash(i, 6) * .24, .8 + hash(i, 7) * .3]]);
     }
   }
+  /* An open-grown crown is seen against the sky from every side, and a
+     shell of cards alone reads as a see-through cloud of leaves. `core`
+     packs extra, larger cards into the middle third so the crown has a
+     body behind its outline. */
+  for (let i = 0; i < (S.core || 0); i++) {
+    const a = i * 2.399 + H + 1, rad = S.r * .3 * Math.sqrt(hash(i, 51)), hw = S.r * .42, hh = S.r * .36;
+    const y = forkY + (S.h - forkY) * (.3 + hash(i, 52) * .45);
+    cards.push([hw * 2, hh * 2, Math.cos(a) * rad, y, Math.sin(a) * rad, -a + hash(i, 53), -.3 + hash(i, 54) * .6,
+      [.78 + hash(i, 55) * .3, .84 + hash(i, 56) * .22, .74 + hash(i, 57) * .3]]);
+  }
   const canopy = MC(K, `${id}_canopy`, mats[S.leaf], cards);
   /* Calibrate the crown to the species radius. The placement maths above
      bounds the WORST case — a card whose width points straight out along its
@@ -643,6 +731,9 @@ function buildTree(K, id, key) {
   const half = Math.max(Math.abs(cb.min.x), Math.abs(cb.max.x), Math.abs(cb.min.z), Math.abs(cb.max.z));
   if (half > .01) { canopy.geometry.scale(S.r / half, 1, S.r / half); canopy.geometry.computeBoundingBox(); }
   canopy.castShadow = true; g.add(canopy);
+  // A crown is round in plan. Measured as a box its corners reach r√2, and
+  // an oak 11 m off a lane read as standing 0.8 m from it.
+  g.userData.plan = 'round';
   return g;
 }
 
@@ -673,10 +764,10 @@ function buildTreeLod(K, id, key) {
 for (const [key, S] of Object.entries(SPECIES)) {
   const id = `toaster_tree_${key}`;
   P({
-    id, label: `Tree — ${key}`, size: `${S.h} m · canopy r ${S.r}`, swatch: key === 'pine' ? '#46583a' : key === 'maple' ? '#b8452a' : '#b07a33',
+    id, label: `Tree — ${key.replace('_', ' ')}`, size: `${S.h} m · canopy r ${S.r}`, swatch: key === 'pine' ? '#46583a' : key === 'maple' ? '#b8452a' : '#b07a33',
     instanced: true, budgetTris: 600, budgetParts: 2, lod1: `${id}_lod1`, lodSwitch: 90,
     stats: { Height: `${S.h} m`, Canopy: `r ${S.r} m`, Parts: '2 (trunk, canopy)', LOD1: '90 m' },
-    note: `Autumn ${key}, root collar on grade, trunk up +Y. EXACTLY two parts — \`${id}_trunk\` and \`${id}_canopy\` — because culling, visibility ranges and mesh LOD all act on a multimesh's whole bounding box, the belt is cut into 40 m cells, and every part multiplies the number of them. Canopy is MASK leaf cards off the shared 1024² atlas: blended leaves sort badly per instance and cost a transparent pass on the most-instanced thing in the game. Limbs leave the bole below the canopy — a crown floating over a pole is what gives a billboard away when you walk up to it.`,
+    note: `Summer ${key}, root collar on grade, trunk up +Y. EXACTLY two parts — \`${id}_trunk\` and \`${id}_canopy\` — because culling, visibility ranges and mesh LOD all act on a multimesh's whole bounding box, the belt is cut into 40 m cells, and every part multiplies the number of them. Canopy is MASK leaf cards off the shared 1024² atlas: blended leaves sort badly per instance and cost a transparent pass on the most-instanced thing in the game. Limbs leave the bole below the canopy — a crown floating over a pole is what gives a billboard away when you walk up to it.`,
     build(K) { return buildTree(K, id, key); },
   });
   P({
@@ -867,7 +958,27 @@ function buildShell(K, id, o) {
   g.add(MB(K, `${id}_floor`, mats.toa_floorboard, [[w - T * 2, FLOOR, d - T * 2, 0, FLOOR / 2, 0]]));
   // Foundation skirt: 150 mm proud of grade, 100 mm proud of the wall face,
   // so the building sits ON the ground instead of being pushed into it.
-  g.add(MB(K, `${id}_foundation`, mats.toa_concrete, [[w + .2, .18, d + .2, 0, .09, 0]]));
+  /* Steps at every person door, in the same concrete as the skirt. A door
+     sill 150 mm over grade with nothing under it is a doorway on a stage. */
+  const steps = [];
+  for (const dr of doors) {
+    // A vehicle bay has an apron, not a step; and `nosteps` where the lane
+    // runs close enough that a slab would put the shell's box inside §4.8.
+    if ((dr.h ?? 2.6) > 3.4 || (dr.w ?? 2.4) >= 4 || dr.nosteps) continue;
+    const wg = dr.wing ? wings.find((x) => x.id === dr.wing) : null, dw = (dr.w ?? 2.4) + .5;
+    const onZ = dr.side === 'N' || dr.side === 'S', s = dr.side === 'N' || dr.side === 'W' ? -1 : 1;
+    const face = (onZ ? d : w) / 2 + (wg ? wg.proj : 0);
+    for (const [dep, h, ww2] of [[.9, .15, dw], [1.5, .07, dw + .5]]) {
+      if (onZ) steps.push([ww2, h, dep, dr.at, h / 2, s * (face + dep / 2)]); else steps.push([dep, h, ww2, s * (face + dep / 2), h / 2, dr.at]);
+    }
+  }
+  g.add(MB(K, `${id}_foundation`, mats.toa_concrete, [[w + .2, .18, d + .2, 0, .09, 0], ...steps]));
+  // Gutter along both eaves and a downspout at each corner — the line a
+  // house has at its eaves that a box with a lid does not.
+  const gut = [];
+  for (const sz of [-1, 1]) gut.push([w + .7, .1, .12, 0, eaves - .05, sz * (d / 2 + .3)]);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) gut.push([.08, eaves - .3, .08, sx * (w / 2 + .12), (eaves - .3) / 2 + .1, sz * (d / 2 - .8)], [.08, .08, .4, sx * (w / 2 + .12), eaves - .1, sz * (d / 2 - .6)]);
+  g.add(MB(K, `${id}_gutters`, mats.toa_paint_faded, gut));
 
   /* Gable fields. The main mass no longer needs one — the roof file is now a
      closed gabled MASS rather than a plate, so it carries its own rake ends
@@ -903,27 +1014,50 @@ function buildShell(K, id, o) {
   const along = (L, step) => { const n = Math.max(1, Math.floor((L - 2) / step)), out = []; for (let i = 0; i < n; i++) out.push(-L / 2 + 1 + (i + .5) * ((L - 2) / n)); return out; };
   if (hasWin) {
     for (const at of along(w, 4.2)) {
-      if (clearOf('N', at)) win.push([ww, wh, .02, at, sill + wh / 2, -d / 2 + .005]);
-      if (clearOf('S', at)) win.push([ww, wh, .02, at, sill + wh / 2, d / 2 - .005]);
+      if (clearOf('N', at)) win.push([ww, wh, .05, at, sill + wh / 2, -d / 2 - .005]);
+      if (clearOf('S', at)) win.push([ww, wh, .05, at, sill + wh / 2, d / 2 + .005]);
     }
     for (const at of along(d - T * 2, 4.2)) {
-      if (clearOf('E', at)) win.push([.02, wh, ww, w / 2 - .005, sill + wh / 2, at]);
-      if (clearOf('W', at)) win.push([.02, wh, ww, -w / 2 + .005, sill + wh / 2, at]);
+      if (clearOf('E', at)) win.push([.05, wh, ww, w / 2 + .005, sill + wh / 2, at]);
+      if (clearOf('W', at)) win.push([.05, wh, ww, -w / 2 - .005, sill + wh / 2, at]);
     }
   }
   if (win.length) g.add(MB(K, `${id}_windows`, mats.toa_window, win));
-  // Casings round each window and each opening, so the holes read as joinery.
-  const cas = [];
-  for (const [bw, bh, bd, x, y, z] of win) {
-    const vert = bw < bh;
-    cas.push([vert ? .06 : ww + .16, vert ? wh + .16 : .08, vert ? ww + .16 : .06, x, y, z]);
+  /* Casings are FRAMES — head, two jambs, a sill — proud of the wall face.
+     The first pass drew each casing as one trim box the size of the opening
+     and centred on it, so it sat IN the opening: every window read as a blank
+     stucco square and every doorway as a panel, and the lit panes and the
+     cut door openings were both hidden behind the thing meant to frame them. */
+  const cas = [], F = .07, PD = .08;
+  for (const [bw, , , x, y, z] of win) {
+      if (bw > .1) {                                                        // pane in a Z wall
+        const zz = z + Math.sign(z) * .02;
+      cas.push([ww + 2 * F, F, PD, x, y + wh / 2 + F / 2, zz], [F, wh, PD, x - ww / 2 - F / 2, y, zz], [F, wh, PD, x + ww / 2 + F / 2, y, zz],
+        [ww + 2 * F + .1, .08, .18, x, y - wh / 2 - .04, zz + Math.sign(z) * .04]);
+    } else {                                                              // pane in an X wall
+      const xx = x + Math.sign(x) * .02;
+      cas.push([PD, F, ww + 2 * F, xx, y + wh / 2 + F / 2, z], [PD, wh, F, xx, y, z - ww / 2 - F / 2], [PD, wh, F, xx, y, z + ww / 2 + F / 2],
+        [.18, .08, ww + 2 * F + .1, xx + Math.sign(x) * .04, y - wh / 2 - .04, z]);
+    }
   }
+  const rail = (side, at, dw2, dh2) => {                                  // sliding-door track over a vehicle bay
+    const onZ = side === 'N' || side === 'S', s = side === 'N' || side === 'W' ? -1 : 1;
+    if (onZ) cas.push([dw2 * 1.9, .16, .14, at, dh2 + .34, s * (d / 2 + .08)]); else cas.push([.14, .16, dw2 * 1.9, s * (w / 2 + .08), dh2 + .34, at]);
+  };
   for (const dr of doors) {
     if (dr.wing) continue;
-    const dw = (dr.w ?? 2.4) + .18, dh = (dr.h ?? 2.6) + .09;
-    if (dr.side === 'N' || dr.side === 'S') cas.push([dw, dh, .10, dr.at, dh / 2, (dr.side === 'N' ? -1 : 1) * (d / 2 - .04)]);
-    else cas.push([.10, dh, dw, (dr.side === 'E' ? 1 : -1) * (w / 2 - .04), dh / 2, dr.at]);
+    const dw = dr.w ?? 2.4, dh = dr.h ?? 2.6, J = .12;
+    const onZ = dr.side === 'N' || dr.side === 'S', s = dr.side === 'N' || dr.side === 'W' ? -1 : 1;
+    if (onZ) {
+      const zz = s * (d / 2 + .01);
+      cas.push([J, dh + J, PD, dr.at - dw / 2 - J / 2, (dh + J) / 2, zz], [J, dh + J, PD, dr.at + dw / 2 + J / 2, (dh + J) / 2, zz], [dw + 2 * J, J, PD, dr.at, dh + J / 2, zz]);
+    } else {
+      const xx = s * (w / 2 + .01);
+      cas.push([PD, dh + J, J, xx, (dh + J) / 2, dr.at - dw / 2 - J / 2], [PD, dh + J, J, xx, (dh + J) / 2, dr.at + dw / 2 + J / 2], [PD, J, dw + 2 * J, xx, dh + J / 2, dr.at]);
+    }
+    if (dh > 3.4) rail(dr.side, dr.at, dw, dh);
   }
+  for (const l of o.leaves || []) if (l.h > 3.4) rail(l.side, l.at, l.w, l.h);
   cas.push(...wingTrim);
   g.add(MB(K, `${id}_casings`, mats[trim], cas));
 
@@ -1010,6 +1144,13 @@ function buildRoof(K, id, o) {
     uv.push(0, 0, 1, 0, 1, 1, 0, 1);
     idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
   };
+  const gp = [], guv = [], gidx = [], gcol = [];
+  const gquad = (a, b, c, e) => {
+    const base = gp.length / 3;
+    for (const p of [a, b, c, e]) { gp.push(p[0], p[1], p[2]); gcol.push(1, 1, 1); }
+    guv.push(a[0] * .3, a[1] * .3, b[0] * .3, b[1] * .3, c[0] * .3, c[1] * .3, e[0] * .3, e[1] * .3);
+    gidx.push(base, base + 1, base + 2, base, base + 2, base + 3);
+  };
   // Top surface, cell by cell. A cell is flat because every crease is a grid
   // line, so the corner heights of one cell always describe one plane.
   for (let i = 0; i < xs.length - 1; i++) {
@@ -1025,13 +1166,21 @@ function buildRoof(K, id, o) {
     if (Math.abs(ay1 - ay0) < .01 && Math.abs(by1 - by0) < .01) return;
     quad([ax, ay0, az], [bx, by0, bz], [bx, by1, bz], [ax, ay1, az]);
   };
+  /* Gable ends. These are WALL, not roof: a masonry (or on the houses,
+     dashed-stucco) triangle in the wall plane under the rake, which is the
+     two-tone read these rooflines have. The first pass closed the ends with
+     shingle at the overhang line and every gable end became a dark flat
+     triangle of roof. Built as a second surface in its own material, cell
+     by cell off the same heightfield, so where the flat deck reaches the
+     edge the wall stops at the deck, not at the slope. */
   for (let i = 0; i < xs.length - 1; i++) {
-    const x0 = xs[i], x1 = xs[i + 1], mx = (x0 + x1) / 2;
-    for (const [z, sgn] of [[-Z, -1], [Z, 1]]) {
+    const x0 = Math.max(-w / 2, xs[i]), x1 = Math.min(w / 2, xs[i + 1]), mx = (x0 + x1) / 2;
+    if (x1 - x0 < .01) continue;
+    for (const [z, sgn] of [[-d / 2 - .012, -1], [d / 2 + .012, 1]]) {
       const mz = z + sgn * -.01, dk = inDeck(mx, mz);
-      const h0 = dk ? top : gableH(x0), h1 = dk ? top : gableH(x1);
-      if (sgn < 0) quad([x0, eaves, z], [x0, h0, z], [x1, h1, z], [x1, eaves, z]);
-      else quad([x1, eaves, z], [x1, h1, z], [x0, h0, z], [x0, eaves, z]);
+      const h0 = dk ? top : gableH(x0), h1 = dk ? top : gableH(x1), e0 = eaves - .3;
+      if (sgn < 0) gquad([x0, e0, z], [x0, h0, z], [x1, h1, z], [x1, e0, z]);
+      else gquad([x1, e0, z], [x1, h1, z], [x0, h0, z], [x0, e0, z]);
     }
   }
   // Step faces round the deck, where the lower flat bay meets a gable.
@@ -1044,8 +1193,8 @@ function buildRoof(K, id, o) {
       const hg0 = gableH(x - sgn * .01), hg1 = gableH(x + sgn * .01);
       const hi = Math.max(hg0, hg1, top), lo = top;
       if (hi - lo < .02) continue;
-      if (sgn > 0) quad([x, lo, z0], [x, hi, z0], [x, hi, z1], [x, lo, z1]);
-      else quad([x, lo, z1], [x, hi, z1], [x, hi, z0], [x, hi === lo ? hi : lo, z0]);
+      if (sgn > 0) gquad([x, lo, z1], [x, hi, z1], [x, hi, z0], [x, lo, z0]);
+      else gquad([x, lo, z0], [x, hi, z0], [x, hi, z1], [x, lo, z1]);
     }
   }
   for (let i = 0; i < xs.length - 1; i++) {
@@ -1056,8 +1205,8 @@ function buildRoof(K, id, o) {
       if (inside === outside) continue;
       const h0 = Math.max(gableH(x0), top), h1 = Math.max(gableH(x1), top);
       if (h0 - top < .02 && h1 - top < .02) continue;
-      if (sgn > 0) quad([x1, top, z], [x1, h1, z], [x0, h0, z], [x0, top, z]);
-      else quad([x0, top, z], [x0, h0, z], [x1, h1, z], [x1, top, z]);
+      if (sgn > 0) gquad([x0, top, z], [x0, h0, z], [x1, h1, z], [x1, top, z]);
+      else gquad([x1, top, z], [x1, h1, z], [x0, h0, z], [x0, top, z]);
     }
   }
 
@@ -1095,6 +1244,15 @@ function buildRoof(K, id, o) {
   const mass = new THREE.Mesh(solid(THREE, geo), mats[skin]); mass.name = `${id}_slopes`;
   mass.material.side = THREE.DoubleSide;
   mass.castShadow = true; mass.receiveShadow = true; g.add(mass);
+  if (gidx.length) {
+    const gg = new THREE.BufferGeometry();
+    gg.setAttribute('position', new THREE.Float32BufferAttribute(gp, 3));
+    gg.setAttribute('uv', new THREE.Float32BufferAttribute(guv, 2));
+    gg.setAttribute('color', new THREE.Float32BufferAttribute(gcol, 3));
+    gg.setIndex(gidx); gg.computeVertexNormals();
+    const gm = new THREE.Mesh(gg, mats[o.gableMat || skin]); gm.name = `${id}_gable`;
+    gm.castShadow = true; gm.receiveShadow = true; g.add(gm);
+  }
 
   // The walkable flat: a real slab at the ladder head, 100 mm proud so the
   // collider the code puts under it has something to sit on.
@@ -1114,22 +1272,36 @@ function buildRoof(K, id, o) {
       [wg.proj + over, .22, .1, s * (face + wg.proj / 2), wg.eaves - .11, wg.at + wg.w / 2 + over]);
   }
   g.add(MB(K, `${id}_fascia`, mats.toa_timber_bare, fas));
+  /* Chimneys, through the slope to 0.9 m over the ridge line where they stand
+     — in the shell's brick, because that is what they are. */
+  if (o.chimneys && o.chimneys.length) {
+    const ch = [];
+    for (const [cx, cz] of o.chimneys) { const top = gableH(cx) + .9, base = eaves - .6; ch.push([.8, top - base, .8, cx, (top + base) / 2, cz], [.95, .12, .95, cx, top + .06, cz]); }
+    const m = MB(K, `${id}_chimney`, mats[o.chimneyMat || 'toa_brick_red'], ch); m.castShadow = true; g.add(m);
+  }
+  // Ridge cupolas on the shed: louvred boxes under their own caps, which is
+  // how a metal-roofed machine shed vents.
+  if (o.cupolas && o.cupolas.length) {
+    const cp = [], ry = eaves + (bw / 2) * tanP;
+    for (const cz of o.cupolas) cp.push([1.4, 1.0, 1.4, 0, ry + .4, cz], [1.9, .12, 1.9, 0, ry + .96, cz], [1.3, .3, 1.3, 0, ry + 1.15, cz], [.6, .26, .6, 0, ry + 1.4, cz]);
+    const m = MB(K, `${id}_cupola`, mats[skin], cp); m.castShadow = true; g.add(m);
+  }
   return g;
 }
 
 const BUILDINGS = [
   {
-    key: 'barn', label: 'Barn', w: 30, d: 21, eaves: 6.0, roof: 6.3, bays: 1, pitch: 6, deckAt: [12, -7.5], windows: false, skin: 'toa_timber_red', roofSkin: 'toa_corrugate',
+    key: 'barn', label: 'Barn', w: 30, d: 21, eaves: 6.0, roof: 6.3, bays: 1, pitch: 12, deckAt: [12, -7.5], windows: false, cupolas: [-6, 6],
     centre: '(−108, 54)', swatch: '#8d5a46', skin: 'toa_brick_red', roofSkin: 'toa_corrugate', trim: 'toa_stucco',
-    doors: [{ side: 'S', at: 0, w: 5, h: 4 }, { side: 'N', at: -8, w: 2.4, h: 2.6 }],
+    doors: [{ side: 'S', at: 0, w: 5, h: 4 }, { side: 'N', at: -8, w: 2.4, h: 2.6, nosteps: true }],
     // The second bay is shut in every photograph of the real shed, so it is a
     // white leaf on a solid wall rather than a second opening. An opening is
     // a thing enemies path through; a leaf is not.
     leaves: [{ side: 'S', at: 8.2, w: 4.6, h: 3.8 }],
-    note: 'The equipment shed, 30 × 21, eaves 6.0 and roof surface 6.3 — red-brown brick under a shallow metal gable, not a board pole barn: this building is masonry on the ground, and the brick is what makes it read as the shed on this property. Two vehicle bays across the +Z elevation, the left one open at 5 × 4 because the Gator is driven through it (2.9 long, 1.5 wide, 1.85 tall) and the right one a closed white overhead leaf; the person door is on −Z, 8 m left of centre. NO WINDOWS — the real building is a blank brick rectangle, and the kit’s automatic domestic band (1 m sill, panes every 4.2 m) put seventeen lit house windows on it. The one building with no teleport pad: it is the vehicle shed. Ladder to the roof goes on the +X wall, 8.5 m toward −Z (`shared_ladder`, placed by the level file).',
+    note: 'The equipment shed, 30 × 21, eaves 6.0 and roof surface 6.3 — red-brown brick under a 12° (about 2½:12) metal gable ridging at 9.2 m, with two louvred cupolas on the ridge and sliding-door rails over both bays: the 6° lid of the first pass read as a flat roof from every angle the game uses. Two vehicle bays across the +Z elevation, the left one open at 5 × 4 because the Gator is driven through it (2.9 long, 1.5 wide, 1.85 tall) and the right one a closed white overhead leaf; the person door is on −Z, 8 m left of centre. NO WINDOWS — the real building is a blank brick rectangle, and the kit’s automatic domestic band (1 m sill, panes every 4.2 m) put seventeen lit house windows on it. The one building with no teleport pad: it is the vehicle shed. Ladder to the roof goes on the +X wall, 8.5 m toward −Z (`shared_ladder`, placed by the level file).',
   },
   {
-    key: 'house_buggy', label: 'Buggy house', w: 19, d: 28, eaves: 3.4, roof: 3.7, bays: 2, pitch: 28, deckAt: [-6.5, 11], skin: 'toa_brick_brown', roofSkin: 'toa_shingle_brown', trim: 'toa_stucco',
+    key: 'house_buggy', label: 'Buggy house', w: 19, d: 28, eaves: 3.4, roof: 3.7, bays: 2, pitch: 28, deckAt: [-6.5, 11], skin: 'toa_brick_brown', roofSkin: 'toa_shingle_brown', trim: 'toa_stucco', chimneys: [[3, -5]],
     centre: '(−134, −7)', swatch: '#7d5742',
     doors: [{ side: 'E', at: 6, wing: 'entry' }, { side: 'W', at: -8 }],
     wings: [
@@ -1140,9 +1312,9 @@ const BUILDINGS = [
     note: 'Single-storey brick ranch, 19 × 28, eaves 3.4, roof surface 3.7 — long and low, with a gabled entry bay projecting 2 m off the +X elevation and a second cross gable down the run. The front door sits IN that entry bay under a brick arch, 6 m toward +Z; back door on −X, 8 m toward −Z. Teleport pad inside at local (0, 0, −5) — placed by the level file, not baked in, so the room arranges around the pad. Ladder on the −X wall, 12 m toward +Z.',
   },
   {
-    key: 'house_vehickle', label: 'Vehickle house', w: 34, d: 26, eaves: 3.4, roof: 3.7, bays: 3, pitch: 28, deckAt: [14, -10], skin: 'toa_brick_red', roofSkin: 'toa_shingle_brown', trim: 'toa_stucco_warm',
+    key: 'house_vehickle', label: 'Vehickle house', w: 34, d: 26, eaves: 3.4, roof: 3.7, bays: 3, pitch: 28, deckAt: [14, -10], skin: 'toa_brick_red', roofSkin: 'toa_shingle_brown', trim: 'toa_stucco_warm', chimneys: [[-8, 5], [3, -3]],
     centre: '(30, 31)', swatch: '#8d5a46',
-    doors: [{ side: 'N', at: -10, w: 2.6, h: 2.7, wing: 'entry' }, { side: 'S', at: 12 }, { side: 'W', at: 0, w: 4.5, h: 2.8 }],
+    doors: [{ side: 'N', at: -10, w: 2.6, h: 2.7, wing: 'entry', nosteps: true }, { side: 'S', at: 12 }, { side: 'W', at: 0, w: 4.5, h: 2.8 }],
     wings: [
       { id: 'entry', side: 'N', at: -10, w: 5.6, proj: 1.8, eaves: 2.15, arch: true },
       { side: 'N', at: 2, w: 8.0, proj: 1.2, eaves: 2.55 },
@@ -1153,9 +1325,9 @@ const BUILDINGS = [
     note: 'The large main house, 34 × 26, with the circular drive to its north. Red-brown brick to the eaves with stucco gable fields above — the two-tone that gives this house its roofline. The −Z elevation is three stepped cross gables: a tall arched entry bay projecting 1.8 m at 10 m toward −X, a broad gable beside it, and a smaller one at the east end. Back door on +Z 12 m toward +X, and a 4.5 × 2.8 garage opening on −X centred — the quad lives in it. One storey deliberately: a second floor needs a climb, and a climb the sim cannot see is a tier the coverage rules cannot reason about. Pad at local (−7, 0, 0); ladder on +X, 11 m toward −Z.',
   },
   {
-    key: 'house_grnmchn', label: 'Grnmchn house', w: 24, d: 30, eaves: 3.4, roof: 3.7, bays: 2, pitch: 28, deckAt: [-9, 12], skin: 'toa_brick_buff', roofSkin: 'toa_shingle', trim: 'toa_stucco',
+    key: 'house_grnmchn', label: 'Grnmchn house', w: 24, d: 30, eaves: 3.4, roof: 3.7, bays: 2, pitch: 28, deckAt: [-9, 12], skin: 'toa_brick_buff', roofSkin: 'toa_shingle', trim: 'toa_stucco', chimneys: [[5, -7]],
     centre: '(90, −50)', swatch: '#a8917a',
-    doors: [{ side: 'W', at: 0, wing: 'entry' }, { side: 'E', at: 8 }],
+    doors: [{ side: 'W', at: 0, wing: 'entry', nosteps: true }, { side: 'E', at: 8 }],
     wings: [
       /* The lane runs 4.3 m off this house's −X face, which is also the face
          the front door is on. §4.8 wants 3 m clear of a lane measured from a
@@ -1175,17 +1347,17 @@ for (const b of BUILDINGS) {
   const sid = `toaster_${b.key}_shell`, rid = `toaster_${b.key}_roof`;
   P({
     id: sid, label: `${b.label} — shell`, size: `${b.w}×${b.d} m · eaves ${b.eaves}`, swatch: b.swatch,
-    budgetTris: 6000, budgetParts: 12,
+    budgetTris: 7000, budgetParts: 14,
     stats: { Footprint: `${b.w}×${b.d}`, Eaves: `${b.eaves} m`, Centre: b.centre, Walls: '0.3 m', Floor: 'y 0.15' },
-    note: `${b.note} Walls 0.3 m thick as solid boxes so the shell reads from inside as well as out, interior floor top at y 0.15, clear height over 3 m everywhere a player walks. DOOR OPENINGS ONLY, no doors — a door that closes is a wall, and the sim cannot model one that opens. Windows are opaque faintly-emissive panels in the wall face, not glass: no transparency anywhere in this kit.`,
+    note: `${b.note} Walls 0.3 m thick as solid boxes so the shell reads from inside as well as out, interior floor top at y 0.15, clear height over 3 m everywhere a player walks. DOOR OPENINGS ONLY, no doors — a door that closes is a wall, and the sim cannot model one that opens. Windows are opaque faintly-emissive panels in the wall face, not glass: no transparency anywhere in this kit. Casings are frames (head, jambs, sill) proud of the face rather than boxes in the opening; concrete steps at every person door; gutters and corner downspouts at the eaves.`,
     build(K) { return buildShell(K, sid, { w: b.w, d: b.d, eaves: b.eaves, top: b.roof, doors: b.doors, skin: b.skin, wings: b.wings, trim: b.trim, leaves: b.leaves, bays: b.bays, pitch: b.pitch, windows: b.windows }); },
   });
   P({
     id: rid, label: `${b.label} — roof`, size: `${b.w}×${b.d} m · top ${b.roof}`, swatch: b.swatch,
-    budgetTris: 1500, budgetParts: 3,
-    stats: { Flat: `6×6 m at y ${b.roof}`, Ridge: `${(b.eaves + (b.w / b.bays / 2) * Math.tan(b.pitch * Math.PI / 180)).toFixed(1)} m`, Pitch: `${b.pitch}° · ${b.bays} ${b.bays > 1 ? 'gables' : 'gable'}`, Parts: '3' },
+    budgetTris: 2000, budgetParts: 6,
+    stats: { Flat: `6×6 m at y ${b.roof}`, Ridge: `${(b.eaves + (b.w / b.bays / 2) * Math.tan(b.pitch * Math.PI / 180)).toFixed(1)} m`, Pitch: `${b.pitch}° · ${b.bays} ${b.bays > 1 ? 'gables' : 'gable'}`, Gables: b.windows === false ? 'brick' : 'stucco' },
     note: `Separate file because the roof is a surface players stand on and the code puts a collider under it. The contract asks for ONE flat area of at least 4 × 4 m at ${b.roof} m — not a flat roof — and allows pitched slopes elsewhere up to 30°. So the flat is 6 × 6 m placed at the ladder head (local ${b.deckAt[0]}, ${b.deckAt[1]}), which on all four buildings is a corner, and it reads as the lower roof of an attached bay; the rest is ${b.bays > 1 ? `${b.bays} parallel gables` : 'a single gable'} at ${b.pitch}° ridging at ${(b.eaves + (b.w / b.bays / 2) * Math.tan(b.pitch * Math.PI / 180)).toFixed(1)} m over ${b.eaves} m eaves. The plan is split into bays across X so no one span has to carry an absurd ridge. Built as a heightfield whose x samples include every bay boundary, every ridge line and both deck edges, so each crease is exact and the whole roof is about a hundred cells.`,
-    build(K) { return buildRoof(K, rid, { w: b.w, d: b.d, eaves: b.eaves, top: b.roof, skin: b.roofSkin, wings: b.wings, bays: b.bays, pitch: b.pitch, deckAt: b.deckAt }); },
+    build(K) { return buildRoof(K, rid, { w: b.w, d: b.d, eaves: b.eaves, top: b.roof, skin: b.roofSkin, wings: b.wings, bays: b.bays, pitch: b.pitch, deckAt: b.deckAt, chimneys: b.chimneys, chimneyMat: b.skin, cupolas: b.cupolas, gableMat: b.windows === false ? b.skin : b.trim }); },
   });
 }
 
@@ -1476,24 +1648,24 @@ for (const state of ['idle', 'active']) {
 
 /**
  * The pond. 34 m across, and drawn UPWARD rather than dug — the ground is one
- * flat slab and always will be. A riprap bank ring from r 15 out to r 18
- * rising to 0.5 m, opaque dark water inside it at y 0.15, and a bare island at
- * the centre for the tree set to stand on.
+ * flat slab and always will be. Open water all the way across, a low earth
+ * shelf under it, and a ring of river rock laid round the margin in three
+ * courses — the inner one standing in the water.
  *
  * No collision: the code rings it with a hidden bank collider at r 17, which
  * is what stops a quad doing twenty across the surface of the water.
  */
 P({
   id: 'toaster_pond', label: 'Pond', size: '34 m across', swatch: '#243033',
-  budgetTris: 2500, budgetParts: 3,
-  stats: { Across: '36 × 30 m oval', Bank: 'r 15–18 · 0.5 m', Island: 'r 9.6 bare', Collision: 'none (code rings it)' },
-  note: 'Drawn upward, not dug: the ground is one flat slab and always will be. An elliptical basin rather than a disc — the pond on this property is a long oval lying roughly north-east, with a broad earth rim, a BIG bare island filling most of the middle and only a ring of open water round it. That is the shape in the aerial, and it is why the view across it from the lane reads as a green hollow rather than as a lake. Riprap bank r 15 → 18 rising to 0.5 m (the hidden collider the code rings it with sits at r 17), an OPAQUE dark water ring at y 0.15 inside it — roughness ~0.1, no transparency, no refraction. Three parts named `pond_bank`, `pond_water`, `pond_island`. No collision: the code rings it with a hidden bank collider, which is what stops a quad doing twenty across the surface of the water.',
+  budgetTris: 12000, budgetParts: 4,
+  stats: { Across: '36 × 30 m oval', Water: 'r 15.3 · y 0.22', Rock: '3 courses · r 14.3–17.4', Collision: 'none (code rings it)' },
+  note: 'Drawn upward, not dug: the ground is one flat slab and always will be. A plain pond — OPEN WATER across the whole basin, ringed by river rock. No island: a bare disc filling two thirds of the middle read as a crater rather than as water, which is the reason for the rebuild. An elliptical plan (1.0 × 0.84, turned 34°), a low earth shelf from r 13.6 out to r 18.8 that the water laps over, and ~120 water-tumbled stones laid in three courses — a wet inner course standing in the shallows at r 14.9, a large crest course at r 16.0, a smaller outer course bedded into the grass at r 17.1, plus scatter to break the ring. Stones are rounded ellipsoids with their own displacement, randomly tumbled and tinted in vertex colour, merged to ONE mesh per course pair so the whole ring is two draw calls. Water is an opaque plane at y 0.22 with a low-amplitude swell on it so the specular breaks up instead of reading as a plastic disc — roughness ~0.1, no transparency, no refraction. Four parts: `pond_shelf`, `pond_water`, `pond_rocks`, `pond_rocks_wet`. No collision: the code rings it with a hidden bank collider at r 17, which is what stops a quad doing twenty across the surface of the water.',
   build(K) {
     const { THREE, grp, mats } = K, g = grp('toaster_pond');
     /* Plan is an ellipse, 1.0 × 0.84, turned 34° — measured off the aerial
        rather than assumed round. Applied as a vertex warp after the revolve,
        so the bank profile stays a profile and only its plan changes. */
-    const EA = .34 * Math.PI, SQ = .84, eca = Math.cos(EA), esa = Math.sin(EA);
+    const EA = 34 * Math.PI / 180, SQ = .84, eca = Math.cos(EA), esa = Math.sin(EA);
     const oval = (geo) => {
       const p = geo.attributes.position;
       for (let i = 0; i < p.count; i++) {
@@ -1503,40 +1675,96 @@ P({
       }
       geo.computeVertexNormals();
     };
-    // Bank: a revolved ring, its crest broken per azimuth so it is riprap
-    // rather than a bund. Isotropic UVs at the kit's 1.6 repeats/m.
-    const bank = revolve(THREE, 'pond_bank', [
-      [14.6, .05], [15.4, .30], [16.2, .50], [17.0, .46], [17.6, .26], [18.0, .02],
-    ], mats.toa_riprap, { segs: 56, creaseAngle: 34, scale: .9, rot: [-Math.PI / 2, 0, 0] });
-    const bp = bank.geometry.attributes.position;
-    for (let i = 0; i < bp.count; i++) {
-      const x = bp.getX(i), z = bp.getZ(i), y = bp.getY(i), a = Math.atan2(z, x);
-      if (y > .1) bp.setY(i, y + (vnoise(Math.cos(a) * 9 + 3, Math.sin(a) * 9) - .5) * .22);
-    }
-    bank.geometry.computeVertexNormals();
-    oval(bank.geometry);
-    bank.receiveShadow = true; g.add(bank);
+    // Same warp for a single point, so stones are PLACED on the ellipse
+    // instead of being squashed by it.
+    const ovalPt = (x, z) => {
+      const u = x * eca + z * esa, v = (-x * esa + z * eca) * SQ;
+      return [u * eca - v * esa, u * esa + v * eca];
+    };
 
-    const water = new THREE.Mesh(new THREE.CircleGeometry(14.8, 48), mats.toa_water);
+    /* Shelf: the ground the water lies in and the rock beds into. Starts below
+       water level so the water's edge is never a visible seam, rises to a low
+       margin and dies back into grade at r 18.8 — a rim, not a bund. */
+    const shelf = revolve(THREE, 'pond_shelf', [
+      [13.6, -.12], [14.8, .06], [15.8, .26], [16.8, .34], [17.8, .20], [18.8, .01],
+    ], mats.toa_dirt, { segs: 56, creaseAngle: 34, scale: 1.6, rot: [-Math.PI / 2, 0, 0] });
+    /* revolve() sweeps the profile about local Z and carries the lie-flat
+       rotation on the MESH, so the position attribute's height is Z, not Y.
+       Bake it before touching vertices — the noise below and oval() both read
+       world axes, and warping the unbaked attribute mixes the rim height into
+       the plan (a 2.7 m tilted annulus instead of a 0.5 m rim). */
+    shelf.updateMatrix();
+    shelf.geometry.applyMatrix4(shelf.matrix);
+    shelf.rotation.set(0, 0, 0); shelf.updateMatrix();
+    const sp = shelf.geometry.attributes.position;
+    for (let i = 0; i < sp.count; i++) {
+      const x = sp.getX(i), z = sp.getZ(i), y = sp.getY(i), a = Math.atan2(z, x);
+      if (y > .04) sp.setY(i, y + (vnoise(Math.cos(a) * 9 + 3, Math.sin(a) * 9) - .5) * .14);
+    }
+    shelf.geometry.computeVertexNormals();
+    oval(shelf.geometry);
+    shelf.receiveShadow = true; g.add(shelf);
+
+    /* Water: open across the whole basin. A low-amplitude swell rather than a
+       flat plane — at 30 m the specular on a plane flips wholesale as the
+       camera passes, which is what made the old disc read as sheet plastic. */
+    const water = new THREE.Mesh(new THREE.CircleGeometry(15.3, 64, 1, Math.PI * 2), mats.toa_water);
     water.geometry.rotateX(-Math.PI / 2);
-    water.position.y = .15; water.name = 'pond_water'; solid(THREE, water.geometry);
+    const wp = water.geometry.attributes.position;
+    for (let i = 0; i < wp.count; i++) {
+      const x = wp.getX(i), z = wp.getZ(i);
+      wp.setY(i, (vnoise(x * .22 + 4, z * .22) - .5) * .05 + (vnoise(x * .7 + 19, z * .7) - .5) * .015);
+    }
+    water.geometry.computeVertexNormals();
+    water.position.y = .22; water.name = 'pond_water'; solid(THREE, water.geometry);
     oval(water.geometry);
     water.receiveShadow = true; g.add(water);
 
-    /* The island is most of the pond, not a dot in it. On the aerial the bare
-       middle is nearly two thirds of the open water's width — which is why
-       the pond reads as a ring from the lane, and why a boat-sized disc of
-       water in a 36 m bowl looked nothing like the place. */
-    const isl = revolve(THREE, 'pond_island', [
-      [0, .72], [3.0, .68], [5.4, .54], [7.4, .34], [8.8, .16], [9.6, .02],
-    ], mats.toa_dirt, { segs: 40, creaseAngle: 34, scale: 1.6, rot: [-Math.PI / 2, 0, 0] });
-    const ip = isl.geometry.attributes.position;
-    for (let i = 0; i < ip.count; i++) {
-      const x = ip.getX(i), z = ip.getZ(i), y = ip.getY(i);
-      if (y > .05) ip.setY(i, y + (vnoise(x * .6 + 11, z * .6) - .5) * .18);
+    /* River rock. Rounded stone, not riprap: each is an ellipsoid with its own
+       low-frequency displacement, tumbled to a random attitude and tinted in
+       vertex colour, so no two read alike. Three courses plus scatter, merged
+       to one mesh for the dry stone and one for the wet. */
+    let seed = 20260913;
+    const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+    const stones = [];
+    for (let v = 0; v < 4; v++) {
+      const geo = new THREE.IcosahedronGeometry(1, 1);
+      const p = geo.attributes.position, ax = [.94 + rnd() * .5, .58 + rnd() * .26, .82 + rnd() * .4];
+      for (let i = 0; i < p.count; i++) {
+        const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+        const d = 1 + (vnoise(x * 1.7 + v * 7, z * 1.7 + y) - .5) * .30;
+        p.setXYZ(i, x * ax[0] * d, y * ax[1] * d, z * ax[2] * d);
+      }
+      geo.computeVertexNormals();
+      const uv = geo.attributes.uv;
+      if (uv) for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 1.6, uv.getY(i) * 1.6);
+      stones.push(geo);
     }
-    oval(isl.geometry);
-    isl.receiveShadow = true; g.add(isl);
+    const dry = [], wet = [];
+    const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler(), S = new THREE.Vector3(), T = new THREE.Vector3();
+    const lay = (r, n, sMin, sMax, y, isWet, jitR, jitA) => {
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2 + (rnd() - .5) * jitA;
+        const rr = r + (rnd() - .5) * jitR;
+        const [px, pz] = ovalPt(Math.cos(a) * rr, Math.sin(a) * rr);
+        const s = sMin + rnd() * (sMax - sMin);
+        E.set(rnd() * .7 - .35, rnd() * Math.PI * 2, rnd() * .7 - .35);
+        Q.setFromEuler(E); S.set(s, s * (.72 + rnd() * .3), s * (.86 + rnd() * .3));
+        T.set(px, y + s * (.1 + rnd() * .2), pz);
+        M.compose(T, Q, S);
+        const t = .84 + rnd() * .26, warm = (rnd() - .5) * .1;
+        (isWet ? wet : dry).push({ geo: stones[(i + (isWet ? 1 : 0)) % stones.length], m: M.clone(), c: [t + warm, t, t - warm * .6] });
+      }
+    };
+    lay(14.85, 34, .34, .60, -.02, true, .5, .10);   // standing in the shallows
+    lay(16.00, 30, .46, .86, .10, false, .45, .10);  // the big crest course
+    lay(17.10, 32, .26, .50, .02, false, .5, .12);   // bedded into the grass
+    lay(15.45, 14, .22, .44, .00, true, 1.1, .5);    // scatter, wet side
+    lay(16.60, 16, .20, .40, .06, false, 1.3, .5);   // scatter, dry side
+    const rocks = merge(THREE, dry, 'pond_rocks', mats.toa_riverrock);
+    rocks.castShadow = rocks.receiveShadow = true; g.add(rocks);
+    const rocksWet = merge(THREE, wet, 'pond_rocks_wet', mats.toa_riverrock_wet);
+    rocksWet.castShadow = rocksWet.receiveShadow = true; g.add(rocksWet);
     /* Declared round, because the clearance sweep measures bounding boxes and
        a 36 m circle in a 36 m square reaches 25.5 m at the corners — it read
        as sitting in a lane it is actually 3.9 m clear of. A piece that knows
@@ -1565,42 +1793,61 @@ P({
 
 /**
  * Skybox. Same 700 m dome as the other two maps, baked at 2048 × 1024 rather
- * than 4096 × 2048 — the existing skies are 9 MB each and an overcast
- * afternoon has nothing in it that needs the resolution.
+ * than 4096 × 2048 — the existing skies are 9 MB each and a clear sky is
+ * gradient and soft cloud, neither of which needs the resolution.
  *
- * Overcast late autumn: a low warm sun in the south-west at 24° through a
- * grey-gold cloud deck. The part that matters on a map this wide is the
- * TREELINE SILHOUETTE baked into the horizon band, so the belt meets the sky
- * instead of stopping at a slab edge.
+ * Clear summer afternoon: a high sun in the south-west at 58° and scattered
+ * fair-weather cumulus — flat-bottomed, bright-crowned, flattening toward the
+ * horizon as perspective makes them. The part that matters on a map this wide
+ * is still the TREELINE SILHOUETTE baked into the horizon band, so the belt
+ * meets the sky instead of stopping at a slab edge.
  */
 P({
-  id: 'toaster_skybox', label: 'Skybox — overcast autumn', size: '700 m dome', swatch: '#9aa0a6',
+  id: 'toaster_skybox', label: 'Skybox — clear summer', size: '700 m dome', swatch: '#63a3d8',
   budgetTris: 4000, budgetParts: 1,
-  stats: { Dome: '700 m', Bake: '2048×1024', Sun: '24° · az 220°', Horizon: 'treeline baked' },
-  note: 'Overcast late-autumn afternoon: low warm sun in the south-west at 24° elevation, grey-gold cloud deck, and a treeline silhouette baked into the horizon band so the belt meets the sky rather than stopping. Baked at 2048 × 1024 — the existing two skies are 4096 × 2048 and 9 MB each, and an overcast sky does not need it.',
+  stats: { Dome: '700 m', Bake: '2048×1024', Sun: '58° · az 220°', Horizon: 'treeline baked' },
+  note: 'Clear summer afternoon: high sun in the south-west at 58° elevation with a small disc, scattered fair-weather cumulus that flatten and thin toward the horizon, and a green treeline silhouette baked into the horizon band so the belt meets the sky rather than stopping. Baked at 2048 × 1024 — the existing two skies are 4096 × 2048 and 9 MB each, and a gradient-and-cumulus sky does not need it.',
   build(K) {
     const { THREE, grp, mats } = K, g = grp('toaster_skybox');
     const W = 2048, H = 1024, c = cv(W, H), x = c.getContext('2d'), R = rng(1124);
-    // Vertical gradient: warm haze at the horizon into a flat grey deck.
+    // Vertical gradient: saturated blue at the zenith, thinning to a pale warm
+    // haze at the horizon — the aerial perspective that makes a sky read deep.
     const grd = x.createLinearGradient(0, 0, 0, H);
-    grd.addColorStop(0, '#5d6570'); grd.addColorStop(.42, '#8d949b');
-    grd.addColorStop(.58, '#b6ab98'); grd.addColorStop(.66, '#c9b394'); grd.addColorStop(1, '#6d6a60');
+    grd.addColorStop(0, '#1f61ae'); grd.addColorStop(.34, '#4f96d4');
+    grd.addColorStop(.50, '#8ebfe2'); grd.addColorStop(.60, '#c6dbe6'); grd.addColorStop(1, '#7d8f6e');
     x.fillStyle = grd; x.fillRect(0, 0, W, H);
-    // Cloud deck: soft banded blots, denser away from the sun.
-    const sunU = (220 / 360) * W, sunV = H * (.5 - 24 / 180);
-    for (let i = 0; i < 420; i++) {
-      const u = R() * W, v = H * .08 + R() * H * .42, r = 40 + R() * 200;
-      const near = 1 - Math.min(1, Math.abs(u - sunU) / (W * .28));
-      const t = 150 + near * 70 + R() * 40;
-      const gg = x.createRadialGradient(u, v, 0, u, v, r);
-      gg.addColorStop(0, `rgba(${t | 0},${(t * .98) | 0},${(t * .94) | 0},${.1 + R() * .16})`);
-      gg.addColorStop(1, 'rgba(0,0,0,0)');
-      x.fillStyle = gg; x.beginPath(); x.ellipse(u, v, r, r * .36, 0, 0, 6.283); x.fill();
+    const sunU = (220 / 360) * W, sunV = H * (.5 - 58 / 180);
+    /* Fair-weather cumulus. Each cloud is a cluster of soft blots sitting ON a
+       flat base line — that flat bottom is the whole tell — with the crowns
+       bright and the underside shaded. Clusters near the horizon are wider and
+       much flatter, which is perspective on a deck at one altitude, not taste. */
+    for (let i = 0; i < 46; i++) {
+      const cu = R() * W, t = Math.pow(R(), .75);
+      const base = H * .12 + t * H * .34;               // higher on the sheet = overhead
+      const persp = 1 - t;                              // 1 overhead, 0 at the horizon
+      const w = (110 + R() * 200) * (.5 + persp * .8), hh = w * (.10 + persp * .24);
+      const lit = 1 - Math.min(1, Math.abs(cu - sunU) / (W * .45)) * .35;
+      for (let k = 0; k < 14; k++) {
+        const bu = cu + (R() - .5) * w, lift = Math.pow(R(), 1.5) * hh;
+        const r = hh * (.45 + R() * .7) * (1 - lift / (hh * 2.4));
+        const crown = Math.min(1, lift / (hh * .55));
+        const v0 = (208 + crown * 46) * lit;
+        const gg = x.createRadialGradient(bu, base - lift, 0, bu, base - lift, Math.max(6, r));
+        gg.addColorStop(0, `rgba(${v0 | 0},${(v0 * .99) | 0},${Math.min(255, v0 * 1.02) | 0},${.62 + crown * .32})`);
+        gg.addColorStop(.6, `rgba(${v0 | 0},${v0 | 0},${Math.min(255, v0 * 1.03) | 0},${.3 + crown * .22})`);
+        gg.addColorStop(1, 'rgba(255,255,255,0)');
+        x.fillStyle = gg;
+        x.save(); x.beginPath(); x.rect(0, 0, W, base + 2); x.clip();   // nothing below the base
+        x.beginPath(); x.ellipse(bu, base - lift, r * 1.25, r, 0, 0, 6.283); x.fill();
+        x.restore();
+      }
     }
-    // The sun's glow through the deck — no disc; it is overcast.
-    const sg = x.createRadialGradient(sunU, sunV, 0, sunU, sunV, W * .18);
-    sg.addColorStop(0, 'rgba(255,224,176,.62)'); sg.addColorStop(.5, 'rgba(255,206,150,.2)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
-    x.fillStyle = sg; x.beginPath(); x.arc(sunU, sunV, W * .18, 0, 6.283); x.fill();
+    // The sun: a small disc in a tight halo. On a clear day it is a disc.
+    const sg = x.createRadialGradient(sunU, sunV, 0, sunU, sunV, W * .13);
+    sg.addColorStop(0, 'rgba(255,250,232,.9)'); sg.addColorStop(.14, 'rgba(255,242,206,.44)');
+    sg.addColorStop(.5, 'rgba(255,238,200,.13)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
+    x.fillStyle = sg; x.beginPath(); x.arc(sunU, sunV, W * .13, 0, 6.283); x.fill();
+    x.fillStyle = 'rgba(255,253,245,.98)'; x.beginPath(); x.arc(sunU, sunV, 15, 0, 6.283); x.fill();
     // Treeline: two layers of silhouette on the horizon band, the far one
     // hazed back, so the wood has depth where the belt runs out.
     const band = (base, height, alpha, tint) => {
@@ -1613,11 +1860,11 @@ P({
       }
       x.lineTo(W, H); x.closePath(); x.fill(); x.globalAlpha = 1;
     };
-    band(.565, 42, .55, '#6f6a5e');
-    band(.585, 62, .95, '#3f4239');
+    band(.565, 42, .5, '#8fa88c');
+    band(.585, 62, .95, '#3e5936');
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace; t.mapping = THREE.EquirectangularReflectionMapping;
-    const sky = new THREE.Mesh(new THREE.SphereGeometry(700, 48, 24), new THREE.MeshBasicMaterial({ map: t, side: THREE.BackSide, depthWrite: false }));
+    const sky = new THREE.Mesh(new THREE.SphereGeometry(700, 48, 24), new THREE.MeshBasicMaterial({ map: t, side: THREE.BackSide, depthWrite: false, fog: false }));
     /* `sky_` prefix and the gizmo flag are the viewer's contract for "not part
        of the level": without them the 1.4 km dome is what the bounds readout
        measures, and the Toaster reported 1400×1400×1400 instead of its
@@ -1755,10 +2002,10 @@ P({
 });
 
 P({
-  id: 'toaster_leaf_pile', label: 'Leaf drift', size: '2×0.3 m', swatch: '#a8712f',
+  id: 'toaster_leaf_pile', label: 'Cut-grass drift', size: '2×0.3 m', swatch: '#6e9a40',
   instanced: true, budgetTris: 60, budgetParts: 1,
   stats: { Size: '2×0.3 m', Cards: 'MASK', Placed: 'instanced, belt edge' },
-  note: 'A drift of leaves for the inner edge of the belt, where the wood sheds onto the field. One merged part of MASK cards.',
+  note: 'A drift of cut grass and brush at the inner edge of the belt, where the mower stops and the wood begins. One merged part of MASK cards.',
   build(K) {
     const { grp, mats } = K, g = grp('toaster_leaf_pile'), cards = [];
     for (let i = 0; i < 9; i++) {
@@ -1790,6 +2037,350 @@ P({
   },
 });
 
+/* ═══ P4 — the working farm ══════════════════════════════════════════════════════
+   What the first drop left out. The property had four buildings, a pond and
+   a lawn, and nothing that said anyone farmed it: no line dividing the land
+   into fields, nothing stored, nothing that pumps or feeds or dries. These
+   are the pieces a rural property has BETWEEN its buildings — each placed a
+   handful of times or instanced along a rule, and each built to the same
+   budget arithmetic as the rest of the kit. */
+
+/** Merged arbitrary geometries. Entries: [geo, x, y, z, rx?, ry?, rz?, colour?]. */
+function MG(K, name, mat, list) {
+  const { THREE } = K, items = [], e = new THREE.Euler();
+  for (const [geo, x, y, z, rx = 0, ry = 0, rz = 0, c] of list) {
+    e.set(rx, ry, rz, 'XYZ');
+    const m = new THREE.Matrix4().makeRotationFromEuler(e); m.setPosition(x, y, z);
+    items.push({ geo, m, c });
+  }
+  return merge(THREE, items, name, mat);
+}
+/** Merged cylinders between two points — braces, wires, tubes. Entries: [a, b, r0, r1?, segs?, colour?]. */
+function MSeg(K, name, mat, list) {
+  const { THREE } = K, items = [], up = new THREE.Vector3(0, 1, 0);
+  for (const [a, b, r0, r1 = r0, segs = 6, c] of list) {
+    const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), d = B.clone().sub(A), len = d.length();
+    if (len < 1e-4) continue;
+    const m = new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromUnitVectors(up, d.normalize()));
+    m.setPosition(A.lerp(B, .5));
+    items.push({ geo: new THREE.CylinderGeometry(r1, r0, len, segs, 1, false), m, c });
+  }
+  return merge(THREE, items, name, mat);
+}
+
+P({
+  id: 'toaster_fence_wire', label: 'Fence — wire on T-posts', size: '4 m · 1.3 high', swatch: '#5c6658',
+  instanced: true, budgetTris: 120, budgetParts: 2, run: '+X', repeat: 4.0, width: 0.1,
+  stats: { Run: '+X · 4 m', Height: '1.3 m', Strands: '5', Post: 'steel T @ 4 m' },
+  note: 'Five-strand wire on a steel T-post, 4 m of it — the fence a working field has, where post-and-rail is the fence a lawn has. Post on the module end so runs share posts. Instanced round the pasture, the orchard, the crop field and the hayfield, about 180 placements, and it is what turns one 320 m lawn into fields.',
+  build(K) {
+    const { grp, mats } = K, g = grp('toaster_fence_wire');
+    g.add(MB(K, 'toaster_fence_wire_post', mats.toa_tpost, [[.05, 1.55, .05, -2, .78, 0], [.14, .05, .04, -2, 1.5, 0], [.05, .4, .12, -2, .15, 0]]));
+    const strands = [];
+    for (const y of [.32, .56, .8, 1.04, 1.28]) strands.push([4, .014, .014, 0, y, 0]);
+    g.add(MB(K, 'toaster_fence_wire_strands', mats.toa_galv, strands));
+    return g;
+  },
+});
+
+P({
+  id: 'toaster_gate_farm', label: 'Farm gate (tube)', size: '4 m · 1.3 high', swatch: '#9da19c',
+  budgetTris: 900, budgetParts: 2, run: '+X', repeat: 4.0, width: 0.2,
+  stats: { Span: '4 m', Height: '1.3 m', Rails: '6 tube', Posts: 'timber' },
+  note: 'A 4 m galvanised tube gate between two timber posts — the same module length as the wire, so it drops into a fence run in place of one module. Six rails, two uprights and a diagonal brace, as the real thing is welded. Hung shut: a gate that stands open is an opening the sim does not know about.',
+  build(K) {
+    const { grp, mats } = K, g = grp('toaster_gate_farm');
+    g.add(MCyl(K, 'toaster_gate_farm_posts', mats.toa_timber_bare, [[.1, .12, 1.7, -2.05, .85, 0, 0, 0, 7], [.1, .12, 1.7, 2.05, .85, 0, 0, 0, 7]]));
+    const segs = [];
+    for (const y of [.28, .48, .68, .88, 1.08, 1.28]) segs.push([[-1.92, y, 0], [1.92, y, 0], .022, .022, 6]);
+    for (const x of [-1.92, -.3, 1.3, 1.92]) segs.push([[x, .28, 0], [x, 1.28, 0], .022, .022, 6]);
+    segs.push([[-1.92, .28, 0], [1.3, 1.28, 0], .018, .018, 5]);
+    g.add(MSeg(K, 'toaster_gate_farm_tubes', mats.toa_galv, segs));
+    return g;
+  },
+});
+
+P({
+  id: 'toaster_utility_pole', label: 'Utility pole', size: '10 m', swatch: '#9a9184',
+  budgetTris: 600, budgetParts: 3,
+  stats: { Height: '10 m', Crossarm: '2.2 m · 3 insulators', Variants: '2 (v1 carries a transformer)', Placed: '~14' },
+  note: 'A 10 m treated pole with a single crossarm and three insulators, laid down the county road and the south road at 36 m intervals, on the verge. The conductors between them are built by the level (`buildToasterWires`) from the poles that were actually placed, with real sag, so a refused pole never leaves a wire hanging in air. v1 adds a pole-mounted transformer at the drops to the houses. Poles and wires are what say a road is a road that goes somewhere.',
+  build(K) { return this.buildVariant(K, 0); },
+  buildVariant(K, v = 0) {
+    const { grp, mats } = K, g = grp('toaster_utility_pole');
+    g.add(MCyl(K, 'toaster_utility_pole_pole', mats.toa_timber_bare, [[.11, .17, 10, 0, 5, 0, 0, 0, 8]]));
+    g.add(MB(K, 'toaster_utility_pole_arm', mats.toa_timber_bare, [[2.2, .1, .1, 0, 9.35, 0], [.05, .55, .05, -.65, 9.05, .1], [.05, .55, .05, .65, 9.05, .1]]));
+    const fit = [[.05, .06, .22, -.95, 9.51, 0, 0, 0, 8], [.05, .06, .22, .95, 9.51, 0, 0, 0, 8], [.05, .06, .22, 0, 10.1, 0, 0, 0, 8]];
+    if (v % 2) fit.push([.27, .27, .8, .48, 8.3, .3, 0, 0, 12, [.55, .58, .6]], [.02, .02, 1.2, .3, 9.0, .15, 0, .4, 4, [.2, .2, .2]]);
+    g.add(MCyl(K, 'toaster_utility_pole_fittings', mats.toa_doorpanel, fit));
+    return g;
+  },
+});
+
+function grainBin(K, R, H) {
+  const { THREE, grp, mats } = K, g = grp('toaster_grain_bin');
+  // Corrugated wall in stiffener rings every 950 mm, then the 30° cone, the
+  // eave flashing and the fill cap — one turned profile.
+  const pts = [[0, 0], [R, 0]];
+  for (let y = .95; y < H - .3; y += .95) pts.push([R, y - .05], [R + .06, y], [R, y + .05]);
+  const apex = H + (R - .4) * .55;
+  pts.push([R, H], [R + .18, H + .02], [R + .18, H + .1], [.4, apex], [.4, apex + .25], [.28, apex + .32], [0, apex + .32]);
+  const shell = revolve(THREE, 'toaster_grain_bin_shell', pts, mats.toa_galv, { segs: 30, creaseAngle: 35, rot: [-Math.PI / 2, 0, 0] });
+  shell.castShadow = true; g.add(shell);
+  const lad = [[.05, H + .6, .05, R + .12, (H + .6) / 2, -.22], [.05, H + .6, .05, R + .12, (H + .6) / 2, .22]];
+  for (let y = .3; y < H + .5; y += .3) lad.push([.03, .03, .44, R + .12, y, 0]);
+  // Unloading auger tube out of the base, and the short ladder onto the cone.
+  lad.push([.16, .16, R + 1.6, R * .4, .5, 0, 0], [.6, .5, .6, .0, .45, 0]);
+  g.add(MB(K, 'toaster_grain_bin_fittings', mats.toa_galv, lad));
+  g.add(revolve(THREE, 'toaster_grain_bin_pad', [[0, 0], [R + .5, 0], [R + .5, .12], [0, .12]], mats.toa_concrete, { segs: 30, rot: [-Math.PI / 2, 0, 0] }));
+  return g;
+}
+P({
+  id: 'toaster_grain_bin', label: 'Grain bin', size: '5.5 dia · 6.5 m', swatch: '#9da19c',
+  budgetTris: 3000, budgetParts: 3,
+  stats: { Diameter: '5.5 m (v1: 7.3)', Eave: '5.2 m (v1: 7.0)', Roof: '30° cone', Variants: '2' },
+  note: 'Corrugated galvanised grain bin on a concrete pad: stiffener rings every 950 mm, a 30° cone roof with eave flashing and a fill cap, a side ladder and the unloading auger out of the base. Turned as one profile, so the rings are in the silhouette rather than painted. Two sizes (5.5 and 7.3 m) beside the shed, where a farm keeps them. The single most legible thing on a farm horizon after the barn itself.',
+  build(K) { return this.buildVariant(K, 0); },
+  buildVariant(K, v = 0) { return v % 2 ? grainBin(K, 3.65, 7.0) : grainBin(K, 2.75, 5.2); },
+});
+
+P({
+  id: 'toaster_windmill', label: 'Windmill (water pump)', size: '10 m · 2.5 m wheel', swatch: '#9da19c',
+  budgetTris: 5000, budgetParts: 6,
+  stats: { Tower: '10 m · 4-leg lattice', Wheel: '2.5 m · 18 blades', Spin: 'userData.spin', Placed: '1, pasture' },
+  note: 'Aermotor-pattern pumping mill: a four-leg galvanised lattice tower 10 m tall with girts and X-bracing at 2 m panels, a 2.5 m 18-blade wheel on a rim, and the tail vane that keeps it in the wind. Stands over the stock tank in the pasture. The wheel is ONE part named `toaster_windmill_wheel` and the group declares `userData.spin = { part, axis, rpm }` so a driver can turn it without knowing its geometry — the moving-parts contract from the weapons applied to a prop.',
+  build(K) {
+    const { THREE, grp, mats } = K, g = grp('toaster_windmill');
+    const HT = 10, B = 1.5, TW = .42, C = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+    const at = (sx, sz, y) => { const r = B + (TW - B) * (y / HT); return [sx * r, y, sz * r]; };
+    const segs = [];
+    for (const [sx, sz] of C) segs.push([at(sx, sz, -.2), at(sx, sz, HT), .045, .03, 6]);
+    for (let y = 2; y <= 8; y += 2) for (let i = 0; i < 4; i++) segs.push([at(...C[i], y), at(...C[(i + 1) % 4], y), .02, .02, 5]);
+    for (let y = 0; y < HT; y += 2) for (let i = 0; i < 4; i++) segs.push([at(...C[i], y), at(...C[(i + 1) % 4], y + 2), .013, .013, 4], [at(...C[(i + 1) % 4], y), at(...C[i], y + 2), .013, .013, 4]);
+    segs.push([[0, .4, 0], [0, HT + .1, 0], .03, .03, 6]);   // pump rod
+    const tower = MSeg(K, 'toaster_windmill_tower', mats.toa_galv, segs); tower.castShadow = true; g.add(tower);
+    g.add(MB(K, 'toaster_windmill_head', mats.toa_galv, [[1.3, .06, 1.3, 0, HT - .55, 0], [.5, .45, .7, 0, HT + .3, -.05], [.44, .12, .44, 0, HT, 0]]));
+    g.add(MB(K, 'toaster_windmill_footings', mats.toa_concrete, C.map(([sx, sz]) => [.55, .3, .55, sx * B, .15, sz * B])));
+    // The wheel: 18 blades on a rim, pitched 28° to the plane of rotation.
+    const items = [], N = 18, R0 = 1.25;
+    for (let i = 0; i < N; i++) {
+      const m = new THREE.Matrix4().makeRotationZ(i / N * Math.PI * 2).multiply(new THREE.Matrix4().makeTranslation(0, .84, 0)).multiply(new THREE.Matrix4().makeRotationY(.49));
+      items.push({ geo: new THREE.PlaneGeometry(.36, .74), m });
+    }
+    items.push({ geo: new THREE.TorusGeometry(R0 - .04, .022, 4, 40), m: new THREE.Matrix4() }, { geo: new THREE.TorusGeometry(.48, .02, 4, 20), m: new THREE.Matrix4() },
+      { geo: new THREE.CylinderGeometry(.09, .09, .34, 10).rotateX(Math.PI / 2), m: new THREE.Matrix4() });
+    for (let i = 0; i < 6; i++) items.push({ geo: new THREE.BoxGeometry(.028, R0 * 2 - .1, .028), m: new THREE.Matrix4().makeRotationZ(i * Math.PI / 6) });
+    const wheel = merge(THREE, items, 'toaster_windmill_wheel', mats.toa_galv_ds);
+    wheel.position.set(0, HT + .38, .78); wheel.castShadow = true; g.add(wheel);
+    g.add(MG(K, 'toaster_windmill_tail', mats.toa_galv_ds, [
+      [new THREE.CylinderGeometry(.025, .025, 1.7, 6), 0, HT + .34, -1.2, Math.PI / 2, 0, 0],
+      [new THREE.PlaneGeometry(1.0, .82), 0, HT + .5, -1.85, 0, Math.PI / 2, 0],
+    ]));
+    g.userData.spin = { part: 'toaster_windmill_wheel', axis: [0, 0, 1], rpm: 14 };
+    return g;
+  },
+});
+
+P({
+  id: 'toaster_stock_tank', label: 'Stock tank', size: '2.4 dia × 0.66 m', swatch: '#9da19c',
+  budgetTris: 900, budgetParts: 3,
+  stats: { Diameter: '2.4 m', Height: '0.66 m', Water: 'y 0.5', Placed: '1, under the mill' },
+  note: 'Round galvanised stock tank with a rolled rim, standing water in it, and the fill pipe from the mill. Turned, like the bins, from one profile with the rim in it.',
+  build(K) {
+    const { THREE, grp, mats } = K, g = grp('toaster_stock_tank');
+    g.add(revolve(THREE, 'toaster_stock_tank_wall', [[0, 0], [1.22, 0], [1.22, .04], [1.2, .04], [1.2, .6], [1.25, .63], [1.25, .67], [1.15, .67], [1.15, .05], [0, .05]], mats.toa_galv, { segs: 28, creaseAngle: 35, rot: [-Math.PI / 2, 0, 0] }));
+    g.add(MCyl(K, 'toaster_stock_tank_water', mats.toa_water, [[1.14, 1.14, .02, 0, .5, 0, 0, 0, 28]]));
+    g.add(MSeg(K, 'toaster_stock_tank_pipe', mats.toa_galv, [[[1.75, -.1, 0], [1.75, .95, 0], .03, .03, 6], [[1.75, .95, 0], [.9, .95, 0], .03, .03, 6]]));
+    return g;
+  },
+});
+
+P({
+  id: 'toaster_shed_small', label: 'Small shed / coop', size: '3.6×2.4×2.4 m', swatch: '#9a9184',
+  budgetTris: 600, budgetParts: 2,
+  stats: { Footprint: '3.6×2.4', Roof: 'lean-to, corrugated', Door: '+Z, ajar', Placed: '2' },
+  note: 'Board shed under a corrugated lean-to — a hen house behind the south-east house, a garden shed behind the main house. Grey unpainted board, door hung ajar on the +Z side, a nest box on the flank. The kind of outbuilding every property has two of and no plan ever draws.',
+  build(K) {
+    const { THREE, grp, mats } = K, g = grp('toaster_shed_small');
+    const W = 3.6, D = 2.4, HF = 2.4, HB = 1.95, T = .08;
+    const walls = [
+      [2.4, HF, T, -.6, HF / 2, D / 2 - T / 2], [.8, HF - 1.9, T, 1.0, 1.9 + (HF - 1.9) / 2, D / 2 - T / 2], [.4, HF, T, 1.6, HF / 2, D / 2 - T / 2],
+      [W, HB, T, 0, HB / 2, -D / 2 + T / 2],
+      [T, HB, D, -W / 2 + T / 2, HB / 2, 0], [T, HB, D, W / 2 - T / 2, HB / 2, 0],
+      [W + .1, .12, D + .1, 0, .06, 0],
+      [.76, 1.84, .05, .55, .98, D / 2 + .32, .75],                            // door leaf, ajar
+      [.9, .5, .45, W / 2 + .2, 1.05, -.3], [.98, .04, .55, W / 2 + .22, 1.34, -.3],  // nest box and its lid
+    ];
+    for (let i = 0; i < 4; i++) { const z0 = -D / 2 + i * D / 4, h = HB + (HF - HB) * (i + 1) / 4; walls.push([T, h - HB, D / 4, -W / 2 + T / 2, HB + (h - HB) / 2, z0 + D / 8], [T, h - HB, D / 4, W / 2 - T / 2, HB + (h - HB) / 2, z0 + D / 8]); }
+    const m = MB(K, 'toaster_shed_small_walls', mats.toa_timber_bare, walls); m.castShadow = true; g.add(m);
+    const roof = MG(K, 'toaster_shed_small_roof', mats.toa_corrugate, [[new THREE.BoxGeometry(W + .5, .05, Math.hypot(D + .5, HF - HB)), 0, (HF + HB) / 2 + .04, .02, -Math.atan2(HF - HB, D), 0, 0]]);
+    roof.castShadow = true; g.add(roof);
+    return g;
+  },
+});
+
+P({
+  id: 'toaster_hedgerow', label: 'Hedgerow (4 m)', size: '4 m · 2.4 high', swatch: '#4f7a34',
+  instanced: true, budgetTris: 400, budgetParts: 3, run: '+X', repeat: 4.0, width: 1.8,
+  stats: { Run: '+X · 4 m', Height: '1.6–2.6 m', Cards: 'MASK', Placed: '~18' },
+  note: 'Four metres of overgrown field hedge — hawthorn and bramble that grew up along a fence line and was never cut back — with a few bare stems showing through. MASK cards off the shared leaf atlas in two greens, so the run has depth. Along the hayfield frontage with open-grown oaks standing in it, which is how a hedgerow tree got there.',
+  build(K) {
+    const { grp, mats } = K, g = grp('toaster_hedgerow'), a = [], b = [];
+    for (let i = 0; i < 44; i++) {
+      const x = -2 + (i / 44) * 4 + (hash(i, 71) - .5) * .4, z = (hash(i, 72) - .5) * 1.6, h = 1.6 + hash(i, 73) * 1.0;
+      (i % 3 ? a : b).push([1.1 + hash(i, 74) * .7, h, x, h / 2 - .1, z, hash(i, 75) * 3.1, -.08 + hash(i, 76) * .16,
+        [.72 + hash(i, 77) * .4, .8 + hash(i, 78) * .3, .6 + hash(i, 79) * .3]]);
+    }
+    g.add(MC(K, 'toaster_hedgerow_cards', mats.toa_leaf_edge, a));
+    g.add(MC(K, 'toaster_hedgerow_cards_dark', mats.toa_leaf_oak, b));
+    const st = [];
+    for (let i = 0; i < 7; i++) st.push([.015, .04, 1.8 + hash(i, 81) * .9, -1.7 + i * .55, 1.0, (hash(i, 82) - .5) * .8, (hash(i, 83) - .5) * .5, (hash(i, 84) - .5) * .5, 4]);
+    g.add(MCyl(K, 'toaster_hedgerow_stems', mats.toa_bark, st));
+    return g;
+  },
+});
+
+P({
+  id: 'toaster_crop_rows', label: 'Row crop (10 m)', size: '10×10 m', swatch: '#6f8f3a',
+  instanced: true, budgetTris: 700, budgetParts: 2,
+  stats: { Module: '10×10 m', Rows: '13 @ 760 mm', Plants: '260 MASK cards', Placed: '12' },
+  note: 'Ten metres square of row crop — soybeans a month in — as 13 ridged rows on 760 mm centres along +X with the plants as MASK cards and the ridges in a shaded soil plane. Twelve modules fill the fenced field north of the core yard, and from the drive the rows read as the striped block a crop field is from a distance. Instanced.',
+  build(K) {
+    const { THREE, grp, mats } = K, g = grp('toaster_crop_rows');
+    const S = 10, geo = new THREE.PlaneGeometry(S, S, 2, 52); geo.rotateX(-Math.PI / 2);
+    const p = geo.attributes.position, col = new Float32Array(p.count * 3);
+    for (let i = 0; i < p.count; i++) {
+      const z = p.getZ(i), ridge = Math.cos(z / .76 * Math.PI * 2) * .5 + .5;
+      p.setY(i, .02 + ridge * .07);
+      const v = .7 + ridge * .42; col[i * 3] = v; col[i * 3 + 1] = v * .94; col[i * 3 + 2] = v * .84;
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); geo.computeVertexNormals();
+    const soil = new THREE.Mesh(geo, mats.toa_dirt); soil.name = 'toaster_crop_rows_soil'; soil.receiveShadow = true; g.add(soil);
+    const cards = [];
+    for (let r = 0; r < 13; r++) {
+      const z = -4.56 + r * .76;
+      for (let k = 0; k < 20; k++) {
+        const x = -4.75 + k * .5, h = .48 + hash(r, k) * .22;
+        cards.push([.56, h, x, h / 2 + .06, z, (k % 2 ? .55 : -.55) + (hash(k, r) - .5) * .5, 0, [.82 + hash(r, k, 3) * .3, .9 + hash(r, k, 4) * .2, .66 + hash(r, k, 5) * .3]]);
+      }
+    }
+    g.add(MC(K, 'toaster_crop_rows_plants', mats.toa_leaf_maple, cards));
+    return g;
+  },
+});
+
+P({
+  id: 'toaster_reeds', label: 'Reeds (cattail clump)', size: '2 m · 1.9 high', swatch: '#5a6e3a',
+  instanced: true, budgetTris: 200, budgetParts: 2,
+  stats: { Clump: '2 m', Height: '1.4–2.0 m', Heads: '12', Placed: '8, pond margin' },
+  note: 'A clump of cattails for the pond\u2019s wet shelf, standing in the inner rock course: blade cards with brown seed heads. Eight round the margin, none on the dock side or where the lane passes. A pond with a bare stone rim is a reservoir; reeds are what make it a farm pond.',
+  build(K) {
+    const { grp, mats } = K, g = grp('toaster_reeds'), cards = [], heads = [];
+    for (let i = 0; i < 34; i++) {
+      const a = i * 2.399, r = Math.pow(hash(i, 91), .5) * .95, h = 1.4 + hash(i, 92) * .6;
+      cards.push([.12, h, Math.cos(a) * r, h / 2, Math.sin(a) * r, hash(i, 93) * 3.1, (hash(i, 94) - .5) * .2, [.75 + hash(i, 95) * .3, .85 + hash(i, 96) * .2, .55]]);
+      if (i % 3 === 0) heads.push([.025, .025, .2, Math.cos(a) * r, h + .05, Math.sin(a) * r, 0, 0, 5]);
+    }
+    g.add(MC(K, 'toaster_reeds_blades', mats.toa_leaf_pine, cards));
+    g.add(MCyl(K, 'toaster_reeds_heads', mats.toa_bark, heads));
+    return g;
+  },
+});
+
+P({
+  id: 'toaster_fuel_tank', label: 'Farm fuel tank', size: '2.3×1.0 · 2.6 m', swatch: '#8a2c22',
+  budgetTris: 900, budgetParts: 3,
+  stats: { Tank: '1.0 dia × 2.3 m', Stand: '1.75 m steel', Placed: '1, by the shed' },
+  note: 'Gravity diesel tank on a steel stand beside the shed — red enamel, rust on the stand, the hose and nozzle hung off the end. Turned like the propane tank; the stand is the same welded angle every farm builds.',
+  build(K) {
+    const { THREE, grp, mats } = K, g = grp('toaster_fuel_tank');
+    const t = revolve(THREE, 'toaster_fuel_tank_shell', [[0, -1.15], [.3, -1.12], [.44, -1.02], [.5, -.85], [.5, .85], [.44, 1.02], [.3, 1.12], [0, 1.15]], mats.toa_red_paint, { segs: 20, creaseAngle: 40, pos: [0, 2.2, 0], rot: [0, Math.PI / 2, 0] });
+    t.castShadow = true; g.add(t);
+    const st = [];
+    for (const x of [-.8, .8]) for (const z of [-.42, .42]) st.push([.06, 1.75, .06, x, .88, z]);
+    st.push([1.9, .06, .06, 0, 1.72, -.42], [1.9, .06, .06, 0, 1.72, .42], [.06, .06, 1.0, -.8, 1.72, 0], [.06, .06, 1.0, .8, 1.72, 0],
+      [1.9, .06, .06, 0, .55, -.42], [1.9, .06, .06, 0, .55, .42], [.12, .3, .9, -.8, 1.87, 0], [.12, .3, .9, .8, 1.87, 0]);
+    g.add(MB(K, 'toaster_fuel_tank_stand', mats.toa_rust, st));
+    g.add(MCyl(K, 'toaster_fuel_tank_fittings', mats.toa_warp_dark, [[.03, .03, .9, 1.05, 1.5, .35, .35, 0, 6], [.05, .05, .26, 1.18, 1.08, .5, Math.PI / 2, 0, 6], [.06, .06, .12, 0, 2.76, 0, 0, 0, 8]]));
+    return g;
+  },
+});
+
+P({
+  id: 'toaster_hay_wagon', label: 'Hay wagon', size: '2.4×7.2×2.9 m', swatch: '#8a2c22',
+  budgetTris: 1800, budgetParts: 4,
+  stats: { Deck: '2.4×5.0 at 1.0 m', Load: '5 round bales', Placed: '1, hayfield' },
+  note: 'Flat running-gear wagon, tongue down, loaded with five round bales and left in the hayfield where the baler stopped. Red running gear under a grey plank deck, tyres on the axles. DRESSING, not a vehicle — no rig, nothing the vehicle code binds to.',
+  build(K) {
+    const { grp, mats } = K, g = grp('toaster_hay_wagon');
+    g.add(MB(K, 'toaster_hay_wagon_deck', mats.toa_deck, [[2.4, .08, 5.0, 0, 1.0, 0], [.1, .35, 5.0, -1.12, .82, 0], [.1, .35, 5.0, 1.12, .82, 0]]));
+    g.add(MB(K, 'toaster_hay_wagon_gear', mats.toa_red_paint, [[.12, .14, 4.6, -.6, .84, 0], [.12, .14, 4.6, .6, .84, 0], [2.1, .1, .1, 0, .48, -1.7], [2.1, .1, .1, 0, .48, 1.7], [.08, .08, 2.0, 0, .42, 3.5], [.5, .08, .3, 0, .3, 4.45]]));
+    const wh = [];
+    for (const z of [-1.7, 1.7]) for (const x of [-1.2, 1.2]) wh.push([.42, .42, .2, x, .44, z, 0, Math.PI / 2, 12], [.14, .14, .24, x, .44, z, 0, Math.PI / 2, 8, [.6, .6, .6]]);
+    g.add(MCyl(K, 'toaster_hay_wagon_wheels', mats.toa_warp_dark, wh));
+    const bales = [];
+    for (const z of [-1.3, 1.3]) for (const x of [-.64, .64]) bales.push([.72, .72, 1.2, x, 1.78, z, 0, Math.PI / 2, 12]);
+    bales.push([.72, .72, 1.2, 0, 3.02, 0, 0, Math.PI / 2, 12]);
+    g.add(MCyl(K, 'toaster_hay_wagon_bales', mats.toa_hay, bales));
+    return g;
+  },
+});
+
+P({
+  id: 'toaster_bale_feeder', label: 'Bale feeder', size: '2.5 dia × 1.3 m', swatch: '#9da19c',
+  budgetTris: 1200, budgetParts: 2,
+  stats: { Ring: '2.4 m · 14 bars', Bale: 'standing, inside', Placed: '2, pasture' },
+  note: 'Round tube bale feeder with a bale stood in it — the one object that says a pasture is grazed without putting an animal in the scene. Two in the south-west pasture.',
+  build(K) {
+    const { THREE, grp, mats } = K, g = grp('toaster_bale_feeder'), items = [];
+    for (const y of [.32, 1.22]) items.push([new THREE.TorusGeometry(1.2, .03, 5, 36), 0, y, 0, Math.PI / 2, 0, 0]);
+    for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2; items.push([new THREE.CylinderGeometry(.022, .022, 1.36, 5), Math.cos(a) * 1.2, .74, Math.sin(a) * 1.2]); }
+    g.add(MG(K, 'toaster_bale_feeder_ring', mats.toa_galv, items));
+    g.add(MCyl(K, 'toaster_bale_feeder_bale', mats.toa_hay, [[.72, .74, 1.15, 0, .58, 0, 0, 0, 12]]));
+    return g;
+  },
+});
+
+P({
+  id: 'toaster_garden_plot', label: 'Vegetable garden', size: '8×7.4 m', swatch: '#6b5a44',
+  budgetTris: 900, budgetParts: 4,
+  stats: { Beds: '4 raised, 1.2×6', Fence: 'low wire', Placed: '2, behind houses' },
+  note: 'Four timber raised beds with a low rabbit wire round them, behind the two houses that are lived in. Plants as MASK cards on the soil. Origin at footprint centre on grade.',
+  build(K) {
+    const { grp, mats } = K, g = grp('toaster_garden_plot'), beds = [], soil = [], plants = [];
+    for (let i = 0; i < 4; i++) {
+      const x = -2.7 + i * 1.8;
+      beds.push([1.2, .28, .05, x, .14, -3], [1.2, .28, .05, x, .14, 3], [.05, .28, 6.05, x - .6, .14, 0], [.05, .28, 6.05, x + .6, .14, 0]);
+      soil.push([1.1, .2, 5.95, x, .13, 0]);
+      for (let k = 0; k < 11; k++) { const z = -2.6 + k * .52, h = .25 + hash(i, k) * .35; plants.push([.6, h, x, .23 + h / 2, z, hash(k, i) * 3, 0, [.8 + hash(i, k, 2) * .4, .85 + hash(i, k, 3) * .3, .68 + hash(i, k, 4) * .3]]); }
+    }
+    g.add(MB(K, 'toaster_garden_plot_beds', mats.toa_timber_bare, beds));
+    g.add(MB(K, 'toaster_garden_plot_soil', mats.toa_dirt, soil));
+    g.add(MC(K, 'toaster_garden_plot_plants', mats.toa_leaf_maple, plants));
+    const fence = [];
+    for (const [x, z] of [[-4, -3.7], [0, -3.7], [4, -3.7], [-4, 3.7], [0, 3.7], [4, 3.7], [-4, 0], [4, 0]]) fence.push([.05, 1.0, .05, x, .5, z]);
+    for (const y of [.45, .92]) fence.push([8, .012, .012, 0, y, -3.7], [8, .012, .012, 0, y, 3.7], [.012, .012, 7.4, -4, y, 0], [.012, .012, 7.4, 4, y, 0]);
+    g.add(MB(K, 'toaster_garden_plot_fence', mats.toa_galv, fence));
+    return g;
+  },
+});
+
+P({
+  id: 'toaster_clothesline', label: 'Clothesline', size: '8 m · 2.2 high', swatch: '#e6e2d8',
+  budgetTris: 400, budgetParts: 3,
+  stats: { Span: '8 m', Lines: '3, sagging', Washing: '3 sheets', Placed: '2' },
+  note: 'Two steel T-posts, three lines with sag in them, and washing on the middle one. Cheap, and it is the one prop that says the house is lived in today rather than abandoned.',
+  build(K) {
+    const { grp, mats } = K, g = grp('toaster_clothesline');
+    g.add(MB(K, 'toaster_clothesline_posts', mats.toa_galv, [[.06, 2.2, .06, -4, 1.1, 0], [.06, 2.2, .06, 4, 1.1, 0], [.05, .05, 1.8, -4, 2.15, 0], [.05, .05, 1.8, 4, 2.15, 0]]));
+    const segs = [];
+    for (const z of [-.8, 0, .8]) { let prev = [-4, 2.15, z]; for (let k = 1; k <= 4; k++) { const t = k / 4, p = [-4 + 8 * t, 2.15 - .5 * t * (1 - t), z]; segs.push([prev, p, .008, .008, 4]); prev = p; } }
+    g.add(MSeg(K, 'toaster_clothesline_lines', mats.toa_galv, segs));
+    g.add(MC(K, 'toaster_clothesline_washing', mats.toa_linen, [[1.6, 1.1, -1.8, 1.5, 0, 0, 0], [1.0, .9, .6, 1.6, 0, 0, 0, [.72, .78, .9]], [1.3, 1.0, 2.2, 1.55, 0, 0, 0, [.95, .88, .78]]]));
+    return g;
+  },
+});
+
 export const TOASTER_BUDGETS = TOASTER.filter((p) => p.budgetTris).map((p) => ({ id: p.id, tris: p.budgetTris, parts: p.budgetParts, instanced: !!p.instanced }));
 
 /* ═══ assembly helpers ═════════════════════════════════════════════════════
@@ -1807,7 +2398,7 @@ export const TOASTER_BUDGETS = TOASTER.filter((p) => p.budgetTris).map((p) => ({
 export function buildToasterBelt(K, o) {
   const { THREE, grp, mats } = K, g = grp('toaster_treebelt');
   const { halfX, halfZ, depth = 12, keepOut = () => false, step = 3.5 } = o;
-  const keys = Object.keys(SPECIES), spots = Object.fromEntries(keys.map((k) => [k, []]));
+  const keys = BELT, spots = Object.fromEntries(keys.map((k) => [k, []]));
   let i = 0;
   for (let x = -halfX + 2; x <= halfX - 2; x += step) {
     for (let z = -halfZ + 2; z <= halfZ - 2; z += step, i++) {
@@ -1865,16 +2456,21 @@ export function buildToasterBelt(K, o) {
 export function buildToasterRoads(K, roads, ALL) {
   const { THREE, grp } = K, g = grp('toaster_roads');
   for (const r of roads) {
-    const M = ALL[r.kind === 'gravel' ? 'toaster_road_gravel' : 'toaster_road_asphalt'];
+    const M = ALL[r.kind === 'asphalt' ? 'toaster_road_asphalt' : r.kind === 'track' ? 'toaster_path_ground' : 'toaster_road_gravel'];
     if (!M) continue;
+    /* Wider than the module: lay rows across it. The shed apron is 8 m of the
+       same gravel the drive is made of, not a wider module — and an `apron`
+       sits 15 mm under the drive that crosses it so the two do not fight. */
+    const mw = M.width || 4, rows = Math.max(1, Math.round((r.width ?? mw) / mw)), drop = r.kind === 'apron' ? .015 : 0;
     for (let i = 0; i < r.pts.length - 1; i++) {
       const a = new THREE.Vector3(...r.pts[i]), b = new THREE.Vector3(...r.pts[i + 1]);
       const d = b.clone().sub(a), len = d.length();
       if (len < 1) continue;
-      const n = Math.max(1, Math.round(len / 4));
-      for (let k = 0; k < n; k++) {
+      const n = Math.max(1, Math.round(len / 4)), perp = new THREE.Vector3(-d.z, 0, d.x).normalize();
+      for (let k = 0; k < n; k++) for (let q = 0; q < rows; q++) {
         const p = M.build(K);
-        p.position.copy(a).addScaledVector(d, (k + .5) / n);
+        p.position.copy(a).addScaledVector(d, (k + .5) / n).addScaledVector(perp, (q - (rows - 1) / 2) * mw);
+        p.position.y -= drop;
         // The module runs along its own +X, so it is laid on the LINE, not
         // across it. A quarter-turn out here is a road at right angles to the
         // one the vehicles are driving on.
@@ -1898,7 +2494,7 @@ export function buildToasterRoads(K, roads, ALL) {
       const p = M.build(K);
       p.position.copy(b);
       p.rotation.y = h0 + turn / 2;
-      p.scale.x = (r.width ?? 6) / 4;
+      p.scale.x = (r.width ?? 6) / 4; p.scale.z = rows; p.position.y -= drop;
       g.add(p);
     }
   }
@@ -1915,5 +2511,29 @@ export function buildToasterDrive(K, centre, ALL) {
     a.rotation.y = -i * Math.PI / 6;
     g.add(a);
   }
+  return g;
+}
+
+/**
+ * Power lines: three conductors between consecutive PLACED poles, with sag.
+ * `lines` is what the level's pole generator actually managed to place —
+ * [x, z, yaw] per pole — so a pole refused for clearance shortens a span
+ * instead of leaving a wire in the air over nothing. Attachment points are the
+ * pole's own: outer insulators ±0.95 m along the crossarm at 9.6, the pin at
+ * the pole top at 10.2. Sag follows span (w L² / 8T), clamped, so a 36 m span
+ * dips about 0.9 m and nothing dips into a lane's 5.5 m headroom.
+ */
+export function buildToasterWires(K, lines) {
+  const { grp, mats } = K, g = grp('toaster_wires'), segs = [];
+  for (const line of lines) for (let i = 0; i < line.length - 1; i++) {
+    const [ax, az, ary] = line[i], [bx, bz, bry] = line[i + 1];
+    const span = Math.hypot(bx - ax, bz - az), sag = Math.min(1.8, .00065 * span * span + .25);
+    for (const [off, y] of [[-.95, 9.6], [.95, 9.6], [0, 10.2]]) {
+      const A = [ax + Math.cos(ary) * off, y, az - Math.sin(ary) * off], B = [bx + Math.cos(bry) * off, y, bz - Math.sin(bry) * off];
+      let prev = A;
+      for (let k = 1; k <= 6; k++) { const t = k / 6, P = [A[0] + (B[0] - A[0]) * t, y - sag * 4 * t * (1 - t), A[2] + (B[2] - A[2]) * t]; segs.push([prev, P, .016, .016, 4]); prev = P; }
+    }
+  }
+  if (segs.length) g.add(MSeg(K, 'toaster_wires_conductors', mats.toa_warp_dark, segs));
   return g;
 }

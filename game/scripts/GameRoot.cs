@@ -86,6 +86,7 @@ public partial class GameRoot : Node3D
     private int _lastWaveEnemyCount;          // what the wave announced, for the kill split
     private string? _shotPath;
     private string _shotView = "eye";
+    private bool _shotSwing;
     private int _shotCountdown;
     private List<Vector3> _laneMouths = new();
     private Node3D? _coreView;
@@ -190,6 +191,7 @@ public partial class GameRoot : Node3D
         Kit.ReleaseCaches();
         AssetLibrary.ReleaseCaches();
         TowerRig.ReleaseCaches();
+        AssetManifest.ReleaseCaches();
         // Same rule for the view maps this class keeps: they hold managed
         // wrappers for nodes the SceneTree is about to take away, and anything
         // still referenced when mono shuts down is reported as leaked.
@@ -203,6 +205,7 @@ public partial class GameRoot : Node3D
         _padState.Clear();
         _footprints.Clear();
         _warpMembranes.Clear();
+        _spinners.Clear();
         Surfaces.Clear();
         _avatarViews.Clear();
         _towerRigs.Clear();
@@ -303,6 +306,34 @@ public partial class GameRoot : Node3D
                 AuditAssets();
                 GetTree().Quit();
                 return;
+            }
+            // What the importer made of one file: every mesh part with its
+            // material's albedo, texture and vertex-colour settings, for the
+            // afternoon a delivered piece renders the wrong colour and the
+            // question is whether the file or the pipeline did it.
+            if (args[i] == "--inspect" && i + 1 < args.Length)
+            {
+                InspectAsset(args[i + 1]);
+                GetTree().Quit();
+                return;
+            }
+        }
+    }
+
+    private static void InspectAsset(string asset)
+    {
+        var node = AssetLibrary.TryInstantiate(asset);
+        if (node is null) { GD.Print($"[inspect] {asset}: not delivered"); return; }
+        foreach (var child in node.FindChildren("*", nameof(MeshInstance3D), true, false))
+        {
+            if (child is not MeshInstance3D piece || piece.Mesh is null) continue;
+            for (int i = 0; i < piece.Mesh.GetSurfaceCount(); i++)
+            {
+                var material = piece.GetSurfaceOverrideMaterial(i) ?? piece.Mesh.SurfaceGetMaterial(i);
+                string desc = material is BaseMaterial3D m
+                    ? $"albedo={m.AlbedoColor} tex={(m.AlbedoTexture is null ? "none" : m.AlbedoTexture.ResourcePath)} vcolAlbedo={m.VertexColorUseAsAlbedo} vcolSrgb={m.VertexColorIsSrgb} rough={m.Roughness} metal={m.Metallic} transparency={m.Transparency}"
+                    : material?.GetType().Name ?? "null";
+                GD.Print($"[inspect] {asset}: {piece.Name} surface {i} ({material?.ResourceName}) {desc}");
             }
         }
     }
@@ -630,6 +661,32 @@ public partial class GameRoot : Node3D
             _shotPath = path;
             _shotCountdown = 40;
             _shotFire = true;
+            return;
+        }
+
+        // Melee review: buy a platform, fit one module in every slot that has
+        // one, and swing it so the capture lands mid-arc — the only frame on
+        // which a melee model appears at all.
+        if (_shotView.StartsWith("swing-") && _world is not null)
+        {
+            string melee = _shotView[6..];
+            if (_world.Players.TryGetValue(LocalPlayerId, out var me) && Melee.All.ContainsKey(melee))
+            {
+                _world.Money = 1000;
+                foreach (var type in System.Enum.GetValues<ScrapType>()) me.Scrap[type] = 200;
+                Submit(new Command.BuyMelee(LocalPlayerId, melee));
+                foreach (var module in Melee.Attachments.Values.GroupBy(a => a.Slot).Select(g => g.First()))
+                    Submit(new Command.CraftMeleeAttachment(LocalPlayerId, melee, module.Id));
+                Step.Advance(_world);
+                Submit(new Command.StartWave(LocalPlayerId));
+                Step.Advance(_world);
+                RebuildView();
+            }
+            _shotView = "eye";
+            _shotPath = path;
+            _shotCountdown = 40;
+            _shotSwing = true;
+            GD.Print($"[swing] staged {melee}: owned={(_world.Players.TryGetValue(LocalPlayerId, out var who) ? string.Join(",", who.OwnedMelee) : "?")} in hand={CurrentMeleeId()}");
             return;
         }
 
@@ -981,6 +1038,15 @@ public partial class GameRoot : Node3D
                 "air" => (new Vector3(-14, 24, 38), new Vector3(0, 8, 0)),
                 "core" => (new Vector3(20, 10, 26), new Vector3(36, 2, 6)),
                 "deck" => (new Vector3(30, 15, 6), new Vector3(6, 6, -10)),
+                // The Toaster's quarters, for reviewing the farm: the shed
+                // yard with its bins and apron, the pasture with the mill, the
+                // hayfield behind its hedge, the crop field north of the core,
+                // and the south road's poles at eye height.
+                "barnyard" => (new Vector3(-150, 22, 30), new Vector3(-118, 3, 52)),
+                "pasture" => (new Vector3(-60, 18, -10), new Vector3(-85, 3, -46)),
+                "hayfield" => (new Vector3(70, 20, 0), new Vector3(110, 2, 20)),
+                "crop" => (new Vector3(-60, 16, 60), new Vector3(-25, 2, 28)),
+                "road" => (new Vector3(-10, 6, -58), new Vector3(60, 5, -66)),
                 _ => (new Vector3(0, 60, 60), Vector3.Zero),
             };
             var camera = new Camera3D { Position = from, Far = SkyFar };
@@ -1061,6 +1127,18 @@ public partial class GameRoot : Node3D
             if (WeaponAssembly.Build(weapon.Id, everything, world: false) is { } vm) built.Add(vm);
         }
         foreach (var def in Attachments.All.Values) built.Add(AssetLibrary.Instantiate($"attach_{def.Id}", () => new Node3D()));
+        // The melee platforms the sim sells, each with one module in every
+        // slot that has one, both as the swing's viewmodel and as the world
+        // model — the same pass the guns get, or the eight module files
+        // design shipped would count as delivered-and-unused forever.
+        foreach (var melee in Melee.All.Values)
+        {
+            var everyModule = Melee.Attachments.Values.GroupBy(a => a.Slot).ToDictionary(g => g.Key, g => g.First().Id);
+            if (MeleeAssembly.Build(melee.Id, everyModule) is { } world) built.Add(world);
+            if (MeleeAssembly.Build(melee.Id, everyModule, world: false) is { } vm) built.Add(vm);
+        }
+        foreach (var att in Melee.Attachments.Values)
+            built.Add(AssetLibrary.Instantiate(MeleeAssembly.ModuleAsset(att.Id), () => new Node3D()));
         // Scrap on the floor: a solo match only drops it when the player kills
         // something, which no automated run does, so the audit asks for the
         // models directly rather than reporting them unused forever.
@@ -1272,11 +1350,13 @@ public partial class GameRoot : Node3D
         TickShotStages();
         TickIntermissionShot();
         TickWarpGates(delta);
+        TickSpinners(delta);
         if (_traversalReport is not null) TickTraversalProbe(delta);
         if (_reloadReport is not null) TickReloadProbe(delta);
         if (_teleportReport is not null) TickTeleportProbe(delta);
         if (_vehicleReport is not null) TickVehicleProbe(delta);
         if (_shotPath is not null && _shotFire && _shotCountdown == 2 && _player is not null) { _player.FireForReview(); _shotFire = false; }
+        if (_shotPath is not null && _shotSwing && _shotCountdown == 12 && _player is not null) { GD.Print($"[swing] review swing of {CurrentMeleeId()}"); _player.SwingForReview(); _shotSwing = false; }
         if (_shotPath is not null && --_shotCountdown <= 0) CaptureShot();
         TickCoreFlash(delta);
 
@@ -1515,6 +1595,18 @@ public partial class GameRoot : Node3D
             && _world.Players.TryGetValue(LocalPlayerId, out var p))
             return p.MeleeId;
         return "wrench";
+    }
+
+    /// <summary>What is fitted to the melee platform in hand: one attachment
+    /// per slot, from the sim's own build. Empty on a joined client, whose
+    /// view carries no melee state yet — it swings an unmodified host.</summary>
+    public IReadOnlyDictionary<MeleeSlot, string> CurrentMeleeBuild()
+    {
+        if (Mode != RunMode.Client && _world is not null
+            && _world.Players.TryGetValue(LocalPlayerId, out var p)
+            && p.MeleeBuilds.TryGetValue(p.MeleeId, out var build))
+            return build.Attachments;
+        return new System.Collections.Generic.Dictionary<MeleeSlot, string>();
     }
 
     public MapDef CurrentMap() => _map;
@@ -3477,8 +3569,14 @@ public partial class GameRoot : Node3D
             // a lattice). They are cycled across the grid by the commission's
             // own formula, (ix·7 + iz·3) mod 4; a kit that shipped only v0
             // draws everything from v0, as before.
-            var tiles = new List<Transform3D>[4];
-            for (int v = 0; v < 4; v++) tiles[v] = new List<Transform3D>();
+            // Six lists, not four: the Toaster's tile gained two FIELD looks
+            // (v4 rough pasture, v5 cut hay stubble) that are assigned by
+            // region rather than by the hash, so the property reads as fields
+            // divided by fences instead of one mown park. A map with no
+            // regions never fills the last two.
+            const int variantCount = 6;
+            var tiles = new List<Transform3D>[variantCount];
+            for (int v = 0; v < variantCount; v++) tiles[v] = new List<Transform3D>();
             int ix = 0;
             for (float x = -lastX; x <= lastX + 0.01f; x += 20f, ix++)
             {
@@ -3497,6 +3595,9 @@ public partial class GameRoot : Node3D
                         ? Basis.FromEuler(new Vector3(0, Mathf.Pi, 0))
                         : Basis.Identity;
                     int variant = ((ix * 7 + iz * 3) % 4 + 4) % 4;
+                    // A tile wholly inside a named field takes that field's
+                    // variant; tile-aligned, because a variant is a whole tile.
+                    if (map.Id == "toaster" && ToasterLayout.FieldVariant(x, z) is { } field) variant = field;
                     if (variant != 0 && !AssetLibrary.Has($"{map.Id}_terrain_v{variant}")) variant = 0;
                     tiles[variant].Add(new Transform3D(basis,
                         new Vector3(x, MapKit.GroundLocal(ground), z)));
@@ -3526,7 +3627,7 @@ public partial class GameRoot : Node3D
             // for it by name.
             bool chunk = Mathf.Max(map.FieldX, map.FieldZ) > 200f;
             int drawn = 0, laid = 0, variants = 0;
-            for (int v = 0; v < 4; v++)
+            for (int v = 0; v < variantCount; v++)
             {
                 if (tiles[v].Count == 0) continue;
                 string asset = v == 0 ? $"{map.Id}_terrain" : $"{map.Id}_terrain_v{v}";
@@ -3550,8 +3651,12 @@ public partial class GameRoot : Node3D
             : $"{map.Id}_path_ground";
         // A map's own lane module is mounted per segment so its once-in-five
         // details can be thinned; a borrowed road module has none and is laid
-        // as one instanced draw — on the Toaster that is 250 pieces of track.
+        // as one instanced draw. So is a lane module design marked
+        // `instanced` in its manifest: the Toaster's is a worn two-rut track,
+        // one part with nothing to thin, and mounting its 230 pieces one
+        // subtree at a time was 700 nodes of the same ground.
         bool borrowed = laneModule != $"{map.Id}_path_ground";
+        bool instancedLane = borrowed || AssetManifest.Instanced(laneModule);
         var laneRuns = new List<Transform3D>();
         foreach (var route in map.Routes)
         {
@@ -3575,7 +3680,7 @@ public partial class GameRoot : Node3D
                 // faint ribbon: pylons are placed separately, standing on the
                 // ground, because hanging them off a ribbon 9 m up put a row of
                 // masts in the sky.
-                if (!air && borrowed)
+                if (!air && instancedLane)
                 {
                     float span = (b - a).Length();
                     int count = Mathf.Max(1, Mathf.RoundToInt(span / 4f));
@@ -4029,9 +4134,34 @@ public partial class GameRoot : Node3D
         // Upper deck platform (walkable).
         var deck = AddStaticBox(new Vector3(2, 5.8f, -17), new Vector3(28, 0.4f, 10), new Color(0.45f, 0.48f, 0.55f), layer: 1);
         MapKit.MountRun(deck, "foundry_deck", 28f, 4f, alongX: true, MapKit.GroundLocal(deck));
-        // Deck guard rail (visual).
+        // Deck guard rail (visual). Round the WHOLE deck, 0.2 m inside each
+        // edge, every run placed with its toe board facing the drop — which
+        // fixes the yaw per edge — and three openings, all deliberate: the
+        // ladder head at x -8, flanked by the mirrored gap runs (v3/v2) that
+        // leave a 1.4 m gap with a grab stanchion each side; the same pair at
+        // x 6/10, because the gantry bridge lands on this edge and a completed
+        // perimeter would wall the deck off from it; and the right-edge bay
+        // z -17.8..-13.8, which is where the zipline leaves. The sides are
+        // 4 + 4 m and a short closer (v1) so they end ON the front and back
+        // lines instead of overhanging them. Design's own placements
+        // (levels.js), on this deck's own edges: it is 10 m deep here, not
+        // 11, so the closer is squeezed to the 1.6 m that is left.
         var rail = AddStaticBox(new Vector3(2, 6.6f, -12.2f), new Vector3(28, 1.0f, 0.2f), new Color(0.5f, 0.53f, 0.6f), layer: 0);
-        MapKit.MountRun(rail, "foundry_deck_rail", 28f, 4f, alongX: true, MapKit.GroundLocal(rail) + 6.0f);
+        if (AssetLibrary.Has("foundry_deck_rail"))
+        {
+            MapKit.HideBox(rail);
+            const float top = 6.0f;
+            foreach (float x in new[] { -10f, -6f, -2f, 2f, 6f, 10f, 14f })
+                MapKit.Prop(this, "foundry_deck_rail", new Vector3(x, top, -21.8f), 0f);
+            foreach (var (x, variant) in new[] { (-10f, "_v3"), (-6f, "_v2"), (-2f, ""), (2f, ""), (6f, "_v3"), (10f, "_v2"), (14f, "") })
+                MapKit.Prop(this, "foundry_deck_rail" + variant, new Vector3(x, top, -12.2f), 180f);
+            var closer = new Vector3(1.6f / 2.6f, 1f, 1f);
+            foreach (float z in new[] { -19.8f, -15.8f })
+                MapKit.Prop(this, "foundry_deck_rail", new Vector3(-11.8f, top, z), 90f);
+            MapKit.Prop(this, "foundry_deck_rail_v1", new Vector3(-11.8f, top, -13.0f), 90f, closer);
+            MapKit.Prop(this, "foundry_deck_rail", new Vector3(15.8f, top, -19.8f), -90f);
+            MapKit.Prop(this, "foundry_deck_rail_v1", new Vector3(15.8f, top, -13.0f), -90f, closer);
+        }
         // Deck support pillars.
         var pillarWest = AddStaticBox(new Vector3(-10, 2.9f, -17), new Vector3(1.2f, 5.8f, 1.2f), new Color(0.4f, 0.42f, 0.48f), layer: 1);
         MapKit.Mount(pillarWest, "foundry_pillar", MapKit.GroundLocal(pillarWest));
@@ -4078,9 +4208,15 @@ public partial class GameRoot : Node3D
         launcher.AddChild(launchArea);
         MapKit.Mount(launcher, "shared_launcher_idle", MapKit.GroundLocal(launcher));
 
-        // Zipline: deck east edge down to the core gate. Player rides on interact.
-        var zipStart = new Vector3(14f, 6.8f, -14f);
-        var zipEnd = new Vector3(28f, 1.6f, 2f);
+        // Zipline: deck east edge down to the core gate. Player rides on
+        // interact. The ride line hangs 0.8 m under the cable at BOTH ends:
+        // the cable runs sheave to sheave, 7.6 m on the deck post down to
+        // 1.6 m on the grade post. The landing post is full size now (its
+        // base plate is 0.9 m across), so it stands at (34.5, 2.2), clear of
+        // the lane and of g19 by the three metres it used to get by being
+        // drawn at six-tenths scale.
+        var zipStart = new Vector3(14f, 6.8f, -17.5f);
+        var zipEnd = new Vector3(34.36f, 0.8f, 2.06f);
         var zipAnchor = AddStaticBox(zipStart + new Vector3(0, 0.6f, 0), new Vector3(0.4f, 1.2f, 0.4f), new Color(0.85f, 0.8f, 0.4f), layer: 0);
         var mid = (zipStart + zipEnd) * 0.5f;
         var cable = AddStaticBox(mid, new Vector3((zipEnd - zipStart).Length(), 0.06f, 0.06f), new Color(0.8f, 0.8f, 0.8f), layer: 0);
@@ -4089,7 +4225,7 @@ public partial class GameRoot : Node3D
         var zipArea = MakeArea("zipline", new BoxShape3D { Size = new Vector3(2.5f, 2.5f, 2.5f) });
         zipArea.SetMeta("zip_end", zipEnd);
         zipAnchor.AddChild(zipArea);
-        DressZipline(zipAnchor, cable, zipStart, zipEnd);
+        DressZipline(zipAnchor, cable, zipStart, zipEnd, new Vector3(14f, 6.0f, -17.5f), new Vector3(34.5f, 0f, 2.2f));
 
         // Vent tunnel: the hero-only shortcut from under the deck out to the
         // mid-lane station. Two things were wrong with it.
@@ -4163,17 +4299,38 @@ public partial class GameRoot : Node3D
         MapKit.Prop(this, asset, at, yaw);
     }
 
-    /// <summary>Anchor at each end plus the stretched cable. The graybox cable
-    /// box is a rotated sliver, which the model would inherit, so the span is
-    /// mounted in world space instead.</summary>
-    private void DressZipline(Node3D anchorBody, Node3D cableBody, Vector3 from, Vector3 to)
+    /// <summary>Anchor at each end plus the cable, strung from the anchors'
+    /// own sheaves. Both anchors are the same full-size post and each is yawed
+    /// to FACE the other: the sheave sits out along the post's local +Z, so an
+    /// anchor pointing anywhere else hangs its cable off the side of its own
+    /// wheel. The post declares its sheave in <c>userData.zip</c> (local
+    /// metres), so there is exactly one description of where the cable is
+    /// attached; a post without it is strung from the ride line's ends.
+    /// The graybox cable box is a rotated sliver, which the model would
+    /// inherit, so the span is mounted in world space instead.</summary>
+    private void DressZipline(Node3D anchorBody, Node3D? cableBody, Vector3 from, Vector3 to,
+        Vector3 topBase, Vector3 bottomBase)
     {
         if (!AssetLibrary.Has("shared_zipline_anchor")) return;
-        MapKit.Mount(anchorBody, "shared_zipline_anchor", MapKit.GroundLocal(anchorBody) + from.Y);
-        MapKit.Prop(this, "shared_zipline_anchor", new Vector3(to.X, to.Y, to.Z));
-        MapKit.HideBox(cableBody);
-        MapKit.MountSpan(this, "shared_zipline_cable", from, to);
-        MapKit.Prop(this, "shared_zipline_trolley", from + (to - from) * 0.06f);
+        MapKit.HideBox(anchorBody);
+        if (cableBody is not null) MapKit.HideBox(cableBody);
+        static float FaceYaw(Vector3 at, Vector3 toward) => Mathf.RadToDeg(Mathf.Atan2(toward.X - at.X, toward.Z - at.Z));
+        var top = MapKit.Prop(this, "shared_zipline_anchor", topBase, FaceYaw(topBase, bottomBase));
+        var bottom = MapKit.Prop(this, "shared_zipline_anchor", bottomBase, FaceYaw(bottomBase, topBase));
+        var a = Sheave(top, from + Vector3.Up * 0.8f);
+        var b = Sheave(bottom, to + Vector3.Up * 0.8f);
+        MapKit.MountSpan(this, "shared_zipline_cable", a, b);
+        MapKit.Prop(this, "shared_zipline_trolley", a + (b - a) * 0.06f);
+    }
+
+    /// <summary>Where a placed anchor's cable leaves it, in world space.</summary>
+    private static Vector3 Sheave(Node3D? anchor, Vector3 fallback)
+    {
+        if (anchor is null || FindExtras(anchor, "zip") is not { } zip
+            || !zip.TryGetValue("sheave", out var at) || at.VariantType != Variant.Type.Array) return fallback;
+        var v = at.AsGodotArray();
+        if (v.Count != 3) return fallback;
+        return anchor.GlobalTransform * new Vector3((float)v[0].AsDouble(), (float)v[1].AsDouble(), (float)v[2].AsDouble());
     }
 
     /// <summary>Boundary wall around the play area, laid so the run closes
@@ -4379,7 +4536,11 @@ public partial class GameRoot : Node3D
         // roof has never carried anyone since the day it was written.
         spireZip.SetMeta("zip_end", new Vector3(-26f, 1f, -6f));
         anchor.AddChild(spireZip);
-        MapKit.Mount(anchor, "shared_zipline_anchor", MapKit.GroundLocal(anchor));
+        // The post stands on the roof (top 40.07) and its mate on the plaza;
+        // the old mount put the roof post's art at grade, forty metres under
+        // the pad it serves.
+        DressZipline(anchor, null, new Vector3(6f, 40.87f, -14f), new Vector3(-26f, 1f, -6f),
+            new Vector3(6f, 40.07f, -14f), new Vector3(-26f, 0f, -6f));
     }
 
     private void BuildSwitchyardStructures()
@@ -4464,13 +4625,7 @@ public partial class GameRoot : Node3D
         var zipArea = MakeArea("zipline", new BoxShape3D { Size = new Vector3(2.5f, 2.5f, 2.5f) });
         zipArea.SetMeta("zip_end", zipEnd);
         anchor.AddChild(zipArea);
-        if (AssetLibrary.Has("shared_zipline_anchor"))
-        {
-            MapKit.Mount(anchor, "shared_zipline_anchor", MapKit.GroundLocal(anchor) + zipStart.Y);
-            MapKit.Prop(this, "shared_zipline_anchor", zipEnd);
-            MapKit.MountSpan(this, "shared_zipline_cable", zipStart, zipEnd);
-            MapKit.Prop(this, "shared_zipline_trolley", zipStart + (zipEnd - zipStart) * 0.06f);
-        }
+        DressZipline(anchor, null, zipStart, zipEnd, new Vector3(12f, 10.0f, 4f), new Vector3(32f, 0f, 5f));
 
         BuildFreightCut();
         BuildSwitchyardRailway();
