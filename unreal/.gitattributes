@@ -1,0 +1,23 @@
+# Git LFS for the Unreal project (ADR-0010). Scoped to unreal/ so the frozen Godot tree is untouched.
+# Requires `git lfs install` once per clone (brew install git-lfs).
+DeepField/Content/**/*.uasset      filter=lfs diff=lfs merge=lfs -text lockable
+DeepField/Content/**/*.umap        filter=lfs diff=lfs merge=lfs -text lockable
+DeepField/Content/**/*.ubulk       filter=lfs diff=lfs merge=lfs -text
+DeepField/Content/**/*.uexp        filter=lfs diff=lfs merge=lfs -text
+DeepField/Content/**/*.upayload    filter=lfs diff=lfs merge=lfs -text
+DeepField/Content/**/*.uptnl       filter=lfs diff=lfs merge=lfs -text
+DeepField/**/*.fbx                 filter=lfs diff=lfs merge=lfs -text
+DeepField/**/*.glb                 filter=lfs diff=lfs merge=lfs -text
+DeepField/**/*.gltf                filter=lfs diff=lfs merge=lfs -text
+DeepField/**/*.png                 filter=lfs diff=lfs merge=lfs -text
+DeepField/**/*.tga                 filter=lfs diff=lfs merge=lfs -text
+DeepField/**/*.exr                 filter=lfs diff=lfs merge=lfs -text
+DeepField/**/*.hdr                 filter=lfs diff=lfs merge=lfs -text
+DeepField/**/*.psd                 filter=lfs diff=lfs merge=lfs -text
+DeepField/**/*.wav                 filter=lfs diff=lfs merge=lfs -text
+DeepField/**/*.ogg                 filter=lfs diff=lfs merge=lfs -text
+DeepField/**/*.mp3                 filter=lfs diff=lfs merge=lfs -text
+DeepField/**/*.ttf                 filter=lfs diff=lfs merge=lfs -text
+DeepField/**/*.otf                 filter=lfs diff=lfs merge=lfs -text
+content/terrain/*.png              filter=lfs diff=lfs merge=lfs -text
+# Text that must stay text (never LFS): *.json *.ini *.cs *.cpp *.h *.py *.md *.tsv *.uproject *.uplugin

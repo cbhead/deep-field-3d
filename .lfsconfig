@@ -1,0 +1,6 @@
+# Git LFS repository config (ADR-0010). `git lfs install` picks this up per clone.
+# Mac sessions clone light: Megascans and the art/lighting sublevels are GPU-box work.
+# The GPU box overrides with `git config lfs.fetchexclude ""` (or fetches them explicitly).
+[lfs]
+	fetchexclude = unreal/DeepField/Content/Megascans/**,unreal/DeepField/Content/DF/Maps/*/L_*_Art*,unreal/DeepField/Content/DF/Maps/*/L_*_Lighting*,unreal/DeepField/Content/DF/Env/**
+	locksverify = true

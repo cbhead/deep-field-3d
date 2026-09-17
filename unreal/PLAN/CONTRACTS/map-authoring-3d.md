@@ -1,0 +1,28 @@
+# Map authoring in 3D (ADR-0018) — successor of `docs/MAP-AUTHORING.md` §4
+
+**Canonical:** this document, `unreal/content/schema/level.schema.json`, `unreal/content/schema/terrain.schema.json`, and `DF.Map.Validate` (`DFEditor` commandlet). **Owner:** WS-09. **Rule:** R. Where `docs/MAP-AUTHORING.md` §4 assumed a flat world, this document supersedes it; everything else there (§2 file format, §5 kit conventions, the doctrine that the map can be shaped but never sealed) stands.
+
+## 1. Files
+- `unreal/content/levels/<map>.level.json` — MAP-AUTHORING §2 extended: routes as 3D polylines (metres, Y-up; projected to the terrain on import unless `elevated: true`), `air` routes with `agl` (height above ground, 8–15 m) instead of absolute Y, `sockets` with `pad: true` (importer cuts a level 1.2 m pad), `bossRoute`, `mutables[]`, `containerGates[]`, `vehicleRoads[]` (splines with `maxGradePercent`), `brief` (the lesson and the design intent, prose), `nests[]`, `caches[]`, `barrelSpawns[]`.
+- `unreal/content/terrain/<map>.terrain.json` — the landform: `bounds` (playable + belt), `baseElevation`, `features[]` each `{kind: ridge|valley|plateau|terrace|cut|embankment|basin|saddle|cliff|roadbed|shore, spline[], width, height|depth, profile: smooth|sharp|stepped, falloff}`, `noise[]` per region `{octaves, amplitude, frequency, mask}`, `water[] {kind: lake|river|canal, level, spline|centre, width}`, `flats[]` (explicitly flat regions with a reason), `seed`. `build_heightmap.py` renders it deterministically to a 16-bit heightmap + layer masks; `<map>_sculpt_delta.png` (optional) is a recorded hand-polish layer re-applied after regeneration; the Landscape in `L_<Map>_Terrain` is always the product of these two, never the source.
+
+## 2. Rules (all measured on the assembled level by `DF.Map.Validate`; ratchet file `unreal/map-validation-baseline.tsv`)
+1. **Lane grade** ≤ 30 % on every walk edge (sampled every 1 m); boss routes ≤ 15 %; warp edges exempt.
+2. **Lane corridor** 3.4 m wide is walkable (navmesh agent slope 35°, step 45 cm) along its whole length; no navmesh gap.
+3. **Air lanes** keep their authored AGL within ±2 m over terrain and structures (sampled every 1 m); clearance ≥ 3 m below.
+4. **Sockets** sit on a levelled pad (slope ≤ 5 % after the cut); the surrounding ungraded slope may be ≤ 25 %; sockets ≥ 3.5 m off any lane centreline; pad ≥ 1.1 m (ground/trap) or on a wall face (wall).
+5. **Coverage** (the point): for every lane segment (every 4 m of every walk edge) at least **3 sockets** have real line of sight (`DF_Sight` trace from a tower's muzzle height on that socket to a 1.6 m target on the segment) and are within the longest tower range (16 m ground / 15 m air) — air segments need 3 air-capable sockets. Output: a **dead-ground report** per socket set (segments with < 3, and per socket the segments it can see) written beside the level file; a layout is accepted only with a clean report.
+6. **Indirect coverage** is reported separately: segments reachable by Nova's ballistic arc from ≥ 2 sockets (design information, not a hard rule).
+7. **Reachability on foot**: every socket, station, nest, cache, lever and pad is reachable from every hero station without vehicles (mantle ≤ 1.2 m, vault ≤ 0.9 m, ladders, ziplines, launchers, lifts, teleporters counted; slopes ≤ 45°).
+8. **Containment**: a capsule walked outward at 8 points per edge of the playable bounds is stopped (invisible wall at the belt's inner edge); no walkable path leads over a ridge out of bounds; no fall out of the world.
+9. **Vehicle roads** ≤ 12 % grade; every vehicle spawn on a road; roads reachable from every station by the vehicle's own rated grade.
+10. **Water**: lane crossings ≤ 0.5 m deep; deeper water is either bridged or a `mutable`/condition feature (ice); enemies never path through water > 0.5 m.
+11. **Gates and mutables**: closing any closable set never seals (`WouldSeal`); ≤ 8 closable edges; **every reachable combination of mutable states** is validated for rules 1–8 (rule 17 from PROGRAMME.md); a destructible wall opening adds a lane and never removes one.
+12. **Spawn apron**: 8 m around a spawn with no socket or structure; **clearance**: dressing ≥ 3 m + its footprint radius from lanes/sockets/spawns/core/armory/stations (PCG inputs).
+13. **Boss route**: 8 m clearance, ≤ 15 % grade, no warp legs, no operated gate it cannot break, at least one nest overlooking ≥ 50 % of it.
+14. **Sightline sanity**: no socket can see the spawn portal interior (enemies must walk before they are targetable) — a 2 m spawn shadow.
+15. **Silhouette rule at distance**: the validator renders (on the GPU box lane) each enemy at 40 m from the most common socket height and stores the sheet; a human signs it off per map.
+16. **Terrain proof** (vertical slice only): ≥ 8 m of relief along the primary lane; at least one socket whose LOS to a lane segment is blocked by terrain and recovered by Nova's arc.
+
+## 3. Lessons and briefs
+Each level file carries `brief.lesson` (one sentence, e.g. "the ground you hold is not the ground the wave is on") and `brief.intent` (a paragraph). The redesign of an existing map must preserve its lesson and its route-length ratios within ±20 %; socket counts may change. The previous `level.json` is copied to `unreal/content/levels/legacy/<map>.level.json` as the brief's record.

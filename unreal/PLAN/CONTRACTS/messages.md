@@ -1,0 +1,17 @@
+# C15 — Message inventory
+
+**Canonical:** `unreal/DeepField/Source/DFCore/Public/Messages/DFMessages.h` (one `USTRUCT FDFMsg_<Name>` per message with the same fields as the `Events.cs` record) and `UDFMessageBus` (`Broadcast(Tag, Payload)`, `Subscribe(Tag, Handler)`). **Owner:** WS-00. **Rule:** A for new messages; R for field changes.
+
+Transport (ADR-0004): the host broadcasts locally then `ADFEventRelay::NetMulticast_Event(FDFEventEnvelope)` for team-wide messages, or `Client_Refused(Tag, Reason)` for refusals to the issuing client only. UI, audio and VFX subscribe to messages and cues; nothing polls.
+
+Messages mirror `sim/Sim.Core/Events.cs:17-317` one-to-one (same names, same fields) — the port must keep the list; new ones are appended:
+
+**Lobby/match:** `PlayerJoined, PlayerLeft, JoinRejected{reason,yourBuild,hostBuild}, FactionSet, MatchLaunched, WaveStarted, WaveCleared, Intermission, Victory, Defeat, CoreBreached{lives}, ConditionAnnounced{next}, EndlessLap, TierSet, EarlyCallVote{player,vote}, EarlyCalled{bonus}`.
+**Building:** `TowerPlaced, BuildRejected{reason}, TowerUpgraded, UpgradeRejected, TowerSold, SellRejected{notOwner|limit}, TowerDestroyed, TrapTriggered, TrapRearmed, BarricadeState, StructureDamaged, BreachTargeted, OverclockFed{source,target,rate}`.
+**Combat:** `TowerFired, ProjectileLanded, BeamHeld, EnemySpawned, EnemyDamaged{source,zone,amount}, EnemyKilled{killer,melee}, EnemyLeaked, EnemyTeleported, StatusApplied, StatusExpired, ReactionTriggered, ShieldPopped, ShieldRegen, Burrowed, Surfaced, ClusterSplit, Healed, Enraged, Knockdown, EliteSpawned{mods}, BossArrived, BossPhase{phase}, PlateRemoved, Tethered, TetherBroken, Phased, Leaped`.
+**Player:** `PlayerHit, PlayerDowned, PlayerRevived, ReviveProgress, PlayerRespawned, ReloadStarted, Reloaded, AbilityUsed, AbilityRejected, ComboTriggered{a,b,combo}, Pinged{kind,target}, Dragging, Carrying, Mantled, HardLanding`.
+**Economy/gunsmith:** `ScrapDropped, ScrapCollected, ScrapBanked, WeaponBought, PurchaseRejected, WeaponSelected, AttachmentCrafted, CraftRejected, AmmoSelected, PackAPunched, MeleeBought, MeleeUpgraded, CacheOpened`.
+**Gates/mutables/vehicles:** `GateOperated, GateRejected{wouldSeal|body|cooldown}, MutableChanged{id,state}, FloodgatePulled, WallBroken, BarrelExploded, VehicleEntered, VehicleExited, VehicleRejected{reason}, VehicleRammed, VehicleWrecked, VehicleRespawned`.
+**Online:** `ConnectionState, JoinRequest{id,name}, JoinApproved, Kicked, HostMigrationOffered, SaveResumed`.
+
+Every refusal is a message with a machine-readable `reason` so the UI can say *why* ("factionTaken", "insufficientScrap", "wouldSeal", "notOwner").

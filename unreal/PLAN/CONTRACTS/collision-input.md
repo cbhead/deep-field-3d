@@ -1,0 +1,9 @@
+# C16 — Collision channels and input
+
+**Canonical:** `unreal/DeepField/Config/DefaultEngine.ini` (`[/Script/Engine.CollisionProfile]`), `Content/DF/Core/Input/{IMC_DF_Default, IA_*, DA_InputConfig}`. **Owner:** WS-00; **Rule:** I (integration-owned; request changes via "Needs INT").
+
+**Trace channels:** `DF_Sight` (tower/AI line of sight — blocked by terrain, static world, registered blockers; ignores enemies except the target), `DF_Weapon` (hero shots — blocks on world, enemy hit zones, vehicles), `DF_Build` (socket/ghost placement), `DF_Interact` (E-key targets: sockets, levers, pads, vehicles, caches, downed players, barrels), `DF_LaneSurface` (terrain query for lane projection and scrap settling).
+**Object channels:** `DF_Hero`, `DF_Enemy`, `DF_Structure`, `DF_Vehicle`, `DF_Prop` (barrels, containers, debris), `DF_Pickup`.
+**Profiles:** `DF_Hero` (capsule; blocks world/structure/vehicle/prop, overlaps enemy contact), `DF_HeroRagdoll`, `DF_EnemyGround`, `DF_EnemyAir`, `DF_EnemyRagdoll`, `DF_EnemyHitZone` (physics-asset bodies: `DF_Weapon` block only), `DF_Structure`, `DF_StructureGhost`, `DF_Vehicle`, `DF_Prop`, `DF_Pickup` (overlap hero only), `DF_SightBlocker` (Monolith/boss/wall/container extra body), `DF_Graybox` (dev kit).
+
+**Input:** Enhanced Input; `IMC_DF_Default` + `IMC_DF_Vehicle` + `IMC_DF_Radial` (wheel/picker steering) + `IMC_DF_Downed`; actions `IA_Move IA_Look IA_Jump IA_Sprint IA_Crouch IA_Fire IA_AltFire IA_Aim IA_Reload IA_Melee IA_Interact(hold) IA_Build(hold E) IA_Upgrade(hold U) IA_Sell(hold X 0.7 s) IA_Ability(Q) IA_Wheel IA_Ping IA_Scoreboard(Tab) IA_Pause(Esc) IA_Flashlight IA_Throttle IA_Steer IA_Handbrake IA_Exit` mapped to `DF.Input.*` tags in `DA_InputConfig` (Lyra pattern). Defaults preserve the Godot bindings (WASD/Shift/Space, hold E/U/X, LMB/RMB, Q, R, Tab, F, Esc). Gamepad mappings are included from day one (Common UI input routing).
