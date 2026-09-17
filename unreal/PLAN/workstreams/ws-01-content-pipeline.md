@@ -2,11 +2,11 @@
 ws: 01
 slug: content-pipeline
 title: Content pipeline
-state: unclaimed
-owner: 
-claimed_at: 
-lease_expires: 
-branch: 
+state: active
+owner: session-75b58b1b (INT)
+claimed_at: 2026-09-17T07:18:45Z
+lease_expires: 2026-09-18T07:18:45Z
+branch: unreal/main
 last_commit: 
 editor_heavy: false
 phase: P1
