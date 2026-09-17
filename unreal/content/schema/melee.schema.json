@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deepfield.dev/content/melee.schema.json",
+  "title": "melee",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "table",
+    "generated",
+    "rows"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "deepfield-content/1"
+    },
+    "table": {
+      "type": "string"
+    },
+    "generated": {
+      "type": "string"
+    },
+    "sourceSha": {
+      "type": "string"
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "recipe",
+          "damage",
+          "swingsPerSecond",
+          "reachMeters",
+          "arcDegrees",
+          "knockbackMeters",
+          "applies",
+          "masteryCosts"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "recipe": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "enum": [
+                "Alloy",
+                "Flux",
+                "Plating",
+                "Gravium"
+              ]
+            }
+          },
+          "damage": {
+            "type": "number"
+          },
+          "swingsPerSecond": {
+            "type": "number"
+          },
+          "reachMeters": {
+            "type": "number"
+          },
+          "arcDegrees": {
+            "type": "number"
+          },
+          "knockbackMeters": {
+            "type": "number"
+          },
+          "applies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "masteryCosts": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    }
+  }
+}

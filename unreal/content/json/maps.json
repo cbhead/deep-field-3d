@@ -1,0 +1,117 @@
+{
+  "$schema": "deepfield-content/1",
+  "table": "maps",
+  "generated": "2026-09-17T07:21:16Z",
+  "sourceSha": "b44eea1",
+  "rows": [
+    {
+      "id": "testlane",
+      "order": -1,
+      "totalWaves": 3,
+      "fieldMeters": [
+        110,
+        80
+      ],
+      "conditionSchedule": {},
+      "vehicles": [],
+      "bossRated": false,
+      "lesson": "",
+      "tiers": [
+        "standard",
+        "hardened",
+        "assault"
+      ],
+      "legacyLevelFile": "levels/legacy/testlane.level.json"
+    },
+    {
+      "id": "foundry",
+      "order": 0,
+      "totalWaves": 10,
+      "fieldMeters": [
+        110,
+        80
+      ],
+      "conditionSchedule": {
+        "8": "fog"
+      },
+      "vehicles": [],
+      "bossRated": false,
+      "lesson": "",
+      "tiers": [
+        "standard",
+        "hardened",
+        "assault"
+      ],
+      "legacyLevelFile": "levels/legacy/foundry.level.json"
+    },
+    {
+      "id": "switchyard",
+      "order": 1,
+      "totalWaves": 12,
+      "fieldMeters": [
+        110,
+        80
+      ],
+      "conditionSchedule": {
+        "8": "night"
+      },
+      "vehicles": [],
+      "bossRated": false,
+      "lesson": "",
+      "tiers": [
+        "standard",
+        "hardened",
+        "assault"
+      ],
+      "legacyLevelFile": "levels/legacy/switchyard.level.json"
+    },
+    {
+      "id": "spire",
+      "order": 2,
+      "totalWaves": 12,
+      "fieldMeters": [
+        110,
+        80
+      ],
+      "conditionSchedule": {
+        "7": "night",
+        "11": "fog"
+      },
+      "vehicles": [],
+      "bossRated": false,
+      "lesson": "",
+      "tiers": [
+        "standard",
+        "hardened",
+        "assault"
+      ],
+      "legacyLevelFile": "levels/legacy/spire.level.json"
+    },
+    {
+      "id": "toaster",
+      "order": 3,
+      "totalWaves": 12,
+      "fieldMeters": [
+        320,
+        160
+      ],
+      "conditionSchedule": {
+        "8": "night"
+      },
+      "vehicles": [
+        "buggy",
+        "dagator",
+        "grnmchn",
+        "vehickle"
+      ],
+      "bossRated": false,
+      "lesson": "",
+      "tiers": [
+        "standard",
+        "hardened",
+        "assault"
+      ],
+      "legacyLevelFile": "levels/legacy/toaster.level.json"
+    }
+  ]
+}

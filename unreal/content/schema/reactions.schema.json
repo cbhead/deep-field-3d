@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deepfield.dev/content/reactions.schema.json",
+  "title": "reactions",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "table",
+    "generated",
+    "rows"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "deepfield-content/1"
+    },
+    "table": {
+      "type": "string"
+    },
+    "generated": {
+      "type": "string"
+    },
+    "sourceSha": {
+      "type": "string"
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "statusA",
+          "statusB",
+          "burstFraction"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "statusA": {
+            "type": "string"
+          },
+          "statusB": {
+            "type": "string"
+          },
+          "burstFraction": {
+            "type": "number"
+          },
+          "emitStatus": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,104 @@
+{
+  "$schema": "deepfield-content/1",
+  "table": "statuses",
+  "generated": "2026-09-17T07:21:16Z",
+  "sourceSha": "b44eea1",
+  "rows": [
+    {
+      "id": "chill",
+      "channel": "Movement",
+      "speedFactor": 0.65,
+      "damagePerSecond": 0,
+      "damageTakenFactor": 1,
+      "armorDelta": 0,
+      "hardControl": false,
+      "maxDurationSeconds": 1.5,
+      "ignoresArmor": false,
+      "ignoresShield": false
+    },
+    {
+      "id": "burn",
+      "channel": "Thermal",
+      "speedFactor": 1,
+      "damagePerSecond": 6,
+      "damageTakenFactor": 1,
+      "armorDelta": 0,
+      "hardControl": false,
+      "maxDurationSeconds": 3,
+      "ignoresArmor": false,
+      "ignoresShield": false
+    },
+    {
+      "id": "mark",
+      "channel": "Vulnerability",
+      "speedFactor": 1,
+      "damagePerSecond": 0,
+      "damageTakenFactor": 1.25,
+      "armorDelta": 0,
+      "hardControl": false,
+      "maxDurationSeconds": 4,
+      "ignoresArmor": false,
+      "ignoresShield": false
+    },
+    {
+      "id": "shock",
+      "channel": "Control",
+      "speedFactor": 0,
+      "damagePerSecond": 0,
+      "damageTakenFactor": 1,
+      "armorDelta": 0,
+      "hardControl": true,
+      "maxDurationSeconds": 0.25,
+      "ignoresArmor": false,
+      "ignoresShield": false
+    },
+    {
+      "id": "freeze",
+      "channel": "Control",
+      "speedFactor": 0,
+      "damagePerSecond": 0,
+      "damageTakenFactor": 1,
+      "armorDelta": 0,
+      "hardControl": true,
+      "maxDurationSeconds": 1.2,
+      "ignoresArmor": false,
+      "ignoresShield": false
+    },
+    {
+      "id": "shred",
+      "channel": "Defense",
+      "speedFactor": 1,
+      "damagePerSecond": 0,
+      "damageTakenFactor": 1,
+      "armorDelta": -2,
+      "hardControl": false,
+      "maxDurationSeconds": 4,
+      "ignoresArmor": false,
+      "ignoresShield": false
+    },
+    {
+      "id": "poison",
+      "channel": "Toxin",
+      "speedFactor": 1,
+      "damagePerSecond": 3,
+      "damageTakenFactor": 1,
+      "armorDelta": 0,
+      "hardControl": false,
+      "maxDurationSeconds": 6,
+      "ignoresArmor": true,
+      "ignoresShield": true
+    },
+    {
+      "id": "reveal",
+      "channel": "Detection",
+      "speedFactor": 1,
+      "damagePerSecond": 0,
+      "damageTakenFactor": 1,
+      "armorDelta": 0,
+      "hardControl": false,
+      "maxDurationSeconds": 3,
+      "ignoresArmor": false,
+      "ignoresShield": false
+    }
+  ]
+}

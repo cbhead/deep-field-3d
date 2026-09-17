@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deepfield.dev/content/conditions.schema.json",
+  "title": "conditions",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "table",
+    "generated",
+    "rows"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "deepfield-content/1"
+    },
+    "table": {
+      "type": "string"
+    },
+    "generated": {
+      "type": "string"
+    },
+    "sourceSha": {
+      "type": "string"
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "effect",
+          "towerRangeFactor",
+          "rangeExemptTowerIds",
+          "acquisitionDelaySeconds",
+          "acquisitionDelayExemptsMarked",
+          "heroRangeFactor",
+          "stealthWeightFactor",
+          "channelDurationFactors"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "effect": {
+            "type": "string"
+          },
+          "towerRangeFactor": {
+            "type": "number"
+          },
+          "rangeExemptTowerIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "acquisitionDelaySeconds": {
+            "type": "number"
+          },
+          "acquisitionDelayExemptsMarked": {
+            "type": "boolean"
+          },
+          "heroRangeFactor": {
+            "type": "number"
+          },
+          "stealthWeightFactor": {
+            "type": "number"
+          },
+          "channelDurationFactors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            },
+            "propertyNames": {
+              "enum": [
+                "Movement",
+                "Thermal",
+                "Toxin",
+                "Defense",
+                "Vulnerability",
+                "Control",
+                "Tether",
+                "Detection"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

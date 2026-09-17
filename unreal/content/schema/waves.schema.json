@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deepfield.dev/content/waves.schema.json",
+  "title": "waves",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "table",
+    "generated",
+    "rows"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "deepfield-content/1"
+    },
+    "table": {
+      "type": "string"
+    },
+    "generated": {
+      "type": "string"
+    },
+    "sourceSha": {
+      "type": "string"
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "waveIndex": {
+            "type": "integer"
+          },
+          "enemyId": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "spacingTicks": {
+            "type": "integer"
+          },
+          "startDelayTicks": {
+            "type": "integer"
+          },
+          "routeId": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

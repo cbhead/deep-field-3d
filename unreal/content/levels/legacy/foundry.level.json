@@ -1,0 +1,582 @@
+{
+  "$schema": "deepfield-level/legacy",
+  "id": "foundry",
+  "note": "Exported from sim/Sim.Core/Content/Maps.cs. The BRIEF for the 3D redesign (routes, lessons, socket counts, route-length ratios) — not the output. See unreal/PLAN/CONTRACTS/map-authoring-3d.md.",
+  "units": "metres, Y-up, -Z forward (sim frame)",
+  "field": [
+    110,
+    80
+  ],
+  "totalWaves": 10,
+  "heroSpawn": [
+    0,
+    0,
+    -24
+  ],
+  "armory": [
+    -6,
+    0,
+    -24
+  ],
+  "routes": [
+    {
+      "id": "ground",
+      "layer": "Ground",
+      "waypoints": [
+        [
+          -40,
+          0,
+          0
+        ],
+        [
+          -20,
+          0,
+          0
+        ],
+        [
+          -20,
+          0,
+          14
+        ],
+        [
+          0,
+          0,
+          14
+        ],
+        [
+          0,
+          0,
+          -8
+        ],
+        [
+          18,
+          0,
+          -8
+        ],
+        [
+          18,
+          0,
+          6
+        ],
+        [
+          36,
+          0,
+          6
+        ]
+      ],
+      "barricadeGate": null,
+      "fallbackRouteId": null,
+      "teleportLegs": null
+    },
+    {
+      "id": "air",
+      "layer": "Air",
+      "waypoints": [
+        [
+          -40,
+          9,
+          -4
+        ],
+        [
+          -14,
+          13,
+          -14
+        ],
+        [
+          8,
+          13,
+          -16
+        ],
+        [
+          36,
+          9,
+          4
+        ]
+      ],
+      "barricadeGate": null,
+      "fallbackRouteId": null,
+      "teleportLegs": null
+    }
+  ],
+  "sockets": [
+    {
+      "id": "g7",
+      "tag": "Ground",
+      "pos": [
+        -34,
+        0,
+        -6
+      ]
+    },
+    {
+      "id": "g8",
+      "tag": "Ground",
+      "pos": [
+        -33,
+        0,
+        7
+      ]
+    },
+    {
+      "id": "g9",
+      "tag": "Ground",
+      "pos": [
+        -26,
+        0,
+        -6
+      ]
+    },
+    {
+      "id": "g1",
+      "tag": "Ground",
+      "pos": [
+        -24,
+        0,
+        6
+      ]
+    },
+    {
+      "id": "g11",
+      "tag": "Ground",
+      "pos": [
+        -26,
+        0,
+        14
+      ]
+    },
+    {
+      "id": "g10",
+      "tag": "Ground",
+      "pos": [
+        -14,
+        0,
+        -4
+      ]
+    },
+    {
+      "id": "g2",
+      "tag": "Ground",
+      "pos": [
+        -14,
+        0,
+        9
+      ]
+    },
+    {
+      "id": "g12",
+      "tag": "Ground",
+      "pos": [
+        -16,
+        0,
+        20
+      ]
+    },
+    {
+      "id": "g13",
+      "tag": "Ground",
+      "pos": [
+        -6,
+        0,
+        20
+      ]
+    },
+    {
+      "id": "g3",
+      "tag": "Ground",
+      "pos": [
+        -4,
+        0,
+        8
+      ]
+    },
+    {
+      "id": "g14",
+      "tag": "Ground",
+      "pos": [
+        6,
+        0,
+        12
+      ]
+    },
+    {
+      "id": "g4",
+      "tag": "Ground",
+      "pos": [
+        4,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "g15",
+      "tag": "Ground",
+      "pos": [
+        9,
+        0,
+        4
+      ]
+    },
+    {
+      "id": "g16",
+      "tag": "Ground",
+      "pos": [
+        -5,
+        0,
+        -5
+      ]
+    },
+    {
+      "id": "g5",
+      "tag": "Ground",
+      "pos": [
+        12,
+        0,
+        -2
+      ]
+    },
+    {
+      "id": "g17",
+      "tag": "Ground",
+      "pos": [
+        0,
+        0,
+        -13
+      ]
+    },
+    {
+      "id": "g18",
+      "tag": "Ground",
+      "pos": [
+        22,
+        0,
+        -13
+      ]
+    },
+    {
+      "id": "g6",
+      "tag": "Ground",
+      "pos": [
+        24,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "g19",
+      "tag": "Ground",
+      "pos": [
+        30,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "g20",
+      "tag": "Ground",
+      "pos": [
+        30,
+        0,
+        13
+      ]
+    },
+    {
+      "id": "g21",
+      "tag": "Ground",
+      "pos": [
+        14,
+        0,
+        10
+      ]
+    },
+    {
+      "id": "g22",
+      "tag": "Ground",
+      "pos": [
+        36,
+        0,
+        -2
+      ]
+    },
+    {
+      "id": "w1",
+      "tag": "Wall",
+      "pos": [
+        -6,
+        6,
+        -16
+      ]
+    },
+    {
+      "id": "w2",
+      "tag": "Wall",
+      "pos": [
+        2,
+        6,
+        -16
+      ]
+    },
+    {
+      "id": "w3",
+      "tag": "Wall",
+      "pos": [
+        10,
+        6,
+        -16
+      ]
+    },
+    {
+      "id": "g23",
+      "tag": "Ground",
+      "pos": [
+        -30,
+        0,
+        -9
+      ]
+    },
+    {
+      "id": "w4",
+      "tag": "Wall",
+      "pos": [
+        -10,
+        6,
+        -13.4
+      ]
+    },
+    {
+      "id": "w5",
+      "tag": "Wall",
+      "pos": [
+        -2,
+        6,
+        -13.4
+      ]
+    },
+    {
+      "id": "w6",
+      "tag": "Wall",
+      "pos": [
+        6,
+        6,
+        -13.4
+      ]
+    },
+    {
+      "id": "w7",
+      "tag": "Wall",
+      "pos": [
+        14,
+        6,
+        -13.4
+      ]
+    },
+    {
+      "id": "w8",
+      "tag": "Wall",
+      "pos": [
+        -10,
+        6,
+        -19.5
+      ]
+    },
+    {
+      "id": "w9",
+      "tag": "Wall",
+      "pos": [
+        6,
+        6,
+        -19.5
+      ]
+    },
+    {
+      "id": "w10",
+      "tag": "Wall",
+      "pos": [
+        9,
+        6,
+        -7
+      ]
+    },
+    {
+      "id": "w11",
+      "tag": "Wall",
+      "pos": [
+        9,
+        6,
+        -1
+      ]
+    },
+    {
+      "id": "t4",
+      "tag": "Trap",
+      "pos": [
+        -30,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "t1",
+      "tag": "Trap",
+      "pos": [
+        -20,
+        0,
+        7
+      ]
+    },
+    {
+      "id": "t5",
+      "tag": "Trap",
+      "pos": [
+        -20,
+        0,
+        13
+      ]
+    },
+    {
+      "id": "t6",
+      "tag": "Trap",
+      "pos": [
+        -10,
+        0,
+        14
+      ]
+    },
+    {
+      "id": "t7",
+      "tag": "Trap",
+      "pos": [
+        0,
+        0,
+        10
+      ]
+    },
+    {
+      "id": "t2",
+      "tag": "Trap",
+      "pos": [
+        0,
+        0,
+        3
+      ]
+    },
+    {
+      "id": "t8",
+      "tag": "Trap",
+      "pos": [
+        0,
+        0,
+        -4
+      ]
+    },
+    {
+      "id": "t9",
+      "tag": "Trap",
+      "pos": [
+        9,
+        0,
+        -8
+      ]
+    },
+    {
+      "id": "t3",
+      "tag": "Trap",
+      "pos": [
+        18,
+        0,
+        -1
+      ]
+    },
+    {
+      "id": "t10",
+      "tag": "Trap",
+      "pos": [
+        18,
+        0,
+        5
+      ]
+    },
+    {
+      "id": "t11",
+      "tag": "Trap",
+      "pos": [
+        28,
+        0,
+        6
+      ]
+    }
+  ],
+  "stations": [
+    {
+      "id": "spawnYard",
+      "pos": [
+        0,
+        0,
+        -20
+      ]
+    },
+    {
+      "id": "upperDeck",
+      "pos": [
+        2,
+        6,
+        -15
+      ]
+    },
+    {
+      "id": "midLane",
+      "pos": [
+        -8,
+        0,
+        5
+      ]
+    },
+    {
+      "id": "coreGate",
+      "pos": [
+        28,
+        0,
+        3
+      ]
+    }
+  ],
+  "conditionSchedule": {
+    "8": "fog"
+  },
+  "vehicles": [],
+  "laneNodeNames": [
+    {
+      "id": "westGate",
+      "at": [
+        -40,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "core",
+      "at": [
+        36,
+        0,
+        6
+      ]
+    },
+    {
+      "id": "airWest",
+      "at": [
+        -40,
+        9,
+        -4
+      ]
+    },
+    {
+      "id": "airCore",
+      "at": [
+        36,
+        9,
+        4
+      ]
+    }
+  ],
+  "laneGates": [],
+  "operatedGates": []
+}

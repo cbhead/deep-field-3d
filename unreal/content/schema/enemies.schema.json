@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deepfield.dev/content/enemies.schema.json",
+  "title": "enemies",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "table",
+    "generated",
+    "rows"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "deepfield-content/1"
+    },
+    "table": {
+      "type": "string"
+    },
+    "generated": {
+      "type": "string"
+    },
+    "sourceSha": {
+      "type": "string"
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "hp",
+          "speedMetersPerSec",
+          "bounty",
+          "leakDamage",
+          "layer",
+          "contactDamage",
+          "scatterWidth",
+          "blocksSight",
+          "frontArmorArcDegrees",
+          "frontArmorFactor",
+          "rearWeakFactor",
+          "shield",
+          "flatArmor",
+          "mass",
+          "burrower",
+          "splitCount",
+          "scrapYield"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "hp": {
+            "type": "number"
+          },
+          "speedMetersPerSec": {
+            "type": "number"
+          },
+          "bounty": {
+            "type": "integer"
+          },
+          "leakDamage": {
+            "type": "integer"
+          },
+          "layer": {
+            "type": "string",
+            "enum": [
+              "Ground",
+              "Air"
+            ]
+          },
+          "contactDamage": {
+            "type": "number"
+          },
+          "scatterWidth": {
+            "type": "number"
+          },
+          "blocksSight": {
+            "type": "boolean"
+          },
+          "frontArmorArcDegrees": {
+            "type": "number"
+          },
+          "frontArmorFactor": {
+            "type": "number"
+          },
+          "rearWeakFactor": {
+            "type": "number"
+          },
+          "shield": {
+            "type": "number"
+          },
+          "flatArmor": {
+            "type": "number"
+          },
+          "mass": {
+            "type": "number"
+          },
+          "burrower": {
+            "type": "boolean"
+          },
+          "splitInto": {
+            "type": "string"
+          },
+          "splitCount": {
+            "type": "integer"
+          },
+          "scrapYield": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "enum": [
+                "Alloy",
+                "Flux",
+                "Plating",
+                "Gravium"
+              ]
+            }
+          },
+          "stealth": {
+            "type": "boolean"
+          },
+          "stealthSpeedBonus": {
+            "type": "number"
+          },
+          "healPerSecond": {
+            "type": "number"
+          },
+          "healRadius": {
+            "type": "number"
+          },
+          "structureDps": {
+            "type": "number"
+          },
+          "structureReach": {
+            "type": "number"
+          },
+          "enrageBelowHpFraction": {
+            "type": "number"
+          },
+          "enrageSpeedFactor": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  }
+}

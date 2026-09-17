@@ -1,0 +1,27 @@
+{
+  "$schema": "deepfield-content/1",
+  "table": "reactions",
+  "generated": "2026-09-17T07:21:16Z",
+  "sourceSha": "b44eea1",
+  "rows": [
+    {
+      "id": "thermalShock",
+      "statusA": "chill",
+      "statusB": "burn",
+      "burstFraction": 0.12
+    },
+    {
+      "id": "flashFreeze",
+      "statusA": "chill",
+      "statusB": "shock",
+      "burstFraction": 0,
+      "emitStatus": "freeze"
+    },
+    {
+      "id": "corrode",
+      "statusA": "poison",
+      "statusB": "shred",
+      "burstFraction": 0.1
+    }
+  ]
+}

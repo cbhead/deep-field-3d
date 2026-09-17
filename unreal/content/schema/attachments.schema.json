@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deepfield.dev/content/attachments.schema.json",
+  "title": "attachments",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "table",
+    "generated",
+    "rows"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "deepfield-content/1"
+    },
+    "table": {
+      "type": "string"
+    },
+    "generated": {
+      "type": "string"
+    },
+    "sourceSha": {
+      "type": "string"
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "slot",
+          "damageFactor",
+          "rateFactor",
+          "rangeFactor",
+          "recipe"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "slot": {
+            "type": "string",
+            "enum": [
+              "Barrel",
+              "Muzzle",
+              "Optic",
+              "Magazine",
+              "Stock",
+              "Underbarrel",
+              "Infusion"
+            ]
+          },
+          "damageFactor": {
+            "type": "number"
+          },
+          "rateFactor": {
+            "type": "number"
+          },
+          "rangeFactor": {
+            "type": "number"
+          },
+          "applies": {
+            "type": "string"
+          },
+          "recipe": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "enum": [
+                "Alloy",
+                "Flux",
+                "Plating",
+                "Gravium"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

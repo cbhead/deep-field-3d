@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deepfield.dev/content/traps.schema.json",
+  "title": "traps",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "table",
+    "generated",
+    "rows"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "deepfield-content/1"
+    },
+    "table": {
+      "type": "string"
+    },
+    "generated": {
+      "type": "string"
+    },
+    "sourceSha": {
+      "type": "string"
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "cost",
+          "triggerRadius",
+          "charges",
+          "rearmSeconds",
+          "damage",
+          "knockbackMeters",
+          "scrapCost"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "cost": {
+            "type": "integer"
+          },
+          "triggerRadius": {
+            "type": "number"
+          },
+          "charges": {
+            "type": "integer"
+          },
+          "rearmSeconds": {
+            "type": "number"
+          },
+          "damage": {
+            "type": "number"
+          },
+          "applies": {
+            "type": "string"
+          },
+          "knockbackMeters": {
+            "type": "number"
+          },
+          "scrapCost": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "enum": [
+                "Alloy",
+                "Flux",
+                "Plating",
+                "Gravium"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

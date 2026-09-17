@@ -1,13 +1,13 @@
 # Workstream status
 
-Generated 2026-09-17T07:18:45Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-17T07:22:04Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
-active: 2 · unclaimed: 47
+active: 1 · blocked: 1 · unclaimed: 47
 
 | WS | Title | Phase | CP | State | Owner | Lease expires | Last commit | Editor-heavy | Blocked on |
 |---|---|---|---|---|---|---|---|---|---|
 | WS-00 | Foundation & contracts | P1 | CP | active | session-75b58b1b (INT) | 2026-09-18T07:17:27Z | — | yes | — |
-| WS-01 | Content pipeline | P1 | CP | active | session-75b58b1b (INT) | 2026-09-18T07:18:45Z | — |  | — |
+| WS-01 | Content pipeline | P1 | CP | blocked | session-75b58b1b (INT) | 2026-09-18T07:18:45Z | — |  | uproject (external SSD, P0) for the commandlet half; JSON bootstrap done |
 | WS-02 | Gameplay core (GAS) | P1-P2 | CP | unclaimed | — | — | — |  | — |
 | WS-03 | Player | P2 | CP | unclaimed | — | — | — | yes | — |
 | WS-04 | Towers & build | P2-P3 | CP | unclaimed | — | — | — | yes | — |

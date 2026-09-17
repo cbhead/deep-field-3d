@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deepfield.dev/content/ammo.schema.json",
+  "title": "ammo",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "table",
+    "generated",
+    "rows"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "deepfield-content/1"
+    },
+    "table": {
+      "type": "string"
+    },
+    "generated": {
+      "type": "string"
+    },
+    "sourceSha": {
+      "type": "string"
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "damageFactor",
+          "ignoresFlatArmor",
+          "unarmoredBonusFactor",
+          "recipe"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "damageFactor": {
+            "type": "number"
+          },
+          "ignoresFlatArmor": {
+            "type": "boolean"
+          },
+          "unarmoredBonusFactor": {
+            "type": "number"
+          },
+          "applies": {
+            "type": "string"
+          },
+          "recipe": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "enum": [
+                "Alloy",
+                "Flux",
+                "Plating",
+                "Gravium"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

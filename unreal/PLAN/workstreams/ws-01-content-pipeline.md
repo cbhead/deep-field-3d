@@ -2,7 +2,7 @@
 ws: 01
 slug: content-pipeline
 title: Content pipeline
-state: active
+state: blocked
 owner: session-75b58b1b (INT)
 claimed_at: 2026-09-17T07:18:45Z
 lease_expires: 2026-09-18T07:18:45Z
@@ -12,7 +12,7 @@ editor_heavy: false
 phase: P1
 size: M
 critical: true
-blocked_on: 
+blocked_on: uproject (external SSD, P0) for the commandlet half; JSON bootstrap done
 ---
 # WS-01 — Content pipeline
 
@@ -42,3 +42,4 @@ blocked_on:
 
 ## Session log
 <!-- append-only: date · session · what landed · what's next -->
+- 2026-09-17 · session-75b58b1b (INT) · Landed `tools/content-export` (.NET 8, reflection over Sim.Core records) and ran the one-time bootstrap: 20 tables in `unreal/content/json/` (towers 8, traps 3, enemies 11, statuses 8, reactions 3, factions 5, weapons 6, melee 4, meleeAttachments 8, attachments 11, ammo 7, conditions 2, vehicles 4, maps 5, waves_* ×5, balance 52 dials), `unreal/content/content-ids.json`, 16 JSON schemas in `unreal/content/schema/`, and the five legacy level briefs in `unreal/content/levels/legacy/`. `--diff` reports no drift. From here the JSON is authoritative (ADR-0005). **Next:** the `DFContentPipeline` commandlet (JSON → `DT_*`), `DF.Content.RoundTrip/Bindings/TagCoverage`, `DA_Palette`/`DA_UITokens` import — all need the .uproject, i.e. the external SSD (P0). A CI schema validator (`unreal/Build/validate-content-json.py`) can land before that.

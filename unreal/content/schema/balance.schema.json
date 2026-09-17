@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deepfield.dev/content/balance.schema.json",
+  "title": "balance",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "table",
+    "generated",
+    "rows"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "deepfield-content/1"
+    },
+    "table": {
+      "type": "string"
+    },
+    "generated": {
+      "type": "string"
+    },
+    "sourceSha": {
+      "type": "string"
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tickHz": {
+            "type": "integer"
+          },
+          "dt": {
+            "type": "number"
+          },
+          "startingLives": {
+            "type": "integer"
+          },
+          "startingMoney": {
+            "type": "integer"
+          },
+          "hpGrowth": {
+            "type": "number"
+          },
+          "bountyScale": {
+            "type": "integer"
+          },
+          "bountyGrowth": {
+            "type": "number"
+          },
+          "scrapGrowth": {
+            "type": "number"
+          },
+          "packFirstCost": {
+            "type": "integer"
+          },
+          "packCostGrowth": {
+            "type": "number"
+          },
+          "packDamagePerLevel": {
+            "type": "number"
+          },
+          "packRatePerLevel": {
+            "type": "number"
+          },
+          "packGraviumEvery": {
+            "type": "integer"
+          },
+          "packGraviumPerStep": {
+            "type": "integer"
+          },
+          "intermissionSeconds": {
+            "type": "integer"
+          },
+          "projectileHitRadius": {
+            "type": "number"
+          },
+          "countScalePerExtraPlayer": {
+            "type": "number"
+          },
+          "hpScalePerExtraPlayer": {
+            "type": "number"
+          },
+          "playerMaxHp": {
+            "type": "integer"
+          },
+          "playerRegenDelaySeconds": {
+            "type": "integer"
+          },
+          "playerRegenPerSecond": {
+            "type": "integer"
+          },
+          "reviveSeconds": {
+            "type": "integer"
+          },
+          "bleedoutSeconds": {
+            "type": "integer"
+          },
+          "soloRespawnSeconds": {
+            "type": "integer"
+          },
+          "reviveRangeMeters": {
+            "type": "number"
+          },
+          "contactRadiusMeters": {
+            "type": "number"
+          },
+          "scrapTeamShare": {
+            "type": "number"
+          },
+          "forgeBuildDiscount": {
+            "type": "number"
+          },
+          "beamRampPerSecond": {
+            "type": "number"
+          },
+          "beamRampCap": {
+            "type": "integer"
+          },
+          "emberBurnDurationFactor": {
+            "type": "number"
+          },
+          "tempestRateFactor": {
+            "type": "number"
+          },
+          "glacierChilledDamageFactor": {
+            "type": "number"
+          },
+          "sellRefundPercent": {
+            "type": "integer"
+          },
+          "shieldRegenDelaySeconds": {
+            "type": "integer"
+          },
+          "shieldRegenPerSecond": {
+            "type": "integer"
+          },
+          "ccResistFillPerSecond": {
+            "type": "number"
+          },
+          "ccResistDecayPerSecond": {
+            "type": "number"
+          },
+          "meleeScrapBonus": {
+            "type": "number"
+          },
+          "meleeRepairFactor": {
+            "type": "number"
+          },
+          "siegeBreachBias": {
+            "type": "number"
+          },
+          "burrowCycleMeters": {
+            "type": "integer"
+          },
+          "burrowedMeters": {
+            "type": "integer"
+          },
+          "hitRangeSlack": {
+            "type": "number"
+          },
+          "endlessCountGrowthPerLap": {
+            "type": "number"
+          },
+          "endlessHpGrowth": {
+            "type": "number"
+          },
+          "scrapPickupSeconds": {
+            "type": "integer"
+          },
+          "scrapMagnetMeters": {
+            "type": "number"
+          },
+          "scrapMagnetSpeed": {
+            "type": "integer"
+          },
+          "scrapCollectMeters": {
+            "type": "number"
+          },
+          "scrapFallSpeed": {
+            "type": "integer"
+          }
+        }
+      }
+    }
+  }
+}
