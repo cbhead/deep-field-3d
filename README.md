@@ -69,15 +69,15 @@ the core does.
 
 | | |
 |---|---|
-| WASD / Shift / Space | move, sprint, jump |
+| WASD or arrow keys / Shift / Space | move, sprint, jump |
 | **hold E** at a socket | build wheel — steer with the mouse, release to build |
 | **hold U** at a structure | upgrade paths (1–3), **hold X** to sell |
 | LMB / RMB | fire · melee swing (arc; melee kills pay +25% scrap) |
 | walk over a drop | collect scrap — it buys your weapons, attachments and ammo |
 | **Q** faction ability · **hold R** revive | |
 | **Tab** | armory + gunsmith · **F** start wave early · **Esc** menu |
-| E on a zipline, W on a ladder | traversal |
-| **E** at a vehicle · **hold E** to take the passenger seat | drive with WASD, **Space** handbrake, **E** to get out |
+| E on a zipline, W or ↑ on a ladder | traversal |
+| **E** at a vehicle · **hold E** to take the passenger seat | drive with WASD or the arrows, **Space** handbrake, **E** to get out |
 | **hold E** on a teleport pad | pick a destination from the network; stand still for the charge |
 
 ## What's in it
