@@ -35,6 +35,9 @@ public class DFEditor : ModuleRules
 			"AssetTools",
 			"ContentBrowser",
 			"Projects",
+			// Terrain lane (WS-30): PNG heightmaps in, PM_Grass on the Landscape.
+			"ImageWrapper",
+			"PhysicsCore",
 		});
 	}
 }
