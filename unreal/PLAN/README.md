@@ -18,6 +18,13 @@ for every workstream, the Appendices for the workstreams that cite them.
 | `digests/YYYY-MM-DD.md` | INT cycle digest: merged PRs, interface changes, expired leases, red tests, open RFCs, unverified render lanes. | INT |
 | `registry.json` | The workstream registry used by `plan-scaffold.py` to create missing ws files. Edit only to add a workstream (INT). | INT |
 
+## Working copies (ADR-0021)
+
+- **Unreal working copy:** `/Volumes/Toshiba/Deepfield-Unreal/deepfield-3d` on the external SSD — open the editor, build, cook and import only here. DDC: `/Volumes/Toshiba/Deepfield-Unreal/DDC`.
+- Parallel sessions: `git worktree add /Volumes/Toshiba/Deepfield-Unreal/wt-ws-NN -b ws/NN-<slug>/<topic> origin/unreal/main` from that clone.
+- The internal-disk checkout (`~/dev/deepfield-3d`) has ~16 GB free: text-only work (ledger, JSON, docs, scripts).
+- Build: `Engine/Build/BatchFiles/Mac/Build.sh DeepFieldEditor Mac Development -Project=<clone>/unreal/DeepField/DeepField.uproject`; tests: `unreal/Build/test.sh`; net smoke: `unreal/Build/smoke-listen.sh`.
+
 ## Session bootstrap prompt
 
 Paste this into a new Claude Code session (replace `WS-NN`):

@@ -55,3 +55,12 @@ Date 2026-09-17 · Accepted · `DA_Palette` from `docs/palette.json`; `UDFTintCo
 
 ## ADR-0018 Real terrain everywhere; every map is a layout redesign
 Date 2026-09-17 · Accepted · Every map is a Landscape with genuine relief, flat only where a place would be flat. Enemies, towers, vehicles, projectiles, scrap, VFX and validation are terrain-aware (PROGRAMME.md Section 3.2). Terrain is text-authored (`unreal/content/terrain/<map>.terrain.json` → `build_heightmap.py` → heightmap + masks); hand sculpting is a recorded polish delta. Line of sight is real (terrain and static world block it); the validator computes coverage with traces. The existing `level.json` is the brief, not the output. Supersedes the flat-world rules of `docs/MAP-AUTHORING.md` §4 where they conflict (see `CONTRACTS/map-authoring-3d.md`).
+
+## ADR-0019 Message bus is ours; GameplayMessageRouter is not in the engine
+Date 2026-09-19 · Accepted · The UE 5.8.2 launcher build ships neither `GameplayMessageRouter` nor `CommonUser` (both are Lyra plugins). `UDFMessageBus` (DFCore, ~120 lines, `FInstancedStruct` payloads, parent-tag fan-out) is the implementation of C15's transport; Lyra remains a pattern source only (ADR-0001). Resolves risk R9.
+
+## ADR-0020 Installed-build constraints: BuildSettingsVersion.V7, no `.inl` native tags
+Date 2026-09-19 · Accepted · Targets must use `BuildSettingsVersion.V7` (the installed engine's build environment refuses V5 overrides); native gameplay tags are defined by expanding `UE_DEFINE_GAMEPLAY_TAG` by hand in `DFGameplayTags.cpp` because the macro's static-assert forbids X-macro lists in `.inl` files; generated module log categories are `LogDF<Module>` (the engine already owns `LogAudio` etc.).
+
+## ADR-0021 Working copies: the SSD clone is the Unreal working copy
+Date 2026-09-19 · Accepted · `/Volumes/Toshiba/Deepfield-Unreal/deepfield-3d` (a clone of `unreal/main`, APFS, 3.6 TB) is where every editor-heavy session works; DDC at `/Volumes/Toshiba/Deepfield-Unreal/DDC` (`DefaultEngine.ini` points at `%GAMEDIR%../../../DDC`). Worktrees for parallel sessions are created from this clone on the SSD (`git worktree add /Volumes/Toshiba/Deepfield-Unreal/wt-ws-NN ws/NN-slug/topic`). The internal-disk checkout stays for text-only work. Supplements ADR-0016.
