@@ -13,12 +13,15 @@ class UWorld;
 /**
  * DFTerrainImport — the Landscape half of the terrain lane (ADR-0018, PROGRAMME.md §3.2).
  *
- *   UnrealEditor-Cmd DeepField.uproject -run=DFTerrainImport -map=foundry [-terraindir=<dir>] [-verifyonly]
+ *   UnrealEditor-Cmd DeepField.uproject -run=DFEditor.DFTerrainImport -map=foundry [-terraindir=<dir>] [-verifyonly]
  *
- * The engine resolves -run=<Name> right after LoadStartupModules (PreDefault + Default phases) and before the
- * engine initialises, so DFEditor must load in the "Default" phase for this class to exist at that point
- * (DeepField.uproject; a PostEngineInit editor module fails with "looked like a commandlet, but we could not
- * find the class"). The "Module.Commandlet" form does not help: the class is looked up by the whole token.
+ * The module prefix is required. The engine resolves -run=<Name> in FEngineLoop::PreInitPostStartupScreen,
+ * after the PreDefault/Default/PostDefault modules load and before the engine initialises, so a class in
+ * DFEditor (a PostEngineInit module, DeepField.uproject) does not exist yet and a bare -run=DFTerrainImport
+ * fails with "looked like a commandlet, but we could not find the class". With a period in the token the
+ * engine loads the module named before it (FModuleManager::LoadModule) and looks the class up again; the
+ * dotted name is matched by FObjectSearchPath, whose outermost segment is a suffix match against the class's
+ * package "/Script/DFEditor" (UObjectHash.cpp), so "DFEditor.DFTerrainImportCommandlet" resolves.
  *
  * Reads unreal/content/terrain/out/<map>_height.{json,png} (written by build_heightmap.py), creates or
  * replaces the streaming sublevel /Game/DF/Maps/<Map>/L_<Map>_Terrain with one ALandscape imported from

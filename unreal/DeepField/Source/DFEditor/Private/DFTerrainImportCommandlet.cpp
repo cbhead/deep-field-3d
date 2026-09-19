@@ -96,7 +96,7 @@ int32 UDFTerrainImportCommandlet::Main(const FString& Params)
 	FString MapId;
 	if (!FParse::Value(*Params, TEXT("map="), MapId) || MapId.IsEmpty())
 	{
-		UE_LOG(LogDFTerrainImport, Error, TEXT("usage: -run=DFTerrainImport -map=<id> [-terraindir=<dir>] [-verifyonly]"));
+		UE_LOG(LogDFTerrainImport, Error, TEXT("usage: -run=DFEditor.DFTerrainImport -map=<id> [-terraindir=<dir>] [-verifyonly]"));
 		return 1;
 	}
 	MapId = MapId.ToLower();
