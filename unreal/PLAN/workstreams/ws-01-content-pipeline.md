@@ -2,17 +2,17 @@
 ws: 01
 slug: content-pipeline
 title: Content pipeline
-state: blocked
-owner: session-75b58b1b (INT)
-claimed_at: 2026-09-17T07:18:45Z
-lease_expires: 2026-09-18T07:18:45Z
-branch: unreal/main
+state: active
+owner: session-75b58b1b/agent-ws01
+claimed_at: 2026-09-19T15:16:34Z
+lease_expires: 2026-09-20T15:16:34Z
+branch: ws/01-content-pipeline/commandlet
 last_commit: 
 editor_heavy: false
 phase: P1
 size: M
 critical: true
-blocked_on: uproject (external SSD, P0) for the commandlet half; JSON bootstrap done
+blocked_on: 
 ---
 # WS-01 — Content pipeline
 
