@@ -8,7 +8,7 @@ UDFLaneGraphAsset
   Edges[]        { Id, From, To, Layer: Ground|Air, Kind: Walk|Warp, Waypoints[] (3D spline control points),
                    LengthMeters, MaxGradePercent, CostFactor, State: Open|Closed, ClosableBy: SocketId|MutableId|None,
                    AglMeters (air only), CorridorWidthMeters (3.4 default) }
-  Itineraries[]  { Id, Layer, Via[] (edge ids) }            # the authored routes, derived exactly as LaneGraph.FromRoutes
+  Itineraries[]  { Id, Layer, Via[] (NODE ids, in walk order) }  # the authored routes, derived exactly as LaneGraph.FromRoutes; EdgesOf() resolves node pairs to edges
   Gates[]        { EdgeId, SocketId }                         # barricade sockets that close an edge
   OperatedGates[]{ Id, EdgeId, At (cm), Label, CooldownSeconds (6), ReachMeters (9), BodyCheckMeters (4) }
   Mutables[]     { Id, Kind: Floodgate|Crusher|Wall|Cache|Nest|Barrel|Container, EdgeId?, At, Params{} }

@@ -16,7 +16,7 @@
 		{ "Name": "DFOnline",   "Type": "Runtime", "LoadingPhase": "Default" },
 		{ "Name": "DFAudio",    "Type": "Runtime", "LoadingPhase": "Default" },
 		{ "Name": "DFVfx",      "Type": "Runtime", "LoadingPhase": "Default" },
-		{ "Name": "DFEditor",   "Type": "Editor",  "LoadingPhase": "PostEngineInit" },
+		{ "Name": "DFEditor",   "Type": "Editor",  "LoadingPhase": "Default" },
 		{ "Name": "DFTests",    "Type": "UncookedOnly", "LoadingPhase": "PostEngineInit" },
 		{ "Name": "DFContentPipeline", "Type": "Editor", "LoadingPhase": "Default" }
 	],
