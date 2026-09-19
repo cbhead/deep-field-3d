@@ -539,8 +539,8 @@ public partial class Player : CharacterBody3D
         if (_onLadder)
         {
             float climb = 0f;
-            if (Input.IsPhysicalKeyPressed(Key.W) || ClimbHeld) climb = ClimbSpeed;
-            else if (Input.IsPhysicalKeyPressed(Key.S)) climb = -ClimbSpeed;
+            if (MoveKeys.Forward || ClimbHeld) climb = ClimbSpeed;
+            else if (MoveKeys.Back) climb = -ClimbSpeed;
             velocity.Y = climb;
         }
         else if (!IsOnFloor())
@@ -561,10 +561,10 @@ public partial class Player : CharacterBody3D
         var input = Vector2.Zero;
         if (!uiOwnsInput)
         {
-            if (Input.IsPhysicalKeyPressed(Key.W)) input.Y -= 1;
-            if (Input.IsPhysicalKeyPressed(Key.S)) input.Y += 1;
-            if (Input.IsPhysicalKeyPressed(Key.A)) input.X -= 1;
-            if (Input.IsPhysicalKeyPressed(Key.D)) input.X += 1;
+            if (MoveKeys.Forward) input.Y -= 1;
+            if (MoveKeys.Back) input.Y += 1;
+            if (MoveKeys.Left) input.X -= 1;
+            if (MoveKeys.Right) input.X += 1;
         }
 
         float speed = Input.IsPhysicalKeyPressed(Key.Shift) ? SprintSpeed : MoveSpeed;

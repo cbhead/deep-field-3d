@@ -129,11 +129,11 @@ public partial class Vehicle : CharacterBody3D
     private void Drive(float delta)
     {
         float throttle = ThrottleHeld != 0f ? ThrottleHeld
-            : Input.IsPhysicalKeyPressed(Key.W) ? 1f
-            : Input.IsPhysicalKeyPressed(Key.S) ? -1f : 0f;
+            : MoveKeys.Forward ? 1f
+            : MoveKeys.Back ? -1f : 0f;
         float steerInput = SteerHeld != 0f ? SteerHeld
-            : (Input.IsPhysicalKeyPressed(Key.A) ? 1f : 0f)
-              - (Input.IsPhysicalKeyPressed(Key.D) ? 1f : 0f);
+            : (MoveKeys.Left ? 1f : 0f)
+              - (MoveKeys.Right ? 1f : 0f);
         bool handbrake = HandbrakeHeld || Input.IsPhysicalKeyPressed(Key.Space);
 
         SurfaceUnder = Surfaces.At(GlobalPosition);
