@@ -1,13 +1,13 @@
 # Workstream status
 
-Generated 2026-09-19T23:32:26Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-19T23:38:12Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
 active: 6 · claimed: 2 · review: 1 · unclaimed: 40
 
 | WS | Title | Phase | CP | State | Owner | Lease expires | Last commit | Editor-heavy | Blocked on |
 |---|---|---|---|---|---|---|---|---|---|
 | WS-00 | Foundation & contracts | P1 | CP | review (lease expired) | session-75b58b1b (INT) | 2026-09-18T07:17:27Z | ff379ca | yes | git-lfs for committing L_Dev_Empty.umap; WS-15 for CI |
-| WS-01 | Content pipeline | P1 | CP | active | session-75b58b1b/agent-ws01 | 2026-09-20T15:21:30Z | — |  | — |
+| WS-01 | Content pipeline | P1 | CP | active | session-75b58b1b/agent-ws01 | 2026-09-20T15:21:30Z | d8168ba |  | — |
 | WS-02 | Gameplay core (GAS) | P1-P2 | CP | active | session-75b58b1b/agent-ws02 | 2026-09-20T15:16:34Z | — |  | — |
 | WS-03 | Player | P2 | CP | unclaimed | — | — | — | yes | — |
 | WS-04 | Towers & build | P2-P3 | CP | unclaimed | — | — | — | yes | — |
