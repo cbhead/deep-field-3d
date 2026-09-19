@@ -65,8 +65,8 @@ struct DFCORE_API FDFMsg_Vote
 {
 	GENERATED_BODY()
 	UPROPERTY(BlueprintReadOnly) int32 PlayerId = 0;
-	UPROPERTY(BlueprintReadOnly) bool bYes = false;
-	UPROPERTY(BlueprintReadOnly) int32 Yes = 0;
+	UPROPERTY(BlueprintReadOnly) bool bYes = false;          // this voter's vote
+	UPROPERTY(BlueprintReadOnly) int32 YesCount = 0;         // tally so far
 	UPROPERTY(BlueprintReadOnly) int32 Needed = 0;
 };
 

@@ -1,12 +1,12 @@
 # Workstream status
 
-Generated 2026-09-19T14:48:26Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-19T14:52:57Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
-active: 1 · blocked: 1 · unclaimed: 47
+blocked: 1 · review: 1 · unclaimed: 47
 
 | WS | Title | Phase | CP | State | Owner | Lease expires | Last commit | Editor-heavy | Blocked on |
 |---|---|---|---|---|---|---|---|---|---|
-| WS-00 | Foundation & contracts | P1 | CP | active (lease expired) | session-75b58b1b (INT) | 2026-09-18T07:17:27Z | 83296f0 | yes | — |
+| WS-00 | Foundation & contracts | P1 | CP | review (lease expired) | session-75b58b1b (INT) | 2026-09-18T07:17:27Z | ff379ca | yes | git-lfs for committing L_Dev_Empty.umap; WS-15 for CI |
 | WS-01 | Content pipeline | P1 | CP | blocked (lease expired) | session-75b58b1b (INT) | 2026-09-18T07:18:45Z | — |  | uproject (external SSD, P0) for the commandlet half; JSON bootstrap done |
 | WS-02 | Gameplay core (GAS) | P1-P2 | CP | unclaimed | — | — | — |  | — |
 | WS-03 | Player | P2 | CP | unclaimed | — | — | — | yes | — |

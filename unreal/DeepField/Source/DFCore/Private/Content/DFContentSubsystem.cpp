@@ -50,7 +50,10 @@ bool UDFContentSubsystem::LoadTables()
 	for (const TCHAR* Table : GTableNames)
 	{
 		const FString Path = TableAssetPath(Table);
-		UDataTable* DT = Cast<UDataTable>(FSoftObjectPath(Path).TryLoad());
+		// Existence first: TryLoad on a missing package logs an engine warning per table, and an
+		// un-imported project is a normal state (the importer has not run yet), not a fault.
+		const FString PackageName = FPackageName::ObjectPathToPackageName(Path);
+		UDataTable* DT = FPackageName::DoesPackageExist(PackageName) ? Cast<UDataTable>(FSoftObjectPath(Path).TryLoad()) : nullptr;
 		if (DT)
 		{
 			Tables.Add(FName(Table), DT);
