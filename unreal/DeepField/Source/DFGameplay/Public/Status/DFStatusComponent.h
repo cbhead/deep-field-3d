@@ -10,6 +10,7 @@
 #include "DFStatusComponent.generated.h"
 
 class UAbilitySystemComponent;
+class UDFDamageContext;
 class UDFTintComponent;
 struct FDFEnemyRow;
 
@@ -142,6 +143,10 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_Slots)
 	TArray<FDFStatusSlotRep> Slots;
+
+	/** Keeps each channel's damage context alive while its periodic effect runs (the effect context only weak-references it). */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UDFDamageContext>> ChannelContexts;
 
 	TMap<FName, FDFStatusRow> StatusRowOverrides;
 	TMap<FName, FDFReactionRow> ReactionRowOverrides;

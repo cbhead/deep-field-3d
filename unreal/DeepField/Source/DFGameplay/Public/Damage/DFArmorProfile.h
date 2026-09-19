@@ -7,7 +7,7 @@
 // The target-side half of the damage execution's inputs (C4): the enemy row's directional
 // armor numbers and the facing to test them against. An actor that has a front arc (ADFEnemy,
 // the boss) implements this so an applier only has to say where the shot came from; the
-// execution asks the target for the rest. Absent the interface — and absent explicit values on
+// execution asks the target (IDFArmorProfileSource) for the rest. Absent the interface — and absent explicit values on
 // the UDFDamageContext — the hit has no aspect and takes no arc factor.
 
 USTRUCT(BlueprintType)
@@ -22,12 +22,13 @@ struct DFGAMEPLAY_API FDFArmorProfile
 };
 
 UINTERFACE(MinimalAPI, BlueprintType)
-class UDFArmorProfile : public UInterface
+class UDFArmorProfileSource : public UInterface
 {
 	GENERATED_BODY()
 };
 
-class DFGAMEPLAY_API IDFArmorProfile
+/** Implemented by any actor whose hits have an aspect (ADFEnemy, the boss). */
+class DFGAMEPLAY_API IDFArmorProfileSource
 {
 	GENERATED_BODY()
 

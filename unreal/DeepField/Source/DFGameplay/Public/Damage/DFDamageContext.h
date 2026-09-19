@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Damage/DFArmorProfile.h"
 #include "Damage/DFDamageMath.h"
 #include "GameplayEffectTypes.h"
 #include "GameplayTagContainer.h"
@@ -20,6 +21,9 @@ struct FDFStatusRow;
 // It is a transient UObject rather than a custom FGameplayEffectContext subclass because the
 // latter needs an AbilitySystemGlobals subclass in DefaultGame.ini (INT-owned); this needs no
 // config and still travels with the spec on the server, which is the only side that executes.
+// The effect context holds it only weakly (SourceObject is a TWeakObjectPtr): an applier of a
+// lasting effect (a DoT, an aura) must keep it referenced from a UPROPERTY for the effect's life
+// — UDFStatusComponent does that per channel; an instant hit is safe on the call stack.
 UCLASS(BlueprintType)
 class DFGAMEPLAY_API UDFDamageContext : public UObject
 {
@@ -49,7 +53,7 @@ public:
 	UPROPERTY(BlueprintReadWrite) bool bHasSourceLocation = false;
 	UPROPERTY(BlueprintReadWrite) FVector SourceLocation = FVector::ZeroVector;
 
-	// The target's arc, when the applier chose to supply it; otherwise the execution asks the target (IDFArmorProfile).
+	// The target's arc, when the applier chose to supply it; otherwise the execution asks the target (IDFArmorProfileSource).
 	UPROPERTY(BlueprintReadWrite) bool bHasTargetArmor = false;
 	UPROPERTY(BlueprintReadWrite) FDFArmorProfile TargetArmor;
 

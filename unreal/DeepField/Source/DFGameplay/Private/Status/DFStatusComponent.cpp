@@ -27,6 +27,7 @@ UDFStatusComponent::UDFStatusComponent()
 	SetIsReplicatedByDefault(true);
 
 	Slots.SetNum(FDFStatusResolver::NumChannels);
+	ChannelContexts.SetNum(FDFStatusResolver::NumChannels);
 	ImmunityTags.AddTag(DFTags::Enemy_State_Phased);
 	ImmunityTags.AddTag(DFTags::Enemy_BossFrame01);
 }
@@ -376,6 +377,7 @@ void UDFStatusComponent::ApplyChannelEffect(EDFStatusChannel Channel, const FDFS
 			Channel == EDFStatusChannel::Thermal ? DFTags::Damage_Type_Thermal : DFTags::Damage_Type_Toxin, FGameplayTag());
 		Damage->SetStatus(Row, StatusTag);
 		Damage->AttachTo(Context);
+		ChannelContexts[static_cast<int32>(Channel)] = Damage;
 		break;
 	}
 	default:
@@ -411,6 +413,7 @@ void UDFStatusComponent::RemoveChannelEffect(EDFStatusChannel Channel)
 		}
 		Handle.Invalidate();
 	}
+	ChannelContexts[static_cast<int32>(Channel)] = nullptr;
 }
 
 void UDFStatusComponent::ApplyBurst(const FDFStatusApplyOutcome& Outcome, AActor* Source)

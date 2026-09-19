@@ -86,7 +86,7 @@ void UDFDamageExecution::Execute_Implementation(const FGameplayEffectCustomExecu
 	AActor* TargetActor = TargetASC ? TargetASC->GetAvatarActor() : nullptr;
 	FDFArmorProfile TargetProfile;
 	const FDFArmorProfile* TargetProfilePtr = nullptr;
-	if (const IDFArmorProfile* Armored = Cast<IDFArmorProfile>(TargetActor))
+	if (const IDFArmorProfileSource* Armored = Cast<IDFArmorProfileSource>(TargetActor))
 	{
 		TargetProfile = Armored->GetArmorProfile();
 		TargetProfilePtr = &TargetProfile;
