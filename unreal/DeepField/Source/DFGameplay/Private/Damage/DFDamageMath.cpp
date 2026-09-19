@@ -1,6 +1,6 @@
 #include "Damage/DFDamageMath.h"
 
-EDFHitAspect FDFDamageMath::Aspect(float HitDot, float FrontArmorArcDegrees, float RearArcDegrees)
+EDFHitAspect FDFDamageMath::Aspect(float HitDot, float FrontArmorArcDegrees, float RearThresholdDegrees)
 {
 	if (FrontArmorArcDegrees <= 0.f)
 	{
@@ -8,7 +8,7 @@ EDFHitAspect FDFDamageMath::Aspect(float HitDot, float FrontArmorArcDegrees, flo
 	}
 	// Cosine decreases as the angle grows, so the comparisons invert (Step.cs Damage()).
 	const float CosHalfArc = FMath::Cos(FMath::DegreesToRadians(FrontArmorArcDegrees * 0.5f));
-	const float CosRear = FMath::Cos(FMath::DegreesToRadians(RearArcDegrees));
+	const float CosRear = FMath::Cos(FMath::DegreesToRadians(RearThresholdDegrees));
 	if (HitDot >= CosHalfArc)
 	{
 		return EDFHitAspect::Front;
@@ -60,7 +60,7 @@ FDFDamageResult FDFDamageMath::Compute(const FDFDamageInput& In)
 	// 2. Directional armor (Aegis / Ram): reduced inside the front arc, amplified from behind.
 	if (In.bHasHitDirection)
 	{
-		Out.Aspect = Aspect(In.HitDot, In.FrontArmorArcDegrees, In.RearArcDegrees);
+		Out.Aspect = Aspect(In.HitDot, In.FrontArmorArcDegrees, In.RearThresholdDegrees);
 		if (Out.Aspect == EDFHitAspect::Front)
 		{
 			Amount *= In.FrontArmorFactor;
@@ -71,20 +71,21 @@ FDFDamageResult FDFDamageMath::Compute(const FDFDamageInput& In)
 		}
 	}
 
-	// 3. Shred on an arc-armored target: the plating leaks regardless of aspect.
+	// 3. Vulnerability (mark) — before flat armor, as Step.cs orders it: the mark amplifies the
+	//    hit and the armor then takes its flat bite out of the amplified number.
+	Amount *= In.DamageTakenFactor;
+
+	// 4. Shred on an arc-armored target: the plating leaks regardless of aspect.
 	if (In.bTargetShredded && In.FrontArmorArcDegrees > 0.f)
 	{
-		Amount *= In.ShreddedFrontArcFactor;
+		Amount *= In.ShredFrontArcLeakFactor;
 	}
 
-	// 4. Flat armor per hit (the attribute already carries the shred delta), floored.
+	// 5. Flat armor per hit (the attribute already carries the shred delta), floored.
 	if (In.FlatArmor > 0.f && Amount > 0.f && !In.bIgnoresFlatArmor)
 	{
-		Amount = FMath::Max(In.MinDamageAfterArmor, Amount - In.FlatArmor);
+		Amount = FMath::Max(In.PostArmorDamageFloor, Amount - In.FlatArmor);
 	}
-
-	// 5. Vulnerability.
-	Amount *= In.DamageTakenFactor;
 
 	Out.Damage = FMath::Max(Amount, 0.f);
 

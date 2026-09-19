@@ -305,4 +305,204 @@ bool FDFStatusTetherImmunityTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+// Step.cs ApplyStatus 1070-1131: the reaction scan runs across every active slot BEFORE the
+// burn-vs-shield and hard-control-vs-CcResist gates, which apply only to non-reaction paths.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFStatusReactionScanPrecedesGatesTest, "DF.Unit.Status.ReactionScanPrecedesGates", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+bool FDFStatusReactionScanPrecedesGatesTest::RunTest(const FString& Parameters)
+{
+	// Case 1: a shielded, chilled Warden hit by burn. Burn alone is refused on a shield; with
+	// chill active the scan matches first and thermalShock fires anyway.
+	DFTestRows::FResolverFixture Warden;
+	Warden.Target.Shield = 25.f;
+	TestEqual(TEXT("burn alone refused on the shield"), Warden.Apply(TEXT("burn")).Result, EDFStatusApplyResult::RejectedShield);
+	TestEqual(TEXT("chill lands through the shield"), Warden.Apply(TEXT("chill")).Result, EDFStatusApplyResult::Applied);
+	const FDFStatusApplyOutcome Shock = Warden.Apply(TEXT("burn"));
+	TestEqual(TEXT("burn onto chill reacts despite the shield"), Shock.Result, EDFStatusApplyResult::Reacted);
+	TestEqual(TEXT("thermalShock"), Shock.ReactionId, FName(TEXT("thermalShock")));
+	TestEqual(TEXT("burst 12%"), Shock.BurstFraction, 0.12f);
+	TestFalse(TEXT("chill consumed"), Warden.Resolver.IsActive(EDFStatusChannel::Movement));
+	TestFalse(TEXT("burn never landed"), Warden.Resolver.IsActive(EDFStatusChannel::Thermal));
+
+	// Case 2: shock at CcResist >= 1 into a chilled target. Shock alone is refused by the gauge;
+	// with chill active flashFreeze fires — and its emitted freeze is then itself gated by CcResist < 1.
+	DFTestRows::FResolverFixture Full;
+	Full.Resolver.CcResist = 1.f;
+	TestEqual(TEXT("shock alone refused at full gauge"), Full.Apply(TEXT("shock")).Result, EDFStatusApplyResult::RejectedCcResist);
+	Full.Apply(TEXT("chill"));
+	const FDFStatusApplyOutcome Freeze = Full.Apply(TEXT("shock"));
+	TestEqual(TEXT("shock onto chill reacts despite the gauge"), Freeze.Result, EDFStatusApplyResult::Reacted);
+	TestEqual(TEXT("flashFreeze"), Freeze.ReactionId, FName(TEXT("flashFreeze")));
+	TestFalse(TEXT("chill consumed"), Full.Resolver.IsActive(EDFStatusChannel::Movement));
+	TestTrue(TEXT("emitted freeze refused by the gauge"), Freeze.bEmitRejected);
+	TestTrue(TEXT("no emitted status recorded"), Freeze.EmittedStatusId.IsNone());
+	TestFalse(TEXT("Control slot empty"), Full.Resolver.IsActive(EDFStatusChannel::Control));
+
+	// And just under the gauge the same pair emits the freeze.
+	DFTestRows::FResolverFixture Under;
+	Under.Resolver.CcResist = 0.99f;
+	Under.Apply(TEXT("chill"));
+	const FDFStatusApplyOutcome Emit = Under.Apply(TEXT("shock"));
+	TestEqual(TEXT("reacts"), Emit.Result, EDFStatusApplyResult::Reacted);
+	TestFalse(TEXT("emit not refused"), Emit.bEmitRejected);
+	TestEqual(TEXT("freeze written"), Under.Resolver.Slot(EDFStatusChannel::Control).StatusId, FName(TEXT("freeze")));
+	return true;
+}
+
+// Step.cs ApplyStatus: `slot.StatusId = null; // consume the active half` ... `return; // incoming
+// status consumed by the reaction`. The ACTIVE partner's slot is cleared; the INCOMING status is
+// never written anywhere; nothing else on the target is touched.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFStatusReactionConsumesActiveNotIncomingTest, "DF.Unit.Status.ReactionConsumesActiveNotIncoming", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+bool FDFStatusReactionConsumesActiveNotIncomingTest::RunTest(const FString& Parameters)
+{
+	// poison active (Toxin), mark active (Vulnerability, a bystander), shred incoming (Defense).
+	DFTestRows::FResolverFixture F;
+	F.Apply(TEXT("mark"), 0.f, 7);
+	F.Apply(TEXT("poison"), 0.f, 3);
+	const FDFStatusApplyOutcome Out = F.Apply(TEXT("shred"), 0.5f, 9);
+	TestEqual(TEXT("corrode fired"), Out.ReactionId, FName(TEXT("corrode")));
+	TestEqual(TEXT("consumed the ACTIVE poison"), Out.ConsumedStatusId, FName(TEXT("poison")));
+	TestEqual(TEXT("from Toxin"), Out.ConsumedChannel, EDFStatusChannel::Toxin);
+	TestFalse(TEXT("Toxin slot cleared"), F.Resolver.IsActive(EDFStatusChannel::Toxin));
+	TestFalse(TEXT("incoming shred NOT applied"), F.Resolver.IsActive(EDFStatusChannel::Defense));
+	TestTrue(TEXT("bystander mark untouched"), F.Resolver.IsActive(EDFStatusChannel::Vulnerability));
+	TestEqual(TEXT("mark keeps its source"), F.Resolver.Slot(EDFStatusChannel::Vulnerability).SourceId, 7);
+	TestEqual(TEXT("mark keeps its end time"), F.Resolver.Slot(EDFStatusChannel::Vulnerability).EndTime, 4.f);
+	TestTrue(TEXT("nothing emitted"), Out.EmittedStatusId.IsNone());
+
+	// The other way round: shred active, poison incoming — shred is consumed, poison never lands.
+	DFTestRows::FResolverFixture G;
+	G.Apply(TEXT("shred"));
+	const FDFStatusApplyOutcome Rev = G.Apply(TEXT("poison"));
+	TestEqual(TEXT("corrode again"), Rev.ReactionId, FName(TEXT("corrode")));
+	TestEqual(TEXT("consumed the ACTIVE shred"), Rev.ConsumedStatusId, FName(TEXT("shred")));
+	TestFalse(TEXT("Defense cleared"), G.Resolver.IsActive(EDFStatusChannel::Defense));
+	TestFalse(TEXT("incoming poison NOT applied"), G.Resolver.IsActive(EDFStatusChannel::Toxin));
+
+	// The incoming status is consumed even though its own channel was free and it would have
+	// been the stronger of nothing: the reaction return happens before the slot logic.
+	TestTrue(TEXT("a fresh poison lands now that shred is gone"), G.Apply(TEXT("poison")).Result == EDFStatusApplyResult::Applied);
+	return true;
+}
+
+// Step.cs ApplyStatus: `emitSlot.StatusId = emitDef.Id; emitSlot.TimeLeft = emitDef.MaxDurationSeconds;`
+// — the EmitStatus is written straight into its slot, whatever held it, at the row's own duration.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFStatusEmitOverwritesSlotTest, "DF.Unit.Status.EmitOverwritesSlot", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+bool FDFStatusEmitOverwritesSlotTest::RunTest(const FString& Parameters)
+{
+	// A hard control far STRONGER than freeze (magnitude = duration: 5 vs 1.2) holds the Control
+	// slot. Strongest-wins would keep it; the emit does not ask.
+	DFTestRows::FResolverFixture F;
+	F.Rows.Add(TEXT("stasis"), DFTestRows::Status(EDFStatusChannel::Control, 5.f, 0.f, 0.f, 1.f, 0.f, true));
+	TestEqual(TEXT("stasis applied"), F.Apply(TEXT("stasis"), 0.f, 4).Result, EDFStatusApplyResult::Applied);
+	TestEqual(TEXT("freeze as an input is dropped against stasis"), F.Apply(TEXT("freeze"), 0.f, 4).Result, EDFStatusApplyResult::DroppedWeaker);
+	F.Apply(TEXT("chill"), 0.f, 1);
+	const FDFStatusApplyOutcome Out = F.Apply(TEXT("shock"), 2.f, 2);
+	TestEqual(TEXT("flashFreeze"), Out.ReactionId, FName(TEXT("flashFreeze")));
+	TestEqual(TEXT("emitted freeze"), Out.EmittedStatusId, FName(TEXT("freeze")));
+	TestEqual(TEXT("it displaced stasis"), Out.EmitReplacedStatusId, FName(TEXT("stasis")));
+	const FDFStatusSlot& Control = F.Resolver.Slot(EDFStatusChannel::Control);
+	TestEqual(TEXT("Control slot is freeze"), Control.StatusId, FName(TEXT("freeze")));
+	TestEqual(TEXT("freeze magnitude 1.2 (weaker, still written)"), Control.Magnitude, 1.2f);
+	TestEqual(TEXT("freeze duration is the row's: 2 + 1.2"), Control.EndTime, 3.2f);
+	TestEqual(TEXT("freeze source is the reactor"), Control.SourceId, 2);
+
+	// The same emit onto a slot already holding freeze is not a refresh either: it is rewritten from Now.
+	DFTestRows::FResolverFixture G;
+	G.Apply(TEXT("chill"), 0.f);
+	G.Apply(TEXT("shock"), 0.f);   // freeze until 1.2
+	TestEqual(TEXT("freeze until 1.2"), G.Resolver.Slot(EDFStatusChannel::Control).EndTime, 1.2f);
+	G.Apply(TEXT("chill"), 1.f);
+	const FDFStatusApplyOutcome Again = G.Apply(TEXT("shock"), 1.f);
+	TestEqual(TEXT("second flashFreeze"), Again.ReactionId, FName(TEXT("flashFreeze")));
+	TestEqual(TEXT("it overwrote the earlier freeze"), Again.EmitReplacedStatusId, FName(TEXT("freeze")));
+	TestEqual(TEXT("freeze now until 2.2"), G.Resolver.Slot(EDFStatusChannel::Control).EndTime, 2.2f);
+
+	// The emit takes the row's raw duration: no duration factor rides on it (Step.cs writes emitDef.MaxDurationSeconds).
+	DFTestRows::FResolverFixture H;
+	H.Apply(TEXT("chill"), 0.f);
+	const FDFStatusApplyOutcome Scaled = H.Resolver.Apply(TEXT("shock"), H.Rows.FindChecked(TEXT("shock")), 0.f, 1, H.Target, -1.f, /*DurationFactor*/ 2.f);
+	TestEqual(TEXT("emitted duration unscaled"), Scaled.EmittedDuration, 1.2f);
+	return true;
+}
+
+// Step.cs ApplyStatus: `if (burst > 0f) Damage(...); if (reaction.EmitStatus is { } emitted && !enemy.Dead) { ... }`
+// — a burst that kills the target suppresses the emit. The world half reports the kill through OnReaction.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFStatusNoEmitOnKillTest, "DF.Unit.Status.NoEmitOnKill", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+bool FDFStatusNoEmitOnKillTest::RunTest(const FString& Parameters)
+{
+	// A reaction that both bursts and emits (none in the shipped table; the closure rule does not care).
+	DFTestRows::FResolverFixture F;
+	F.Resolver.Reactions.Reset();
+	F.Resolver.Reactions.Add(TEXT("lethalFreeze"), DFTestRows::Reaction(TEXT("chill"), TEXT("shock"), 1.0f, TEXT("freeze")));
+
+	int32 Calls = 0;
+	FName SeenReaction;
+	bool bSeenSlotClearedBeforeBurst = false;
+	F.Resolver.OnReaction = [&](const FDFStatusApplyOutcome& Partial) -> bool
+	{
+		++Calls;
+		SeenReaction = Partial.ReactionId;
+		// The consumed slot is already clear when the burst goes out (Step.cs clears it first).
+		bSeenSlotClearedBeforeBurst = !F.Resolver.IsActive(Partial.ConsumedChannel);
+		return false;   // the burst killed the target
+	};
+	F.Apply(TEXT("chill"));
+	const FDFStatusApplyOutcome Out = F.Apply(TEXT("shock"));
+	TestEqual(TEXT("reacted"), Out.Result, EDFStatusApplyResult::Reacted);
+	TestEqual(TEXT("burst callback ran once"), Calls, 1);
+	TestEqual(TEXT("with the reaction id"), SeenReaction, FName(TEXT("lethalFreeze")));
+	TestTrue(TEXT("consumed slot cleared before the burst"), bSeenSlotClearedBeforeBurst);
+	TestEqual(TEXT("burst fraction reported"), Out.BurstFraction, 1.0f);
+	TestTrue(TEXT("emit skipped: target dead"), Out.bEmitSkippedDead);
+	TestFalse(TEXT("not the cc-resist refusal"), Out.bEmitRejected);
+	TestTrue(TEXT("nothing emitted"), Out.EmittedStatusId.IsNone());
+	TestFalse(TEXT("Control slot empty"), F.Resolver.IsActive(EDFStatusChannel::Control));
+
+	// Alive: the same reaction writes its freeze.
+	DFTestRows::FResolverFixture G;
+	G.Resolver.Reactions.Reset();
+	G.Resolver.Reactions.Add(TEXT("lethalFreeze"), DFTestRows::Reaction(TEXT("chill"), TEXT("shock"), 1.0f, TEXT("freeze")));
+	G.Resolver.OnReaction = [](const FDFStatusApplyOutcome&) { return true; };
+	G.Apply(TEXT("chill"));
+	const FDFStatusApplyOutcome Alive = G.Apply(TEXT("shock"));
+	TestFalse(TEXT("emit not skipped"), Alive.bEmitSkippedDead);
+	TestEqual(TEXT("freeze written"), G.Resolver.Slot(EDFStatusChannel::Control).StatusId, FName(TEXT("freeze")));
+
+	// Unbound callback = alive (a resolver with no world attached).
+	DFTestRows::FResolverFixture H;
+	H.Apply(TEXT("chill"));
+	TestEqual(TEXT("unbound: flashFreeze emits"), H.Apply(TEXT("shock")).EmittedStatusId, FName(TEXT("freeze")));
+	return true;
+}
+
+// Step.cs ApplyStatus: `if (active.Magnitude >= incoming.Magnitude) return;` — a tie keeps the active status, untouched.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFStatusTieKeepsActiveTest, "DF.Unit.Status.TieKeepsActive", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+bool FDFStatusTieKeepsActiveTest::RunTest(const FString& Parameters)
+{
+	// Two different Movement statuses with the same magnitude (0.65x -> 0.35): the incumbent stays.
+	DFTestRows::FResolverFixture F;
+	F.Rows.Add(TEXT("tarChill"), DFTestRows::Status(EDFStatusChannel::Movement, 4.f, 0.65f));
+	TestEqual(TEXT("chill applied"), F.Apply(TEXT("chill"), 0.f, 1).Result, EDFStatusApplyResult::Applied);
+	const FDFStatusApplyOutcome Tie = F.Apply(TEXT("tarChill"), 1.f, 2);
+	TestEqual(TEXT("tie dropped"), Tie.Result, EDFStatusApplyResult::DroppedWeaker);
+	TestTrue(TEXT("nothing replaced"), Tie.ReplacedStatusId.IsNone());
+	const FDFStatusSlot& Slot = F.Resolver.Slot(EDFStatusChannel::Movement);
+	TestEqual(TEXT("chill still holds the slot"), Slot.StatusId, FName(TEXT("chill")));
+	TestEqual(TEXT("its source unchanged"), Slot.SourceId, 1);
+	TestEqual(TEXT("its end time unchanged (not refreshed)"), Slot.EndTime, 1.5f);
+	TestEqual(TEXT("its magnitude unchanged"), Slot.Magnitude, 0.35f);
+
+	// Ties in the Control channel too (shock 0.25 vs a 0.25 s stagger-like row).
+	DFTestRows::FResolverFixture G;
+	G.Rows.Add(TEXT("jolt"), DFTestRows::Status(EDFStatusChannel::Control, 0.25f, 0.f, 0.f, 1.f, 0.f, true));
+	G.Apply(TEXT("jolt"), 0.f, 5);
+	TestEqual(TEXT("shock ties jolt: dropped"), G.Apply(TEXT("shock"), 0.1f, 6).Result, EDFStatusApplyResult::DroppedWeaker);
+	TestEqual(TEXT("jolt stays"), G.Resolver.Slot(EDFStatusChannel::Control).StatusId, FName(TEXT("jolt")));
+
+	// Strictly stronger still wins, and the tie rule is on magnitude, not id order.
+	G.Rows.Add(TEXT("stun"), DFTestRows::Status(EDFStatusChannel::Control, 0.5f, 0.f, 0.f, 1.f, 0.f, true));
+	TestEqual(TEXT("stun beats jolt"), G.Apply(TEXT("stun"), 0.1f, 7).Result, EDFStatusApplyResult::Applied);
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

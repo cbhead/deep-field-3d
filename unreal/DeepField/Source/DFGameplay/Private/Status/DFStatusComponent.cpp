@@ -82,6 +82,37 @@ UAbilitySystemComponent* UDFStatusComponent::GetASC() const
 	return UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner(), /*LookForComponent*/ true);
 }
 
+bool UDFStatusComponent::IsAlive() const
+{
+	const UAbilitySystemComponent* ASC = GetASC();
+	if (ASC && ASC->HasAttributeSetForAttribute(UDFHealthSet::GetHealthAttribute()))
+	{
+		return ASC->GetNumericAttribute(UDFHealthSet::GetHealthAttribute()) > 0.f;
+	}
+	return true;
+}
+
+bool UDFStatusComponent::IsEmberApplier(const AActor* Source)
+{
+	// Step.cs: `playerId is int pid && w.Players[pid].FactionId == Factions.Ember.Id` — only a
+	// player applier, never a tower or trap. The faction tag sits on the hero's ASC; a weapon or
+	// projectile actor reaches it through its owner or instigator.
+	const AActor* Candidates[] = { Source, Source ? Source->GetOwner() : nullptr, Source ? Source->GetInstigator() : nullptr };
+	for (const AActor* Actor : Candidates)
+	{
+		if (!Actor)
+		{
+			continue;
+		}
+		const UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Actor, /*LookForComponent*/ true);
+		if (ASC && ASC->HasMatchingGameplayTag(DFTags::Faction_Ember))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 UDFTintComponent* UDFStatusComponent::GetTint() const
 {
 	const AActor* Owner = GetOwner();
@@ -97,6 +128,8 @@ void UDFStatusComponent::ReadRates()
 		Resolver.CcResistFillPerSecond = Content->Balance(TEXT("ccResistFillPerSecond"), Resolver.CcResistFillPerSecond);
 		Resolver.CcResistDecayPerSecond = Content->Balance(TEXT("ccResistDecayPerSecond"), Resolver.CcResistDecayPerSecond);
 		Resolver.TetherImmuneMass = Content->Balance(TEXT("tetherImmuneMass"), Resolver.TetherImmuneMass);
+		EmberBurnDurationFactor = Content->Balance(TEXT("emberBurnDurationFactor"), EmberBurnDurationFactor);
+		StatusTickHz = FMath::Max(1.f, Content->Balance(TEXT("tickHz"), StatusTickHz));
 		return;
 	}
 	if (const UAbilitySystemComponent* ASC = GetASC())
@@ -221,9 +254,26 @@ EDFStatusApplyResult UDFStatusComponent::ApplyById(FName StatusId, AActor* Sourc
 	{
 		Factor *= *ConditionFactor;
 	}
+	// Ember's passive, by applier faction, before the resolver's refresh / strongest-wins branch
+	// (Step.cs ApplyStatus applies it to `duration` ahead of the slot logic, so a refresh gets it).
+	if (StatusId == DFGameplayLocalTags::ContentIdFromTag(DFTags::Status_Burn) && IsEmberApplier(Source))
+	{
+		Factor *= EmberBurnDurationFactor;
+	}
+
+	// The burst runs inside Resolver.Apply, between consuming the partner and writing the emit,
+	// so the consumed status's effect (e.g. shred's armor delta) is gone before the burst lands
+	// and a lethal burst suppresses the emit — the Step.cs order.
+	Resolver.OnReaction = [this, Source](const FDFStatusApplyOutcome& Partial) -> bool
+	{
+		OnSlotLeft(Partial.ConsumedChannel, Partial.ConsumedStatusId, /*bExpired*/ false);
+		ApplyBurst(Partial, Source);
+		return IsAlive();
+	};
 
 	const int32 SourceId = Source ? static_cast<int32>(Source->GetUniqueID()) : 0;
 	LastOutcome = Resolver.Apply(StatusId, *Row, Now(), SourceId, ReadTargetState(), MagnitudeOverride, Factor);
+	Resolver.OnReaction = nullptr;
 
 	switch (LastOutcome.Result)
 	{
@@ -236,13 +286,13 @@ EDFStatusApplyResult UDFStatusComponent::ApplyById(FName StatusId, AActor* Sourc
 		break;
 
 	case EDFStatusApplyResult::Refreshed:
+		// Silent: duration and source moved in the resolver; no cue, no StatusApplied message.
 		ChannelSources[static_cast<int32>(LastOutcome.Channel)] = Source;
 		SyncSlots();
 		break;
 
 	case EDFStatusApplyResult::Reacted:
-		OnSlotLeft(LastOutcome.ConsumedChannel, LastOutcome.ConsumedStatusId, /*bExpired*/ false);
-		ApplyBurst(LastOutcome, Source);
+		// The consumed slot and the burst were handled in OnReaction; only the emit is left.
 		if (!LastOutcome.EmittedStatusId.IsNone())
 		{
 			if (!LastOutcome.EmitReplacedStatusId.IsNone())
@@ -392,8 +442,11 @@ void UDFStatusComponent::ApplyChannelEffect(EDFStatusChannel Channel, const FDFS
 	Spec.Data->SetSetByCallerMagnitude(DFTags::SetByCaller_Magnitude, EffectMagnitude);
 	if (Channel == EDFStatusChannel::Thermal || Channel == EDFStatusChannel::Toxin)
 	{
-		// dps x tick period: the execution reads DF.SetByCaller.Damage as the base of each tick.
-		Spec.Data->SetSetByCallerMagnitude(DFTags::SetByCaller_Damage, Slot.Magnitude * UDFGE_StatusBase::DotPeriodSeconds);
+		// A fixed sim tick (Balance tickHz, 30): the period on the spec, and dps / tickHz as the
+		// base of each tick (the execution reads DF.SetByCaller.Damage, then the full order).
+		const float Period = 1.f / StatusTickHz;
+		Spec.Data->Period = Period;
+		Spec.Data->SetSetByCallerMagnitude(DFTags::SetByCaller_Damage, Slot.Magnitude * Period);
 	}
 	if (StatusTag.IsValid())
 	{

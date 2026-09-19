@@ -57,10 +57,11 @@ public:
 	UPROPERTY(BlueprintReadWrite) bool bHasTargetArmor = false;
 	UPROPERTY(BlueprintReadWrite) FDFArmorProfile TargetArmor;
 
-	// Rule dials (Step.cs literals; ReadBalance overrides them from content when it is loaded).
-	UPROPERTY(BlueprintReadWrite) float RearArcDegrees = DFDamageDefaults::RearArcDegrees;
-	UPROPERTY(BlueprintReadWrite) float ShreddedFrontArcFactor = DFDamageDefaults::ShreddedFrontArcFactor;
-	UPROPERTY(BlueprintReadWrite) float MinDamageAfterArmor = DFDamageDefaults::MinDamageAfterArmor;
+	// Rule dials (the Step.cs literals; ReadBalance reads Balance("rearThresholdDegrees" / "shredFrontArcLeakFactor" /
+	// "postArmorDamageFloor") with these defaults once content is loaded — the dials are requested from WS-06/INT by RFC).
+	UPROPERTY(BlueprintReadWrite) float RearThresholdDegrees = DFDamageDefaults::RearThresholdDegrees;
+	UPROPERTY(BlueprintReadWrite) float ShredFrontArcLeakFactor = DFDamageDefaults::ShredFrontArcLeakFactor;
+	UPROPERTY(BlueprintReadWrite) float PostArmorDamageFloor = DFDamageDefaults::PostArmorDamageFloor;
 
 	/** A fresh context owned by Outer (the applying actor / component) with the Balance dials read. */
 	static UDFDamageContext* Make(UObject* Outer, const FGameplayTag& InDamageType = FGameplayTag(), const FGameplayTag& InDamageSource = FGameplayTag());
@@ -77,7 +78,7 @@ public:
 	/** DoT tick: poison ignores armor and shield, burn neither. */
 	void SetStatus(const FDFStatusRow& Row, const FGameplayTag& InStatusTag);
 
-	/** Overrides the three rule dials from Balance (rearArcDegrees, shreddedFrontArcFactor, minDamageAfterArmor) when content is loaded. */
+	/** Overrides the three rule dials from Balance (rearThresholdDegrees, shredFrontArcLeakFactor, postArmorDamageFloor) when content is loaded. */
 	void ReadBalance(const UObject* WorldContext);
 
 	/** Copies the context's share of the inputs (factors, flags, dials, arc, direction) onto In. */

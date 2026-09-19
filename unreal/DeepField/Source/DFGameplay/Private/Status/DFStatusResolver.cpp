@@ -48,8 +48,9 @@ FDFStatusApplyOutcome FDFStatusResolver::Apply(FName StatusId, const FDFStatusRo
 	Out.Magnitude = MagnitudeFor(Row, MagnitudeOverride);
 	Out.Duration = DurationFor(Row, DurationFactor);
 
-	// 1. Reactions first (Step.cs ApplyStatus): the active partner is consumed, the incoming
-	//    status never lands, and the output goes straight into its slot without a re-scan.
+	// 1. Reactions first (Step.cs ApplyStatus), before any gate: the active partner is consumed,
+	//    the incoming status never lands, the burst goes out, and the output goes straight into
+	//    its slot without a re-scan.
 	for (int32 I = 0; I < NumChannels; ++I)
 	{
 		FDFStatusSlot& Active = Slots[I];
@@ -67,38 +68,44 @@ FDFStatusApplyOutcome FDFStatusResolver::Apply(FName StatusId, const FDFStatusRo
 		Out.BurstFraction = Reaction->Row.BurstFraction;
 		Out.ConsumedStatusId = Active.StatusId;
 		Out.ConsumedChannel = Active.Channel;
-		Active.Clear();
+		Active.Clear();   // consume the active half — before the burst, so the burst never sees it
+
+		// The burst (BurstFraction x MaxHealth through Damage()) happens here, between consume
+		// and emit; whoever bound OnReaction tells us whether the target is still standing.
+		const bool bAlive = OnReaction ? OnReaction(Out) : true;
 
 		const FName Emit = Reaction->Row.EmitStatus;
 		if (!Emit.IsNone())
 		{
 			const FDFStatusRow* EmitRow = FindStatusRow ? FindStatusRow(Emit) : nullptr;
-			if (EmitRow)
+			if (!bAlive)
 			{
-				if (EmitRow->bHardControl && CcResist >= 1.f)
-				{
-					Out.bEmitRejected = true;
-				}
-				else
-				{
-					FDFStatusSlot& EmitSlot = Slot(EmitRow->Channel);
-					Out.EmitReplacedStatusId = EmitSlot.StatusId;
-					Out.EmittedStatusId = Emit;
-					Out.EmittedChannel = EmitRow->Channel;
-					Out.EmittedMagnitude = EmitRow->Magnitude();
-					Out.EmittedDuration = DurationFor(*EmitRow, DurationFactor);
-					Write(EmitSlot, Emit, *EmitRow, Out.EmittedMagnitude, Now, Out.EmittedDuration, SourceId);
-				}
+				Out.bEmitSkippedDead = true;   // Step.cs: `if (reaction.EmitStatus is { } emitted && !enemy.Dead)`
 			}
-			else
+			else if (!EmitRow)
 			{
 				Out.bEmitRejected = true;
 			}
+			else if (EmitRow->bHardControl && CcResist >= 1.f)
+			{
+				Out.bEmitRejected = true;      // the only gate an emit passes through
+			}
+			else
+			{
+				// Written outright: no strongest-wins, no refresh, the row's own duration.
+				FDFStatusSlot& EmitSlot = Slot(EmitRow->Channel);
+				Out.EmitReplacedStatusId = EmitSlot.StatusId;
+				Out.EmittedStatusId = Emit;
+				Out.EmittedChannel = EmitRow->Channel;
+				Out.EmittedMagnitude = EmitRow->Magnitude();
+				Out.EmittedDuration = EmitRow->MaxDurationSeconds;
+				Write(EmitSlot, Emit, *EmitRow, Out.EmittedMagnitude, Now, Out.EmittedDuration, SourceId);
+			}
 		}
-		return Out;
+		return Out;   // incoming status consumed by the reaction
 	}
 
-	// 2. Gates.
+	// 2. Gates (non-reaction paths only).
 	if (Row.Channel == EDFStatusChannel::Thermal && Target.Shield > 0.f)
 	{
 		Out.Result = EDFStatusApplyResult::RejectedShield;
@@ -115,21 +122,22 @@ FDFStatusApplyOutcome FDFStatusResolver::Apply(FName StatusId, const FDFStatusRo
 		return Out;
 	}
 
-	// 3. One status per channel: refresh, drop, or replace.
+	// 3. One status per channel: refresh, drop, or replace. Out.Duration already carries the
+	//    duration factor (Ember, conditions), so a refresh gets it too.
 	FDFStatusSlot& Current = Slot(Row.Channel);
 	if (Current.IsActive())
 	{
 		if (Current.StatusId == StatusId)
 		{
+			// Same id: duration and source reset; the magnitude is the row's already (never stacks).
 			Current.EndTime = Now + Out.Duration;
 			Current.SourceId = SourceId;
-			Current.Magnitude = Out.Magnitude;
 			Out.Result = EDFStatusApplyResult::Refreshed;
 			return Out;
 		}
 		if (Current.Magnitude >= Out.Magnitude)
 		{
-			Out.Result = EDFStatusApplyResult::DroppedWeaker;
+			Out.Result = EDFStatusApplyResult::DroppedWeaker;   // strongest wins; a tie keeps the active status
 			return Out;
 		}
 		Out.ReplacedStatusId = Current.StatusId;

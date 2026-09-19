@@ -56,14 +56,15 @@ void UDFDamageContext::SetStatus(const FDFStatusRow& Row, const FGameplayTag& In
 
 void UDFDamageContext::ReadBalance(const UObject* WorldContext)
 {
-	// Only when every table is loaded: a partially imported project would log a missing-dial
-	// error per hit, and the defaults are the sim's own numbers.
+	// Only when every table is loaded: an un-imported project is a normal state, and the defaults
+	// are the sim's own numbers (ContentTypes.cs:64, Step.cs Damage()). Balance() reports a dial
+	// the table lacks once per process and returns the default — the RFC asks for the three dials.
 	const UDFContentSubsystem* Content = UDFContentSubsystem::Get(WorldContext);
 	if (Content && Content->IsReady())
 	{
-		RearArcDegrees = Content->Balance(TEXT("rearArcDegrees"), RearArcDegrees);
-		ShreddedFrontArcFactor = Content->Balance(TEXT("shreddedFrontArcFactor"), ShreddedFrontArcFactor);
-		MinDamageAfterArmor = Content->Balance(TEXT("minDamageAfterArmor"), MinDamageAfterArmor);
+		RearThresholdDegrees = Content->Balance(TEXT("rearThresholdDegrees"), RearThresholdDegrees);
+		ShredFrontArcLeakFactor = Content->Balance(TEXT("shredFrontArcLeakFactor"), ShredFrontArcLeakFactor);
+		PostArmorDamageFloor = Content->Balance(TEXT("postArmorDamageFloor"), PostArmorDamageFloor);
 	}
 }
 
@@ -75,9 +76,9 @@ void UDFDamageContext::FillInput(FDFDamageInput& In, const FVector& TargetLocati
 	In.PackAPunchFactor = PackAPunchFactor;
 	In.bIgnoresFlatArmor = bIgnoresFlatArmor;
 	In.bIgnoresShield = bIgnoresShield;
-	In.RearArcDegrees = RearArcDegrees;
-	In.ShreddedFrontArcFactor = ShreddedFrontArcFactor;
-	In.MinDamageAfterArmor = MinDamageAfterArmor;
+	In.RearThresholdDegrees = RearThresholdDegrees;
+	In.ShredFrontArcLeakFactor = ShredFrontArcLeakFactor;
+	In.PostArmorDamageFloor = PostArmorDamageFloor;
 
 	const FDFArmorProfile* Profile = bHasTargetArmor ? &TargetArmor : TargetProfile;
 	if (Profile)

@@ -34,6 +34,17 @@ DECLARE_MULTICAST_DELEGATE(FDFSlotsChanged);
 // Slots replicate as a compact 8-entry array {StatusTag, EndTimeServer, Magnitude}; the
 // resolver itself is server-only.
 //
+// Two Step.cs rules live here rather than in the resolver because they need the world:
+//   * Ember's passive — a burn applied by an Ember hero (DF.Faction.Ember on the source's ASC,
+//     or its owner's / instigator's) lasts Balance("emberBurnDurationFactor", 1.3) times longer.
+//     The factor goes into the resolver BEFORE its refresh / strongest-wins branch, so an Ember
+//     refresh also keeps the longer duration (DF.Unit.Status.EmberDurationOnRefresh).
+//   * the reaction burst — bound to the resolver's OnReaction: the consumed status's effect is
+//     removed first, then BurstFraction x MaxHealth goes through UDFGE_Damage with no source
+//     location (no arc; mark, flat armor and shield apply), and the resolver only writes the
+//     EmitStatus if Health is still above 0 (DF.Unit.Status.BurstIsArmoredAndShielded, NoEmitOnKill).
+// Thermal / Toxin ticks run at a fixed Balance("tickHz", 30): see the resolver header.
+//
 // Rows come from UDFContentSubsystem (Status / Reaction / Ids("reactions")); AddStatusRowOverride
 // and AddReactionRowOverride let a test (or a dev map) supply rows without the tables.
 UCLASS(ClassGroup = (DF), meta = (BlueprintSpawnableComponent))
@@ -50,9 +61,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DF|Status")
 	EDFStatusApplyResult Apply(FGameplayTag StatusTag, AActor* Source, float MagnitudeOverride = -1.f);
 
-	/** Same by content id; DurationFactor multiplies the row duration (Ember's burn passive x1.3, conditions). */
+	/** Same by content id; DurationFactor multiplies the row duration on top of the condition and Ember factors the component adds itself. */
 	UFUNCTION(BlueprintCallable, Category = "DF|Status")
 	EDFStatusApplyResult ApplyById(FName StatusId, AActor* Source, float MagnitudeOverride = -1.f, float DurationFactor = 1.f);
+
+	/** True when Source (or its owner / instigator) carries DF.Faction.Ember on an ASC — the applier whose burns last longer. */
+	static bool IsEmberApplier(const AActor* Source);
+
+	/** Balance "emberBurnDurationFactor" (1.3) and "tickHz" (30) as read at BeginPlay (defaults until content loads). */
+	float GetEmberBurnDurationFactor() const { return EmberBurnDurationFactor; }
+	float GetStatusTickHz() const { return StatusTickHz; }
 
 	/** Every detail of the last Apply (reaction id, burst fraction, emitted status, ...). */
 	const FDFStatusApplyOutcome& GetLastOutcome() const { return LastOutcome; }
@@ -119,6 +137,8 @@ protected:
 private:
 	bool HasAuthority() const;
 	float Now() const;
+	/** Health > 0 on the owner's UDFHealthSet (true when it has none). */
+	bool IsAlive() const;
 	UAbilitySystemComponent* GetASC() const;
 	UDFTintComponent* GetTint() const;
 	void LoadReactions();
@@ -151,4 +171,9 @@ private:
 	TMap<FName, FDFStatusRow> StatusRowOverrides;
 	TMap<FName, FDFReactionRow> ReactionRowOverrides;
 	bool bReactionsLoaded = false;
+
+	/** Balance.cs EmberBurnDurationFactor until the balance table overrides it. */
+	float EmberBurnDurationFactor = 1.3f;
+	/** Balance.cs TickHz: the Thermal / Toxin tick rate (period = 1 / this). */
+	float StatusTickHz = 30.f;
 };

@@ -3,25 +3,30 @@
 #include "CoreMinimal.h"
 #include "DFDamageMath.generated.h"
 
-// C4 damage order as a pure function, so DF.Unit.Damage.* can pin the formula without an ASC:
+// C4 damage order as a pure function, so DF.Unit.Damage.* can pin the formula without an ASC.
+// The order is Step.cs Damage() (lines 2010-2066) — the sim is the spec (ADR-0005); gas.md's
+// "flat armor before vulnerability" is the contract error, corrected by RFC:
 //   source factors (DamageFactor, ammo, unarmored bonus, weak point, Pack-a-Punch)
 //   -> target front-arc / rear factor (hit direction vs facing, enemy row arc numbers)
-//   -> shredded-plate leak (Defense channel active on an arc-armored target)
-//   -> flat armor unless the hit ignores it (floor at MinDamageAfterArmor)
-//   -> DamageTakenFactor (Vulnerability channel)
+//   -> DamageTakenFactor (Vulnerability channel: mark x1.25)
+//   -> shredded-plate leak (Defense channel active on an arc-armored target: x1.35)
+//   -> flat armor unless the hit ignores it, floored at PostArmorDamageFloor (0.5)
 //   -> shield then health unless the hit ignores the shield (SplitShield; UDFHealthSet calls it).
-// Every input is a row value, an attribute or a set-by-caller magnitude; the three that were
-// literals in Step.cs (rear threshold 150 deg, shredded leak x1.35, post-armor floor 0.5) are
-// DFDamageDefaults, overridable per hit by the Balance dials UDFDamageContext::ReadBalance reads.
+// So mark x1.25 on a 10 hit against 2 flat armor is 12.5 - 2 = 10.5, not (10 - 2) x 1.25 = 10
+// (DF.Unit.Damage.OrderMatchesSim). Every input is a row value, an attribute or a set-by-caller
+// magnitude; the three that were literals in Step.cs (rear threshold cos(150 deg),
+// ContentTypes.cs:64; shredded front-arc leak x1.35; post-armor floor 0.5) are DFDamageDefaults,
+// read per hit from Balance("rearThresholdDegrees" / "shredFrontArcLeakFactor" /
+// "postArmorDamageFloor") by UDFDamageContext::ReadBalance with these defaults.
 
 namespace DFDamageDefaults
 {
-	/** Step.cs EnemyDef.CosRearThreshold: past this angle from the facing a hit is "from behind". */
-	constexpr float RearArcDegrees = 150.f;
-	/** Step.cs Damage(): shredded plating leaks — an arc-armored target under shred takes x1.35. */
-	constexpr float ShreddedFrontArcFactor = 1.35f;
-	/** Step.cs Damage(): flat armor never reduces a hit below this. */
-	constexpr float MinDamageAfterArmor = 0.5f;
+	/** ContentTypes.cs:64 EnemyDef.CosRearThreshold = cos(150 deg): past this angle from the facing a hit is "from behind". Balance "rearThresholdDegrees". */
+	constexpr float RearThresholdDegrees = 150.f;
+	/** Step.cs Damage(): shredded plating leaks — an arc-armored target under shred takes x1.35. Balance "shredFrontArcLeakFactor". */
+	constexpr float ShredFrontArcLeakFactor = 1.35f;
+	/** Step.cs Damage(): flat armor never reduces a hit below this. Balance "postArmorDamageFloor". */
+	constexpr float PostArmorDamageFloor = 0.5f;
 	/** B§1.6: Tether is refused at this Mass and above. */
 	constexpr float TetherImmuneMass = 6.f;
 }
@@ -58,11 +63,11 @@ struct DFGAMEPLAY_API FDFDamageInput
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float FrontArmorArcDegrees = 0.f;  // FDFEnemyRow
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float FrontArmorFactor = 1.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float RearWeakFactor = 1.f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) float RearArcDegrees = DFDamageDefaults::RearArcDegrees;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float RearThresholdDegrees = DFDamageDefaults::RearThresholdDegrees;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float FlatArmor = 0.f;             // UDFHealthSet on the target (shred already applied)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) bool bTargetShredded = false;      // DF.Status.Channel.Defense on the target
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) float ShreddedFrontArcFactor = DFDamageDefaults::ShreddedFrontArcFactor;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) float MinDamageAfterArmor = DFDamageDefaults::MinDamageAfterArmor;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float ShredFrontArcLeakFactor = DFDamageDefaults::ShredFrontArcLeakFactor;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float PostArmorDamageFloor = DFDamageDefaults::PostArmorDamageFloor;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float DamageTakenFactor = 1.f;     // UDFHealthSet on the target
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float Shield = 0.f;                // UDFHealthSet on the target (for the split preview)
 
@@ -97,7 +102,7 @@ struct DFGAMEPLAY_API FDFDamageMath
 	static FDFShieldSplit SplitShield(float Amount, float Shield, bool bIgnoresShield);
 
 	/** Which aspect a hit lands on: cosine compare, no Acos, exactly as Step.cs. */
-	static EDFHitAspect Aspect(float HitDot, float FrontArmorArcDegrees, float RearArcDegrees);
+	static EDFHitAspect Aspect(float HitDot, float FrontArmorArcDegrees, float RearThresholdDegrees);
 
 	/** dot(unit(SourceLocation - TargetLocation), TargetForward); returns 1 when the source sits on the target (DoT, reactions). */
 	static float HitDot(const FVector& SourceLocation, const FVector& TargetLocation, const FVector& TargetForward);

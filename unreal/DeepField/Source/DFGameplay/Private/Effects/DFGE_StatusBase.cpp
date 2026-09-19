@@ -71,8 +71,8 @@ void UDFGE_StatusBase::AddMagnitudeModifier(const FGameplayAttribute& Attribute,
 
 void UDFGE_StatusBase::ConfigurePeriodicDamage()
 {
-	Period = FScalableFloat(DotPeriodSeconds);
-	// The sim damaged on the first tick after application; ticking at t=0 is the nearest match.
+	Period = FScalableFloat(DotPeriodSeconds);   // the component sets the spec's Period from Balance tickHz
+	// The sim damaged on the first tick after application; GAS runs this on the next timer tick.
 	bExecutePeriodicEffectOnApplication = true;
 	FGameplayEffectExecutionDefinition Execution;
 	Execution.CalculationClass = UDFDamageExecution::StaticClass();

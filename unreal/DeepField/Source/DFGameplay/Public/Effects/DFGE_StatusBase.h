@@ -18,8 +18,10 @@ class DFGAMEPLAY_API UDFGE_StatusBase : public UGameplayEffect
 	GENERATED_BODY()
 
 public:
-	/** Period of the Thermal / Toxin damage tick. A cadence, not a balance number: dps per row x this = damage per tick. */
-	static constexpr float DotPeriodSeconds = 0.25f;
+	/** Default period of the Thermal / Toxin damage tick: the sim's 1/30 s (Balance.cs TickHz). UDFStatusComponent overwrites
+	 *  the spec's Period from Balance("tickHz", 30); the tick amount is dps x period through the full damage order, so the
+	 *  period IS a balance number (the post-armor floor turns a 0.2 tick into 0.5 — see FDFStatusResolver). */
+	static constexpr float DotPeriodSeconds = 1.f / 30.f;
 
 	/** The channel this class serves. */
 	EDFStatusChannel GetChannel() const { return Channel; }

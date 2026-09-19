@@ -51,7 +51,7 @@ bool FDFDamageFrontArcAndRearTest::RunTest(const FString& Parameters)
 
 	// The rear threshold is a dial: at 120 deg, 130 deg becomes rear.
 	FDFDamageInput Dial = Aegis(8.f, FromAngle(130.f));
-	Dial.RearArcDegrees = 120.f;
+	Dial.RearThresholdDegrees = 120.f;
 	TestEqual(TEXT("rear threshold from the dial"), FDFDamageMath::Compute(Dial).Aspect, EDFHitAspect::Rear);
 
 	// No hit direction (DoT, reaction burst, splash centre): no aspect, no factor.
@@ -100,7 +100,7 @@ bool FDFDamageFlatArmorAndApTest::RunTest(const FString& Parameters)
 	FDFDamageInput Tiny = Ram;
 	Tiny.BaseDamage = 1.f;
 	TestTrue(TEXT("floored at 0.5"), FMath::IsNearlyEqual(FDFDamageMath::Compute(Tiny).Damage, 0.5f, 1e-4f));
-	Tiny.MinDamageAfterArmor = 0.25f;
+	Tiny.PostArmorDamageFloor = 0.25f;
 	TestTrue(TEXT("floor is a dial"), FMath::IsNearlyEqual(FDFDamageMath::Compute(Tiny).Damage, 0.25f, 1e-4f));
 
 	// Hollow point: x1.3 only on unarmored targets. Drifter 7 -> 9.1; Ram (armored) 7 -> 5.
@@ -123,10 +123,10 @@ bool FDFDamageFlatArmorAndApTest::RunTest(const FString& Parameters)
 	Stack.PackAPunchFactor = 1.25f;
 	TestTrue(TEXT("(7 x 1.25 x 2 x 1.25) - 2 = 19.875"), FMath::IsNearlyEqual(FDFDamageMath::Compute(Stack).Damage, 19.875f, 1e-4f));
 
-	// C4 order: flat armor BEFORE vulnerability. Mark x1.25 on a ram: (7 - 2) x 1.25 = 6.25.
+	// Step.cs order: vulnerability BEFORE flat armor. Mark x1.25 on a ram: 7 x 1.25 - 2 = 6.75, not (7 - 2) x 1.25.
 	FDFDamageInput Marked = Ram;
 	Marked.DamageTakenFactor = 1.25f;
-	TestTrue(TEXT("armor then mark: 6.25"), FMath::IsNearlyEqual(FDFDamageMath::Compute(Marked).Damage, 6.25f, 1e-4f));
+	TestTrue(TEXT("mark then armor: 6.75"), FMath::IsNearlyEqual(FDFDamageMath::Compute(Marked).Damage, 6.75f, 1e-4f));
 
 	// Shred lowers the attribute the execution captures: FlatArmor 0 on a ram -> 7 (the leak needs an arc).
 	FDFDamageInput ShredRam = Ram;
@@ -182,6 +182,58 @@ bool FDFDamageShieldBeforeHealthAndPoisonBypassTest::RunTest(const FString& Para
 	TestTrue(TEXT("bypass to health 40"), FMath::IsNearlyEqual(Bypass.ToHealth, 40.f, 1e-4f));
 	const FDFShieldSplit None = FDFDamageMath::SplitShield(0.f, 25.f, false);
 	TestTrue(TEXT("zero damage splits to nothing"), None.Absorbed == 0.f && None.ToHealth == 0.f);
+	return true;
+}
+
+// Step.cs Damage() 2010-2066: arc -> vulnerability -> shred leak -> flat armor (floor 0.5) -> shield -> hp.
+// gas.md had flat armor before vulnerability; the sim is the spec (ADR-0005).
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFDamageOrderMatchesSimTest, "DF.Unit.Damage.OrderMatchesSim", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+bool FDFDamageOrderMatchesSimTest::RunTest(const FString& Parameters)
+{
+	// The task's own example: mark x1.25 on 10 damage against 2 flat armor = 12.5 - 2 = 10.5, not (10 - 2) x 1.25 = 10.
+	FDFDamageInput In;
+	In.BaseDamage = 10.f;
+	In.FlatArmor = 2.f;
+	In.DamageTakenFactor = 1.25f;
+	TestTrue(TEXT("mark before armor: 10.5"), FMath::IsNearlyEqual(FDFDamageMath::Compute(In).Damage, 10.5f, 1e-4f));
+
+	// Arc before mark before shred leak before armor, on a marked, shredded ram hit from the front:
+	// 10 x 0.35 (front) x 1.25 (mark) x 1.35 (shredded plating leaks) - 0 (shred took the 2 armor) = 5.90625.
+	FDFDamageInput Ram;
+	Ram.BaseDamage = 10.f;
+	Ram.bHasHitDirection = true;
+	Ram.HitDot = 1.f;
+	Ram.FrontArmorArcDegrees = 150.f;
+	Ram.FrontArmorFactor = 0.35f;
+	Ram.RearWeakFactor = 2.2f;
+	Ram.DamageTakenFactor = 1.25f;
+	Ram.bTargetShredded = true;
+	Ram.FlatArmor = 0.f;   // the Defense effect already drove the attribute 2 -> 0
+	TestTrue(TEXT("front x mark x leak: 5.90625"), FMath::IsNearlyEqual(FDFDamageMath::Compute(Ram).Damage, 5.90625f, 1e-4f));
+	// From behind without shred: 10 x 2.2 x 1.25 - 2 = 25.5.
+	FDFDamageInput Rear = Ram;
+	Rear.HitDot = -1.f;
+	Rear.bTargetShredded = false;
+	Rear.FlatArmor = 2.f;
+	TestTrue(TEXT("rear x mark - armor: 25.5"), FMath::IsNearlyEqual(FDFDamageMath::Compute(Rear).Damage, 25.5f, 1e-4f));
+
+	// The floor is applied after the mark: a 1.5 tick x 1.25 = 1.875 - 2 -> 0.5, and the shield split sees 0.5.
+	FDFDamageInput Tick;
+	Tick.BaseDamage = 1.5f;
+	Tick.FlatArmor = 2.f;
+	Tick.DamageTakenFactor = 1.25f;
+	Tick.Shield = 25.f;
+	const FDFDamageResult R = FDFDamageMath::Compute(Tick);
+	TestTrue(TEXT("floored after mark"), FMath::IsNearlyEqual(R.Damage, 0.5f, 1e-4f));
+	TestTrue(TEXT("shield soaks the floored tick"), FMath::IsNearlyEqual(R.ShieldAbsorbed, 0.5f, 1e-4f) && R.ToHealth == 0.f);
+
+	// The three literals are dials with the sim's numbers as defaults.
+	TestEqual(TEXT("rear threshold default 150"), DFDamageDefaults::RearThresholdDegrees, 150.f);
+	TestEqual(TEXT("shred leak default 1.35"), DFDamageDefaults::ShredFrontArcLeakFactor, 1.35f);
+	TestEqual(TEXT("post-armor floor default 0.5"), DFDamageDefaults::PostArmorDamageFloor, 0.5f);
+	FDFDamageInput Dials = Ram;
+	Dials.ShredFrontArcLeakFactor = 2.f;
+	TestTrue(TEXT("leak dial honoured: 10 x 0.35 x 1.25 x 2 = 8.75"), FMath::IsNearlyEqual(FDFDamageMath::Compute(Dials).Damage, 8.75f, 1e-4f));
 	return true;
 }
 

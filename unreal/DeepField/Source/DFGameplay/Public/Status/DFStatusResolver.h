@@ -6,21 +6,42 @@
 #include "Status/DFReactionResolver.h"
 #include "Status/DFStatusTypes.h"
 
-// C5 — the status semantics with no world attached, so a unit test can pin every rule
-// (Statuses.cs + Step.cs ApplyStatus/TickStatuses):
+// C5 — the status semantics with no world attached, so a unit test can pin every rule. The
+// sim is the spec (ADR-0005): this is Step.cs ApplyStatus (1070-1131) and UpdateStatuses
+// (1023-1060) line for line, and where status.md reads differently the sim wins (RFC'd):
 //
 //   Apply(id, row, now, source, target):
-//     1. reaction scan over every active channel — a match consumes the active half, drops the
-//        incoming one, reports the burst fraction and writes the row's EmitStatus straight into
-//        its slot (gated only by cc-resist for hard control). Outputs are never re-scanned:
-//        reactions cannot chain. This runs BEFORE the gates, as the sim did.
-//     2. gates: Thermal on Shield > 0; hard control at CcResist >= 1; Tether on Mass >=
-//        TetherImmuneMass or an immune target.
-//     3. the channel slot: same id refreshes; a magnitude <= the active one is dropped; a
-//        stronger one replaces it. Never stacks.
+//     1. REACTION SCAN FIRST, across every active slot, before any gate. A match consumes the
+//        ACTIVE partner (its slot is cleared), the INCOMING status is never applied, and Apply
+//        returns. In between, OnReaction (bound by the component) applies the burst — through
+//        the damage execution with the source at the target's own position, so no arc test but
+//        mark, flat armor and shield all apply — and answers whether the target survived. The
+//        row's EmitStatus is then written STRAIGHT INTO its channel slot: it overwrites whatever
+//        held the slot outright (no strongest-wins, no refresh), takes the row's raw duration,
+//        is gated only by cc-resist when it is hard control, and is skipped if the burst killed
+//        the target. Outputs are never re-scanned: reactions cannot chain.
+//        Consequences the tests pin: a shielded, chilled Warden hit by burn still detonates
+//        thermalShock (the shield gate is below); shock into a chilled target at CcResist >= 1
+//        still fires flashFreeze, whose emitted freeze is then refused by the gauge.
+//     2. gates, on non-reaction paths only: Thermal on Shield > 0; hard control at
+//        CcResist >= 1; Tether on Mass >= TetherImmuneMass or an immune target (B§1.6).
+//     3. duration = row x DurationFactor. The factor is applied BEFORE the refresh /
+//        strongest-wins branch, so an Ember refresh keeps the longer burn (Step.cs applies
+//        EmberBurnDurationFactor by applier faction right here; the component computes it).
+//     4. the channel slot: same id REFRESHES (duration and source reset, magnitude untouched,
+//        and the component does not broadcast StatusApplied for it); otherwise
+//        `active.Magnitude >= incoming.Magnitude` drops the incoming — a TIE keeps the active
+//        status; a strictly stronger one replaces it. Never stacks.
 //   Tick(now, dt): expires slots past EndTime; fills the cc-resist gauge at CcResistFillPerSecond
 //     x the strongest active CcFillScale (hard control 1, Tether 0.5) or decays it at
 //     CcResistDecayPerSecond.
+//
+// DoT cadence (decision for this port): Thermal / Toxin ticks are a periodic UDFDamageExecution
+// at a FIXED 1/30 s — Balance("tickHz", 30), the sim's Balance.Dt — never the frame rate. Each
+// tick is dps / tickHz through the full damage order, so mark amplifies it and the post-armor
+// floor bites: a 0.2 burn tick (6 dps) becomes 0.5 on any target with FlatArmor > 0, which is
+// why a burning Ram takes ~15 dps, not 6 (DF.Unit.Status.DotTickMatchesSim). Changing the
+// period would change those numbers, so it is a balance dial, not a tuning knob.
 //
 // Rows are looked up through FindStatusRow (the component binds UDFContentSubsystem; a test
 // binds a map). Rates default to Balance.cs and are overwritten from the balance table.
@@ -42,6 +63,11 @@ struct DFGAMEPLAY_API FDFStatusResolver
 
 	/** Row source for EmitStatus lookups; unbound = reactions cannot emit. */
 	TFunction<const FDFStatusRow*(FName)> FindStatusRow;
+
+	/** Fires inside Apply after the active partner is consumed and before the EmitStatus is written (the
+	 *  Step.cs order: consume -> Damage() burst -> emit). The outcome carries ReactionId, BurstFraction and the
+	 *  consumed slot. Return false when the burst killed the target: the emit is then skipped. Unbound = alive. */
+	TFunction<bool(const FDFStatusApplyOutcome&)> OnReaction;
 
 	FDFStatusResolver();
 

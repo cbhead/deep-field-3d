@@ -100,4 +100,6 @@ struct DFGAMEPLAY_API FDFStatusApplyOutcome
 	UPROPERTY(BlueprintReadOnly) FName EmitReplacedStatusId;
 	/** The row named an EmitStatus but the cc-resist gate refused it (hard control at full gauge). */
 	UPROPERTY(BlueprintReadOnly) bool bEmitRejected = false;
+	/** The row named an EmitStatus but the burst killed the target first (Step.cs: `EmitStatus ... && !enemy.Dead`). */
+	UPROPERTY(BlueprintReadOnly) bool bEmitSkippedDead = false;
 };
