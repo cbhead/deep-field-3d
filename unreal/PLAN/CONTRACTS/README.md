@@ -21,3 +21,4 @@ Each document here is the human-readable twin of a header, asset or file format 
 | C15 | Message inventory | [messages.md](messages.md) | WS-00 | A (new), R (fields) |
 | C16 | Collision & input | [collision-input.md](collision-input.md) | WS-00 | I |
 | — | Map authoring in 3D (successor of `docs/MAP-AUTHORING.md` §4) | [map-authoring-3d.md](map-authoring-3d.md) | WS-09 | R |
+| — | CI lanes, the self-hosted Mac runner, test naming | [ci.md](ci.md) | WS-15 | A |

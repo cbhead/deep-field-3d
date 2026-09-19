@@ -1,0 +1,107 @@
+# The engine lane for the Unreal rebuild (WS-15; unreal/PLAN/CONTRACTS/ci.md): the dev Mac
+# registered as a self-hosted runner. Nightly it runs the whole INT pre-merge set
+# (unreal/Build/ci-local.sh); on a PR it runs the cheap checks plus the editor build.
+# The steps are the scripts developers run — nothing here is CI-only.
+#
+# The runner is a shared 8 GB machine: builds serialise through UBT's mutex (-WaitMutex) and
+# every editor process goes through unreal/Build/editor-lock.sh, the same lock the agent
+# sessions use, so a run waits for its turn instead of fighting them for memory.
+name: unreal-mac
+
+on:
+  schedule:
+    # 03:00 America/Chicago. GitHub cron is UTC and has no time zone: 08:00 UTC is 03:00 CDT
+    # (March–November) and 02:00 CST — the hour drifts with daylight saving, on purpose.
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+    inputs:
+      full:
+        description: 'Run the full nightly set (ci-local.sh) instead of checks + build'
+        type: boolean
+        default: true
+      client_count:
+        description: 'Clients in the listen-host smoke'
+        type: number
+        default: 1
+  pull_request:
+    branches: [unreal/main]
+    paths:
+      - 'unreal/**'
+      - 'tools/**'
+      - '.github/workflows/unreal-*.yml'
+
+permissions:
+  contents: read
+
+# One run at a time on the one machine; a nightly never cancels a PR run or vice versa
+# (they queue), and a newer push to the same PR replaces the older queued run.
+concurrency:
+  group: unreal-mac-${{ github.event_name == 'pull_request' && github.ref || 'nightly' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  mac:
+    # Never run code from a fork on the self-hosted machine: a fork PR could edit these scripts.
+    # Same-repository PRs and everything scheduled/dispatched are fine.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, macOS, ARM64, deepfield]
+    timeout-minutes: 150
+    env:
+      UE_ROOT: ${{ vars.UE_ROOT || '/Users/Shared/Epic Games/UE_5.8' }}
+      DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
+      # The DDC and the editor lock live beside the SSD working copy (ADR-0021), shared with the
+      # human's and the agents' checkouts, so CI never re-derives what the machine already has.
+      UE_LOCAL_DDC: ${{ vars.UE_LOCAL_DDC || '/Volumes/Toshiba/Deepfield-Unreal/DDC' }}
+      EDITOR_LOCK_DIR: ${{ vars.EDITOR_LOCK_DIR || '/Volumes/Toshiba/Deepfield-Unreal/.editor-lock' }}
+      # Extra arguments for ci-local.sh on the nightly (e.g. "--skip plan-status" while the ledger
+      # is mid-cycle). A repository variable so INT can change it without editing this file.
+      CI_LOCAL_ARGS: ${{ vars.CI_LOCAL_ARGS || '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true          # L_Dev_Empty.umap and any other binary the tests or the smoke open
+
+      - name: Engine and toolchain present
+        run: |
+          test -x "$UE_ROOT/Engine/Binaries/Mac/UnrealEditor-Cmd" || { echo "no editor under UE_ROOT=$UE_ROOT"; exit 1; }
+          test -d "$DEVELOPER_DIR" || { echo "no Xcode at $DEVELOPER_DIR"; exit 1; }
+          git lfs ls-files | head -5
+          python3 --version
+
+      - name: Module layering
+        run: python3 unreal/Build/layering-check.py
+
+      - name: Ownership (INT view — lists, fails on a binary outside every glob)
+        run: python3 unreal/Build/ownership-check.py --ws INT --base "origin/${{ github.event.pull_request.base.ref || 'unreal/main' }}"
+
+      - name: Content JSON against the schemas
+        run: python3 unreal/Build/validate-content-json.py
+
+      # ---- PR: build only (the tests run nightly; a PR's own filter runs on the author's Mac via pr-check.sh)
+      - name: Build DeepFieldEditor Mac Development (-WaitMutex)
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && !inputs.full)
+        run: |
+          mkdir -p unreal/DeepField/Saved/Logs
+          "$UE_ROOT/Engine/Build/BatchFiles/Mac/Build.sh" DeepFieldEditor Mac Development \
+            -Project="$GITHUB_WORKSPACE/unreal/DeepField/DeepField.uproject" -WaitMutex -NoHotReload \
+            > unreal/DeepField/Saved/Logs/ci-build.log 2>&1 || { grep -E " error |Result:" unreal/DeepField/Saved/Logs/ci-build.log | tail -20; exit 1; }
+          grep -E "Result:|Total execution time" unreal/DeepField/Saved/Logs/ci-build.log | tail -3
+
+      # ---- nightly / dispatch(full): the whole INT pre-merge set, in order, first failure stops it
+      - name: ci-local.sh (checks, build, DF.Unit+DF.Content, listen-host smoke)
+        if: github.event_name != 'pull_request' && (github.event_name != 'workflow_dispatch' || inputs.full)
+        run: unreal/Build/ci-local.sh --client-count "${{ inputs.client_count || 1 }}" $CI_LOCAL_ARGS
+
+      - name: Editor logs and automation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unreal-mac-logs-${{ github.run_number }}
+          if-no-files-found: ignore
+          retention-days: 14
+          path: |
+            unreal/DeepField/Saved/Logs/ci-build.log
+            unreal/DeepField/Saved/Logs/test-*.log
+            unreal/DeepField/Saved/Logs/smoke-*.log
+            unreal/DeepField/Saved/Automation/Reports/**
