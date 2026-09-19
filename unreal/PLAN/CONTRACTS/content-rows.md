@@ -24,7 +24,7 @@ Tables and their rows (all in one header; one `DT_<Table>` each):
 | chargecells | `FDFChargeCellRow` | `HeavyEffect (enum), Magnitude, Radius, Recipe{}` |
 | balance | `FDFBalanceRow` (single row `default`) | every `Balance.cs` dial + new knobs (knockdown thresholds, ram formula, primecore drops, early-call fraction, elite chance/cap, spending cap, XP cap, slope speed factors, vehicle grades) |
 | waves_<map> | `FDFWaveGroupRow` | `WaveIndex, EnemyId, Count, SpacingTicks, StartDelayTicks, RouteId, Elite (optional id), Boss (bool)` |
-| conditions | `FDFConditionRow` | `TowerRangeFactor, RangeExempt[], AcquisitionDelay, ExemptsMarked, HeroRangeFactor, StealthWeightFactor, ChannelDurationFactors{}, Hazard{Kind, IntervalMin, IntervalMax, Damage, Applies, Radius}, World{} (map-specific toggles)` |
+| conditions | `FDFConditionRow` | `TowerRangeFactor, RangeExempt[], AcquisitionDelay, ExemptsMarked, HeroRangeFactor, StealthWeight, ChannelDurationFactors{}, Hazard{Kind, IntervalMin, IntervalMax, Damage, Applies, Radius}, World{} (map-specific toggles)` |
 | maps | `FDFSectorRow` | `Order, TotalWaves, FieldMeters, ConditionSchedule{wave→condition}, Vehicles[], BossRated, Lesson, Tiers{}` |
 | vehicles | `FDFVehicleRow` | `Seats, BoardRadiusMeters, MaxSpeed, Hp, MaxGradePercent, RamDamageBase, SurfaceFactors{physmat→{Grip,Accel,Top}}` |
 | mutables | `FDFMutableRow` | per kind: cooldowns, damages, hp, yields (B§2.11) |
