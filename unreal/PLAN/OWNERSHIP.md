@@ -37,11 +37,11 @@ CODEOWNERS-style. A PR titled `[WS-NN]` may add or modify **binary** files only 
 | `unreal/DeepField/Content/DF/Heroes/**` (meshes/anims), `Content/DF/Characters/FPArms/**`, `Content/DF/Weapons/**` (meshes/anims) | WS-35 |
 | `unreal/DeepField/Content/DF/Vehicles/**` (meshes/physics/ABP) | WS-36 |
 | `unreal/DeepField/Content/DF/Maps/Foundry/L_Foundry_Art*`, `L_Foundry_Lighting*`, `Content/DF/Env/Foundry/**` | WS-37 |
-| `…/Switchyard/…` | WS-38 |
-| `…/Spire/…` | WS-39 |
-| `…/Toaster/…`, `Content/DF/Env/Toaster/PCG/**` | WS-40 |
-| `…/Sluice/…` | WS-41 |
-| `…/Crown/…` | WS-42 |
+| `unreal/DeepField/Content/DF/Maps/Switchyard/L_Switchyard_Art*`, `L_Switchyard_Lighting*`, `Content/DF/Env/Switchyard/**` | WS-38 |
+| `unreal/DeepField/Content/DF/Maps/Spire/L_Spire_Art*`, `L_Spire_Lighting*`, `Content/DF/Env/Spire/**` | WS-39 |
+| `unreal/DeepField/Content/DF/Maps/Toaster/L_Toaster_Art*`, `L_Toaster_Lighting*`, `Content/DF/Env/Toaster/**`, `Content/DF/Env/Toaster/PCG/**` | WS-40 |
+| `unreal/DeepField/Content/DF/Maps/Sluice/L_Sluice_Art*`, `L_Sluice_Lighting*`, `Content/DF/Env/Sluice/**` | WS-41 |
+| `unreal/DeepField/Content/DF/Maps/Crown/L_Crown_Art*`, `L_Crown_Lighting*`, `Content/DF/Env/Crown/**` | WS-42 |
 | `unreal/DeepField/Content/DF/World/**` (meshes: traversal set, destructibles, props, pickups) | WS-43 |
 | `unreal/DeepField/Config/DefaultDeviceProfiles.ini` (via INT), `unreal/Build/perf/**` | WS-44 |
 | `unreal/DeepField/Content/DF/UI/{Icons,Styles,Textures,Studio}/**`, `Content/DF/Maps/L_MainMenu*` | WS-45 |

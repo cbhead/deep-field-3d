@@ -1,0 +1,20 @@
+# Unreal build output and caches (the DDC is configured to ../../../DDC beside the repo on the SSD)
+Binaries/
+Intermediate/
+DerivedDataCache/
+Saved/
+Build/Receipts/
+.vs/
+.vscode/
+*.xcworkspace/
+*.xcodeproj/
+*.VC.db
+*.opensdf
+*.sdf
+*.sln
+*.suo
+*.opendb
+*.code-workspace
+Plugins/*/Binaries/
+Plugins/*/Intermediate/
+Content/Megascans/

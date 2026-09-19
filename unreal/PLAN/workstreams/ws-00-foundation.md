@@ -7,7 +7,7 @@ owner: session-75b58b1b (INT)
 claimed_at: 2026-09-17T07:17:27Z
 lease_expires: 2026-09-18T07:17:27Z
 branch: unreal/main
-last_commit: 
+last_commit: 83296f0
 editor_heavy: true
 phase: P1
 size: M
@@ -43,3 +43,4 @@ blocked_on:
 
 ## Session log
 <!-- append-only: date · session · what landed · what's next -->
+- 2026-09-19 · session-75b58b1b (INT) · SSD attached (`/Volumes/Toshiba`, APFS, 3.6 TB); repo cloned to `/Volumes/Toshiba/Deepfield-Unreal/deepfield-3d` (the Unreal working copy; DDC at `../DDC`). Landed the `.uproject` (UE 5.8.2, 26 plugins), Game/Editor targets (BuildSettingsVersion V7 — the installed build refuses V5), 14 module skeletons from `unreal/Build/modules.json` via `new-module.py` (layers 0–6; `layering-check.py` green), DFCore: native tags (C1, X-macro `.inl` — note UE_DEFINE_GAMEPLAY_TAG's .cpp static-assert, we expand it by hand), 110 message tags + 17 payload structs (C15), `UDFMessageBus` (R9 fallback; GameplayMessageRouter is not in the engine), C2 row structs, `UDFContentSubsystem`, `UDFContentDefinition`, `UDFGameInstance`; DFMatch `ADFGameMode`; C16 collision profiles + physmats; DDC/render/nav/net config. **`DeepFieldEditor Mac Development` builds** (5.5 min on the M1). Next: `L_Dev_Empty` via `make_dev_level.py`, listen-host + PIE-client smoke, then commit binaries once git-lfs is installed.
