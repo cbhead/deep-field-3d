@@ -47,12 +47,12 @@ done
 wait $PID; EDITOR_EXIT=$?
 
 # Primary verdict: the JSON report. Fallback: the controller's per-test log lines
-# (5.8 prints "Test Completed. Result={Passed|Failed} Name={...} Path={...}").
+# (5.8 prints "LogAutomationController: Display|Error: Test Completed. Result={Success|Fail} Name={...} Path={...}").
 if [ -f "$REPORT/index.json" ]; then
   python3 - "$REPORT/index.json" "$LOG" "${DF_TEST_ALLOW_EMPTY:-0}" <<'PY'
 import json, sys
 report, log, allow_empty = sys.argv[1], sys.argv[2], sys.argv[3] == "1"
-data = json.load(open(report))
+data = json.load(open(report, encoding="utf-8-sig"))   # the controller writes a BOM
 tests = data.get("tests", [])
 failed = 0
 for t in sorted(tests, key=lambda t: t.get("fullTestPath", "")):
@@ -77,12 +77,12 @@ PY
 fi
 
 echo "tests: no report at $REPORT/index.json (editor exit $EDITOR_EXIT); falling back to the log"
-if ! grep -qE "Test Completed\. Result=\{(Passed|Failed)\}" "$LOG" 2>/dev/null; then
+if ! grep -qE "Test Completed\. Result=\{(Success|Fail)\}" "$LOG" 2>/dev/null; then
   grep -E "Error:|Fatal|Assertion" "$LOG" 2>/dev/null | head -10
   echo "tests: NO RESULT — the editor did not run the tests ($LOG)"; exit 2
 fi
-grep -E "Test Completed\. Result=\{(Passed|Failed)\}" "$LOG" | sed -E 's/^.*Result=\{([A-Za-z]+)\} Name=\{([^}]*)\}.*$/\1 \2/' | sort | uniq
-if grep -qE "Test Completed\. Result=\{Failed\}" "$LOG"; then
+grep -E "Test Completed\. Result=\{(Success|Fail)\}" "$LOG" | sed -E 's/^.*Result=\{([A-Za-z]+)\}.* Path=\{([^}]*)\}.*$/\1 \2/' | sort | uniq
+if grep -qE "Test Completed\. Result=\{Fail\}" "$LOG"; then
   echo "tests: FAILED ($LOG)"; exit 1
 fi
 echo "tests: OK ($LOG)"

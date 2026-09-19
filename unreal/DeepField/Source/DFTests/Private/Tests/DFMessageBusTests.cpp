@@ -123,6 +123,10 @@ bool FDFMessageBusUnsubscribeDuringDeliveryTest::RunTest(const FString& Paramete
 	TestEqual(TEXT("C heard every broadcast after its subscription"), HitsC, 2);
 	TestEqual(TEXT("parent subscriber heard all three"), Parent.Num(), 3);
 
+	Bus->Unsubscribe(C);
+	Bus->Broadcast(DFTags::Message_TowerPlaced, FDFMsg_Structure());
+	TestEqual(TEXT("C silent after unsubscribe"), HitsC, 2);
+
 	// A capture that stops itself from inside its own callback (the FDFMessageCapture::Stop promise).
 	{
 		FDFMessageCapture* SelfStopping = nullptr;
@@ -144,10 +148,7 @@ bool FDFMessageBusUnsubscribeDuringDeliveryTest::RunTest(const FString& Paramete
 		TestTrue(TEXT("capture stopped during the first delivery heard at most that one"), Capture.Num() <= 1);
 		Bus->Unsubscribe(Stopper);
 	}
-
-	Bus->Unsubscribe(C);
-	Bus->Broadcast(DFTags::Message_TowerPlaced, FDFMsg_Structure());
-	TestEqual(TEXT("C silent after unsubscribe"), HitsC, 2);
+	TestEqual(TEXT("C, unsubscribed, heard none of the later broadcasts"), HitsC, 2);
 	return true;
 }
 
