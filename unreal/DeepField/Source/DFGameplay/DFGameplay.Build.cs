@@ -19,6 +19,7 @@ public class DFGameplay : ModuleRules
 			"GameplayTasks",
 			"ModularGameplay",
 			"NetCore",
+			"DeveloperSettings",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {
