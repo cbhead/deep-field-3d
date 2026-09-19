@@ -21,3 +21,4 @@ DeepField/**/*.ttf                 filter=lfs diff=lfs merge=lfs -text
 DeepField/**/*.otf                 filter=lfs diff=lfs merge=lfs -text
 content/terrain/*.png              filter=lfs diff=lfs merge=lfs -text
 # Text that must stay text (never LFS): *.json *.ini *.cs *.cpp *.h *.py *.md *.tsv *.uproject *.uplugin
+content/terrain/**/*.png           filter=lfs diff=lfs merge=lfs -text

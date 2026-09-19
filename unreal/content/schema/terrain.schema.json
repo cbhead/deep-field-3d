@@ -1,0 +1,325 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deepfield.dev/content/terrain.schema.json",
+  "title": "terrain",
+  "description": "A map's landform (CONTRACTS/map-authoring-3d.md §1, ADR-0018): unreal/content/terrain/<map>.terrain.json, rendered by tools/ue-bridge/terrain/build_heightmap.py. Frame: SIM METRES — x right, z forward is -z (so +z is toward the camera / the spawn yard on the legacy maps), y up. Every spline point is [x, z] (or [x, z, y] where a kind accepts an authored elevation). Output sample (col, row) sits at (originX + col*resolution, originZ + row*resolution): columns along +x, rows along +z. The Unreal mapping (X = -z*100, Y = x*100, Z = y*100) is applied by the importer, never in these files. 'left' of a spline = the side where (B-A) x (P-A) > 0 in the (x, z) plane, i.e. for a spline travelling toward +z, left is -x.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "id",
+    "bounds"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "deepfield-terrain/1"
+    },
+    "id": {
+      "type": "string",
+      "description": "Map id (matches maps.json and the level file)."
+    },
+    "note": {
+      "type": "string"
+    },
+    "bounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "playable",
+        "belt"
+      ],
+      "properties": {
+        "playable": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[x, z] extent of the playable field in metres, centred on `centre`."
+        },
+        "belt": {
+          "type": "number",
+          "description": "Metres of non-playable terrain on every side (containment sits at its inner edge)."
+        },
+        "centre": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[x, z] of the playable centre; default [0, 0]."
+        }
+      }
+    },
+    "resolution": {
+      "type": "number",
+      "description": "Metres per heightmap sample (default 1.0 = one Landscape quad of 100 cm). Output size is ceil((playable + 2*belt) / resolution) + 1 per axis."
+    },
+    "baseElevation": {
+      "type": "number",
+      "description": "Starting elevation (metres) everywhere before any feature."
+    },
+    "seed": {
+      "type": "integer",
+      "description": "Base seed for noise layers that do not carry their own."
+    },
+    "features": {
+      "type": "array",
+      "description": "Applied in ascending `priority` (default 0; ties by array order; noise layers default to 50, so give a feature priority > 50 to apply it after noise). Each is a distance-field blend along `spline` with a `profile` (smooth = smoothstep, sharp = linear, stepped = `steps` treads).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Optional name; noise masks and the stats block refer to it. Also the mask file name is by kind, not id."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "ridge",
+              "valley",
+              "plateau",
+              "terrace",
+              "cut",
+              "embankment",
+              "basin",
+              "saddle",
+              "cliff",
+              "roadbed",
+              "shore"
+            ],
+            "description": "ridge/embankment: +height within width/2 of the spline, falling to 0 over `falloff`. valley/cut/saddle: the same, subtracting `depth`. plateau: closed polygon (or centre+radius) blended to `elevation` (absolute) or raised by `height`, with `falloff` outside. basin: closed polygon (or centre+radius) bowl reaching `depth` once `falloff` inside the rim (or blended to `elevation`). terrace/cliff: the ground on `side` of the spline is `height` higher; the face is `width` wide, centred on the line (terrace default width 4 smooth, cliff default width 1 sharp). roadbed: the ground under a lane is flattened across `width` (+ `falloff`) and re-graded along the spline to <= `maxGrade` percent (default 30); bed elevation from [x,z,y] vertices or, when absent, from the terrain as it stands. shore: on `side` (default right) of the line the ground blends to `elevation` over `falloff` and is flat beyond it."
+          },
+          "spline": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 3
+            },
+            "minItems": 1,
+            "description": "Polyline [[x, z], ...] in sim metres; closed polygon for plateau/basin (first point is not repeated); roadbed may use [x, z, y]."
+          },
+          "centre": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "plateau/basin alternative to a polygon: [x, z] with `radius`."
+          },
+          "radius": {
+            "type": "number"
+          },
+          "width": {
+            "type": "number",
+            "description": "Full width in metres of the flat part (ridge/valley/roadbed) or of the step face (terrace/cliff)."
+          },
+          "height": {
+            "type": "number"
+          },
+          "depth": {
+            "type": "number"
+          },
+          "elevation": {
+            "type": "number",
+            "description": "Absolute target elevation for plateau/basin/shore."
+          },
+          "profile": {
+            "type": "string",
+            "enum": [
+              "smooth",
+              "sharp",
+              "stepped"
+            ]
+          },
+          "steps": {
+            "type": "integer",
+            "description": "Treads for the stepped profile (default 4)."
+          },
+          "falloff": {
+            "type": "number",
+            "description": "Metres over which the blend fades (default: the feature's width, or 4 for regions)."
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "left",
+              "right"
+            ],
+            "description": "terrace/cliff: the high side (default left). shore: the bed side (default right)."
+          },
+          "maxGrade": {
+            "type": "number",
+            "description": "roadbed: maximum grade in percent (default 30, the lane rule)."
+          },
+          "gradeMode": {
+            "type": "string",
+            "enum": [
+              "balanced",
+              "fill",
+              "cut"
+            ],
+            "description": "roadbed: how the grade limiter re-profiles a too-steep bed (default balanced)."
+          },
+          "priority": {
+            "type": "number"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "noise": {
+      "type": "array",
+      "description": "Value noise on a seeded lattice, summed over `octaves` (frequency x `lacunarity`, amplitude x `persistence` per octave), scaled by `amplitude` metres and by the mask.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "octaves": {
+            "type": "integer"
+          },
+          "amplitude": {
+            "type": "number",
+            "description": "Metres; the first octave spans roughly [-amplitude, +amplitude]."
+          },
+          "frequency": {
+            "type": "number",
+            "description": "Lattice cells per metre (0.05 = a 20 m lattice)."
+          },
+          "persistence": {
+            "type": "number"
+          },
+          "lacunarity": {
+            "type": "number"
+          },
+          "seed": {
+            "type": "integer"
+          },
+          "priority": {
+            "type": "number",
+            "description": "Default 50 (after features with the default priority 0)."
+          },
+          "mask": {
+            "description": "\"all\" (default), a feature id (that feature's blend weight), or {feature|polygon|region, invert?, falloff?} where region is \"playable\" or \"belt\". A feature named here must have a lower priority than this layer."
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "water": {
+      "type": "array",
+      "description": "Water bodies. They do not change the heightmap (author the bed with basin/shore); the tool writes <map>_mask_water.png where the region is below `level` and lists them in <map>_height.json for the importer.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "level"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "lake",
+              "river",
+              "canal"
+            ]
+          },
+          "level": {
+            "type": "number",
+            "description": "Water surface elevation, metres."
+          },
+          "centre": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "radius": {
+            "type": "number"
+          },
+          "spline": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 3
+            }
+          },
+          "width": {
+            "type": "number"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "flats": {
+      "type": "array",
+      "description": "Explicitly flat polygons, applied after every feature and noise layer (they override everything). Each needs a `reason` — flat ground is the exception under ADR-0018.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "polygon",
+          "elevation",
+          "reason"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "polygon": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "minItems": 3
+          },
+          "elevation": {
+            "type": "number"
+          },
+          "falloff": {
+            "type": "number",
+            "description": "Metres of smooth blend outside the polygon (default 0 = a hard edge)."
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
