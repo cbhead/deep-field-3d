@@ -27,7 +27,7 @@ bool FDFContentBindingsTest::RunTest(const FString& Parameters)
 	AssetManager->GetPrimaryAssetTypeInfoList(Types);
 
 	// Definition() needs no tables, only the Asset Manager; a transient instance is enough.
-	UDFContentSubsystem* Content = NewObject<UDFContentSubsystem>(GetTransientPackage());
+	UDFContentSubsystem* Content = DFContentTest::MakeSubsystem();
 
 	int32 Bound = 0;
 	int32 Unbound = 0;

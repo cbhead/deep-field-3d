@@ -1,4 +1,6 @@
 #include "DFContentTestUtil.h"
+#include "Content/DFContentSubsystem.h"
+#include "Engine/GameInstance.h"
 
 #include "DFContentTables.h"
 #include "Engine/DataTable.h"
@@ -68,4 +70,10 @@ namespace DFContentTest
 		}
 		return true;
 	}
+}
+
+UDFContentSubsystem* DFContentTest::MakeSubsystem()
+{
+	UGameInstance* GameInstance = NewObject<UGameInstance>(GetTransientPackage());
+	return NewObject<UDFContentSubsystem>(GameInstance);
 }
