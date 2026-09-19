@@ -87,7 +87,9 @@ def ws_filename(entry: dict) -> Path:
     return WS_DIR / f"ws-{entry['ws']}-{entry['slug']}.md"
 
 
-def lease_expired(meta: dict[str, str]) -> bool:
+def lease_expired(meta: dict[str, str], now: datetime | None = None) -> bool:
+    """True if the lease is past `now` (default: the current UTC time; plan-status --check passes
+    the committed STATUS.md's own generation time so the comparison is reproducible)."""
     exp = meta.get("lease_expires", "")
     if not exp:
         return False
@@ -95,4 +97,4 @@ def lease_expired(meta: dict[str, str]) -> bool:
         dt = datetime.fromisoformat(exp.replace("Z", "+00:00"))
     except ValueError:
         return False
-    return dt < datetime.now(timezone.utc)
+    return dt < (now or datetime.now(timezone.utc))
