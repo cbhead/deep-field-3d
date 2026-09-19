@@ -77,6 +77,15 @@ PY
 fi
 
 echo "tests: no report at $REPORT/index.json (editor exit $EDITOR_EXIT); falling back to the log"
+# 5.8 writes no report at all when the filter matches nothing: the command line logs
+# "No automation tests matched '<filter>'" and the editor exits 3. That is the "nothing matched"
+# verdict (exit 1, or 0 under DF_TEST_ALLOW_EMPTY=1), not a missing result (exit 2).
+if grep -q "No automation tests matched" "$LOG" 2>/dev/null; then
+  grep "No automation tests matched" "$LOG" | head -1
+  if [ "${DF_TEST_ALLOW_EMPTY:-0}" = "1" ]; then echo "tests: OK — no test matched '$FILTER' and DF_TEST_ALLOW_EMPTY=1 ($LOG)"; exit 0; fi
+  echo "no test matched the filter (a typo? set DF_TEST_ALLOW_EMPTY=1 if an empty suite is expected)"
+  echo "tests: FAILED ($LOG)"; exit 1
+fi
 if ! grep -qE "Test Completed\. Result=\{(Success|Fail)\}" "$LOG" 2>/dev/null; then
   grep -E "Error:|Fatal|Assertion" "$LOG" 2>/dev/null | head -10
   echo "tests: NO RESULT — the editor did not run the tests ($LOG)"; exit 2
