@@ -2,11 +2,11 @@
 ws: 12
 slug: ui
 title: UI (Common UI + MVVM)
-state: unclaimed
-owner: 
-claimed_at: 
-lease_expires: 
-branch: 
+state: claimed
+owner: session-fae2d0c5
+claimed_at: 2026-09-19T20:58:00Z
+lease_expires: 2026-09-20T20:58:00Z
+branch: ws/12-ui/viewmodels
 last_commit: 
 editor_heavy: true
 phase: P2-P5
