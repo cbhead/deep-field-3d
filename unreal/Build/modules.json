@@ -12,12 +12,11 @@
         "Engine",
         "GameplayTags",
         "DeveloperSettings",
-        "NetCore"
-      ],
-      "private": [
+        "NetCore",
         "Json",
         "JsonUtilities"
-      ]
+      ],
+      "private": []
     },
     "DFGameplay": {
       "layer": 1,
@@ -114,7 +113,10 @@
         "Landscape",
         "PhysicsCore"
       ],
-      "private": []
+      "private": [
+        "Json",
+        "JsonUtilities"
+      ]
     },
     "DFVehicles": {
       "layer": 3,
@@ -258,7 +260,14 @@
         "EditorSubsystem",
         "Json",
         "JsonUtilities",
-        "DataValidation"
+        "DataValidation",
+        "Landscape",
+        "LandscapeEditor",
+        "Foliage",
+        "EditorFramework",
+        "AssetTools",
+        "ContentBrowser",
+        "Projects"
       ]
     },
     "DFTests": {

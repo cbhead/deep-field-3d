@@ -22,7 +22,8 @@ public class DFWorld : ModuleRules
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {
-			// (none)
+			"Json",
+			"JsonUtilities",
 		});
 	}
 }

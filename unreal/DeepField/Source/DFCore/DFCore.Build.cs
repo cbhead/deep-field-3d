@@ -16,11 +16,12 @@ public class DFCore : ModuleRules
 			"GameplayTags",
 			"DeveloperSettings",
 			"NetCore",
+			"Json",
+			"JsonUtilities",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {
-			"Json",
-			"JsonUtilities",
+			// (none)
 		});
 	}
 }

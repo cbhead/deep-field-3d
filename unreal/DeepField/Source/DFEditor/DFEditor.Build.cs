@@ -28,6 +28,13 @@ public class DFEditor : ModuleRules
 			"Json",
 			"JsonUtilities",
 			"DataValidation",
+			"Landscape",
+			"LandscapeEditor",
+			"Foliage",
+			"EditorFramework",
+			"AssetTools",
+			"ContentBrowser",
+			"Projects",
 		});
 	}
 }
