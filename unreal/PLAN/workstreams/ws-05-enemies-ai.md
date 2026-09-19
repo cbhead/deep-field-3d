@@ -2,11 +2,11 @@
 ws: 05
 slug: enemies-ai
 title: Enemies & AI
-state: unclaimed
-owner: 
-claimed_at: 
-lease_expires: 
-branch: 
+state: claimed
+owner: session-62767025
+claimed_at: 2026-09-19T23:20:27Z
+lease_expires: 2026-09-20T23:20:27Z
+branch: ws/05-enemies-ai/waveplan
 last_commit: 
 editor_heavy: true
 phase: P2-P3
@@ -43,3 +43,4 @@ blocked_on:
 
 ## Session log
 <!-- append-only: date · session · what landed · what's next -->
+- 2026-09-19 · session-62767025 · **session start:** claimed; first slice is code-only (no editor slot): `FDFWavePlan` port of `sim/Sim.Core/WavePlan.cs` + `DF.Unit.WavePlanBaseline` against `docs/gate-baseline.tsv`, in `Source/DFEnemies/{Public,Private}/Waves`. `ADFEnemy`, movement and StateTrees wait for WS-02's C4/C5 headers and WS-09's lane graph to land on `unreal/main`.
