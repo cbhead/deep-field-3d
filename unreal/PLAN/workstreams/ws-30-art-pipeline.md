@@ -7,7 +7,7 @@ owner: session-75b58b1b/agent-ws30
 claimed_at: 2026-09-19T15:16:34Z
 lease_expires: 2026-09-20T15:16:34Z
 branch: ws/30-art-pipeline/terrain-lane
-last_commit: 
+last_commit: bd09a87
 editor_heavy: true
 phase: P1+
 size: L
@@ -58,6 +58,7 @@ blocked_on:
 
 ## Open questions
 - OWNERSHIP.md puts `tools/ue-bridge/terrain/**` under WS-09 while PROGRAMME.md §5.4 lists the terrain lane under WS-30 — which glob is right?
+- `unreal/Build/test.sh` (WS-15) greps for `Result=\{Failed\}` but UE 5.8's controller logs `Result={Fail}` / `Result={Success}`, so a failing run prints no verdict line and exits 1 only because the final `grep Passed` finds nothing under `pipefail` (seen on `DF.Editor.Terrain` this session; the truth was in `Saved/Logs/test-DF_Editor_Terrain.log`). Suggest matching `Result=\{(Fail|Failed)\}` and `Result=\{(Success|Passed)\}`.
 - `terrain.schema.json` is not validated by `unreal/Build/validate-content-json.py` (it only walks `content/json/`); should the validator learn `content/terrain/*.terrain.json` (WS-01/WS-15)?
 - Edit layers: in 5.8 they cannot be turned off (`ALandscapeProxy::CanHaveLayersContent()` returns `true` unconditionally; `bCanHaveLayersContent` is `_DEPRECATED`). `Import` writes the final heightmap directly and mirrors it into the default edit layer "Layer"; the GPU merge is skipped under `-nullrhi` (`CanUpdateLayersContent` needs `FApp::CanEverRender()`), so the saved final heightmap equals the import and the first editor open re-renders the same data. Nothing to decide — recorded so nobody tries to flag layers off.
 - OFPA (ADR-0006 "OFPA on every level"): `L_<Map>_Terrain` and the placeholder `L_<Map>` are saved with actors *inside* the `.umap` (like WS-00's `L_Dev_Empty`). Reasons: the terrain sublevel is a one-actor product regenerated wholesale (a new actor GUID per run would churn `Content/__ExternalActors__/…` files); `OWNERSHIP.md` has no `__ExternalActors__`/`__ExternalObjects__` globs yet, so the first external-actor tree would fail `ownership-check.py` for every owner; and `SaveWorld`'s stale-external-package cleanup opens a dialog path a `-unattended` commandlet cannot answer. If INT wants OFPA on the generated sublevel, it is one call (`World->PersistentLevel->SetUseExternalActors(true)` before the first save) plus the ownership globs.
@@ -65,3 +66,4 @@ blocked_on:
 
 ## Session log
 <!-- append-only: date · session · what landed · what's next -->
+- 2026-09-19 · session-75b58b1b/agent-ws30 (continuation after the rate-limit stop) · **landed**: rebased on `unreal/main` 9fc6e61 (editor-lock fix); `test_build_heightmap.py` 9/9 (python3 3.13); committed `unreal/content/terrain/out/` is byte-identical to a fresh `build_heightmap.py foundry` (10/10 files, 2.6 s); first successful `DFTerrainImport` run — the previous run had died at class lookup because `DFEditor` loaded at `PostEngineInit` (uproject → `Default`, Needs INT above); landscape GUID now deterministic per map; verify logs/checks collision, physmat, Nanite. Produced and committed via LFS: `/Game/DF/Maps/Foundry/L_Foundry_Terrain` (`Landscape_Foundry`: 3×4 components of 63 quads, 100 cm quads, 12/12 collision components, `PM_Grass`, Nanite on with the Nanite mesh built in-commandlet, bounds X [-8000, 10900] Y [-9500, 15700] Z [-279.2, 3576.6] cm = y [-2.792, 35.766] m == `foundry_height.json`; probes sim (0,0)=8.000 m, (30,10)=−1.710 m, (−40,−4)=15.873 m all equal the PNG), minimal `/Game/DF/Maps/Foundry/L_Foundry` streaming it always-loaded, `/Game/DF/Core/PhysicalMaterials/PM_Grass` (SurfaceType3). Second run idempotent ("already streams"); `-verifyonly` green; `DF.Editor.Terrain` 4/4 through `editor-lock.sh test.sh` (the Layout test's 126-quad expectation corrected to the engine's one-section-first policy — the previous session never ran it). `layering-check` OK; `ownership-check --ws 30` = the 9 PNG violations + warnings already listed under Needs INT. **left**: reimport-in-place for a byte-stable `.umap`; weightmaps/paint layers from the kind masks; `record_sculpt_delta.py`; landscape material + RVT (WS-31); the other five maps' `terrain.json`. **next**: pushed `ws/30-art-pipeline/terrain-lane`; PR to `unreal/main` needs the `cross-owner-ok` label and the Needs INT items.

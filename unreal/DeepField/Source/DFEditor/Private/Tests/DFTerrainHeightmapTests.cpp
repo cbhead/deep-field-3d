@@ -58,13 +58,16 @@ bool FDFTerrainLayoutTest::RunTest(const FString& Parameters)
 	const FDFTerrainLandscapeLayout SmallLayout = FDFTerrainLandscapeLayout::Compute(Small);
 	TestEqual(TEXT("exact tiling components"), SmallLayout.ComponentCount, FIntPoint(1, 1));
 	TestEqual(TEXT("exact tiling verts"), SmallLayout.SizeX, 64);
-	// 127x127 verts: 126 quads = 2 sections of 63, exact.
+	// 127x127 verts: 126 quads. Both 63x2 (one component) and 63x1 (2x2 components) tile it exactly;
+	// FLandscapeImportHelper::ChooseBestComponentSizeForImport (5.8) tries one section before two for
+	// each section size, so the engine — and Compute — pick 2x2 single-section components.
 	Small.Width = 127;
 	Small.Height = 127;
-	const FDFTerrainLandscapeLayout TwoSections = FDFTerrainLandscapeLayout::Compute(Small);
-	TestEqual(TEXT("two-section quads"), TwoSections.QuadsPerSection, 63);
-	TestEqual(TEXT("two-section count"), TwoSections.SectionsPerComponent, 2);
-	TestEqual(TEXT("two-section components"), TwoSections.ComponentCount, FIntPoint(1, 1));
+	const FDFTerrainLandscapeLayout Exact126 = FDFTerrainLandscapeLayout::Compute(Small);
+	TestEqual(TEXT("126-quad quads per section"), Exact126.QuadsPerSection, 63);
+	TestEqual(TEXT("126-quad sections"), Exact126.SectionsPerComponent, 1);
+	TestEqual(TEXT("126-quad components"), Exact126.ComponentCount, FIntPoint(2, 2));
+	TestEqual(TEXT("126-quad verts"), Exact126.SizeX, 127);
 	return true;
 }
 
