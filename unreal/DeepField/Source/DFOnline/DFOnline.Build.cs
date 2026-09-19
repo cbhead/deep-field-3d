@@ -24,6 +24,9 @@ public class DFOnline : ModuleRules
 		PrivateDependencyModuleNames.AddRange(new string[] {
 			"Json",
 			"JsonUtilities",
+			"AssetRegistry",     // UDFContentHash enumerates the imported DataTables
+			"ApplicationCore",   // the primary platform user for the Null / EOS login
+			"EngineSettings",    // the front-end map the backend returns to
 		});
 	}
 }
