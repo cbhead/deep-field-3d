@@ -34,6 +34,9 @@ blocked_on:
 
 ## Interfaces I changed
 <!-- dated list: what, RFC #, dependents notified -->
+- 2026-09-19 · C4 `UDFDamageExecution` / `FDFDamageMath` order corrected to Step.cs (arc → vulnerability → shred leak → flat armor floor → shield → hp); gas.md still reads "flat armor before vulnerability" — RFC text under Open questions. No API change; numbers change for every applier (WS-03/04/05/06): a marked, armored hit is `x1.25 - armor`, not `(x - armor) x1.25`.
+- 2026-09-19 · C5 `FDFStatusResolver`: added `OnReaction` (bound by the component; burst between consume and emit) and `FDFStatusApplyOutcome::bEmitSkippedDead` (appends). `UDFStatusComponent::Apply(StatusTag, Source, MagnitudeOverride)` unchanged; Ember's burn factor and the fixed 1/30 s DoT period are now the component's, not the caller's. status.md corrections — RFC text under Open questions.
+- 2026-09-19 · C8 contract-append: `Source/DFGameplay/Public/Tint/DFTintLayout.h` — the Custom Primitive Data index layout `UDFTintComponent` writes (WS-31 materials read it). Needs INT to append the table to palette.md.
 
 ## Needs INT
 <!-- e.g. "add plugin X to .uproject" -->
@@ -42,6 +45,7 @@ blocked_on:
 
 ## Session log
 <!-- append-only: date · session · what landed · what's next -->
+- 2026-09-19 · session-75b58b1b/agent-ws02 (continuation after a rate-limit stop) · **landed:** the GAS rules layer verified against Step.cs (the sim is the spec, ADR-0005) — damage order arc → vulnerability → shred leak → flat armor (floor) → shield → hp, the three Step.cs literals as Balance dials (`rearThresholdDegrees` / `shredFrontArcLeakFactor` / `postArmorDamageFloor`, sim defaults); `FDFStatusResolver` reaction-scan-first with the burst between consume and emit (`OnReaction`), emit overwrites its slot and is skipped on a kill, tie keeps the active status, silent same-id refresh; Thermal/Toxin ticks at a fixed `Balance("tickHz")` = 1/30 s; Ember's ×1.3 burn by applier faction before the refresh branch. C4 attribute sets, ASC, ability base/set, damage execution + context, 8 channel GEs, status component, tint component/palette/layout audited against C4/C5/C8. Test harness: a standalone world needs `AWorldSettings::NotifyBeginPlay()` for spawned actors' components to tick. 25 tests green through the lock: DF.Unit.Damage ×4 (incl. OrderMatchesSim), DF.Unit.Status ×20 (incl. ReactionScanPrecedesGates, ReactionConsumesActiveNotIncoming, BurstIsArmoredAndShielded, EmitOverwritesSlot, NoEmitOnKill, TieKeepsActive, RefreshIsSilent, DotTickMatchesSim, EmberDurationOnRefresh), DF.Unit.Tint ×1. **Left:** `L_Test_Status` map + the thermalShock cue (editor-heavy; cue assets are WS-14's), the CcResist attribute mirror needs `UDFControlSet` on enemies (WS-05 init), faction passive GEs (WS-07's `GA_Faction_*`; the hooks are `UDFCombatSet::ChilledBonus/WeakPointBonus`), hero-only `stagger`. **Needs INT:** see section above (palette.md append for `DFTintLayout.h`; three balance dials).
 - 2026-09-21 · INT · **landing round 2 with one open minor, deliberately.** The review confirmed one
   finding and refuted four. `UDFStatusComponent::Now()` falls back to `World->GetTimeSeconds()` when the
   world has no game state, and that fallback is unconditional — so on a **joining client, in the window
@@ -55,4 +59,3 @@ blocked_on:
   authority (or on `GetWorld()->GetNetMode() != NM_Client`), and decide with WS-12 what a client shows
   for a status whose clock it does not have yet. C4/C5 land now because six workstreams are waiting on
   them and this does not touch the rules.
-
