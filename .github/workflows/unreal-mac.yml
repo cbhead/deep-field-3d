@@ -15,6 +15,10 @@ on:
     - cron: '0 8 * * *'
   workflow_dispatch:
     inputs:
+      ref:
+        description: 'Branch, tag or sha to build (the Unreal integration branch, not the repository default)'
+        type: string
+        default: 'unreal/main'
       full:
         description: 'Run the full nightly set (ci-local.sh) instead of checks + build'
         type: boolean
@@ -57,8 +61,12 @@ jobs:
       # is mid-cycle). A repository variable so INT can change it without editing this file.
       CI_LOCAL_ARGS: ${{ vars.CI_LOCAL_ARGS || '' }}
     steps:
+      # The repository's default branch is main (the Godot game); a schedule run would check that
+      # out. The Unreal tree lives on unreal/main until G3, so the nightly names it explicitly and a
+      # dispatch takes it from its input. A PR checks out its merge commit as usual (empty ref).
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event_name == 'schedule' && 'unreal/main' || github.event_name == 'workflow_dispatch' && inputs.ref || '' }}
           fetch-depth: 0
           lfs: true          # L_Dev_Empty.umap and any other binary the tests or the smoke open
 
