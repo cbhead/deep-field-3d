@@ -36,11 +36,22 @@ def load_rules() -> list[tuple[str, str]]:
         ws = re.findall(r"WS-\w+", owner)
         owner_id = "INT" if owner.startswith("INT") else (ws[0] if ws else owner.strip())
         for g in globs:
-            g = g.strip()
-            if not (g.startswith("unreal/") or g.startswith("tools/") or g.startswith(".") or g.startswith("docs/")):
-                g = "unreal/DeepField/" + g
-            rules.append((g, owner_id))
+            for expanded in expand_braces(g.strip()):
+                if not (expanded.startswith("unreal/") or expanded.startswith("tools/") or expanded.startswith(".") or expanded.startswith("docs/")):
+                    expanded = "unreal/DeepField/" + expanded
+                rules.append((expanded, owner_id))
     return rules
+
+
+def expand_braces(glob: str) -> list[str]:
+    """`a/{x,y}/b` -> [`a/x/b`, `a/y/b`] (nested braces expand recursively)."""
+    m = re.search(r"\{([^{}]*)\}", glob)
+    if not m:
+        return [glob]
+    out: list[str] = []
+    for alt in m.group(1).split(","):
+        out += expand_braces(glob[: m.start()] + alt.strip() + glob[m.end():])
+    return out
 
 
 def matches(path: str, glob: str) -> bool:

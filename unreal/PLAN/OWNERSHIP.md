@@ -8,13 +8,14 @@ CODEOWNERS-style. A PR titled `[WS-NN]` may add or modify **binary** files only 
 | `unreal/DeepField/DeepField.uproject`, `unreal/DeepField/Config/Default*.ini`, `unreal/DeepField/Source/*.Target.cs`, `.gitattributes`, `.lfsconfig` | INT |
 | `unreal/DeepField/Config/Tags/DF_<ws>.ini` | the named workstream (append-only) |
 | `unreal/DeepField/Source/DFCore/**`, `unreal/DeepField/Source/DFMatch/**`, `unreal/DeepField/Content/DF/Core/**` | WS-00 (contract-append PRs from anyone; changes by RFC) |
-| `tools/content-export/**`, `unreal/content/schema/**`, `unreal/DeepField/Plugins/DFContentPipeline/**`, `unreal/DeepField/Content/DF/Data/Tables/**`, `unreal/DeepField/Source/DFCore/Public/Content/DFContentRows.h` | WS-01 |
+| `tools/content-export/**`, `unreal/content/schema/**` (except `terrain.schema.json`), `unreal/DeepField/Source/DFContentPipeline/**`, `unreal/DeepField/Content/DF/Data/Tables/**`, `unreal/DeepField/Source/DFCore/Public/Content/DFContentRows.h`, `unreal/content/README.md` | WS-01 |
 | `unreal/content/json/towers.json`, `traps.json` | WS-04 |
 | `unreal/content/json/enemies.json`, `elites.json`, `boss.json`, `waves_*.json` | WS-05 (WS-17 elites, WS-19 boss, WS-27 waves by delegation) |
 | `unreal/content/json/weapons.json`, `melee.json`, `attachments.json`, `ammo.json`, `balance.json` | WS-06 (WS-27 balance) |
 | `unreal/content/json/statuses.json`, `reactions.json` | WS-02 |
 | `unreal/content/json/factions.json` | WS-07 |
-| `unreal/content/json/maps.json`, `conditions.json`, `vehicles.json`, `unreal/content/levels/**`, `unreal/content/terrain/**` | WS-09 (per-map level/terrain files by the WS-10x owner) |
+| `unreal/content/json/maps.json`, `conditions.json`, `vehicles.json`, `unreal/content/levels/**`, `unreal/map-validation-baseline.tsv` | WS-09 (per-map level files by the WS-10x owner once claimed) |
+| `unreal/content/terrain/**`, `unreal/content/schema/terrain.schema.json`, `tools/ue-bridge/terrain/**`, `unreal/DeepField/Content/DF/Maps/*/L_*_Terrain*`, `unreal/DeepField/Source/DFEditor/**/DFTerrain*` | WS-30 (terrain lane; per-map `terrain.json` by the WS-10x owner once claimed) |
 | `unreal/DeepField/Source/DFGameplay/**` (except `Economy/`, `Gunsmith/`, `Factions/`), `unreal/DeepField/Content/DF/Gameplay/{GE,GA_Base,Cues}/**` | WS-02 |
 | `unreal/DeepField/Source/DFGameplay/Economy/**`, `Source/DFGameplay/Gunsmith/**`, `Content/DF/Data/Defs/{Weapons,Melee,Ammo}/**`, `Content/DF/Weapons/Attachments/**` | WS-06 |
 | `unreal/DeepField/Source/DFGameplay/Factions/**`, `Content/DF/Gameplay/GA_Faction_*`, `Content/DF/Data/Defs/Factions/**` | WS-07 |
@@ -23,7 +24,7 @@ CODEOWNERS-style. A PR titled `[WS-NN]` may add or modify **binary** files only 
 | `unreal/DeepField/Source/DFEnemies/**`, `Content/DF/Enemies/**` (bindings), `Content/DF/Data/Defs/Enemies/**` | WS-05 |
 | `unreal/DeepField/Source/DFVehicles/**`, `Content/DF/Vehicles/**` (bindings) | WS-08 |
 | `unreal/DeepField/Source/DFWorld/**`, `Content/DF/World/**` (bindings), `Content/DF/Data/Defs/{Maps,LaneGraphs,Conditions}/**`, `Content/DF/Maps/*/L_*_Gameplay*`, `tools/ue-bridge/terrain/**` | WS-09 |
-| `unreal/DeepField/Content/DF/Maps/<Map>/L_<Map>.umap`, `L_<Map>_Terrain*` | WS-10a…f (per map) |
+| `unreal/DeepField/Content/DF/Maps/<Map>/L_<Map>.umap` | WS-09 (legacy import) until the map's WS-10a…f is claimed, then that workstream — INT swaps this row at claim time |
 | `unreal/DeepField/Source/DFOnline/**`, `Content/DF/Online/**` | WS-11 |
 | `unreal/DeepField/Source/DFUI/**`, `Content/DF/UI/**` (except `Icons/`, `Styles/`, `Textures/`, `Studio/` → WS-45) | WS-12 |
 | `unreal/DeepField/Source/DFAudio/**`, `Content/DF/Audio/**`, `Content/DF/Maps/*/L_*_Audio*` | WS-13 |
