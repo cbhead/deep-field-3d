@@ -346,6 +346,7 @@ bool FDFLaneGraphWouldSealTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("J-C: seals S2 (its only way out)"), Asset->WouldSeal(TSet<FName>({ TEXT("J-C") })));
 	TestTrue(TEXT("S1-J and S1-C: seals S1"), Asset->WouldSeal(TSet<FName>({ TEXT("S1-J"), TEXT("S1-C") })));
 	TestFalse(TEXT("nothing closed never seals"), Asset->WouldSeal(TSet<FName>()));
+	AddExpectedMessage(TEXT("WouldSeal asked about edge 'nope', which does not exist"), ELogVerbosity::Warning, EAutomationExpectedMessageFlags::Contains, 1);
 	TestFalse(TEXT("an unknown edge id is ignored, not a seal"), Asset->WouldSeal(TSet<FName>({ TEXT("nope") })));
 
 	// Monotonic (harness gate 57 rule 1): anything legal with more shut is legal with less shut.

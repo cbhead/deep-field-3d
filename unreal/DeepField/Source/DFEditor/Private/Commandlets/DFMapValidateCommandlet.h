@@ -6,7 +6,10 @@
 
 class UDFLaneGraphAsset;
 
-// -run=DFMapValidate -map=<id>
+// -run=DFEditor.DFMapValidate -map=<id>[,<id>] | -all
+//
+// (Module-qualified for the same reason as DFLevelImport: DFEditor loads after the commandlet
+// lookup until its loading phase is Default.)
 //
 // DF.Map.Validate, the seed (CONTRACTS/map-authoring-3d.md §2): the rules that need no terrain.
 //   sealing (11)      no closable subset seals a spawn from the core; <= 8 closable edges

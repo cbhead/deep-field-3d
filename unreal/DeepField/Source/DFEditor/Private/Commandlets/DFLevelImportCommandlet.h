@@ -9,7 +9,11 @@ class UDFLaneGraphAsset;
 class ULevel;
 struct FDFLevelFile;
 
-// -run=DFLevelImport -map=<id> [-all] [-legacy]
+// -run=DFEditor.DFLevelImport -map=<id>[,<id>] [-all] [-legacy]
+//
+// (Spelled with the module: the engine resolves -run= before PostEngineInit modules load, and
+// DFEditor loads at PostEngineInit; "Module.Commandlet" makes it load DFEditor first. The bare
+// -run=DFLevelImport works once INT moves DFEditor to the Default loading phase.)
 //
 // unreal/content/levels/<map>.level.json -> DA_LaneGraph_<Map> + L_<Map>_Gameplay (WS-09; C6,
 // CONTRACTS/map-authoring-3d.md §1). The persistent L_<Map> is created only when missing (a 400 m
