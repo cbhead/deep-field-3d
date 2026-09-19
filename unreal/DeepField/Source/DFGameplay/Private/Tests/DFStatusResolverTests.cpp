@@ -64,7 +64,8 @@ bool FDFStatusSameIdRefreshesTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("still active"), F.Resolver.IsActive(EDFStatusChannel::Movement));
 	TArray<FDFStatusSlot> Expired;
 	TestEqual(TEXT("expired at 2.5"), F.Resolver.Tick(2.5f, 0.1f, &Expired), 1);
-	TestEqual(TEXT("the expired slot is chill"), Expired.Num() == 1 ? Expired[0].StatusId : NAME_None, FName(TEXT("chill")));
+	const FName ExpiredId = Expired.Num() == 1 ? Expired[0].StatusId : FName();
+	TestEqual(TEXT("the expired slot is chill"), ExpiredId, FName(TEXT("chill")));
 	TestFalse(TEXT("slot cleared"), F.Resolver.IsActive(EDFStatusChannel::Movement));
 	return true;
 }
