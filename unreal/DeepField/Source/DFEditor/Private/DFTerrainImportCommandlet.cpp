@@ -215,8 +215,14 @@ bool UDFTerrainImportCommandlet::BuildTerrainLevel(const FString& MapId, const F
 	TMap<FGuid, TArray<FLandscapeImportLayerInfo>> MaterialLayerDataPerLayers;
 	MaterialLayerDataPerLayers.Add(FGuid(), TArray<FLandscapeImportLayerInfo>());
 
-	// The same call the editor's New Landscape > Import button makes (LandscapeEditorDetailCustomization_NewLandscape.cpp).
-	Landscape->Import(FGuid::NewGuid(), 0, 0, Layout.SizeX - 1, Layout.SizeY - 1, Layout.SectionsPerComponent, Layout.QuadsPerSection,
+	// The same call the editor's New Landscape > Import button makes (LandscapeEditorDetailCustomization_NewLandscape.cpp,
+	// UE 5.8: 12 arguments, the FGuid() key is the final/default layer). The landscape GUID is derived from the map id so
+	// two regenerations agree on the landscape's identity (ADR-0018: the Landscape is a product of the json). In 5.8 edit
+	// layers are always on: Import writes the final heightmap directly and mirrors it into the default edit layer; the GPU
+	// merge that would re-render it is skipped under -nullrhi (ALandscape::CanUpdateLayersContent needs a renderer), so
+	// the saved final heightmap is exactly the import.
+	const FGuid LandscapeGuid = FGuid::NewDeterministicGuid(FString::Printf(TEXT("/DF/Terrain/%s"), *MapId));
+	Landscape->Import(LandscapeGuid, 0, 0, Layout.SizeX - 1, Layout.SizeY - 1, Layout.SectionsPerComponent, Layout.QuadsPerSection,
 		HeightDataPerLayers, TEXT(""), MaterialLayerDataPerLayers, ELandscapeImportAlphamapType::Additive, TArrayView<const FLandscapeLayer>());
 
 	ULandscapeInfo* Info = Landscape->GetLandscapeInfo();
@@ -338,6 +344,22 @@ bool UDFTerrainImportCommandlet::VerifyTerrainLevel(const FString& MapId, const 
 	}
 	const FDFTerrainHeightmapMeta& Meta = Heightmap.Meta;
 	bool bOk = true;
+
+	// 0. What was saved: components, collision, physmat, Nanite, quad size.
+	UE_LOG(LogDFTerrainImport, Display, TEXT("verify: %s: %d landscape components (%d quads x %d sections), %d collision components, physmat %s, Nanite %s, quad %.0f cm, guid %s"),
+		*Landscape->GetName(), Landscape->LandscapeComponents.Num(), Landscape->SubsectionSizeQuads, Landscape->NumSubsections, Landscape->CollisionComponents.Num(),
+		Landscape->DefaultPhysMaterial ? *Landscape->DefaultPhysMaterial->GetPathName() : TEXT("(none)"), Landscape->IsNaniteEnabled() ? TEXT("on") : TEXT("off"),
+		Landscape->GetActorScale3D().X, *Landscape->GetLandscapeGuid().ToString());
+	if (Landscape->CollisionComponents.Num() != Landscape->LandscapeComponents.Num())
+	{
+		UE_LOG(LogDFTerrainImport, Error, TEXT("verify: collision is missing on %d of %d components"), Landscape->LandscapeComponents.Num() - Landscape->CollisionComponents.Num(), Landscape->LandscapeComponents.Num());
+		bOk = false;
+	}
+	if (!Landscape->DefaultPhysMaterial)
+	{
+		UE_LOG(LogDFTerrainImport, Error, TEXT("verify: no default physical material"));
+		bOk = false;
+	}
 
 	// 1. Bounds: the whole landscape (padding included) must lie within the json's Z range and
 	//    reach both ends of it, and its footprint must be where the frame mapping says.

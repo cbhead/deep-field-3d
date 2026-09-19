@@ -15,6 +15,11 @@ class UWorld;
  *
  *   UnrealEditor-Cmd DeepField.uproject -run=DFTerrainImport -map=foundry [-terraindir=<dir>] [-verifyonly]
  *
+ * The engine resolves -run=<Name> right after LoadStartupModules (PreDefault + Default phases) and before the
+ * engine initialises, so DFEditor must load in the "Default" phase for this class to exist at that point
+ * (DeepField.uproject; a PostEngineInit editor module fails with "looked like a commandlet, but we could not
+ * find the class"). The "Module.Commandlet" form does not help: the class is looked up by the whole token.
+ *
  * Reads unreal/content/terrain/out/<map>_height.{json,png} (written by build_heightmap.py), creates or
  * replaces the streaming sublevel /Game/DF/Maps/<Map>/L_<Map>_Terrain with one ALandscape imported from
  * the heightmap (100 cm quads at 1 m/sample, sim (0,0) at the Unreal origin, Z range from the json, the
