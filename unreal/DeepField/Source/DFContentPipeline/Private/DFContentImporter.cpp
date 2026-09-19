@@ -6,6 +6,7 @@
 #include "DFContentTables.h"
 #include "Engine/DataTable.h"
 #include "HAL/FileManager.h"
+#include "HAL/PlatformFileManager.h"
 #include "JsonObjectConverter.h"
 #include "Misc/FileHelper.h"
 #include "Misc/PackageName.h"
@@ -221,6 +222,21 @@ bool FDFContentImporter::SaveTable(UDataTable* Table, FString& OutError)
 	UPackage* Package = Table->GetOutermost();
 	const FString FileName = FPackageName::LongPackageNameToFilename(Package->GetName(), FPackageName::GetAssetPackageExtension());
 	IFileManager::Get().MakeDirectory(*FPaths::GetPath(FileName), /*Tree*/ true);
+
+	// The tables are git-lfs "lockable" (unreal/.gitattributes), so a checkout leaves them read-only as the
+	// reminder to lock a shared asset before editing it by hand. Nothing edits these by hand: this commandlet
+	// is their only writer (C3), so it clears the bit itself instead of failing after the JSON has already
+	// been proven. Ownership of the resulting change is checked at the PR, not here (OWNERSHIP.md).
+	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+	if (PlatformFile.FileExists(*FileName) && PlatformFile.IsReadOnly(*FileName))
+	{
+		if (!PlatformFile.SetReadOnly(*FileName, false))
+		{
+			OutError = FString::Printf(TEXT("%s is read-only and could not be made writable"), *FileName);
+			return false;
+		}
+		UE_LOG(LogDFContentPipeline, Display, TEXT("cleared the read-only flag on %s (git-lfs lockable; the importer is its only writer)"), *FileName);
+	}
 
 	FSavePackageArgs Args;
 	Args.TopLevelFlags = RF_Public | RF_Standalone;

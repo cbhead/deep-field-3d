@@ -48,8 +48,10 @@ unreal/Build/editor-lock.sh "$UE" "$PWD/unreal/DeepField/DeepField.uproject" \
 
 Each table prints one line (`towers  8 rows -> /Game/DF/Data/Tables/DT_Towers (updated)`); the exit
 code is 1 if any table failed, and the log names the table, row and key. Rows are replaced wholesale in
-JSON order. Commit the resulting `.uasset`s (they go through Git LFS; `git lfs ls-files` shows them as
-pointers) together with the JSON change.
+JSON order. The `.uasset`s are git-lfs `lockable`, so a checkout leaves them read-only; the importer
+clears that flag itself (it is their only writer) and logs one line per table it had to. Commit the
+resulting `.uasset`s (they go through Git LFS; `git lfs ls-files` shows them as pointers) together with
+the JSON change; an unchanged table saves byte-identically, so a re-run on unchanged JSON leaves git clean.
 
 ## What the tests guarantee
 
