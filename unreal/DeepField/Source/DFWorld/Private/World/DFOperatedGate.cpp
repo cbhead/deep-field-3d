@@ -1,5 +1,6 @@
 #include "World/DFOperatedGate.h"
 
+#include "CollisionShape.h"
 #include "DFWorldCollision.h"
 #include "Engine/OverlapResult.h"
 #include "Engine/World.h"

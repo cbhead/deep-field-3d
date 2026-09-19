@@ -25,7 +25,8 @@ namespace DFCollision
 	constexpr ECollisionChannel Prop        = ECC_GameTraceChannel10;
 	constexpr ECollisionChannel Pickup      = ECC_GameTraceChannel11;
 
-	// Profiles (DefaultEngine.ini [/Script/Engine.CollisionProfile])
-	inline const FName GrayboxProfile(TEXT("DF_Graybox"));
-	inline const FName StructureProfile(TEXT("DF_Structure"));
+	// Profiles (DefaultEngine.ini [/Script/Engine.CollisionProfile]); functions so no FName is
+	// built during static initialisation.
+	inline FName GrayboxProfile()   { static const FName Name(TEXT("DF_Graybox"));   return Name; }
+	inline FName StructureProfile() { static const FName Name(TEXT("DF_Structure")); return Name; }
 }

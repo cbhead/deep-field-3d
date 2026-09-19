@@ -1,5 +1,13 @@
 #include "LaneGraph/DFLaneGraphAsset.h"
 
+#include <limits>
+
+namespace DFLaneGraphPrivate
+{
+	// "Cannot get there": the sim uses float.PositiveInfinity and so does every comparison here.
+	static constexpr float Unreachable = std::numeric_limits<float>::infinity();
+}
+
 DEFINE_LOG_CATEGORY_STATIC(LogDFLaneGraph, Log, All);
 
 void UDFLaneGraphAsset::PostLoad()
@@ -10,15 +18,15 @@ void UDFLaneGraphAsset::PostLoad()
 
 void UDFLaneGraphAsset::RebuildIndex()
 {
-	NodeIndex.Reset();
-	EdgeIndex.Reset();
+	NodeIndexMap.Reset();
+	EdgeIndexMap.Reset();
 	for (int32 i = 0; i < Nodes.Num(); ++i)
 	{
-		NodeIndex.Add(Nodes[i].Id, i);
+		NodeIndexMap.Add(Nodes[i].Id, i);
 	}
 	for (int32 i = 0; i < Edges.Num(); ++i)
 	{
-		EdgeIndex.Add(Edges[i].Id, i);
+		EdgeIndexMap.Add(Edges[i].Id, i);
 	}
 	bIndexBuilt = true;
 }
@@ -29,7 +37,7 @@ int32 UDFLaneGraphAsset::NodeIndexOf(FName NodeId) const
 	{
 		const_cast<UDFLaneGraphAsset*>(this)->RebuildIndex();
 	}
-	const int32* Found = NodeIndex.Find(NodeId);
+	const int32* Found = NodeIndexMap.Find(NodeId);
 	return Found ? *Found : INDEX_NONE;
 }
 
@@ -39,7 +47,7 @@ int32 UDFLaneGraphAsset::EdgeIndexOf(FName EdgeId) const
 	{
 		const_cast<UDFLaneGraphAsset*>(this)->RebuildIndex();
 	}
-	const int32* Found = EdgeIndex.Find(EdgeId);
+	const int32* Found = EdgeIndexMap.Find(EdgeId);
 	return Found ? *Found : INDEX_NONE;
 }
 
@@ -113,7 +121,7 @@ TArray<float> UDFLaneGraphAsset::DistanceTo(TFunctionRef<bool(const FDFLaneNode&
 	Dist.SetNum(Nodes.Num());
 	for (int32 i = 0; i < Nodes.Num(); ++i)
 	{
-		Dist[i] = IsTarget(Nodes[i]) ? 0.f : TNumericLimits<float>::Infinity();
+		Dist[i] = IsTarget(Nodes[i]) ? 0.f : DFLaneGraphPrivate::Unreachable;
 	}
 
 	// Bellman-Ford to a fixed point over reversed edges: dist[from] = min(dist[to] + length).
@@ -232,7 +240,7 @@ float UDFLaneGraphAsset::RemainingToCore(int32 EdgeIndex, float T, const FDFLane
 {
 	if (!Edges.IsValidIndex(EdgeIndex))
 	{
-		return TNumericLimits<float>::Infinity();
+		return DFLaneGraphPrivate::Unreachable;
 	}
 	const FDFLaneEdge& Edge = Edges[EdgeIndex];
 	const float OnThisEdge = (1.f - FMath::Clamp(T, 0.f, 1.f)) * Edge.LengthMeters;   // 0 on a warp
@@ -258,7 +266,7 @@ float UDFLaneGraphAsset::RemainingToCore(int32 EdgeIndex, float T, const FDFLane
 
 	const TArray<float> Dist = DistanceToCore(EdgeOpen);
 	const int32 ToIndex = NodeIndexOf(Edge.To);
-	const float Ahead = ToIndex != INDEX_NONE ? Dist[ToIndex] : TNumericLimits<float>::Infinity();
+	const float Ahead = ToIndex != INDEX_NONE ? Dist[ToIndex] : DFLaneGraphPrivate::Unreachable;
 	return FMath::IsFinite(Ahead) ? OnThisEdge + Ahead : Ahead;
 }
 

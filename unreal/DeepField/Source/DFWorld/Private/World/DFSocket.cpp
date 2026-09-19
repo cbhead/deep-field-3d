@@ -11,7 +11,7 @@ ADFSocket::ADFSocket()
 	Pad->SetMobility(EComponentMobility::Static);
 	Pad->InitBoxExtent(FVector(PadRadiusCm, PadRadiusCm, PadHalfHeightCm));
 	Pad->SetRelativeLocation(FVector(0.f, 0.f, PadHalfHeightCm));
-	Pad->SetCollisionProfileName(DFCollision::GrayboxProfile);
+	Pad->SetCollisionProfileName(DFCollision::GrayboxProfile());
 	// The profile is "behaves as world"; a pad is an interact target that must not cast a
 	// sight shadow or catch the lane-surface projection.
 	Pad->SetCollisionResponseToChannel(DFCollision::Interact, ECR_Block);

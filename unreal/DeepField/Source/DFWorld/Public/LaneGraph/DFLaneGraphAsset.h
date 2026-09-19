@@ -97,7 +97,7 @@ public:
 private:
 	TArray<float> DistanceTo(TFunctionRef<bool(const FDFLaneNode&)> IsTarget, const TArray<bool>* EdgeOpen) const;
 
-	TMap<FName, int32> NodeIndex;
-	TMap<FName, int32> EdgeIndex;
+	TMap<FName, int32> NodeIndexMap;
+	TMap<FName, int32> EdgeIndexMap;
 	bool bIndexBuilt = false;
 };

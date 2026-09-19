@@ -16,6 +16,7 @@
 #include "Engine/SkyLight.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
+#include "Engine/HitResult.h"
 #include "Engine/World.h"
 #include "FileHelpers.h"
 #include "GameFramework/PlayerStart.h"
@@ -252,7 +253,7 @@ UWorld* UDFLevelImportCommandlet::LoadOrCreatePersistentLevel(const FString& Pac
 		Floor->SetMobility(EComponentMobility::Static);
 		Floor->GetStaticMeshComponent()->SetStaticMesh(Cube);
 		Floor->SetActorScale3D(FVector(FloorSizeMeters, FloorSizeMeters, 1.f));
-		Floor->GetStaticMeshComponent()->SetCollisionProfileName(DFCollision::GrayboxProfile);
+		Floor->GetStaticMeshComponent()->SetCollisionProfileName(DFCollision::GrayboxProfile());
 		Floor->GetStaticMeshComponent()->RecreatePhysicsState();
 	}
 	else

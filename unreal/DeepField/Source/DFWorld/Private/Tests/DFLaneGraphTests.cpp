@@ -25,7 +25,7 @@ namespace DFLaneGraphTest
 		{
 			return nullptr;
 		}
-		UDFLaneGraphAsset* Asset = NewObject<UDFLaneGraphAsset>(GetTransientPackage(), FName(*FString::Printf(TEXT("DA_LaneGraph_Test_%s"), MapId)));
+		UDFLaneGraphAsset* Asset = NewObject<UDFLaneGraphAsset>(GetTransientPackage());
 		if (!Test.TestTrue(FString::Printf(TEXT("%s builds: %s"), MapId, *Error), UDFLaneGraphBuilder::BuildFromLevel(Level, *Asset, Error)))
 		{
 			return nullptr;
@@ -312,7 +312,7 @@ bool FDFLaneGraphWouldSealTest::RunTest(const FString& Parameters)
 	//   S1 -> J -> C          (S1-J 10 m, J-C 10 m)
 	//   S1 -> C               (S1-C 30 m, the long way)
 	//   S2 -> J               (S2-J 5 m)
-	UDFLaneGraphAsset* Asset = NewObject<UDFLaneGraphAsset>(GetTransientPackage(), TEXT("DA_LaneGraph_Test_Seal"));
+	UDFLaneGraphAsset* Asset = NewObject<UDFLaneGraphAsset>(GetTransientPackage());
 	const auto AddNode = [Asset](const TCHAR* Id, EDFLaneNodeKind Kind)
 	{
 		FDFLaneNode N;

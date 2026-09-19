@@ -4,6 +4,7 @@
 #include "DFWorldSubsystem.h"
 #include "Dom/JsonObject.h"
 #include "Editor.h"
+#include "Engine/HitResult.h"
 #include "Engine/World.h"
 #include "FileHelpers.h"
 #include "HAL/FileManager.h"
