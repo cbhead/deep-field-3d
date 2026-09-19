@@ -17,7 +17,8 @@
 		{ "Name": "DFAudio",    "Type": "Runtime", "LoadingPhase": "Default" },
 		{ "Name": "DFVfx",      "Type": "Runtime", "LoadingPhase": "Default" },
 		{ "Name": "DFEditor",   "Type": "Editor",  "LoadingPhase": "PostEngineInit" },
-		{ "Name": "DFTests",    "Type": "UncookedOnly", "LoadingPhase": "PostEngineInit" }
+		{ "Name": "DFTests",    "Type": "UncookedOnly", "LoadingPhase": "PostEngineInit" },
+		{ "Name": "DFContentPipeline", "Type": "Editor", "LoadingPhase": "Default" }
 	],
 	"Plugins": [
 		{ "Name": "GameplayAbilities", "Enabled": true },

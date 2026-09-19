@@ -283,7 +283,7 @@ struct DFCORE_API FDFConditionRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) float AcquisitionDelaySeconds = 0.f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) bool bAcquisitionDelayExemptsMarked = false;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) float HeroRangeFactor = 1.f;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly) float StealthWeight = 1.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) float StealthWeightFactor = 1.f;                     // spelled as conditions.json / Conditions.cs spell it
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) TMap<EDFStatusChannel, float> ChannelDurationFactors;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) FName HazardKind;                                 // lightning etc. (B§2.10)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) float HazardIntervalMin = 0.f;

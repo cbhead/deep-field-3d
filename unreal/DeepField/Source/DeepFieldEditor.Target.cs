@@ -11,7 +11,7 @@ public class DeepFieldEditorTarget : TargetRules
 		ExtraModuleNames.AddRange(new string[] {
 			"DFCore", "DFGameplay", "DFPlayer", "DFTowers", "DFEnemies", "DFWorld",
 			"DFVehicles", "DFMatch", "DFUI", "DFOnline", "DFAudio", "DFVfx",
-			"DFEditor", "DFTests"
+			"DFEditor", "DFTests", "DFContentPipeline"
 		});
 	}
 }
