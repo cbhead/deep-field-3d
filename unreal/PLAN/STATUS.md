@@ -1,8 +1,8 @@
 # Workstream status
 
-Generated 2026-09-20T03:03:09Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-20T03:09:29Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
-active: 6 · claimed: 2 · review: 1 · unclaimed: 40
+active: 7 · claimed: 1 · review: 1 · unclaimed: 40
 
 | WS | Title | Phase | CP | State | Owner | Lease expires | Last commit | Editor-heavy | Blocked on |
 |---|---|---|---|---|---|---|---|---|---|
@@ -22,8 +22,8 @@ active: 6 · claimed: 2 · review: 1 · unclaimed: 40
 | WS-10d | Map redesign: Toaster | P3 |  | unclaimed | — | — | — | yes | — |
 | WS-10e | Map design: Sluice (new) | P4 |  | unclaimed | — | — | — | yes | — |
 | WS-10f | Map design: Crown (new) | P4 |  | unclaimed | — | — | — | yes | — |
-| WS-11 | Online, lobby, profile (EOS) | P1-P3 | CP | active | session-75b58b1b/agent-ws11 | 2026-09-20T15:16:34Z | — |  | — |
-| WS-12 | UI (Common UI + MVVM) | P2-P5 | CP | claimed | session-fae2d0c5 | 2026-09-20T20:58:00Z | — | yes | — |
+| WS-11 | Online, lobby, profile (EOS) | P1-P3 | CP | active | session-75b58b1b/agent-ws11 | 2026-09-20T22:15:00Z | ba05fc5 |  | — |
+| WS-12 | UI (Common UI + MVVM) | P2-P5 | CP | active | session-fae2d0c5 | 2026-09-20T21:33:47Z | 278e262 | yes | — |
 | WS-13 | Audio (MetaSounds) | P2-P5 |  | unclaimed | — | — | — | yes | — |
 | WS-14 | VFX (Niagara) | P2-P5 |  | unclaimed | — | — | — | yes | — |
 | WS-15 | Automation, CI, packaging, store | P1+ |  | active | session-75b58b1b/agent-ws15 | 2026-09-20T21:35:55Z | bd9d16a |  | — |
