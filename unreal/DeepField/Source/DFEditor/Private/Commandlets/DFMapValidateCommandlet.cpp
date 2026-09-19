@@ -391,10 +391,11 @@ UDFMapValidateCommandlet::FResult UDFMapValidateCommandlet::CheckCoverage(UWorld
 		}
 	}
 
-	// The report: every segment, the dead ones, and what each socket can see.
+	// The report: every segment, the dead ones, and what each socket can see. It is committed
+	// beside the level file, so nothing in it may change between two runs on the same input — no
+	// timestamp; git's own history says when it was produced.
 	TSharedRef<FJsonObject> Root = MakeShared<FJsonObject>();
 	Root->SetStringField(TEXT("map"), MapId);
-	Root->SetStringField(TEXT("generated"), FDateTime::UtcNow().ToIso8601());
 	Root->SetNumberField(TEXT("segmentMeters"), SegmentCm / 100.f);
 	Root->SetNumberField(TEXT("required"), CoverageRequired);
 	TArray<TSharedPtr<FJsonValue>> SegmentValues;

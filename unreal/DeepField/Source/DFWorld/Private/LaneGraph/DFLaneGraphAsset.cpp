@@ -271,7 +271,8 @@ float UDFLaneGraphAsset::RemainingToCore(int32 EdgeIndex, float T, const FDFLane
 }
 
 int32 UDFLaneGraphAsset::ChooseEdge(const FDFLaneItinerary& Itinerary, int32& ViaCursor, FName AtNode, const TArray<bool>& EdgeOpen,
-	const TArray<TArray<float>>& DistToNode, const TArray<float>& DistToCore) const
+	const TArray<TArray<float>>& DistToNode, const TArray<float>& DistToCore,
+	const TFunction<float(int32)>& ExtraCost, const TArray<TArray<float>>* DistToNodeForVias) const
 {
 	const int32 AtIndex = NodeIndexOf(AtNode);
 	if (AtIndex == INDEX_NONE)
@@ -280,6 +281,11 @@ int32 UDFLaneGraphAsset::ChooseEdge(const FDFLaneItinerary& Itinerary, int32& Vi
 	}
 
 	// Skip vias already reached or no longer reachable as planned; the enemy re-plans at the fork.
+	// Reachability of a via is asked of the map as it is, not as a siege enemy could make it: an
+	// itinerary is a plan for an open map, and if the via kept insisting on a stop behind a wall
+	// there would be nothing left to decide — only one edge leads there, so the Ram would break
+	// through any wall of any thickness, which is the preference the pricing exists to replace.
+	const TArray<TArray<float>>& ViaReach = DistToNodeForVias ? *DistToNodeForVias : DistToNode;
 	while (ViaCursor < Itinerary.Via.Num())
 	{
 		const FName Via = Itinerary.Via[ViaCursor];
@@ -289,7 +295,7 @@ int32 UDFLaneGraphAsset::ChooseEdge(const FDFLaneItinerary& Itinerary, int32& Vi
 			continue;
 		}
 		const int32 ViaIndex = NodeIndexOf(Via);
-		if (ViaIndex == INDEX_NONE || !FMath::IsFinite(DistToNode[ViaIndex][AtIndex]))
+		if (ViaIndex == INDEX_NONE || !FMath::IsFinite(ViaReach[ViaIndex][AtIndex]))
 		{
 			++ViaCursor;
 			continue;
@@ -308,7 +314,14 @@ int32 UDFLaneGraphAsset::ChooseEdge(const FDFLaneItinerary& Itinerary, int32& Vi
 		{
 			continue;
 		}
-		if (!EdgeOpen[E])
+		// A shut edge is skipped unless the walker can pay to come through it; a wall priced at
+		// INFINITY (nothing to chew through, or no siege) is skipped either way.
+		const float Extra = ExtraCost ? ExtraCost(E) : 0.f;
+		if (!EdgeOpen[E] && !ExtraCost)
+		{
+			continue;
+		}
+		if (Extra == DFLaneGraphPrivate::Unreachable)
 		{
 			continue;
 		}
@@ -322,7 +335,7 @@ int32 UDFLaneGraphAsset::ChooseEdge(const FDFLaneItinerary& Itinerary, int32& Vi
 		{
 			continue;
 		}
-		const float Cost = Edge.LengthMeters * Edge.CostFactor + Ahead;
+		const float Cost = Edge.LengthMeters * Edge.CostFactor + Extra + Ahead;
 		if (Cost < BestCost)
 		{
 			BestCost = Cost;

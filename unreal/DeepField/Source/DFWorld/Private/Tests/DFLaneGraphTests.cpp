@@ -4,6 +4,8 @@
 
 #include "Misc/AutomationTest.h"
 
+#include <limits>
+
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "LaneGraph/DFLaneGraphAsset.h"
@@ -376,6 +378,81 @@ bool FDFLaneGraphWouldSealTest::RunTest(const FString& Parameters)
 	const TArray<float> Cut = Asset->DistanceToCore(&Open);
 	TestEqual(TEXT("J-C shut: S1 takes the long way"), Cut[Asset->NodeIndexOf(TEXT("S1"))], 30.f, 0.001f);
 	TestFalse(TEXT("J-C shut: S2 is cut off"), FMath::IsFinite(Cut[Asset->NodeIndexOf(TEXT("S2"))]));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFLaneGraphSiegeBreachPricingTest, "DF.Unit.LaneGraph.SiegeBreachPricing", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+bool FDFLaneGraphSiegeBreachPricingTest::RunTest(const FString& Parameters)
+{
+	// Step.cs NextEdge: a siege enemy is not turned away by a barricade, the wall is PRICED —
+	// chewing through costs the metres it could have walked instead. It breaches when breaking is
+	// cheaper than walking round, so the player's own gate is what sends the Ram at the wall.
+	// Switchyard: the cut (short) and the switchback (long) both lead from the west gate to the
+	// core; shut the cut and price it.
+	UDFLaneGraphAsset* Asset = DFLaneGraphTest::BuildLegacy(*this, TEXT("switchyard"));
+	if (!Asset) { return false; }
+	const FDFLaneItinerary* Short = Asset->FindItinerary(TEXT("groundShort"));
+	if (!TestNotNull(TEXT("groundShort"), Short)) { return false; }
+
+	const int32 Cut = Asset->EdgeIndexOf(TEXT("westGate-cutMouth"));
+	const int32 CutOn = Asset->EdgeIndexOf(TEXT("cutMouth-core"));
+	const int32 Switchback = Asset->EdgeIndexOf(TEXT("westGate-switchbackNorth"));
+	const int32 SwitchbackOn = Asset->EdgeIndexOf(TEXT("switchbackNorth-core"));
+	if (Cut == INDEX_NONE || CutOn == INDEX_NONE || Switchback == INDEX_NONE || SwitchbackOn == INDEX_NONE)
+	{
+		AddError(TEXT("Switchyard's four ground edges are missing"));
+		return false;
+	}
+	const auto Metres = [Asset](int32 E) { return Asset->Edges[E].LengthMeters * Asset->Edges[E].CostFactor; };
+	const float Detour = (Metres(Switchback) + Metres(SwitchbackOn)) - (Metres(Cut) + Metres(CutOn));
+	TestTrue(TEXT("the switchback is the long way round"), Detour > 1.f);
+
+	TArray<bool> AllOpen;
+	AllOpen.Init(true, Asset->Edges.Num());
+	TArray<bool> CutShut = AllOpen;
+	CutShut[Cut] = false;
+	const auto Tables = [Asset](const TArray<bool>& Open, TArray<TArray<float>>& OutToNode, TArray<float>& OutToCore)
+	{
+		OutToCore = Asset->DistanceToCore(&Open);
+		OutToNode.SetNum(Asset->Nodes.Num());
+		for (int32 i = 0; i < Asset->Nodes.Num(); ++i) { OutToNode[i] = Asset->DistanceToNode(Asset->Nodes[i].Id, &Open); }
+	};
+	TArray<TArray<float>> ToNodeOpen, ToNodeShut;
+	TArray<float> ToCoreOpen, ToCoreShut;
+	Tables(AllOpen, ToNodeOpen, ToCoreOpen);
+	Tables(CutShut, ToNodeShut, ToCoreShut);
+
+	// Everyone else: the shut edge is skipped and the plan falls through to the core the long way.
+	int32 Cursor = 1;
+	TestEqual(TEXT("no siege: the cut is shut, walk the switchback"), Asset->ChooseEdge(*Short, Cursor, TEXT("westGate"), CutShut, ToNodeShut, ToCoreShut), Switchback);
+	TestEqual(TEXT("no siege: the via behind the wall was dropped"), Cursor, 2);
+
+	// A Ram, costed against the open tables (siege routing sees through gates) with the vias asked
+	// of the map as it is: a thin wall is cheaper than the detour, so it breaches the cut ...
+	// (Step.cs: an open edge costs nothing extra; a shut one costs the wall on it — here only the
+	// cut has a wall, any other shut edge has nothing to chew through.)
+	const auto Wall = [Cut](float WallMetres, const TArray<bool>& Open)
+	{
+		const TArray<bool>* OpenPtr = &Open;
+		return [WallMetres, Cut, OpenPtr](int32 E) { return (*OpenPtr)[E] ? 0.f : (E == Cut ? WallMetres : std::numeric_limits<float>::infinity()); };
+	};
+	Cursor = 1;
+	TestEqual(TEXT("siege, thin wall: breach the cut"), Asset->ChooseEdge(*Short, Cursor, TEXT("westGate"), CutShut, ToNodeOpen, ToCoreOpen, Wall(Detour * 0.5f, CutShut), &ToNodeShut), Cut);
+	TestEqual(TEXT("siege: the via is still asked of the shut map"), Cursor, 2);
+	// ... a thick one is not, so it walks round like everyone else ...
+	Cursor = 1;
+	TestEqual(TEXT("siege, thick wall: walk the switchback"), Asset->ChooseEdge(*Short, Cursor, TEXT("westGate"), CutShut, ToNodeOpen, ToCoreOpen, Wall(Detour * 2.f, CutShut), &ToNodeShut), Switchback);
+	// ... and a wall with nothing to chew through (INFINITY) is a shut edge like any other.
+	Cursor = 1;
+	TestEqual(TEXT("siege, no wall to break: skip the shut edge"), Asset->ChooseEdge(*Short, Cursor, TEXT("westGate"), CutShut, ToNodeOpen, ToCoreOpen, Wall(std::numeric_limits<float>::infinity(), CutShut), &ToNodeShut), Switchback);
+
+	// With every edge open the pricing is inert: same edge as the plain rule, same cursor.
+	Cursor = 1;
+	int32 PlainCursor = 1;
+	TestEqual(TEXT("open map: siege and plain agree"),
+		Asset->ChooseEdge(*Short, Cursor, TEXT("westGate"), AllOpen, ToNodeOpen, ToCoreOpen, Wall(1.f, AllOpen), &ToNodeOpen),
+		Asset->ChooseEdge(*Short, PlainCursor, TEXT("westGate"), AllOpen, ToNodeOpen, ToCoreOpen));
+	TestEqual(TEXT("open map: cursors agree"), Cursor, PlainCursor);
 	return true;
 }
 

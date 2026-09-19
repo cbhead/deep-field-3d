@@ -78,9 +78,19 @@ public:
 
 	/** The routing rule (LaneGraph.ChooseEdge): the cheapest open edge out of AtNode towards the
 	 *  next via the walker can still reach, falling through to the core. ViaCursor advances past
-	 *  vias reached or cut off. Returns an edge index or INDEX_NONE. */
+	 *  vias reached or cut off. Returns an edge index or INDEX_NONE.
+	 *
+	 *  ExtraCost is what a siege enemy pays to come through a wall (Step.cs NextEdge: blocking
+	 *  hp / StructureDps * speed * SiegeBreachBias, 0 on an open edge): when it is bound, closed
+	 *  edges are priced instead of skipped (INFINITY still skips) and DistToNode/DistToCore must be
+	 *  the tables computed with every edge open, or the far side of a shut edge reads as
+	 *  unreachable. DistToNodeForVias is then the table of the map as it IS (edges shut), because
+	 *  whether a via is still worth heading for is asked of the map, not of what a Ram could do
+	 *  to it; null = DistToNode. Everything else passes neither. */
 	int32 ChooseEdge(const FDFLaneItinerary& Itinerary, int32& ViaCursor, FName AtNode, const TArray<bool>& EdgeOpen,
-		const TArray<TArray<float>>& DistToNode, const TArray<float>& DistToCore) const;
+		const TArray<TArray<float>>& DistToNode, const TArray<float>& DistToCore,
+		const TFunction<float(int32)>& ExtraCost = TFunction<float(int32)>(),
+		const TArray<TArray<float>>* DistToNodeForVias = nullptr) const;
 
 	/** The edges an itinerary's walkers take end to end in a configuration (author-time only). */
 	TArray<int32> PathFor(const FDFLaneItinerary& Itinerary, const TArray<bool>& EdgeOpen) const;
