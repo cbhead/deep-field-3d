@@ -255,8 +255,9 @@ float UDFLaneGraphAsset::RemainingToCore(int32 EdgeIndex, float T, const FDFLane
 		return DFLaneGraphPrivate::CutOff;
 	}
 	const FDFLaneEdge& Edge = Edges[EdgeIndex];
-	// What is left of this edge, priced the way the edges ahead are (length * CostFactor); 0 on a warp.
-	const float OnThisEdge = (1.f - FMath::Clamp(T, 0.f, 1.f)) * Edge.LengthMeters * Edge.CostFactor;
+	// What is left of this edge in raw metres (World.cs:109-111 sums the remaining segment lengths
+	// unweighted); only the edges ahead are cost-weighted, through DistToCore (LaneGraph.cs:510). 0 on a warp.
+	const float OnThisEdge = (1.f - FMath::Clamp(T, 0.f, 1.f)) * Edge.LengthMeters;
 
 	if (Itinerary)
 	{

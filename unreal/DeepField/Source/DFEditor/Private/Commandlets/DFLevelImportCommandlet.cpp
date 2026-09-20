@@ -573,6 +573,10 @@ T* UDFLevelImportCommandlet::FindOrSpawn(FPlacement& P, FName Id, const FVector&
 		SP.ObjectFlags |= RF_Transactional;
 		Actor = P.World->SpawnActor<T>(T::StaticClass(), Location, Rotation, SP);
 		++P.Spawned;
+		// Registered under its key at once, so a second record with the same id in this run resolves
+		// to this actor and trips the collision check below instead of spawning a twin that only the
+		// next import would notice (INT, WS-09 review round 2).
+		P.Existing.Add(Key, Actor);
 	}
 	if (P.Touched.Contains(Actor))
 	{

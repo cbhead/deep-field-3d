@@ -398,10 +398,11 @@ bool FDFLaneGraphWouldSealTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("INDEX_NONE is leaked: nothing left to walk"), Asset->RemainingToCore(INDEX_NONE, 0.f), 0.f);
 	TestEqual(TEXT("an index past the table reads as cut off"), Asset->RemainingToCore(Asset->Edges.Num() + 3, 0.f), TNumericLimits<float>::Max());
 
-	// CostFactor prices what is left of THIS edge the way it prices the edges ahead.
+	// What is left of THIS edge is raw metres (World.cs:109-111 sums the remaining segment lengths
+	// unweighted); CostFactor only prices the edges ahead, through DistToCore (LaneGraph.cs:510).
 	Asset->Edges[S1C].CostFactor = 2.f;
 	Asset->RebuildIndex();
-	TestEqual(TEXT("S1-C at cost 2: halfway is 15 m * 2"), Asset->RemainingToCore(S1C, 0.5f, nullptr, &Open), 30.f, 0.001f);
+	TestEqual(TEXT("S1-C at cost 2: halfway is still 15 m (this edge is not cost-weighted)"), Asset->RemainingToCore(S1C, 0.5f, nullptr, &Open), 15.f, 0.001f);
 	Asset->Edges[S1C].CostFactor = 1.f;
 	return true;
 }
