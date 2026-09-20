@@ -71,6 +71,29 @@ namespace
 			}
 		}
 	}
+
+	/** The sim sorts by (tick, ordinal def id) with List.Sort, which is unstable: where two entries
+	 *  tie, their order there is an accident of the .NET runtime. Here ties keep plan order and ids
+	 *  compare by OrdinalKey, so the result is one specific sequence on every platform and target. */
+	void SortPlan(TArray<FDFSpawnEntry>& Entries)
+	{
+		TMap<FName, FString> Ordinal;
+		for (const FDFSpawnEntry& Entry : Entries)
+		{
+			if (!Ordinal.Contains(Entry.DefId))
+			{
+				Ordinal.Add(Entry.DefId, FDFWavePlan::OrdinalKey(Entry.DefId));
+			}
+		}
+		Entries.StableSort([&Ordinal](const FDFSpawnEntry& A, const FDFSpawnEntry& B)
+		{
+			if (A.TickOffset != B.TickOffset)
+			{
+				return A.TickOffset < B.TickOffset;
+			}
+			return A.DefId != B.DefId && FCString::Strcmp(*Ordinal[A.DefId], *Ordinal[B.DefId]) < 0;
+		});
+	}
 }
 
 FString FDFWavePlan::OrdinalKey(FName Id)
@@ -154,25 +177,31 @@ TArray<FDFSpawnEntry> FDFWavePlan::PlanWave(uint32 Seed, const FDFWavePlanTables
 
 	AppendConditionSpawns(Seed, Tables, WaveIndex, Hp, Entries);
 
-	// The sim sorts by (tick, ordinal def id) with List.Sort, which is unstable: where two entries
-	// tie, their order there is an accident of the .NET runtime. Here ties keep plan order and ids
-	// compare by OrdinalKey, so the result is one specific sequence on every platform and target.
-	TMap<FName, FString> Ordinal;
-	for (const FDFSpawnEntry& Entry : Entries)
+	SortPlan(Entries);
+	return Entries;
+}
+
+TArray<FDFSpawnEntry> FDFWavePlan::PlanWave(uint32 Seed, const FDFWavePlanTables& Tables, int32 WaveIndex, int32 PlayerCount,
+	TConstArrayView<TSharedRef<const IDFWaveInjectionStream>> Streams)
+{
+	TArray<FDFSpawnEntry> Entries = PlanWave(Seed, Tables, WaveIndex, PlayerCount);
+	if (Streams.Num() == 0 || Entries.Num() == 0)
 	{
-		if (!Ordinal.Contains(Entry.DefId))
-		{
-			Ordinal.Add(Entry.DefId, OrdinalKey(Entry.DefId));
-		}
+		return Entries;
 	}
-	Entries.StableSort([&Ordinal](const FDFSpawnEntry& A, const FDFSpawnEntry& B)
+
+	// Every stream sees the same pure plan — not what an earlier stream added — so the order streams
+	// are registered in changes nothing but the order of ties.
+	const TArray<FDFSpawnEntry> Planned = Entries;
+	const FDFWaveInjectionContext Context{ Tables, WaveIndex, PlayerCount, HpScale(Tables, WaveIndex, PlayerCount), Planned };
+	for (const TSharedRef<const IDFWaveInjectionStream>& Stream : Streams)
 	{
-		if (A.TickOffset != B.TickOffset)
-		{
-			return A.TickOffset < B.TickOffset;
-		}
-		return A.DefId != B.DefId && FCString::Strcmp(*Ordinal[A.DefId], *Ordinal[B.DefId]) < 0;
-	});
+		FDFDetRng Rng = FDFRngStreams::StreamFor(Seed, Stream->StreamName(), static_cast<uint32>(WaveIndex));
+		TArray<FDFSpawnEntry> Appended;
+		Stream->Inject(Context, Rng, Appended);
+		Entries.Append(MoveTemp(Appended));
+	}
+	SortPlan(Entries);
 	return Entries;
 }
 
@@ -275,6 +304,7 @@ bool FDFWavePlanTables::Validate(FString& OutError) const
 		{ TEXT("bountyScale"), Dials.BountyScale, false },
 		{ TEXT("bountyGrowth"), Dials.BountyGrowth, true },
 		{ TEXT("scrapGrowth"), Dials.ScrapGrowth, true },
+		{ TEXT("tickHz"), TickHz, true },
 	};
 	for (const FDial& Dial : Required)
 	{

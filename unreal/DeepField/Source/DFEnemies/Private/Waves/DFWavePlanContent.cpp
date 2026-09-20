@@ -52,6 +52,7 @@ bool FDFWavePlanTables::FromContent(const UDFContentSubsystem& Content, FName Ma
 			return Fail(FString::Printf(TEXT("wave %d schedules condition '%s', which has no row"), Scheduled.Key, *Scheduled.Value.ToString()));
 		}
 		Out.StealthWeightFactorByWave.Add(Scheduled.Key, Condition->StealthWeightFactor);
+		Out.ConditionByWave.Add(Scheduled.Key, Scheduled.Value);
 	}
 
 	// A missing dial reads as NaN (and the subsystem logs its name); Validate refuses it. 0 is a value.
@@ -64,6 +65,7 @@ bool FDFWavePlanTables::FromContent(const UDFContentSubsystem& Content, FName Ma
 	Out.Dials.BountyScale = Content.Balance(TEXT("bountyScale"), Unset);
 	Out.Dials.BountyGrowth = Content.Balance(TEXT("bountyGrowth"), Unset);
 	Out.Dials.ScrapGrowth = Content.Balance(TEXT("scrapGrowth"), Unset);
+	Out.TickHz = Content.Balance(TEXT("tickHz"), Unset);
 
 	return Out.Validate(OutError);
 }

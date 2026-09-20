@@ -66,6 +66,7 @@ namespace
 		FDFWavePlanTables Tables;
 		Tables.MapId = FName(*Map);
 		Tables.Dials = GoldenDials();
+		Tables.TickHz = 30.f;   // Balance.TickHz; the plan itself never reads it
 		for (const FGoldenGroup& G : GGoldenGroups)
 		{
 			if (Map != FString(G.Map))

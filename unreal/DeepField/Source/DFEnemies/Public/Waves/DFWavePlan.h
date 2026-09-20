@@ -5,7 +5,9 @@
 #include "DFWavePlan.generated.h"
 
 class UDFContentSubsystem;
+struct FDFDetRng;
 struct FDFWaveGroupRow;
+struct FDFWavePlanTables;
 
 // The wave plan, ported from sim/Sim.Core/WavePlan.cs (the written spec, ADR-0005; B§1.11).
 // A wave's content is a pure function of (seed, tables, waveIndex, playerCount): no sequential
@@ -75,7 +77,9 @@ struct DFENEMIES_API FDFWavePlanTables
 	TArray<TArray<FDFWavePlanGroup>> Waves;          // the authored arc; index = wave index, inner order = authored order
 	TMap<FName, FDFWavePlanEnemy> Enemies;           // every enemy a group names
 	TMap<int32, float> StealthWeightFactorByWave;    // scheduled conditions only (ConditionRow.StealthWeightFactor)
+	TMap<int32, FName> ConditionByWave;              // the same schedule's condition ids, for the wave message
 	FDFWavePlanDials Dials;
+	float TickHz = FDFWavePlanDials::Unset;          // balance dial tickHz: what a TickOffset is counted in
 
 	/** Non-empty arc, no empty wave, every group's enemy known and its numbers sane, nothing scheduled past the arc, every dial set. */
 	bool Validate(FString& OutError) const;
@@ -92,6 +96,28 @@ struct DFENEMIES_API FDFWavePlanTables
 	static bool FromContent(const UDFContentSubsystem& Content, FName MapId, FDFWavePlanTables& Out, FString& OutError);
 };
 
+/** What an injection stream is handed. The plan so far is read-only: a stream appends, it never edits. */
+struct FDFWaveInjectionContext
+{
+	const FDFWavePlanTables& Tables;
+	int32 WaveIndex = 0;
+	int32 PlayerCount = 1;
+	float HpScale = 1.f;
+	TConstArrayView<FDFSpawnEntry> Planned;   // authored + condition spawns, sorted
+};
+
+/** B§1.11: elite injection, boss waves and PCG variants append to the pure plan, each from its own
+ *  RNG stream, so adding one cannot shift a single authored spawn. The plan seeds the generator from
+ *  (seed, StreamName, waveIndex) and hands it over; a stream never makes its own. */
+class IDFWaveInjectionStream
+{
+public:
+	virtual ~IDFWaveInjectionStream() = default;
+	/** Names the RNG stream. Distinct per stream, and none of FDFRngStreams' names. */
+	virtual const TCHAR* StreamName() const = 0;
+	virtual void Inject(const FDFWaveInjectionContext& Context, FDFDetRng& Rng, TArray<FDFSpawnEntry>& OutAppended) const = 0;
+};
+
 struct DFENEMIES_API FDFWavePlan
 {
 	/** The string an id sorts and hashes by: its lower-cased spelling. An FName is case-insensitive
@@ -103,6 +129,10 @@ struct DFENEMIES_API FDFWavePlan
 
 	/** Sorted by (TickOffset, OrdinalKey(DefId)); entries that tie keep plan order (authored groups, then condition spawns). */
 	static TArray<FDFSpawnEntry> PlanWave(uint32 Seed, const FDFWavePlanTables& Tables, int32 WaveIndex, int32 PlayerCount);
+
+	/** PlanWave, then each stream's additions in the order given, then the same sort. With no streams it is PlanWave. */
+	static TArray<FDFSpawnEntry> PlanWave(uint32 Seed, const FDFWavePlanTables& Tables, int32 WaveIndex, int32 PlayerCount,
+		TConstArrayView<TSharedRef<const IDFWaveInjectionStream>> Streams);
 
 	/** The hp multiplier a wave spawns with, player factor included: HpGrowth compounded through
 	 *  the authored arc, then EndlessHpGrowth from the last authored wave's value (continuous at the join). */
