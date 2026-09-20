@@ -25,6 +25,7 @@ CODEOWNERS-style. A PR titled `[WS-NN]` may add or modify **binary** files only 
 | `unreal/DeepField/Source/DFVehicles/**`, `Content/DF/Vehicles/**` (bindings) | WS-08 |
 | `unreal/DeepField/Source/DFWorld/**`, `Content/DF/World/**` (bindings), `Content/DF/Data/Defs/{Maps,LaneGraphs,Conditions}/**`, `Content/DF/Maps/*/L_*_Gameplay*`, `tools/ue-bridge/terrain/**` | WS-09 |
 | `unreal/DeepField/Content/DF/Maps/<Map>/L_<Map>.umap` | WS-09 (legacy import) until the map's WS-10a…f is claimed, then that workstream — INT swaps this row at claim time |
+| `unreal/DeepField/Content/DF/Core/PhysicalMaterials/**` | WS-09 (physical materials per §5.2; a terrain-lane physmat a landscape layer needs is a PR to WS-09 — new files only, never a rewrite) |
 | `unreal/DeepField/Source/DFOnline/**`, `Content/DF/Online/**` | WS-11 |
 | `unreal/DeepField/Source/DFUI/**`, `Content/DF/UI/**` (except `Icons/`, `Styles/`, `Textures/`, `Studio/` → WS-45) | WS-12 |
 | `unreal/DeepField/Source/DFAudio/**`, `Content/DF/Audio/**`, `Content/DF/Maps/*/L_*_Audio*` | WS-13 |
