@@ -1,0 +1,22 @@
+// Screens and the layer each one lives on. Mirrors Config/Tags/DF_UI.ini (DF.UI.Screens.TagsResolve
+// checks both directions). Append-only.
+//
+//   DF_UI_SCREEN(CppName, "DF.UI.Screen.<Name>", Layer)
+DF_UI_SCREEN(Hud,            "DF.UI.Screen.Hud",            Game)
+DF_UI_SCREEN(Crosshairs,     "DF.UI.Screen.Crosshairs",     Game)
+DF_UI_SCREEN(Overheads,      "DF.UI.Screen.Overheads",      Game)
+DF_UI_SCREEN(Prompts,        "DF.UI.Screen.Prompts",        Game)
+DF_UI_SCREEN(Revive,         "DF.UI.Screen.Revive",         Game)
+DF_UI_SCREEN(Endless,        "DF.UI.Screen.Endless",        Game)
+DF_UI_SCREEN(Wheel,          "DF.UI.Screen.Wheel",          GameMenu)
+DF_UI_SCREEN(Upgrade,        "DF.UI.Screen.Upgrade",        GameMenu)
+DF_UI_SCREEN(Armory,         "DF.UI.Screen.Armory",         GameMenu)
+DF_UI_SCREEN(Blueprints,     "DF.UI.Screen.Blueprints",     GameMenu)
+DF_UI_SCREEN(TeleportPicker, "DF.UI.Screen.TeleportPicker", GameMenu)
+DF_UI_SCREEN(Lobby,          "DF.UI.Screen.Lobby",          Menu)
+DF_UI_SCREEN(Sector,         "DF.UI.Screen.Sector",         Menu)
+DF_UI_SCREEN(Intermission,   "DF.UI.Screen.Intermission",   Menu)
+DF_UI_SCREEN(EndMatch,       "DF.UI.Screen.EndMatch",       Menu)
+DF_UI_SCREEN(Pause,          "DF.UI.Screen.Pause",          Menu)
+DF_UI_SCREEN(HowTo,          "DF.UI.Screen.HowTo",          Menu)
+DF_UI_SCREEN(Connection,     "DF.UI.Screen.Connection",     Modal)
