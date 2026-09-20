@@ -19,6 +19,7 @@ enum class EDFStatusApplyResult : uint8
 	RejectedImmune,    // Tether on Mass >= TetherImmuneMass / an immune tag / bTetherImmune
 	Reacted,           // an active partner matched a reaction: both inputs consumed, outputs written
 	NoRow,             // unknown status id, or called without authority
+	RejectedHero,      // the target is a hero: only Movement statuses and stagger land on heroes (C5, B§1.6)
 };
 
 /** One channel slot. Active when StatusId is set; EndTime is in the owner's clock (world seconds). */
@@ -72,6 +73,9 @@ struct DFGAMEPLAY_API FDFStatusTargetState
 	UPROPERTY(BlueprintReadWrite) float Mass = 1.f;
 	/** Skater / boss / DF.Enemy.State.Phased: Tether never lands. */
 	UPROPERTY(BlueprintReadWrite) bool bTetherImmune = false;
+	/** C5 / B§1.6: a hero carries only Movement statuses and the hero-only stagger (no cc-resist); every other
+	 *  status is refused before the reaction scan, so no reaction can form on a hero. (Contract-append, default false.) */
+	UPROPERTY(BlueprintReadWrite) bool bHero = false;
 };
 
 /** Everything one Apply() decided, so the component can mirror it into effects, cues and messages. */

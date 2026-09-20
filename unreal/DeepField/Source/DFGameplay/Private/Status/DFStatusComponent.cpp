@@ -199,6 +199,7 @@ const FDFStatusRow* UDFStatusComponent::FindStatusRow(FName StatusId) const
 void UDFStatusComponent::InitFromEnemyRow(const FDFEnemyRow& Row)
 {
 	Mass = Row.Mass;
+	bHero = false;
 	MARK_PROPERTY_DIRTY_FROM_NAME(UDFStatusComponent, Mass, this);
 }
 
@@ -207,6 +208,7 @@ FDFStatusTargetState UDFStatusComponent::ReadTargetState() const
 	FDFStatusTargetState State;
 	State.Mass = Mass;
 	State.bTetherImmune = bTetherImmune;
+	State.bHero = bHero;
 	if (const UAbilitySystemComponent* ASC = GetASC())
 	{
 		if (ASC->HasAttributeSetForAttribute(UDFHealthSet::GetShieldAttribute()))
@@ -286,8 +288,11 @@ EDFStatusApplyResult UDFStatusComponent::ApplyById(FName StatusId, AActor* Sourc
 		break;
 
 	case EDFStatusApplyResult::Refreshed:
-		// Silent: duration and source moved in the resolver; no cue, no StatusApplied message.
+		// Silent: duration and source moved in the resolver; no cue, no StatusApplied message. The
+		// channel effect keeps running untouched (re-applying it would fire an extra on-application
+		// tick) but from here its ticks are the refresher's, as Step.cs UpdateStatuses credits slot.Source.
 		ChannelSources[static_cast<int32>(LastOutcome.Channel)] = Source;
+		RetargetChannelEffect(LastOutcome.Channel, Source);
 		SyncSlots();
 		break;
 
@@ -467,6 +472,23 @@ void UDFStatusComponent::RemoveChannelEffect(EDFStatusChannel Channel)
 		Handle.Invalidate();
 	}
 	ChannelContexts[static_cast<int32>(Channel)] = nullptr;
+}
+
+void UDFStatusComponent::RetargetChannelEffect(EDFStatusChannel Channel, AActor* Source)
+{
+	const FActiveGameplayEffectHandle& Handle = ChannelEffects[static_cast<int32>(Channel)];
+	UAbilitySystemComponent* ASC = GetASC();
+	if (!Handle.IsValid() || !ASC)
+	{
+		return;
+	}
+	if (const FActiveGameplayEffect* Active = ASC->GetActiveGameplayEffect(Handle))
+	{
+		// Context handles share their FGameplayEffectContext: writing through a copy reaches the
+		// spec the periodic execution runs, so the next tick's instigator is the refresher.
+		FGameplayEffectContextHandle Context = Active->Spec.GetContext();
+		Context.AddInstigator(Source, Source);
+	}
 }
 
 void UDFStatusComponent::ApplyBurst(const FDFStatusApplyOutcome& Outcome, AActor* Source)

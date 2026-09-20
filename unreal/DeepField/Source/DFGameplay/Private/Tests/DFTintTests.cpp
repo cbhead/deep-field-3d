@@ -6,8 +6,10 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFTintPrecedenceTest, "DF.Unit.Tint.Precedence", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
-bool FDFTintPrecedenceTest::RunTest(const FString& Parameters)
+// C8 / palette.md: "DF.Unit.TintContract drives every parameter through the component and checks the
+// written values" — the contract's own test name.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFTintContractTest, "DF.Unit.TintContract", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+bool FDFTintContractTest::RunTest(const FString& Parameters)
 {
 	// A component with no owner: it resolves and mirrors, and writes to no primitive.
 	UDFTintComponent* Tint = NewObject<UDFTintComponent>(GetTransientPackage());

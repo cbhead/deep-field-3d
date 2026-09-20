@@ -36,6 +36,8 @@ namespace DFTestRows
 	inline FDFStatusRow Reveal()  { return Status(EDFStatusChannel::Detection, 3.f); }
 	/** B§1.6 rubble: Movement 0.8x, 3 s — weaker than chill. */
 	inline FDFStatusRow Rubble()  { return Status(EDFStatusChannel::Movement, 3.f, 0.8f); }
+	/** B§1.6 hero-only stagger: Control, 0.25 s, hard control; on a hero it never fills the gauge. */
+	inline FDFStatusRow Stagger() { return Status(EDFStatusChannel::Control, 0.25f, 0.f, 0.f, 1.f, 0.f, true); }
 	/** B§1.6 magnetize: Tether, pull 4 m/s, 1.5 s, fills cc-resist at 0.5x. */
 	inline FDFStatusRow Magnetize() { return Status(EDFStatusChannel::Tether, 1.5f, 1.f, 0.f, 1.f, 0.f, false, false, false, 4.f, 0.5f); }
 
@@ -67,6 +69,7 @@ namespace DFTestRows
 		Rows.Add(TEXT("reveal"), Reveal());
 		Rows.Add(TEXT("rubble"), Rubble());
 		Rows.Add(TEXT("magnetize"), Magnetize());
+		Rows.Add(TEXT("stagger"), Stagger());
 		return Rows;
 	}
 

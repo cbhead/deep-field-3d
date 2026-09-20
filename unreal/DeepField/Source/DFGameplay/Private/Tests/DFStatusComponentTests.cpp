@@ -488,4 +488,77 @@ bool FDFStatusEmberDurationOnRefreshTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+// Step.cs UpdateStatuses: `Damage(w, enemy, dps * dt, slot.Source, ...)` — every tick is credited to
+// the slot's CURRENT source, and a same-id refresh moves the source. The running periodic effect
+// is kept (no re-apply: its period and phase stand, no extra on-application tick) and its context
+// instigator is moved to the refresher, so the ticks after the refresh belong to the second applier.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFStatusRefreshMovesDotAttributionTest, "DF.Unit.Status.RefreshMovesDotAttribution", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+bool FDFStatusRefreshMovesDotAttributionTest::RunTest(const FString& Parameters)
+{
+	FWorldFixture F;
+	if (!TestTrue(TEXT("standalone world"), F.Init(100.f)))
+	{
+		return false;
+	}
+	AActor* First = F.SpawnApplier(FGameplayTag());
+	AActor* Second = F.SpawnApplier(FGameplayTag());
+	TArray<AActor*> Instigators;
+	F.Health->OnDamaged.AddLambda([&Instigators](AActor* Instigator, AActor*, const FGameplayEffectSpec*, float, float, float) { Instigators.Add(Instigator); });
+
+	TestEqual(TEXT("burn from the first applier"), F.Status->Apply(DFTags::Status_Burn, First), EDFStatusApplyResult::Applied);
+	F.Tick(0.5f);
+	const int32 TicksBeforeRefresh = Instigators.Num();
+	TestTrue(TEXT("the burn ticked"), TicksBeforeRefresh > 0);
+	bool bAllFirst = true;
+	for (AActor* Who : Instigators)
+	{
+		bAllFirst &= (Who == First);
+	}
+	TestTrue(TEXT("every tick before the refresh is the first applier's"), bAllFirst);
+
+	TestEqual(TEXT("same burn from the second applier refreshes"), F.Status->Apply(DFTags::Status_Burn, Second), EDFStatusApplyResult::Refreshed);
+	TestEqual(TEXT("slot source moved"), F.Status->GetResolver().Slot(EDFStatusChannel::Thermal).SourceId, static_cast<int32>(Second->GetUniqueID()));
+	TestEqual(TEXT("no extra tick fired by the refresh itself (the effect was not re-applied)"), Instigators.Num(), TicksBeforeRefresh);
+	FGameplayTagContainer Thermal;
+	Thermal.AddTag(DFTags::Status_Channel_Thermal);
+	TestEqual(TEXT("still exactly one Thermal effect"), F.ASC->GetActiveEffectsWithAllTags(Thermal).Num(), 1);
+
+	F.Tick(0.5f);
+	TestTrue(TEXT("the burn kept ticking"), Instigators.Num() > TicksBeforeRefresh);
+	bool bAllSecond = true;
+	for (int32 I = TicksBeforeRefresh; I < Instigators.Num(); ++I)
+	{
+		bAllSecond &= (Instigators[I] == Second);
+	}
+	TestTrue(TEXT("every tick after the refresh is the second applier's"), bAllSecond);
+	TestTrue(*FString::Printf(TEXT("~30 ticks over the second, period untouched (got %d)"), Instigators.Num()), Instigators.Num() >= MinTicksPerSecond && Instigators.Num() <= MaxTicksPerSecond);
+	F.Shutdown();
+	return true;
+}
+
+// The component plumbs bHero into the resolver's hero gate (C5 / B§1.6): a hero's Thermal is
+// refused before any effect is made, Movement lands, stagger controls without a gauge.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFStatusHeroComponentTest, "DF.Unit.Status.HeroComponentRefusesThermal", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+bool FDFStatusHeroComponentTest::RunTest(const FString& Parameters)
+{
+	FWorldFixture F;
+	if (!TestTrue(TEXT("standalone world"), F.Init(100.f)))
+	{
+		return false;
+	}
+	F.Status->bHero = true;
+	TestEqual(TEXT("burn refused on a hero"), F.Status->Apply(DFTags::Status_Burn, nullptr), EDFStatusApplyResult::RejectedHero);
+	TestFalse(TEXT("no Thermal tag"), F.ASC->HasMatchingGameplayTag(DFTags::Status_Channel_Thermal));
+	TestEqual(TEXT("poison refused on a hero"), F.Status->Apply(DFTags::Status_Poison, nullptr), EDFStatusApplyResult::RejectedHero);
+	TestEqual(TEXT("chill lands on a hero"), F.Status->Apply(DFTags::Status_Chill, nullptr), EDFStatusApplyResult::Applied);
+	TestTrue(TEXT("SpeedFactor 0.65"), FMath::IsNearlyEqual(F.ASC->GetNumericAttribute(UDFMovementSet::GetSpeedFactorAttribute()), 0.65f, 1e-4f));
+	TestEqual(TEXT("stagger lands on a hero"), F.Status->Apply(DFTags::Status_Stagger, nullptr), EDFStatusApplyResult::Applied);
+	TestTrue(TEXT("Control tag granted"), F.ASC->HasMatchingGameplayTag(DFTags::Status_Channel_Control));
+	F.Tick(0.2f);
+	TestEqual(TEXT("gauge untouched by a hero's stagger"), F.Status->GetCcResist(), 0.f);
+	TestTrue(TEXT("health untouched"), FMath::IsNearlyEqual(F.Health->GetHealth(), 100.f, 1e-3f));
+	F.Shutdown();
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

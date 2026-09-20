@@ -11,6 +11,10 @@
 // (1023-1060) line for line, and where status.md reads differently the sim wins (RFC'd):
 //
 //   Apply(id, row, now, source, target):
+//     0. HERO GATE (C5 / B§1.6, not a sim rule — the sim's heroes carried no statuses): a target
+//        with bHero accepts only Movement statuses and the hero-only `stagger` (Control, 0.25 s);
+//        anything else is RejectedHero before the reaction scan, so chill + shock never becomes
+//        flashFreeze on a hero. Stagger writes CcFillScale 0 and ignores the gauge: no cc-resist.
 //     1. REACTION SCAN FIRST, across every active slot, before any gate. A match consumes the
 //        ACTIVE partner (its slot is cleared), the INCOMING status is never applied, and Apply
 //        returns. In between, OnReaction (bound by the component) applies the burst — through
@@ -94,7 +98,11 @@ struct DFGAMEPLAY_API FDFStatusResolver
 	static float DurationFor(const FDFStatusRow& Row, float DurationFactor);
 	/** CcResistFill for hard control and Tether rows, 0 otherwise. */
 	static float CcFillScaleFor(const FDFStatusRow& Row);
+	/** The hero-only stagger's content id ("stagger", DF.Status.Stagger). */
+	static FName HeroStaggerId();
+	/** True when a hero may carry this status: any Movement row, or the stagger row in Control (C5). */
+	static bool IsHeroStatus(FName StatusId, const FDFStatusRow& Row);
 
 private:
-	void Write(FDFStatusSlot& Target, FName StatusId, const FDFStatusRow& Row, float Magnitude, float Now, float Duration, int32 SourceId);
+	void Write(FDFStatusSlot& Target, FName StatusId, const FDFStatusRow& Row, float Magnitude, float Now, float Duration, int32 SourceId, bool bHero);
 };

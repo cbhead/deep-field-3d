@@ -39,6 +39,10 @@ DECLARE_MULTICAST_DELEGATE(FDFSlotsChanged);
 //     or its owner's / instigator's) lasts Balance("emberBurnDurationFactor", 1.3) times longer.
 //     The factor goes into the resolver BEFORE its refresh / strongest-wins branch, so an Ember
 //     refresh also keeps the longer duration (DF.Unit.Status.EmberDurationOnRefresh).
+//   * a same-id refresh keeps the running channel effect (period and phase untouched, no extra
+//     on-application tick) and moves its effect-context instigator to the refresher, because
+//     Step.cs UpdateStatuses damages with slot.Source: the DoT is credited to whoever refreshed
+//     it (DF.Unit.Status.RefreshMovesDotAttribution);
 //   * the reaction burst — bound to the resolver's OnReaction: the consumed status's effect is
 //     removed first, then BurstFraction x MaxHealth goes through UDFGE_Damage with no source
 //     location (no arc; mark, flat armor and shield apply), and the resolver only writes the
@@ -104,6 +108,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DF|Status")
 	bool bTetherImmune = false;
 
+	/** C5 / B§1.6: the owner is a hero — only Movement statuses and stagger (no cc-resist) land; Thermal / Toxin and
+	 *  the rest are RejectedHero before the reaction scan. WS-03 sets it on ADFHeroCharacter; InitFromEnemyRow clears it. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DF|Status")
+	bool bHero = false;
+
 	/** C15 target id carried in FDFMsg_Status (the owner assigns it; 0 = unknown). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DF|Status")
 	int32 TargetId = 0;
@@ -149,6 +158,8 @@ private:
 	void OnSlotLeft(EDFStatusChannel Channel, FName StatusId, bool bExpired);
 	void ApplyChannelEffect(EDFStatusChannel Channel, const FDFStatusSlot& Slot, const FDFStatusRow& Row, AActor* Source);
 	void RemoveChannelEffect(EDFStatusChannel Channel);
+	/** Same-id refresh: the running channel effect keeps its period, but its context now names the refresher. */
+	void RetargetChannelEffect(EDFStatusChannel Channel, AActor* Source);
 	void ApplyBurst(const FDFStatusApplyOutcome& Outcome, AActor* Source);
 	void FireCue(FName StatusId, const TCHAR* Verb, float Magnitude, AActor* Source);
 	void BroadcastStatus(const FGameplayTag& MessageTag, const FGameplayTag& StatusTag, EDFStatusChannel Channel, float Magnitude, float Duration);

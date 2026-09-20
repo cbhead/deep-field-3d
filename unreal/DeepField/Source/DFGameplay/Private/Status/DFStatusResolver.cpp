@@ -1,5 +1,8 @@
 #include "Status/DFStatusResolver.h"
 
+#include "DFGameplayLocalTags.h"
+#include "DFGameplayTags.h"
+
 FDFStatusResolver::FDFStatusResolver()
 {
 	for (int32 I = 0; I < NumChannels; ++I)
@@ -28,14 +31,25 @@ float FDFStatusResolver::CcFillScaleFor(const FDFStatusRow& Row)
 	return 0.f;
 }
 
-void FDFStatusResolver::Write(FDFStatusSlot& Target, FName StatusId, const FDFStatusRow& Row, float Magnitude, float Now, float Duration, int32 SourceId)
+FName FDFStatusResolver::HeroStaggerId()
+{
+	static const FName Id = DFGameplayLocalTags::ContentIdFromTag(DFTags::Status_Stagger);
+	return Id;
+}
+
+bool FDFStatusResolver::IsHeroStatus(FName StatusId, const FDFStatusRow& Row)
+{
+	return Row.Channel == EDFStatusChannel::Movement || (Row.Channel == EDFStatusChannel::Control && StatusId == HeroStaggerId());
+}
+
+void FDFStatusResolver::Write(FDFStatusSlot& Target, FName StatusId, const FDFStatusRow& Row, float Magnitude, float Now, float Duration, int32 SourceId, bool bHero)
 {
 	Target.StatusId = StatusId;
 	Target.Channel = Row.Channel;
 	Target.Magnitude = Magnitude;
 	Target.EndTime = Now + Duration;
 	Target.SourceId = SourceId;
-	Target.CcFillScale = CcFillScaleFor(Row);
+	Target.CcFillScale = bHero ? 0.f : CcFillScaleFor(Row);   // a hero's stagger never fills the gauge (B§1.6 "no cc-resist")
 	Target.bHardControl = Row.bHardControl;
 }
 
@@ -47,6 +61,14 @@ FDFStatusApplyOutcome FDFStatusResolver::Apply(FName StatusId, const FDFStatusRo
 	Out.Channel = Row.Channel;
 	Out.Magnitude = MagnitudeFor(Row, MagnitudeOverride);
 	Out.Duration = DurationFor(Row, DurationFactor);
+
+	// 0. Heroes (C5 / B§1.6): only Movement statuses and stagger land on a hero; everything else
+	//    is refused before the reaction scan, so a reaction can never form on one.
+	if (Target.bHero && !IsHeroStatus(StatusId, Row))
+	{
+		Out.Result = EDFStatusApplyResult::RejectedHero;
+		return Out;
+	}
 
 	// 1. Reactions first (Step.cs ApplyStatus), before any gate: the active partner is consumed,
 	//    the incoming status never lands, the burst goes out, and the output goes straight into
@@ -99,7 +121,7 @@ FDFStatusApplyOutcome FDFStatusResolver::Apply(FName StatusId, const FDFStatusRo
 				Out.EmittedChannel = EmitRow->Channel;
 				Out.EmittedMagnitude = EmitRow->Magnitude();
 				Out.EmittedDuration = EmitRow->MaxDurationSeconds;
-				Write(EmitSlot, Emit, *EmitRow, Out.EmittedMagnitude, Now, Out.EmittedDuration, SourceId);
+				Write(EmitSlot, Emit, *EmitRow, Out.EmittedMagnitude, Now, Out.EmittedDuration, SourceId, Target.bHero);
 			}
 		}
 		return Out;   // incoming status consumed by the reaction
@@ -111,7 +133,7 @@ FDFStatusApplyOutcome FDFStatusResolver::Apply(FName StatusId, const FDFStatusRo
 		Out.Result = EDFStatusApplyResult::RejectedShield;
 		return Out;
 	}
-	if (Row.bHardControl && CcResist >= 1.f)
+	if (Row.bHardControl && !Target.bHero && CcResist >= 1.f)   // heroes have no gauge (their stagger is "no cc-resist")
 	{
 		Out.Result = EDFStatusApplyResult::RejectedCcResist;
 		return Out;
@@ -142,7 +164,7 @@ FDFStatusApplyOutcome FDFStatusResolver::Apply(FName StatusId, const FDFStatusRo
 		}
 		Out.ReplacedStatusId = Current.StatusId;
 	}
-	Write(Current, StatusId, Row, Out.Magnitude, Now, Out.Duration, SourceId);
+	Write(Current, StatusId, Row, Out.Magnitude, Now, Out.Duration, SourceId, Target.bHero);
 	Out.Result = EDFStatusApplyResult::Applied;
 	return Out;
 }

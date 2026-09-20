@@ -505,4 +505,63 @@ bool FDFStatusTieKeepsActiveTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+// C5 / B§1.6: "Heroes may carry only Movement statuses and Stagger (0.25 s, no cc-resist), never
+// Thermal/Toxin." Not a Step.cs rule (the sim's heroes carried no statuses): a hero target refuses
+// everything but Movement rows and the stagger row, before the reaction scan, and its stagger
+// neither fills nor consults the cc-resist gauge.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFStatusHeroCarriesOnlyMovementAndStaggerTest, "DF.Unit.Status.HeroCarriesOnlyMovementAndStagger", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+bool FDFStatusHeroCarriesOnlyMovementAndStaggerTest::RunTest(const FString& Parameters)
+{
+	DFTestRows::FResolverFixture Hero;
+	Hero.Target.bHero = true;
+
+	// Movement lands with the usual channel rules.
+	TestEqual(TEXT("chill lands on a hero"), Hero.Apply(TEXT("chill")).Result, EDFStatusApplyResult::Applied);
+	TestEqual(TEXT("rubble is the weaker Movement status: dropped"), Hero.Apply(TEXT("rubble")).Result, EDFStatusApplyResult::DroppedWeaker);
+	TestEqual(TEXT("chill refreshes"), Hero.Apply(TEXT("chill"), 0.5f).Result, EDFStatusApplyResult::Refreshed);
+
+	// Everything outside Movement / stagger is refused — Thermal and Toxin first among them.
+	for (const TCHAR* Id : { TEXT("burn"), TEXT("poison"), TEXT("shred"), TEXT("mark"), TEXT("reveal"), TEXT("magnetize"), TEXT("freeze") })
+	{
+		TestEqual(*FString::Printf(TEXT("%s refused on a hero"), Id), Hero.Apply(Id).Result, EDFStatusApplyResult::RejectedHero);
+	}
+	TestFalse(TEXT("Thermal empty"), Hero.Resolver.IsActive(EDFStatusChannel::Thermal));
+	TestFalse(TEXT("Toxin empty"), Hero.Resolver.IsActive(EDFStatusChannel::Toxin));
+	TestFalse(TEXT("Control empty"), Hero.Resolver.IsActive(EDFStatusChannel::Control));
+
+	// The gate precedes the reaction scan: shock onto a chilled hero is refused, not flashFreeze.
+	const FDFStatusApplyOutcome Shock = Hero.Apply(TEXT("shock"));
+	TestEqual(TEXT("shock refused on a chilled hero"), Shock.Result, EDFStatusApplyResult::RejectedHero);
+	TestTrue(TEXT("no reaction named"), Shock.ReactionId.IsNone());
+	TestTrue(TEXT("chill still active"), Hero.Resolver.IsActive(EDFStatusChannel::Movement));
+	TestFalse(TEXT("no freeze emitted"), Hero.Resolver.IsActive(EDFStatusChannel::Control));
+
+	// Stagger lands in Control, hard control, and never fills the gauge.
+	const FDFStatusApplyOutcome Stagger = Hero.Apply(TEXT("stagger"), 1.f);
+	TestEqual(TEXT("stagger lands on a hero"), Stagger.Result, EDFStatusApplyResult::Applied);
+	const FDFStatusSlot& Control = Hero.Resolver.Slot(EDFStatusChannel::Control);
+	TestEqual(TEXT("Control slot is stagger"), Control.StatusId, FName(TEXT("stagger")));
+	TestTrue(TEXT("stagger is hard control"), Control.bHardControl);
+	TestTrue(TEXT("hero is controlled while staggered"), Hero.Resolver.IsControlled());
+	TestEqual(TEXT("stagger fills no cc-resist"), Control.CcFillScale, 0.f);
+	TestEqual(TEXT("0.25 s"), Control.EndTime, 1.25f);
+	Hero.Resolver.Tick(1.2f, 0.2f);
+	TestEqual(TEXT("gauge still 0 after a staggered tick"), Hero.Resolver.CcResist, 0.f);
+	Hero.Resolver.Tick(1.3f, 0.1f);
+	TestFalse(TEXT("stagger expired"), Hero.Resolver.IsActive(EDFStatusChannel::Control));
+
+	// ... and ignores the gauge: a full gauge (set by hand — nothing fills it on a hero) still staggers.
+	DFTestRows::FResolverFixture Full;
+	Full.Target.bHero = true;
+	Full.Resolver.CcResist = 1.f;
+	TestEqual(TEXT("stagger lands at a full gauge"), Full.Apply(TEXT("stagger")).Result, EDFStatusApplyResult::Applied);
+
+	// Enemies are untouched by the gate.
+	DFTestRows::FResolverFixture Enemy;
+	TestEqual(TEXT("burn lands on an enemy"), Enemy.Apply(TEXT("burn")).Result, EDFStatusApplyResult::Applied);
+	TestEqual(TEXT("stagger on an enemy fills the gauge like any hard control"), Enemy.Apply(TEXT("stagger")).Result, EDFStatusApplyResult::Applied);
+	TestEqual(TEXT("enemy stagger CcFillScale 1"), Enemy.Resolver.Slot(EDFStatusChannel::Control).CcFillScale, 1.f);
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS
