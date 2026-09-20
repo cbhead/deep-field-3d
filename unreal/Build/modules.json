@@ -296,6 +296,26 @@
         "AutomationController",
         "GameplayAbilities"
       ]
+    },
+    "DFContentPipeline": {
+      "layer": 6,
+      "type": "Editor",
+      "df": [
+        "DFCore"
+      ],
+      "public": [
+        "Core",
+        "CoreUObject",
+        "Engine",
+        "GameplayTags"
+      ],
+      "private": [
+        "UnrealEd",
+        "AssetTools",
+        "AssetRegistry",
+        "Json",
+        "JsonUtilities"
+      ]
     }
   }
 }
