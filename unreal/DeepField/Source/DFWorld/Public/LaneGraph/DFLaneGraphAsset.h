@@ -70,10 +70,13 @@ public:
 	/** Every edge something can close: lane gates, operated gates, mutables with an edge. Distinct, in that order. */
 	TArray<FName> ClosableEdges() const;
 
-	/** Metres still to walk from a point T (0..1) along an edge to the core.
-	 *  Along the itinerary when one is given and it uses the edge (the walker's own plan, so
-	 *  targeting compares like with like across routes and warps); otherwise the shortest open way.
-	 *  Warps contribute nothing. INFINITY if the core is unreachable. */
+	/** Metres still to walk from a point T (0..1) along an edge to the core (length * CostFactor,
+	 *  on this edge and the ones ahead). Along the itinerary when one is given and it uses the
+	 *  edge (the walker's own plan, so targeting compares like with like across routes and warps);
+	 *  otherwise the shortest open way. Warps contribute nothing. World.cs RemainingToCore's
+	 *  conventions: TNumericLimits<float>::Max() when the core is unreachable (a cut-off enemy
+	 *  sorts LAST in a targeting order, never first — infinity would poison the comparison), and
+	 *  0 for EdgeIndex < 0 (leaked: on no edge, nothing left to walk). */
 	float RemainingToCore(int32 EdgeIndex, float T, const FDFLaneItinerary* Itinerary = nullptr, const TArray<bool>* EdgeOpen = nullptr) const;
 
 	/** The routing rule (LaneGraph.ChooseEdge): the cheapest open edge out of AtNode towards the

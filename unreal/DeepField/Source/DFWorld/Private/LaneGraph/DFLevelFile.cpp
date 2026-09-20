@@ -124,8 +124,18 @@ bool FDFLevelFile::Load(const FString& Path, FDFLevelFile& Out, FString& OutErro
 	// Anchors: top level (legacy) or under "anchors" (MAP-AUTHORING §2.3).
 	const TSharedPtr<FJsonObject>* Anchors = nullptr;
 	const FJsonObject& AnchorObj = (Root->TryGetObjectField(TEXT("anchors"), Anchors) && Anchors && Anchors->IsValid()) ? **Anchors : *Root;
-	ReadVec3(AnchorObj.TryGetField(TEXT("heroSpawn")), Out.HeroSpawn);
-	ReadVec3(AnchorObj.TryGetField(TEXT("armory")), Out.Armory);
+	// Every vector read fails the load with the record's id: a missing or malformed [x,y,z] must
+	// never land silently at the origin (a socket at 0,0,0 validates, covers and misleads).
+	if (!ReadVec3(AnchorObj.TryGetField(TEXT("heroSpawn")), Out.HeroSpawn))
+	{
+		OutError = FString::Printf(TEXT("%s: heroSpawn is missing or not [x,y,z]"), *Path);
+		return false;
+	}
+	if (!ReadVec3(AnchorObj.TryGetField(TEXT("armory")), Out.Armory))
+	{
+		OutError = FString::Printf(TEXT("%s: armory is missing or not [x,y,z]"), *Path);
+		return false;
+	}
 
 	// Routes
 	for (const TSharedPtr<FJsonValue>& Value : ArrayField(*Root, TEXT("routes")))
@@ -171,24 +181,35 @@ bool FDFLevelFile::Load(const FString& Path, FDFLevelFile& Out, FString& OutErro
 	{
 		FDFLevelSocket Socket;
 		FString TagText;
+		TSharedPtr<FJsonValue> Pos;
 		const TSharedPtr<FJsonObject>* Obj = nullptr;
 		const TArray<TSharedPtr<FJsonValue>>* Arr = nullptr;
 		if (Value->TryGetObject(Obj) && Obj)
 		{
 			Socket.Id = FName(*(*Obj)->GetStringField(TEXT("id")));
 			TagText = (*Obj)->GetStringField(TEXT("tag"));
-			ReadVec3((*Obj)->TryGetField(TEXT("pos")), Socket.Position);
+			Pos = (*Obj)->TryGetField(TEXT("pos"));
 			(*Obj)->TryGetBoolField(TEXT("pad"), Socket.bPad);
 		}
 		else if (Value->TryGetArray(Arr) && Arr && Arr->Num() >= 3)
 		{
 			Socket.Id = FName(*(*Arr)[0]->AsString());
-			ReadVec3((*Arr)[1], Socket.Position);
+			Pos = (*Arr)[1];
 			TagText = (*Arr)[2]->AsString();
+		}
+		else
+		{
+			OutError = FString::Printf(TEXT("sockets[%d] is neither {\"id\",\"tag\",\"pos\"} nor [\"id\", [x,y,z], \"tag\"]"), Out.Sockets.Num());
+			return false;
 		}
 		if (Socket.Id.IsNone() || !ReadSocketTag(TagText, Socket.Tag))
 		{
 			OutError = FString::Printf(TEXT("socket '%s': bad id or tag '%s'"), *Socket.Id.ToString(), *TagText);
+			return false;
+		}
+		if (!ReadVec3(Pos, Socket.Position))
+		{
+			OutError = FString::Printf(TEXT("socket '%s': pos is missing or not [x,y,z]"), *Socket.Id.ToString());
 			return false;
 		}
 		Out.Sockets.Add(Socket);
@@ -198,22 +219,35 @@ bool FDFLevelFile::Load(const FString& Path, FDFLevelFile& Out, FString& OutErro
 	for (const TSharedPtr<FJsonValue>& Value : ArrayField(AnchorObj, TEXT("stations")))
 	{
 		FDFLevelStation Station;
+		TSharedPtr<FJsonValue> Pos;
 		const TSharedPtr<FJsonObject>* Obj = nullptr;
 		const TArray<TSharedPtr<FJsonValue>>* Arr = nullptr;
 		if (Value->TryGetObject(Obj) && Obj)
 		{
 			Station.Id = FName(*(*Obj)->GetStringField(TEXT("id")));
-			ReadVec3((*Obj)->TryGetField(TEXT("pos")), Station.Position);
+			Pos = (*Obj)->TryGetField(TEXT("pos"));
 		}
 		else if (Value->TryGetArray(Arr) && Arr && Arr->Num() >= 2)
 		{
 			Station.Id = FName(*(*Arr)[0]->AsString());
-			ReadVec3((*Arr)[1], Station.Position);
+			Pos = (*Arr)[1];
 		}
-		if (!Station.Id.IsNone())
+		else
 		{
-			Out.Stations.Add(Station);
+			OutError = FString::Printf(TEXT("stations[%d] is neither {\"id\",\"pos\"} nor [\"id\", [x,y,z]]"), Out.Stations.Num());
+			return false;
 		}
+		if (Station.Id.IsNone())
+		{
+			OutError = FString::Printf(TEXT("stations[%d] has no id"), Out.Stations.Num());
+			return false;
+		}
+		if (!ReadVec3(Pos, Station.Position))
+		{
+			OutError = FString::Printf(TEXT("station '%s': pos is missing or not [x,y,z]"), *Station.Id.ToString());
+			return false;
+		}
+		Out.Stations.Add(Station);
 	}
 
 	// Conditions: {"8": "fog"} under conditionSchedule (legacy) or conditions
@@ -234,40 +268,59 @@ bool FDFLevelFile::Load(const FString& Path, FDFLevelFile& Out, FString& OutErro
 	{
 		FDFLevelVehicle Vehicle;
 		float SimYaw = 0.f;
+		TSharedPtr<FJsonValue> Pos;
 		const TSharedPtr<FJsonObject>* Obj = nullptr;
 		const TArray<TSharedPtr<FJsonValue>>* Arr = nullptr;
 		if (Value->TryGetObject(Obj) && Obj)
 		{
 			Vehicle.Id = FName(*(*Obj)->GetStringField(TEXT("id")));
 			Vehicle.DefId = FName(*(*Obj)->GetStringField(TEXT("defId")));
-			ReadVec3((*Obj)->TryGetField(TEXT("pos")), Vehicle.Position);
+			Pos = (*Obj)->TryGetField(TEXT("pos"));
 			SimYaw = (*Obj)->HasField(TEXT("yawDegrees")) ? (*Obj)->GetNumberField(TEXT("yawDegrees")) : 0.f;
 		}
 		else if (Value->TryGetArray(Arr) && Arr && Arr->Num() >= 4)
 		{
 			Vehicle.Id = FName(*(*Arr)[0]->AsString());
 			Vehicle.DefId = FName(*(*Arr)[1]->AsString());
-			ReadVec3((*Arr)[2], Vehicle.Position);
+			Pos = (*Arr)[2];
 			SimYaw = (*Arr)[3]->AsNumber();
 		}
-		Vehicle.Yaw = FDFSimFrame::YawToUnreal(SimYaw);
-		if (!Vehicle.Id.IsNone())
+		else
 		{
-			Out.Vehicles.Add(Vehicle);
+			OutError = FString::Printf(TEXT("vehicles[%d] is neither {\"id\",\"defId\",\"pos\",\"yawDegrees\"} nor [\"id\",\"def\",[x,y,z],yaw]"), Out.Vehicles.Num());
+			return false;
 		}
+		if (Vehicle.Id.IsNone())
+		{
+			OutError = FString::Printf(TEXT("vehicles[%d] has no id"), Out.Vehicles.Num());
+			return false;
+		}
+		if (!ReadVec3(Pos, Vehicle.Position))
+		{
+			OutError = FString::Printf(TEXT("vehicle '%s': pos is missing or not [x,y,z]"), *Vehicle.Id.ToString());
+			return false;
+		}
+		Vehicle.Yaw = FDFSimFrame::YawToUnreal(SimYaw);
+		Out.Vehicles.Add(Vehicle);
 	}
 
 	// Lane node names, gates, levers (all object form in both formats)
 	for (const TSharedPtr<FJsonValue>& Value : ArrayField(*Root, TEXT("laneNodeNames")))
 	{
 		const TSharedPtr<FJsonObject>* Obj = nullptr;
-		if (Value->TryGetObject(Obj) && Obj)
+		if (!Value->TryGetObject(Obj) || !Obj)
 		{
-			FDFLevelNodeName Name;
-			Name.Id = FName(*(*Obj)->GetStringField(TEXT("id")));
-			ReadVec3((*Obj)->TryGetField(TEXT("at")), Name.At);
-			Out.LaneNodeNames.Add(Name);
+			OutError = FString::Printf(TEXT("laneNodeNames[%d] is not an object"), Out.LaneNodeNames.Num());
+			return false;
 		}
+		FDFLevelNodeName Name;
+		Name.Id = FName(*(*Obj)->GetStringField(TEXT("id")));
+		if (!ReadVec3((*Obj)->TryGetField(TEXT("at")), Name.At))
+		{
+			OutError = FString::Printf(TEXT("laneNodeNames '%s': at is missing or not [x,y,z]"), *Name.Id.ToString());
+			return false;
+		}
+		Out.LaneNodeNames.Add(Name);
 	}
 	for (const TSharedPtr<FJsonValue>& Value : ArrayField(*Root, TEXT("laneGates")))
 	{
@@ -283,15 +336,21 @@ bool FDFLevelFile::Load(const FString& Path, FDFLevelFile& Out, FString& OutErro
 	for (const TSharedPtr<FJsonValue>& Value : ArrayField(*Root, TEXT("operatedGates")))
 	{
 		const TSharedPtr<FJsonObject>* Obj = nullptr;
-		if (Value->TryGetObject(Obj) && Obj)
+		if (!Value->TryGetObject(Obj) || !Obj)
 		{
-			FDFLevelOperatedGate Lever;
-			Lever.Id = FName(*(*Obj)->GetStringField(TEXT("id")));
-			Lever.EdgeId = FName(*(*Obj)->GetStringField(TEXT("edgeId")));
-			ReadVec3((*Obj)->TryGetField(TEXT("at")), Lever.At);
-			Lever.Label = (*Obj)->GetStringField(TEXT("label"));
-			Out.OperatedGates.Add(Lever);
+			OutError = FString::Printf(TEXT("operatedGates[%d] is not an object"), Out.OperatedGates.Num());
+			return false;
 		}
+		FDFLevelOperatedGate Lever;
+		Lever.Id = FName(*(*Obj)->GetStringField(TEXT("id")));
+		Lever.EdgeId = FName(*(*Obj)->GetStringField(TEXT("edgeId")));
+		if (!ReadVec3((*Obj)->TryGetField(TEXT("at")), Lever.At))
+		{
+			OutError = FString::Printf(TEXT("operatedGate '%s': at is missing or not [x,y,z]"), *Lever.Id.ToString());
+			return false;
+		}
+		Lever.Label = (*Obj)->GetStringField(TEXT("label"));
+		Out.OperatedGates.Add(Lever);
 	}
 	return true;
 }

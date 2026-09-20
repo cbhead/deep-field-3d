@@ -6,6 +6,12 @@ namespace DFLaneGraphPrivate
 {
 	// "Cannot get there": the sim uses float.PositiveInfinity and so does every comparison here.
 	static constexpr float Unreachable = std::numeric_limits<float>::infinity();
+
+	// "Cut off from every core" as a distance something SORTS by: World.cs RemainingToCore
+	// returns float.MaxValue, so a stranded enemy is the last target, never the first (infinity
+	// would poison the comparison). Distinct from Unreachable, which the tables hold and the
+	// relaxations test with IsFinite.
+	static constexpr float CutOff = TNumericLimits<float>::Max();
 }
 
 DEFINE_LOG_CATEGORY_STATIC(LogDFLaneGraph, Log, All);
@@ -238,12 +244,19 @@ TArray<FName> UDFLaneGraphAsset::ClosableEdges() const
 
 float UDFLaneGraphAsset::RemainingToCore(int32 EdgeIndex, float T, const FDFLaneItinerary* Itinerary, const TArray<bool>* EdgeOpen) const
 {
+	// World.cs RemainingToCore: on no edge at all (INDEX_NONE) the enemy has leaked — nothing left
+	// to walk, so 0; an index past the table is a broken caller and reads as cut off.
+	if (EdgeIndex < 0)
+	{
+		return 0.f;
+	}
 	if (!Edges.IsValidIndex(EdgeIndex))
 	{
-		return DFLaneGraphPrivate::Unreachable;
+		return DFLaneGraphPrivate::CutOff;
 	}
 	const FDFLaneEdge& Edge = Edges[EdgeIndex];
-	const float OnThisEdge = (1.f - FMath::Clamp(T, 0.f, 1.f)) * Edge.LengthMeters;   // 0 on a warp
+	// What is left of this edge, priced the way the edges ahead are (length * CostFactor); 0 on a warp.
+	const float OnThisEdge = (1.f - FMath::Clamp(T, 0.f, 1.f)) * Edge.LengthMeters * Edge.CostFactor;
 
 	if (Itinerary)
 	{
@@ -267,7 +280,8 @@ float UDFLaneGraphAsset::RemainingToCore(int32 EdgeIndex, float T, const FDFLane
 	const TArray<float> Dist = DistanceToCore(EdgeOpen);
 	const int32 ToIndex = NodeIndexOf(Edge.To);
 	const float Ahead = ToIndex != INDEX_NONE ? Dist[ToIndex] : DFLaneGraphPrivate::Unreachable;
-	return FMath::IsFinite(Ahead) ? OnThisEdge + Ahead : Ahead;
+	// Cut off from every core: as far away as it is possible to be, so it sorts LAST (World.cs).
+	return FMath::IsFinite(Ahead) ? OnThisEdge + Ahead : DFLaneGraphPrivate::CutOff;
 }
 
 int32 UDFLaneGraphAsset::ChooseEdge(const FDFLaneItinerary& Itinerary, int32& ViaCursor, FName AtNode, const TArray<bool>& EdgeOpen,

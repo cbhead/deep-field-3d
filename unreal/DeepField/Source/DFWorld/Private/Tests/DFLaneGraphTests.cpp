@@ -11,6 +11,10 @@
 #include "LaneGraph/DFLaneGraphAsset.h"
 #include "LaneGraph/DFLaneGraphBuilder.h"
 #include "LaneGraph/DFLevelFile.h"
+#include "HAL/FileManager.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
+#include "World/DFWarpGate.h"
 
 namespace DFLaneGraphTest
 {
@@ -146,10 +150,12 @@ bool FDFLaneGraphSwitchyardJunctionsTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("operated gates"), Asset->OperatedGates.Num(), 2);
 
 	// Sealing, as the sim proves it (Sim.Harness gate 22c "you may shut either way through, and
-	// never both"): either door alone is fine; both together leave the gate nowhere to walk.
-	TestFalse(TEXT("closing the cut alone does not seal"), Asset->WouldSeal(TSet<FName>({ TEXT("westGate-cutMouth") })));
-	TestFalse(TEXT("closing the switchback alone does not seal"), Asset->WouldSeal(TSet<FName>({ TEXT("westGate-switchbackNorth") })));
-	TestTrue(TEXT("closing both seals the west gate from the core"), Asset->WouldSeal(TSet<FName>({ TEXT("westGate-cutMouth"), TEXT("westGate-switchbackNorth") })));
+	// never both") and as rule 11 reads under RFC-0001: either door alone is fine (a single-edge
+	// seal would FAIL validation); both together seal, which is a legal combination the validator
+	// REPORTS and the runtime refuses at the second closure — WouldSeal is the predicate both use.
+	TestFalse(TEXT("closing the cut alone does not seal (a single-edge seal would fail rule 11)"), Asset->WouldSeal(TSet<FName>({ TEXT("westGate-cutMouth") })));
+	TestFalse(TEXT("closing the switchback alone does not seal (a single-edge seal would fail rule 11)"), Asset->WouldSeal(TSet<FName>({ TEXT("westGate-switchbackNorth") })));
+	TestTrue(TEXT("closing both seals the west gate from the core: a sealing combination — reported by the validator, refused by the runtime at the last closure (RFC-0001), not a validation failure"), Asset->WouldSeal(TSet<FName>({ TEXT("westGate-cutMouth"), TEXT("westGate-switchbackNorth") })));
 	TestTrue(TEXT("everything open: every spawn reaches a core"), Asset->EverySpawnReachesCore());
 
 	// Each gate moves the wave (Sim.Harness gate 57 rule 3): shutting the cut sends the shortcut
@@ -378,6 +384,25 @@ bool FDFLaneGraphWouldSealTest::RunTest(const FString& Parameters)
 	const TArray<float> Cut = Asset->DistanceToCore(&Open);
 	TestEqual(TEXT("J-C shut: S1 takes the long way"), Cut[Asset->NodeIndexOf(TEXT("S1"))], 30.f, 0.001f);
 	TestFalse(TEXT("J-C shut: S2 is cut off"), FMath::IsFinite(Cut[Asset->NodeIndexOf(TEXT("S2"))]));
+
+	// RemainingToCore for the cut-off walker (World.cs): float max, not infinity, so a targeting
+	// sort puts it LAST — after anything that can still get there — and the comparison stays sane.
+	const int32 S2J = Asset->EdgeIndexOf(TEXT("S2-J"));
+	const int32 S1C = Asset->EdgeIndexOf(TEXT("S1-C"));
+	const float Stranded = Asset->RemainingToCore(S2J, 0.5f, nullptr, &Open);
+	const float Walking = Asset->RemainingToCore(S1C, 0.5f, nullptr, &Open);
+	TestEqual(TEXT("J-C shut: S2-J remaining is TNumericLimits<float>::Max()"), Stranded, TNumericLimits<float>::Max());
+	TestTrue(TEXT("J-C shut: S2-J remaining is finite (infinity would poison the sort)"), FMath::IsFinite(Stranded));
+	TestEqual(TEXT("J-C shut: halfway along S1-C is 15 m"), Walking, 15.f, 0.001f);
+	TestTrue(TEXT("the stranded enemy sorts after the walking one"), Walking < Stranded);
+	TestEqual(TEXT("INDEX_NONE is leaked: nothing left to walk"), Asset->RemainingToCore(INDEX_NONE, 0.f), 0.f);
+	TestEqual(TEXT("an index past the table reads as cut off"), Asset->RemainingToCore(Asset->Edges.Num() + 3, 0.f), TNumericLimits<float>::Max());
+
+	// CostFactor prices what is left of THIS edge the way it prices the edges ahead.
+	Asset->Edges[S1C].CostFactor = 2.f;
+	Asset->RebuildIndex();
+	TestEqual(TEXT("S1-C at cost 2: halfway is 15 m * 2"), Asset->RemainingToCore(S1C, 0.5f, nullptr, &Open), 30.f, 0.001f);
+	Asset->Edges[S1C].CostFactor = 1.f;
 	return true;
 }
 
@@ -453,6 +478,112 @@ bool FDFLaneGraphSiegeBreachPricingTest::RunTest(const FString& Parameters)
 		Asset->ChooseEdge(*Short, Cursor, TEXT("westGate"), AllOpen, ToNodeOpen, ToCoreOpen, Wall(1.f, AllOpen), &ToNodeOpen),
 		Asset->ChooseEdge(*Short, PlainCursor, TEXT("westGate"), AllOpen, ToNodeOpen, ToCoreOpen));
 	TestEqual(TEXT("open map: cursors agree"), Cursor, PlainCursor);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFLaneGraphWarpGateIdsTest, "DF.Unit.LaneGraph.WarpGateIds", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+bool FDFLaneGraphWarpGateIdsTest::RunTest(const FString& Parameters)
+{
+	// The importer places one ADFWarpGate per warp END, keyed "<node>@<edge>": a pad that is the
+	// arrival of one warp and the departure of the next must get two actors, one per role, and
+	// a node-only key would give it one. StableIdFor/SplitStableId are the key and its inverse.
+	const FName Shared(TEXT("midPad"));
+	const FName In(TEXT("southPad-midPad"));
+	const FName Out(TEXT("midPad-northPad"));
+	const FName Arrive = ADFWarpGate::StableIdFor(Shared, In);
+	const FName Depart = ADFWarpGate::StableIdFor(Shared, Out);
+	TestEqual(TEXT("arrival id"), Arrive, FName(TEXT("midPad@southPad-midPad")));
+	TestEqual(TEXT("departure id"), Depart, FName(TEXT("midPad@midPad-northPad")));
+	TestNotEqual(TEXT("one pad, two warps, two actors"), Arrive, Depart);
+
+	FName Node, Edge;
+	TestTrue(TEXT("arrival id splits"), ADFWarpGate::SplitStableId(Arrive, Node, Edge));
+	TestEqual(TEXT("arrival node"), Node, Shared);
+	TestEqual(TEXT("arrival edge"), Edge, In);
+	TestTrue(TEXT("an air warp's '@air' stays with the edge"), ADFWarpGate::SplitStableId(ADFWarpGate::StableIdFor(TEXT("a"), TEXT("a-b@air")), Node, Edge));
+	TestEqual(TEXT("air warp node"), Node, FName(TEXT("a")));
+	TestEqual(TEXT("air warp edge"), Edge, FName(TEXT("a-b@air")));
+	TestFalse(TEXT("a bare node id is not a warp gate id"), ADFWarpGate::SplitStableId(TEXT("midPad"), Node, Edge));
+	TestFalse(TEXT("an empty edge is not a warp gate id"), ADFWarpGate::SplitStableId(TEXT("midPad@"), Node, Edge));
+
+	// Toaster, the one legacy map with warps: two legs, four ends, four distinct ids, and every
+	// id round-trips to the end it names.
+	UDFLaneGraphAsset* Asset = DFLaneGraphTest::BuildLegacy(*this, TEXT("toaster"));
+	if (!Asset) { return false; }
+	TSet<FName> Ids;
+	int32 Ends = 0;
+	for (const FDFLaneEdge& E : Asset->Edges)
+	{
+		if (!E.IsWarp()) { continue; }
+		for (const FName& End : { E.From, E.To })
+		{
+			++Ends;
+			const FName Id = ADFWarpGate::StableIdFor(End, E.Id);
+			Ids.Add(Id);
+			TestTrue(FString::Printf(TEXT("%s splits"), *Id.ToString()), ADFWarpGate::SplitStableId(Id, Node, Edge));
+			TestEqual(FString::Printf(TEXT("%s names its node"), *Id.ToString()), Node, End);
+			TestEqual(FString::Printf(TEXT("%s names its edge"), *Id.ToString()), Edge, E.Id);
+		}
+	}
+	TestEqual(TEXT("toaster: four warp ends"), Ends, 4);
+	TestEqual(TEXT("toaster: four distinct warp gate ids"), Ids.Num(), Ends);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFLaneGraphLevelFileVectorsTest, "DF.Unit.LaneGraph.LevelFileVectors", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+bool FDFLaneGraphLevelFileVectorsTest::RunTest(const FString& Parameters)
+{
+	// Every vector in a level file is read or the load fails, naming the record: a missing or
+	// malformed [x,y,z] must never land silently at the origin.
+	const FString Base = TEXT(R"({"id":"t","heroSpawn":[0,0,0],"armory":[1,0,0],)")
+		TEXT(R"("routes":[{"id":"r","layer":"ground","waypoints":[[0,0,0],[10,0,0]]}],)")
+		TEXT(R"("sockets":[{"id":"g1","tag":"ground","pos":[5,0,3]}],)")
+		TEXT(R"("stations":[{"id":"s1","pos":[2,0,2]}],)")
+		TEXT(R"("vehicles":[{"id":"v1","defId":"buggy","pos":[3,0,3],"yawDegrees":0}],)")
+		TEXT(R"("laneNodeNames":[{"id":"start","at":[0,0,0]}],)")
+		TEXT(R"("operatedGates":[{"id":"l1","edgeId":"start-end","at":[5,0,1],"label":"L"}]})");
+	const FString Path = FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Tests"), TEXT("DFLevelFileVectors.level.json"));
+
+	const auto Load = [&Path](const FString& Json, FDFLevelFile& Out, FString& Error)
+	{
+		FFileHelper::SaveStringToFile(Json, *Path);
+		return FDFLevelFile::Load(Path, Out, Error);
+	};
+
+	FDFLevelFile Level;
+	FString Error;
+	if (TestTrue(FString::Printf(TEXT("the base file loads: %s"), *Error), Load(Base, Level, Error)))
+	{
+		TestEqual(TEXT("armory read (sim x=1 -> Unreal Y=100)"), Level.Armory, FVector(0.0, 100.0, 0.0));
+		TestEqual(TEXT("one socket"), Level.Sockets.Num(), 1);
+		TestEqual(TEXT("one station"), Level.Stations.Num(), 1);
+		TestEqual(TEXT("one vehicle"), Level.Vehicles.Num(), 1);
+		TestEqual(TEXT("one node name"), Level.LaneNodeNames.Num(), 1);
+		TestEqual(TEXT("one lever"), Level.OperatedGates.Num(), 1);
+	}
+
+	struct FCase { const TCHAR* What; const TCHAR* From; const TCHAR* To; const TCHAR* Expect; };
+	const FCase Cases[] = {
+		{ TEXT("socket pos too short"),        TEXT(R"("pos":[5,0,3])"),          TEXT(R"("pos":[5,0])"),      TEXT("socket 'g1'") },
+		{ TEXT("socket pos missing"),          TEXT(R"(,"pos":[5,0,3])"),         TEXT(""),                    TEXT("socket 'g1'") },
+		{ TEXT("station pos missing"),         TEXT(R"(,"pos":[2,0,2])"),         TEXT(""),                    TEXT("station 's1'") },
+		{ TEXT("vehicle pos null"),            TEXT(R"("pos":[3,0,3])"),          TEXT(R"("pos":null)"),       TEXT("vehicle 'v1'") },
+		{ TEXT("node name at missing"),        TEXT(R"(,"at":[0,0,0])"),          TEXT(""),                    TEXT("laneNodeNames 'start'") },
+		{ TEXT("lever at is a string"),        TEXT(R"("at":[5,0,1])"),           TEXT(R"("at":"here")"),      TEXT("operatedGate 'l1'") },
+		{ TEXT("armory missing"),              TEXT(R"("armory":[1,0,0],)"),      TEXT(""),                    TEXT("armory") },
+		{ TEXT("heroSpawn is a number"),       TEXT(R"("heroSpawn":[0,0,0])"),    TEXT(R"("heroSpawn":5)"),    TEXT("heroSpawn") },
+		{ TEXT("route waypoint too short"),    TEXT(R"([10,0,0])"),               TEXT(R"([10,0])"),           TEXT("route 'r'") },
+	};
+	for (const FCase& Case : Cases)
+	{
+		const FString Json = Base.Replace(Case.From, Case.To);
+		if (!TestNotEqual(FString::Printf(TEXT("%s: the case changes the file"), Case.What), Json, Base)) { continue; }
+		FDFLevelFile Bad;
+		FString BadError;
+		TestFalse(FString::Printf(TEXT("%s: the load fails"), Case.What), Load(Json, Bad, BadError));
+		TestTrue(FString::Printf(TEXT("%s: the error names the record (\"%s\" in \"%s\")"), Case.What, Case.Expect, *BadError), BadError.Contains(Case.Expect));
+	}
+	IFileManager::Get().Delete(*Path);
 	return true;
 }
 
