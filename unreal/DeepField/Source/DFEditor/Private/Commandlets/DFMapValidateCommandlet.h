@@ -6,10 +6,9 @@
 
 class UDFLaneGraphAsset;
 
-// -run=DFEditor.DFMapValidate -map=<id>[,<id>] | -all
+// -run=DFMapValidate -map=<id>[,<id>] | -all        (or -run=DFEditor.DFMapValidate)
 //
-// (Module-qualified for the same reason as DFLevelImport: DFEditor loads after the commandlet
-// lookup until its loading phase is Default.)
+// (DFEditor loads at the Default phase, so the bare name resolves; the module-qualified spelling still works.)
 //
 // DF.Map.Validate, the seed (CONTRACTS/map-authoring-3d.md §2): the rules that need no terrain.
 //   sealing (11)      RFC-0001: sealing combinations are REPORTED (the runtime refuses the last
