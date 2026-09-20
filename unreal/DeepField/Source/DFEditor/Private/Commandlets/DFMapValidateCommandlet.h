@@ -12,7 +12,8 @@ class UDFLaneGraphAsset;
 // lookup until its loading phase is Default.)
 //
 // DF.Map.Validate, the seed (CONTRACTS/map-authoring-3d.md §2): the rules that need no terrain.
-//   sealing (11)      no closable subset seals a spawn from the core; <= 8 closable edges
+//   sealing (11)      RFC-0001: sealing combinations are REPORTED (the runtime refuses the last
+//                     closure); a single-edge seal or a monotonicity break FAILS; <= 8 closable edges
 //   spawnApron (12)   no socket within 8 m of a spawn
 //   socketOffset (4)  every tower pad >= 3.5 m off any lane centreline (the distance half of rule 4)
 //   corridor (2)      reported as "no navmesh" — never passed until the corridor walk exists
@@ -21,6 +22,8 @@ class UDFLaneGraphAsset;
 //                     dead-ground report to unreal/content/levels/reports/<map>.coverage.json
 // Ratchet: unreal/map-validation-baseline.tsv lists (map, rule) pairs known to fail; those are
 // warnings, anything else failing is an error and the commandlet exits 1.
+// Writes only the report (text, not LFS-lockable); it loads L_<Map> and saves no package, so it
+// needs no `git lfs lock` — see DFLevelImportCommandlet.h for the etiquette when it ever does.
 UCLASS()
 class UDFMapValidateCommandlet : public UCommandlet
 {

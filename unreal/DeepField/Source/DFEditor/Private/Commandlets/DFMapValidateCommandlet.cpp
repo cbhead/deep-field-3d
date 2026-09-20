@@ -1,5 +1,6 @@
 #include "Commandlets/DFMapValidateCommandlet.h"
 
+#include "Commandlets/DFLevelImportCommandlet.h"
 #include "DFWorldCollision.h"
 #include "DFWorldSubsystem.h"
 #include "Dom/JsonObject.h"
@@ -208,6 +209,9 @@ UDFMapValidateCommandlet::FResult UDFMapValidateCommandlet::CheckSealing(const U
 		R.Notes.Add(FString::Printf(TEXT("over the eight-gate cap (%d)"), Closable.Num()));
 		return R;
 	}
+	// Rule 11 as RFC-0001 rules it (it follows the sim): a closable SET may seal — the runtime
+	// refuses the last closure — so the validator REPORTS sealing combinations and FAILS only a
+	// single-edge seal or a break in monotonic reachability.
 	// Every subset, as Sim.Harness gate 57 enumerates "every configuration a map allows". A
 	// combination that seals is legal content as long as the runtime refuses its LAST closure
 	// (Switchyard's b1+b2 is exactly that: gate 22c expects the second barricade to be refused),
@@ -460,7 +464,9 @@ UDFMapValidateCommandlet::FResult UDFMapValidateCommandlet::CheckCoverage(UWorld
 	FJsonSerializer::Serialize(Root, Writer);
 	const FString Path = ReportPath(MapId);
 	IFileManager::Get().MakeDirectory(*FPaths::GetPath(Path), true);
-	if (!FFileHelper::SaveStringToFile(Json, *Path))
+	// The report is text (never LFS-lockable), but the validator writes nothing else, and a
+	// read-only report must not fail the rule silently: clear the bit the same way the importer does.
+	if (!UDFLevelImportCommandlet::MakeWritable(Path, TEXT("the dead-ground report")) || !FFileHelper::SaveStringToFile(Json, *Path))
 	{
 		R.Status = EStatus::Fail;
 		R.Notes.Add(FString::Printf(TEXT("could not write %s"), *Path));

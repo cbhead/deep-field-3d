@@ -20,10 +20,13 @@
 #include "Engine/World.h"
 #include "FileHelpers.h"
 #include "GameFramework/PlayerStart.h"
+#include "GenericPlatform/GenericPlatformFile.h"
+#include "HAL/PlatformFileManager.h"
 #include "LaneGraph/DFLaneGraphAsset.h"
 #include "LaneGraph/DFLaneGraphBuilder.h"
 #include "LaneGraph/DFLevelFile.h"
 #include "Misc/PackageName.h"
+#include "Misc/Paths.h"
 #include "UObject/Package.h"
 #include "UObject/SavePackage.h"
 #include "World/DFCore.h"
@@ -186,6 +189,11 @@ bool UDFLevelImportCommandlet::ImportMap(const FString& MapId, bool bPreferLegac
 		}
 	}
 	PlaceActors(P, Level, *Asset);
+	if (P.Collisions > 0)
+	{
+		OutError = FString::Printf(TEXT("%d placement key(s) used twice in one import (see the errors above); nothing saved"), P.Collisions);
+		return false;
+	}
 	for (const auto& Pair : P.Existing)
 	{
 		if (!P.Touched.Contains(Pair.Value))
@@ -197,7 +205,17 @@ bool UDFLevelImportCommandlet::ImportMap(const FString& MapId, bool bPreferLegac
 	}
 	UE_LOG(LogDFLevelImport, Display, TEXT("%s: actors spawned %d, moved %d, removed %d"), *MapId, P.Spawned, P.Moved, P.Removed);
 
-	// 4. Save: the asset, the sublevel, and the persistent level when it changed.
+	// 4. Save: the asset, the sublevel, and the persistent level when it changed. A checked-out
+	//    tree has every committed .uasset/.umap read-only (LFS `lockable`, see the header): clear
+	//    that on exactly the files about to be written, before the first save.
+	const bool bSavePersistent = bPersistentCreated || bSublevelAdded;
+	if (!MakePackageWritable(AssetPackage, TEXT("the lane graph asset"))
+		|| !MakePackageWritable(GameplayPackage, TEXT("the gameplay sublevel"))
+		|| (bSavePersistent && !MakePackageWritable(PersistentPackage, TEXT("the persistent level"))))
+	{
+		OutError = TEXT("a package to save is read-only and could not be made writable (see above)");
+		return false;
+	}
 	if (!SaveAsset(Asset, OutError))
 	{
 		return false;
@@ -208,7 +226,7 @@ bool UDFLevelImportCommandlet::ImportMap(const FString& MapId, bool bPreferLegac
 		OutError = FString::Printf(TEXT("saving %s failed"), *GameplayPackage);
 		return false;
 	}
-	if (bPersistentCreated || bSublevelAdded)
+	if (bSavePersistent)
 	{
 		if (!UEditorLoadingAndSavingUtils::SaveMap(World, PersistentPackage))
 		{
@@ -217,8 +235,48 @@ bool UDFLevelImportCommandlet::ImportMap(const FString& MapId, bool bPreferLegac
 		}
 	}
 	UE_LOG(LogDFLevelImport, Display, TEXT("%s: saved %s, %s%s"), *MapId, *AssetPackage, *GameplayPackage,
-		(bPersistentCreated || bSublevelAdded) ? *(TEXT(", ") + PersistentPackage) : TEXT(""));
+		bSavePersistent ? *(TEXT(", ") + PersistentPackage) : TEXT(""));
 	return true;
+}
+
+bool UDFLevelImportCommandlet::MakeWritable(const FString& Filename, const TCHAR* Purpose)
+{
+	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+	if (Filename.IsEmpty() || !PlatformFile.FileExists(*Filename) || !PlatformFile.IsReadOnly(*Filename))
+	{
+		return true;
+	}
+	if (!PlatformFile.SetReadOnly(*Filename, false))
+	{
+		UE_LOG(LogDFLevelImport, Error, TEXT("%s is read-only and could not be made writable (%s)"), *Filename, Purpose);
+		return false;
+	}
+	UE_LOG(LogDFLevelImport, Display, TEXT("made %s writable (%s; it was read-only)"), *Filename, Purpose);
+
+	// .gitattributes marks Content/**/*.uasset and *.umap `lockable` (ADR-0010): git-lfs checks them
+	// out read-only and `git lfs lock` is what makes one writable. Clearing the bit keeps a
+	// re-import working on a plain checkout; it takes no lock, and the lock model must not be
+	// broken silently — so one line, every time.
+	const FString Ext = FPaths::GetExtension(Filename).ToLower();
+	const FString ContentDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir());
+	if ((Ext == TEXT("uasset") || Ext == TEXT("umap")) && FPaths::IsUnderDirectory(Filename, ContentDir))
+	{
+		FString RepoRelative = Filename;
+		const FString RepoRoot = FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectDir(), TEXT("../..")));
+		FPaths::MakePathRelativeTo(RepoRelative, *(RepoRoot / TEXT("")));
+		UE_LOG(LogDFLevelImport, Warning, TEXT("LFS reminder (ADR-0010): %s is lockable and no lock was taken — `git lfs lock %s` before editing a shared level, `git lfs unlock` at session end"), *Filename, *RepoRelative);
+	}
+	return true;
+}
+
+bool UDFLevelImportCommandlet::MakePackageWritable(const FString& PackageName, const TCHAR* Purpose)
+{
+	FString Filename;
+	if (!FPackageName::DoesPackageExist(PackageName, &Filename))
+	{
+		return true;   // not on disk yet: the save creates it writable
+	}
+	return MakeWritable(FPaths::ConvertRelativePathToFull(Filename), Purpose);
 }
 
 UWorld* UDFLevelImportCommandlet::LoadOrCreatePersistentLevel(const FString& PackageName, const FDFLevelFile& Level, bool& bOutCreated)
@@ -487,6 +545,14 @@ T* UDFLevelImportCommandlet::FindOrSpawn(FPlacement& P, FName Id, const FVector&
 		Actor = P.World->SpawnActor<T>(T::StaticClass(), Location, Rotation, SP);
 		++P.Spawned;
 	}
+	if (P.Touched.Contains(Actor))
+	{
+		// Two records of this import resolved to one placement key, so the second silently
+		// overwrote the first (a warp pad that is both an arrival and a departure, keyed by node
+		// id alone, was exactly this). Counted; the import fails instead of losing an actor.
+		UE_LOG(LogDFLevelImport, Error, TEXT("placement key %s used twice in one import"), *Key);
+		++P.Collisions;
+	}
 	Actor->SetStableId(Id);
 	P.Touched.Add(Actor);
 	return Actor;
@@ -553,18 +619,18 @@ void UDFLevelImportCommandlet::PlaceActors(FPlacement& P, const FDFLevelFile& Le
 		{
 			continue;
 		}
+		// One actor per warp END, keyed "<node>@<edge>" (ADFWarpGate::StableIdFor): a pad that is
+		// the arrival of one warp and the departure of another gets two actors, one per role.
 		const FDFLaneNode* From = Asset.FindNode(Edge.From);
 		const FDFLaneNode* To = Asset.FindNode(Edge.To);
 		if (From)
 		{
-			ADFWarpGate* Gate = FindOrSpawn<ADFWarpGate>(P, From->Id, From->Position, FRotator::ZeroRotator);
-			Gate->EdgeId = Edge.Id;
+			ADFWarpGate* Gate = FindOrSpawn<ADFWarpGate>(P, ADFWarpGate::StableIdFor(From->Id, Edge.Id), From->Position, FRotator::ZeroRotator);
 			Gate->bArrival = false;
 		}
 		if (To)
 		{
-			ADFWarpGate* Gate = FindOrSpawn<ADFWarpGate>(P, To->Id, To->Position, FRotator::ZeroRotator);
-			Gate->EdgeId = Edge.Id;
+			ADFWarpGate* Gate = FindOrSpawn<ADFWarpGate>(P, ADFWarpGate::StableIdFor(To->Id, Edge.Id), To->Position, FRotator::ZeroRotator);
 			Gate->bArrival = true;
 		}
 	}

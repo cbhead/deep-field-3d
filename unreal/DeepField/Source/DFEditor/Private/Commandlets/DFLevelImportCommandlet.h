@@ -23,6 +23,15 @@ struct FDFLevelFile;
 // Re-import updates in place: every placed actor is found by class + stable id and moved; ids that
 // vanished from the file are removed; nothing is ever recreated under a new GUID. Ground positions
 // are projected onto whatever blocks DF_LaneSurface (the flat floor today, the Landscape later).
+//
+// LFS etiquette (ADR-0010): unreal/.gitattributes marks every Content/**/*.uasset and *.umap
+// `lockable`, so a checked-out tree has them READ-ONLY until `git lfs lock <path>` — and a save
+// onto one fails ("Cannot remove ... as it is read only"). The commandlet clears the read-only
+// bit on the packages it is about to save (DA_LaneGraph_<Map>, L_<Map>_Gameplay, and L_<Map>
+// only when it adds the sublevel), logs each file it made writable, and prints a one-line
+// reminder for each lockable one: it did NOT take the lock. The etiquette stands: before
+// re-importing a shared level, `git lfs lock unreal/DeepField/Content/DF/Maps/<Map>/L_<Map>_Gameplay.umap`
+// (and L_<Map>.umap when it will be saved), and `git lfs unlock` at session end (PROGRAMME §6.5).
 UCLASS()
 class UDFLevelImportCommandlet : public UCommandlet
 {
@@ -32,6 +41,14 @@ public:
 	UDFLevelImportCommandlet();
 
 	virtual int32 Main(const FString& Params) override;
+
+	/** Clear the read-only bit on a file about to be overwritten (a checked-out LFS `lockable`
+	 *  file, see above). Logs what it made writable and, for a lockable file, the lock reminder.
+	 *  True when the file is writable afterwards or is not on disk at all. */
+	static bool MakeWritable(const FString& Filename, const TCHAR* Purpose);
+
+	/** MakeWritable for the file a package is saved to; true for a package not yet on disk. */
+	static bool MakePackageWritable(const FString& PackageName, const TCHAR* Purpose);
 
 private:
 	struct FPlacement
@@ -43,6 +60,7 @@ private:
 		int32 Spawned = 0;
 		int32 Moved = 0;
 		int32 Removed = 0;
+		int32 Collisions = 0;                     // one placement key used by two records in one import
 	};
 
 	bool ImportMap(const FString& MapId, bool bPreferLegacy, FString& OutError);
