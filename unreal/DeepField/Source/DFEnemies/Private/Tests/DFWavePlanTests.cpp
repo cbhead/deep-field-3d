@@ -1,3 +1,4 @@
+#include "Content/DFContentRows.h"
 #include "Content/DFContentSubsystem.h"
 #include "Misc/AutomationTest.h"
 #include "Misc/FileHelper.h"
@@ -22,6 +23,7 @@ namespace
 	struct FGoldenCondition { const char* Map; int32 Wave; uint32 FactorBits; };
 	struct FGoldenRng { uint32 Seed; const char* Stream; uint32 Index; uint32 Draws[8]; };
 	struct FGoldenPow { uint32 XBits; int32 N; uint32 ResultBits; };
+	struct FGoldenRound { uint32 XBits; uint32 ResultBits; };
 	struct FGoldenScale { const char* Map; int32 Wave; int32 Players; uint32 HpBits; uint32 BountyBits; uint32 ScrapBits; };
 	struct FGoldenPlan { const char* Map; int32 Wave; int32 Players; int32 Count; uint32 Hash; };
 	struct FGoldenEntry { const char* DefId; int32 Tick; uint32 HpBits; const char* Route; uint32 LateralBits; };
@@ -98,7 +100,8 @@ namespace
 		return Tables;
 	}
 
-	/** The order the golden hashes were taken in: total, so an unstable sort on the C# side cannot matter. */
+	/** The order the golden hashes were taken in: total, so an unstable sort on the C# side cannot
+	 *  matter, and by OrdinalKey, so neither can the casing FName::ToString() happens to return. */
 	void SortCanonical(TArray<FDFSpawnEntry>& Entries)
 	{
 		Entries.Sort([](const FDFSpawnEntry& A, const FDFSpawnEntry& B)
@@ -107,11 +110,11 @@ namespace
 			{
 				return A.TickOffset < B.TickOffset;
 			}
-			if (const int32 ById = FCString::Strcmp(*A.DefId.ToString(), *B.DefId.ToString()))
+			if (const int32 ById = FCString::Strcmp(*FDFWavePlan::OrdinalKey(A.DefId), *FDFWavePlan::OrdinalKey(B.DefId)))
 			{
 				return ById < 0;
 			}
-			if (const int32 ByRoute = FCString::Strcmp(*A.RouteId.ToString(), *B.RouteId.ToString()))
+			if (const int32 ByRoute = FCString::Strcmp(*FDFWavePlan::OrdinalKey(A.RouteId), *FDFWavePlan::OrdinalKey(B.RouteId)))
 			{
 				return ByRoute < 0;
 			}
@@ -123,7 +126,7 @@ namespace
 		});
 	}
 
-	/** FNV-1a over (defId, 0, tick, hp bits, routeId, 0, lateral bits), little-endian — the dumper's recipe. */
+	/** FNV-1a over (defId, 0, tick, hp bits, routeId, 0, lateral bits), little-endian, ids lower-cased — the dumper's recipe. */
 	uint32 HashPlan(const TArray<FDFSpawnEntry>& Entries)
 	{
 		uint32 H = 2166136261u;
@@ -131,7 +134,7 @@ namespace
 		auto U32 = [&Byte](uint32 V) { for (int32 I = 0; I < 4; ++I) { Byte(V >> (I * 8)); } };
 		auto Str = [&Byte](const FName& Name)
 		{
-			for (const TCHAR C : Name.ToString())
+			for (const TCHAR C : FDFWavePlan::OrdinalKey(Name))
 			{
 				Byte(static_cast<uint32>(C));
 			}
@@ -215,7 +218,19 @@ bool FDFWavePlanDetMathTest::RunTest(const FString& Parameters)
 		}
 	}
 
-	// MathF.Round: ties to even. 5 shades x 0.5 night weight is 2 extra, not 3.
+	// .NET's own MathF.Round — the call WavePlan.cs makes — for ties, the floats either side of a
+	// tie, night-wave extras and lap counts. No wave in the sim's tables lands exactly on .5, so
+	// without these the plans never reach the ties-to-even branch.
+	for (const FGoldenRound& G : GGoldenRound)
+	{
+		const uint32 Got = Bits(FDFDetMath::RoundHalfToEven(FromBits(G.XBits)));
+		if (Got != G.ResultBits)
+		{
+			AddError(FString::Printf(TEXT("RoundHalfToEven(%.9g): %.9g, MathF.Round %.9g"), FromBits(G.XBits), FromBits(Got), FromBits(G.ResultBits)));
+		}
+	}
+
+	// And by hand: 5 shades x 0.5 night weight is 2 extra, not 3.
 	const TPair<float, float> Rounds[] = { { 0.5f, 0.f }, { 1.5f, 2.f }, { 2.5f, 2.f }, { 3.5f, 4.f }, { 2.4f, 2.f }, { 2.6f, 3.f }, { 7.f, 7.f }, { -2.5f, -2.f }, { -3.5f, -4.f } };
 	for (const TPair<float, float>& R : Rounds)
 	{
@@ -385,7 +400,7 @@ bool FDFWavePlanOrderTest::RunTest(const FString& Parameters)
 			for (int32 I = 1; I < Plan.Num(); ++I)
 			{
 				const bool bOrdered = Plan[I - 1].TickOffset < Plan[I].TickOffset
-					|| (Plan[I - 1].TickOffset == Plan[I].TickOffset && FCString::Strcmp(*Plan[I - 1].DefId.ToString(), *Plan[I].DefId.ToString()) <= 0);
+					|| (Plan[I - 1].TickOffset == Plan[I].TickOffset && FCString::Strcmp(*FDFWavePlan::OrdinalKey(Plan[I - 1].DefId), *FDFWavePlan::OrdinalKey(Plan[I].DefId)) <= 0);
 				if (!bOrdered)
 				{
 					AddError(FString::Printf(TEXT("%s wave %d: entry %d is out of order"), Map, W, I));
@@ -460,9 +475,32 @@ bool FDFWavePlanValidateTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("names the id"), Error.Contains(TEXT("notAnEnemy")));
 
 	FDFWavePlanTables MissingDial = Good;
-	MissingDial.Dials.HpGrowth = 0.f;
+	MissingDial.Dials.HpGrowth = FDFWavePlanDials::Unset;
 	TestFalse(TEXT("a missing dial"), MissingDial.Validate(Error));
-	TestTrue(TEXT("names the dial"), Error.Contains(TEXT("hpGrowth")));
+	TestTrue(TEXT("names the dial and calls it missing"), Error.Contains(TEXT("hpGrowth")) && Error.Contains(TEXT("missing")));
+
+	FDFWavePlanTables NeverSet = Good;
+	NeverSet.Dials = FDFWavePlanDials();
+	TestFalse(TEXT("dials nobody set are missing, not zero"), NeverSet.Validate(Error));
+
+	// 0 is a balance choice for the per-player dials — the sim computes 1 + x * (players - 1) for any x.
+	FDFWavePlanTables FlatCoop = Good;
+	FlatCoop.Dials.CountScalePerExtraPlayer = 0.f;
+	FlatCoop.Dials.HpScalePerExtraPlayer = 0.f;
+	if (TestTrue(TEXT("zero co-op scaling is valid"), FlatCoop.Validate(Error)))
+	{
+		TestEqual(TEXT("and four players then face the solo wave"), FDFWavePlan::PlanWave(GGoldenSeed, FlatCoop, 0, 4).Num(), FDFWavePlan::PlanWave(GGoldenSeed, Good, 0, 1).Num());
+		TestEqual(TEXT("at solo hp"), Bits(FDFWavePlan::HpScale(FlatCoop, 3, 4)), Bits(FDFWavePlan::HpScale(Good, 3, 1)));
+	}
+
+	FDFWavePlanTables ZeroGrowth = Good;
+	ZeroGrowth.Dials.HpGrowth = 0.f;
+	TestFalse(TEXT("a growth factor of 0 is not"), ZeroGrowth.Validate(Error));
+	TestTrue(TEXT("and the message says why"), Error.Contains(TEXT("hpGrowth")) && Error.Contains(TEXT("positive")));
+
+	FDFWavePlanTables NegativeCoop = Good;
+	NegativeCoop.Dials.CountScalePerExtraPlayer = -0.1f;
+	TestFalse(TEXT("nor a negative per-player dial"), NegativeCoop.Validate(Error));
 
 	FDFWavePlanTables LateCondition = Good;
 	LateCondition.StealthWeightFactorByWave.Add(Good.Waves.Num(), 1.5f);
@@ -475,6 +513,113 @@ bool FDFWavePlanValidateTest::RunTest(const FString& Parameters)
 	FDFWavePlanTables NoRoute = Good;
 	NoRoute.Waves[0][0].RouteId = NAME_None;
 	TestFalse(TEXT("a group with no route"), NoRoute.Validate(Error));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFWavePlanNameCaseTest, "DF.Unit.WavePlan.OrderIgnoresNameCase", WavePlanTestFlags)
+bool FDFWavePlanNameCaseTest::RunTest(const FString& Parameters)
+{
+	// FName is case-insensitive, and outside the editor ToString() hands back whichever casing was
+	// registered first ("escape" reads "Escape": InputCore's key got there first). Order and hashes
+	// must be a function of the id, so they go through OrdinalKey. The editor preserves case per
+	// FName, which lets this test stand in for a Game build: spell the ids the way another module might have.
+	TestEqual(TEXT("one key whatever the casing"), FDFWavePlan::OrdinalKey(FName(TEXT("Escape"))), FDFWavePlan::OrdinalKey(FName(TEXT("escape"))));
+	TestEqual(TEXT("and it is the lower-case one"), FDFWavePlan::OrdinalKey(FName(TEXT("GroundShort"))), FString(TEXT("groundshort")));
+
+	auto Tied = [](const TCHAR* First, const TCHAR* Second)
+	{
+		FDFWavePlanTables T;
+		T.MapId = TEXT("case");
+		T.Dials = GoldenDials();
+		T.Enemies.Add(First);
+		T.Enemies.Add(Second);
+		TArray<FDFWavePlanGroup>& Wave = T.Waves.AddDefaulted_GetRef();
+		Wave.Add({ First, 1, 0, 0, TEXT("ground") });
+		Wave.Add({ Second, 1, 0, 0, TEXT("ground") });
+		return FDFWavePlan::PlanWave(1u, T, 0, 1);
+	};
+	// Ordinal on the raw strings would put 'Z' (0x5A) before 'a' (0x61).
+	const TArray<FDFSpawnEntry> Mixed = Tied(TEXT("Zeta"), TEXT("alpha"));
+	const TArray<FDFSpawnEntry> Lower = Tied(TEXT("zeta"), TEXT("alpha"));
+	if (TestTrue(TEXT("two entries each"), Mixed.Num() == 2 && Lower.Num() == 2))
+	{
+		TestEqual(TEXT("alpha first, however zeta is spelled"), Mixed[0].DefId, FName(TEXT("alpha")));
+		TestEqual(TEXT("same order as the lower-case spelling"), Mixed[0].DefId, Lower[0].DefId);
+	}
+
+	// The golden hash of a route the engine has its own casing for.
+	TArray<FDFSpawnEntry> One;
+	One.AddDefaulted_GetRef().DefId = TEXT("drifter");
+	One[0].RouteId = TEXT("escape");
+	TArray<FDFSpawnEntry> Other = One;
+	Other[0].RouteId = TEXT("Escape");
+	Other[0].DefId = TEXT("Drifter");
+	TestEqual(TEXT("hash does not see casing"), HashPlan(One), HashPlan(Other));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFWavePlanRowsTest, "DF.Unit.WavePlan.RowsAreBoundedBeforeSizing", WavePlanTestFlags)
+bool FDFWavePlanRowsTest::RunTest(const FString& Parameters)
+{
+	// waves.schema.json only says "integer": a wave index is content, and content is hostile until
+	// checked. None of these may size an array by the number they carry.
+	auto Row = [](int32 WaveIndex)
+	{
+		FDFWaveGroupRow R;
+		R.WaveIndex = WaveIndex;
+		R.EnemyId = TEXT("drifter");
+		R.Count = 3;
+		R.RouteId = TEXT("ground");
+		return R;
+	};
+	auto Build = [](TConstArrayView<FDFWaveGroupRow> Rows, int32 TotalWaves, FString& Error, FDFWavePlanTables& Out)
+	{
+		TArray<const FDFWaveGroupRow*> Pointers;
+		for (const FDFWaveGroupRow& R : Rows)
+		{
+			Pointers.Add(&R);
+		}
+		Out.MapId = TEXT("rows");
+		return Out.SetWavesFromRows(Pointers, TotalWaves, Error);
+	};
+
+	FString Error;
+	FDFWavePlanTables T;
+	const FDFWaveGroupRow Good[] = { Row(0), Row(0), Row(1), Row(2) };
+	if (TestTrue(TEXT("rows in range build"), Build(Good, 3, Error, T)))
+	{
+		TestTrue(TEXT("three waves, two groups in the first"), T.Waves.Num() == 3 && T.Waves[0].Num() == 2 && T.Waves[2].Num() == 1);
+	}
+
+	const FDFWaveGroupRow Wraps[] = { Row(0), Row(MAX_int32) };
+	TestFalse(TEXT("INT_MAX does not wrap into a SetNum"), Build(Wraps, 3, Error, T));
+	TestTrue(TEXT("and names the index"), Error.Contains(TEXT("2147483647")));
+	TestEqual(TEXT("nothing half-built is left behind"), T.Waves.Num(), 0);
+
+	const FDFWaveGroupRow Huge[] = { Row(0), Row(200000000) };
+	TestFalse(TEXT("200 million does not allocate"), Build(Huge, 3, Error, T));
+
+	const FDFWaveGroupRow Negative[] = { Row(-1) };
+	TestFalse(TEXT("a negative index"), Build(Negative, 3, Error, T));
+
+	const FDFWaveGroupRow OnePast[] = { Row(0), Row(3) };
+	TestFalse(TEXT("one past the map's last wave"), Build(OnePast, 3, Error, T));
+
+	const FDFWaveGroupRow Backwards[] = { Row(1), Row(0) };
+	TestFalse(TEXT("a table that goes backwards"), Build(Backwards, 3, Error, T));
+	TestTrue(TEXT("says out of order"), Error.Contains(TEXT("out of order")));
+
+	TestFalse(TEXT("a map with two billion waves"), Build(Good, 2000000000, Error, T));
+	TestFalse(TEXT("a map with none"), Build(Good, 0, Error, T));
+	TestTrue(TEXT("the cap is the structural one"), Build(Good, FDFWavePlanTables::MaxAuthoredWaves, Error, T) && T.Waves.Num() == FDFWavePlanTables::MaxAuthoredWaves);
+
+	// Fewer authored waves than the map claims: the rows build, Validate refuses the empty wave.
+	FDFWavePlanTables Short = GoldenTables(TEXT("foundry"));
+	const FDFWaveGroupRow TwoOfThree[] = { Row(0), Row(1) };
+	TestTrue(TEXT("rows for 2 of 3 waves build"), Build(TwoOfThree, 3, Error, Short));
+	Short.MapId = TEXT("short");
+	TestFalse(TEXT("but do not validate"), Short.Validate(Error));
+	TestTrue(TEXT("because wave 2 is empty"), Error.Contains(TEXT("wave 2 has no groups")));
 	return true;
 }
 

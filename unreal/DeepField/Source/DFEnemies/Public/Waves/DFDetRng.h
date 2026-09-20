@@ -1,12 +1,15 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Waves/DFDetMath.h"   // DF_DET_FP_*
 
 // Deterministic randomness, ported bit for bit from sim/Sim.Core/Util/Rng.cs. Gameplay that must
 // be a pure function of (seed, stream, index) draws from here and never from FMath::Rand or
 // FRandomStream: wave N's content is identical whatever waves 1..N-1 drew, which is what resume
 // under a new host, join-in-progress and the balance sweeps rely on (B§1.11).
 // Header-only and free of DF dependencies so it can move to DFCore when a second module needs it.
+
+DF_DET_FP_PUSH
 
 /** mulberry32. One stream; obtain it from FDFRngStreams::StreamFor. */
 struct FDFDetRng
@@ -23,10 +26,18 @@ struct FDFDetRng
 	}
 
 	/** Uniform in [0, 1). */
-	double NextDouble() { return static_cast<double>(NextUInt()) / 4294967296.0; }
+	double NextDouble()
+	{
+		DF_DET_FP_SCOPE
+		return static_cast<double>(NextUInt()) / 4294967296.0;   // a division, never a multiply by the reciprocal
+	}
 
 	/** NextDouble narrowed to float, as the sim does; a draw near 1 can round up to 1.0f there too. */
-	float NextFloat() { return static_cast<float>(NextDouble()); }
+	float NextFloat()
+	{
+		DF_DET_FP_SCOPE
+		return static_cast<float>(NextDouble());
+	}
 
 	/** Uniform integer in [MinInclusive, MaxExclusive). Modulo bias included — it is the sim's. */
 	int32 NextInt(int32 MinInclusive, int32 MaxExclusive)
@@ -70,3 +81,5 @@ struct FDFRngStreams
 		return FDFDetRng(H);
 	}
 };
+
+DF_DET_FP_POP

@@ -1,9 +1,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include <limits>
 #include "DFWavePlan.generated.h"
 
 class UDFContentSubsystem;
+struct FDFWaveGroupRow;
 
 // The wave plan, ported from sim/Sim.Core/WavePlan.cs (the written spec, ADR-0005; B§1.11).
 // A wave's content is a pure function of (seed, tables, waveIndex, playerCount): no sequential
@@ -50,17 +52,20 @@ struct FDFWavePlanEnemy
 	int32 SplitCount = 0;   // not read by the plan; carried for spawn totals (a Cluster's children)
 };
 
-/** Balance.cs dials the plan reads, by their balance.json names. No defaults: a plan with a missing dial is an error. */
+/** Balance.cs dials the plan reads, by their balance.json names. Unset is NaN, not 0: a per-player
+ *  dial of 0 is a legitimate balance choice ("co-op adds no bodies"), a missing dial is an error. */
 struct FDFWavePlanDials
 {
-	float CountScalePerExtraPlayer = 0.f;
-	float HpScalePerExtraPlayer = 0.f;
-	float EndlessCountGrowthPerLap = 0.f;
-	float HpGrowth = 0.f;
-	float EndlessHpGrowth = 0.f;
-	float BountyScale = 0.f;
-	float BountyGrowth = 0.f;
-	float ScrapGrowth = 0.f;
+	static constexpr float Unset = std::numeric_limits<float>::quiet_NaN();
+
+	float CountScalePerExtraPlayer = Unset;   // >= 0
+	float HpScalePerExtraPlayer = Unset;      // >= 0
+	float EndlessCountGrowthPerLap = Unset;   // > 0
+	float HpGrowth = Unset;                   // > 0
+	float EndlessHpGrowth = Unset;            // > 0
+	float BountyScale = Unset;                // >= 0
+	float BountyGrowth = Unset;               // > 0
+	float ScrapGrowth = Unset;                // > 0
 };
 
 /** Everything PlanWave reads, as plain data: built from content at match start, or by hand in a test. */
@@ -75,13 +80,28 @@ struct DFENEMIES_API FDFWavePlanTables
 	/** Non-empty arc, no empty wave, every group's enemy known and its numbers sane, nothing scheduled past the arc, every dial set. */
 	bool Validate(FString& OutError) const;
 
+	/** The most waves a map may author. A structural bound, not a balance number: it is what keeps a
+	 *  typo in maps.json or waves_*.json from sizing an array by it. */
+	static constexpr int32 MaxAuthoredWaves = 512;
+
+	/** Wave-table rows -> Waves, in table order. Every WaveIndex must lie in [0, TotalWaves) and never
+	 *  decrease; checked before anything is sized by it. Does not look enemies up (FromContent does). */
+	bool SetWavesFromRows(TConstArrayView<const FDFWaveGroupRow*> Rows, int32 TotalWaves, FString& OutError);
+
 	/** From the imported DataTables. False with the offending id in OutError; never a silent default. */
 	static bool FromContent(const UDFContentSubsystem& Content, FName MapId, FDFWavePlanTables& Out, FString& OutError);
 };
 
 struct DFENEMIES_API FDFWavePlan
 {
-	/** Sorted by (TickOffset, DefId ordinal); entries that tie keep plan order (authored groups, then condition spawns). */
+	/** The string an id sorts and hashes by: its lower-cased spelling. An FName is case-insensitive
+	 *  and, outside the editor, ToString() returns whichever casing reached the name table first in
+	 *  the process ("escape" reads back "Escape": InputCore registered the key) — so only a
+	 *  case-folded key is a function of the id alone. Same order as the sim's ordinal compare for
+	 *  the all-lowercase enemy ids the sim has. */
+	static FString OrdinalKey(FName Id);
+
+	/** Sorted by (TickOffset, OrdinalKey(DefId)); entries that tie keep plan order (authored groups, then condition spawns). */
 	static TArray<FDFSpawnEntry> PlanWave(uint32 Seed, const FDFWavePlanTables& Tables, int32 WaveIndex, int32 PlayerCount);
 
 	/** The hp multiplier a wave spawns with, player factor included: HpGrowth compounded through

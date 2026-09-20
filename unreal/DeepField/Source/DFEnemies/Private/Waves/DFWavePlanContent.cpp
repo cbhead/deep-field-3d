@@ -22,47 +22,26 @@ bool FDFWavePlanTables::FromContent(const UDFContentSubsystem& Content, FName Ma
 		return Fail(TEXT("no row in the maps table"));
 	}
 
-	// Groups arrive in table order, which the importer writes in JSON order: wave index ascending,
-	// and within a wave the authored order — the order the wave stream is drawn in. A table that
-	// goes backwards was not written by the importer.
-	int32 LastWave = 0;
-	for (const FDFWaveGroupRow* Row : Content.Waves(MapId))
+	const TArray<const FDFWaveGroupRow*> Rows = Content.Waves(MapId);
+	if (!Out.SetWavesFromRows(Rows, Sector->TotalWaves, OutError))
 	{
-		if (Row->WaveIndex < LastWave)
-		{
-			return Fail(FString::Printf(TEXT("wave table is out of order at wave %d ('%s')"), Row->WaveIndex, *Row->EnemyId.ToString()));
-		}
-		LastWave = Row->WaveIndex;
-		if (!Out.Waves.IsValidIndex(Row->WaveIndex))
-		{
-			Out.Waves.SetNum(Row->WaveIndex + 1);
-		}
-
-		FDFWavePlanGroup& Group = Out.Waves[Row->WaveIndex].AddDefaulted_GetRef();
-		Group.EnemyId = Row->EnemyId;
-		Group.Count = Row->Count;
-		Group.SpacingTicks = Row->SpacingTicks;
-		Group.StartDelayTicks = Row->StartDelayTicks;
-		Group.RouteId = Row->RouteId;
-		Group.Elite = Row->Elite;
-		Group.bBoss = Row->bBoss;
-
-		if (!Out.Enemies.Contains(Row->EnemyId))
-		{
-			const FDFEnemyRow* Enemy = Content.Enemy(Row->EnemyId);
-			if (!Enemy)
-			{
-				return Fail(FString::Printf(TEXT("wave %d names enemy '%s', which has no row"), Row->WaveIndex, *Row->EnemyId.ToString()));
-			}
-			FDFWavePlanEnemy& PlanEnemy = Out.Enemies.Add(Row->EnemyId);
-			PlanEnemy.ScatterWidth = Enemy->ScatterWidth;
-			PlanEnemy.bStealth = Enemy->bStealth;
-			PlanEnemy.SplitCount = Enemy->SplitCount;
-		}
+		return false;
 	}
-	if (Out.Waves.Num() != Sector->TotalWaves)
+	for (const FDFWaveGroupRow* Row : Rows)
 	{
-		return Fail(FString::Printf(TEXT("the maps table says %d waves, the wave table has %d"), Sector->TotalWaves, Out.Waves.Num()));
+		if (Out.Enemies.Contains(Row->EnemyId))
+		{
+			continue;
+		}
+		const FDFEnemyRow* Enemy = Content.Enemy(Row->EnemyId);
+		if (!Enemy)
+		{
+			return Fail(FString::Printf(TEXT("wave %d names enemy '%s', which has no row"), Row->WaveIndex, *Row->EnemyId.ToString()));
+		}
+		FDFWavePlanEnemy& PlanEnemy = Out.Enemies.Add(Row->EnemyId);
+		PlanEnemy.ScatterWidth = Enemy->ScatterWidth;
+		PlanEnemy.bStealth = Enemy->bStealth;
+		PlanEnemy.SplitCount = Enemy->SplitCount;
 	}
 
 	for (const TPair<int32, FName>& Scheduled : Sector->ConditionSchedule)
@@ -75,15 +54,16 @@ bool FDFWavePlanTables::FromContent(const UDFContentSubsystem& Content, FName Ma
 		Out.StealthWeightFactorByWave.Add(Scheduled.Key, Condition->StealthWeightFactor);
 	}
 
-	// A missing dial reads as 0 (and the subsystem logs its name); Validate refuses it.
-	Out.Dials.CountScalePerExtraPlayer = Content.Balance(TEXT("countScalePerExtraPlayer"));
-	Out.Dials.HpScalePerExtraPlayer = Content.Balance(TEXT("hpScalePerExtraPlayer"));
-	Out.Dials.EndlessCountGrowthPerLap = Content.Balance(TEXT("endlessCountGrowthPerLap"));
-	Out.Dials.HpGrowth = Content.Balance(TEXT("hpGrowth"));
-	Out.Dials.EndlessHpGrowth = Content.Balance(TEXT("endlessHpGrowth"));
-	Out.Dials.BountyScale = Content.Balance(TEXT("bountyScale"));
-	Out.Dials.BountyGrowth = Content.Balance(TEXT("bountyGrowth"));
-	Out.Dials.ScrapGrowth = Content.Balance(TEXT("scrapGrowth"));
+	// A missing dial reads as NaN (and the subsystem logs its name); Validate refuses it. 0 is a value.
+	constexpr float Unset = FDFWavePlanDials::Unset;
+	Out.Dials.CountScalePerExtraPlayer = Content.Balance(TEXT("countScalePerExtraPlayer"), Unset);
+	Out.Dials.HpScalePerExtraPlayer = Content.Balance(TEXT("hpScalePerExtraPlayer"), Unset);
+	Out.Dials.EndlessCountGrowthPerLap = Content.Balance(TEXT("endlessCountGrowthPerLap"), Unset);
+	Out.Dials.HpGrowth = Content.Balance(TEXT("hpGrowth"), Unset);
+	Out.Dials.EndlessHpGrowth = Content.Balance(TEXT("endlessHpGrowth"), Unset);
+	Out.Dials.BountyScale = Content.Balance(TEXT("bountyScale"), Unset);
+	Out.Dials.BountyGrowth = Content.Balance(TEXT("bountyGrowth"), Unset);
+	Out.Dials.ScrapGrowth = Content.Balance(TEXT("scrapGrowth"), Unset);
 
 	return Out.Validate(OutError);
 }

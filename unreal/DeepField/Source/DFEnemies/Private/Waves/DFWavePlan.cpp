@@ -1,5 +1,6 @@
 #include "Waves/DFWavePlan.h"
 
+#include "Content/DFContentRows.h"
 #include "Waves/DFDetMath.h"
 #include "Waves/DFDetRng.h"
 
@@ -70,6 +71,11 @@ namespace
 			}
 		}
 	}
+}
+
+FString FDFWavePlan::OrdinalKey(FName Id)
+{
+	return Id.ToString().ToLower();
 }
 
 int32 FDFWavePlan::Lap(const FDFWavePlanTables& Tables, int32 WaveIndex)
@@ -149,14 +155,14 @@ TArray<FDFSpawnEntry> FDFWavePlan::PlanWave(uint32 Seed, const FDFWavePlanTables
 	AppendConditionSpawns(Seed, Tables, WaveIndex, Hp, Entries);
 
 	// The sim sorts by (tick, ordinal def id) with List.Sort, which is unstable: where two entries
-	// tie, their order there is an accident of the .NET runtime. Here ties keep plan order, so the
-	// result is one specific sequence on every platform.
+	// tie, their order there is an accident of the .NET runtime. Here ties keep plan order and ids
+	// compare by OrdinalKey, so the result is one specific sequence on every platform and target.
 	TMap<FName, FString> Ordinal;
 	for (const FDFSpawnEntry& Entry : Entries)
 	{
 		if (!Ordinal.Contains(Entry.DefId))
 		{
-			Ordinal.Add(Entry.DefId, Entry.DefId.ToString());
+			Ordinal.Add(Entry.DefId, OrdinalKey(Entry.DefId));
 		}
 	}
 	Entries.StableSort([&Ordinal](const FDFSpawnEntry& A, const FDFSpawnEntry& B)
@@ -168,6 +174,51 @@ TArray<FDFSpawnEntry> FDFWavePlan::PlanWave(uint32 Seed, const FDFWavePlanTables
 		return A.DefId != B.DefId && FCString::Strcmp(*Ordinal[A.DefId], *Ordinal[B.DefId]) < 0;
 	});
 	return Entries;
+}
+
+bool FDFWavePlanTables::SetWavesFromRows(TConstArrayView<const FDFWaveGroupRow*> Rows, int32 TotalWaves, FString& OutError)
+{
+	auto Fail = [&OutError, this](const FString& Why)
+	{
+		Waves.Reset();
+		OutError = FString::Printf(TEXT("wave plan tables for '%s': %s"), *MapId.ToString(), *Why);
+		return false;
+	};
+
+	// Bound first, size second: nothing below may allocate by a number that came out of a JSON file.
+	if (TotalWaves < 1 || TotalWaves > MaxAuthoredWaves)
+	{
+		return Fail(FString::Printf(TEXT("the maps table says %d waves; a map authors 1 to %d"), TotalWaves, MaxAuthoredWaves));
+	}
+	Waves.Reset();
+	Waves.SetNum(TotalWaves);
+
+	// Groups arrive in table order, which the importer writes in JSON order: wave index ascending,
+	// and within a wave the authored order — the order the wave stream is drawn in. A table that
+	// goes backwards was not written by the importer.
+	int32 LastWave = 0;
+	for (const FDFWaveGroupRow* Row : Rows)
+	{
+		if (Row->WaveIndex < 0 || Row->WaveIndex >= TotalWaves)
+		{
+			return Fail(FString::Printf(TEXT("group '%s' has waveIndex %d, outside the map's %d waves"), *Row->EnemyId.ToString(), Row->WaveIndex, TotalWaves));
+		}
+		if (Row->WaveIndex < LastWave)
+		{
+			return Fail(FString::Printf(TEXT("wave table is out of order at wave %d ('%s')"), Row->WaveIndex, *Row->EnemyId.ToString()));
+		}
+		LastWave = Row->WaveIndex;
+
+		FDFWavePlanGroup& Group = Waves[Row->WaveIndex].AddDefaulted_GetRef();
+		Group.EnemyId = Row->EnemyId;
+		Group.Count = Row->Count;
+		Group.SpacingTicks = Row->SpacingTicks;
+		Group.StartDelayTicks = Row->StartDelayTicks;
+		Group.RouteId = Row->RouteId;
+		Group.Elite = Row->Elite;
+		Group.bBoss = Row->bBoss;
+	}
+	return true;   // a wave left with no groups is Validate's to refuse
 }
 
 bool FDFWavePlanTables::Validate(FString& OutError) const
@@ -212,21 +263,28 @@ bool FDFWavePlanTables::Validate(FString& OutError) const
 		}
 	}
 
-	const TPair<const TCHAR*, float> Required[] = {
-		{ TEXT("countScalePerExtraPlayer"), Dials.CountScalePerExtraPlayer },
-		{ TEXT("hpScalePerExtraPlayer"), Dials.HpScalePerExtraPlayer },
-		{ TEXT("endlessCountGrowthPerLap"), Dials.EndlessCountGrowthPerLap },
-		{ TEXT("hpGrowth"), Dials.HpGrowth },
-		{ TEXT("endlessHpGrowth"), Dials.EndlessHpGrowth },
-		{ TEXT("bountyScale"), Dials.BountyScale },
-		{ TEXT("bountyGrowth"), Dials.BountyGrowth },
-		{ TEXT("scrapGrowth"), Dials.ScrapGrowth },
+	// Every dial must be set (unset is NaN). Growth factors compound, so they must be positive; the
+	// per-player and bounty scales may be 0 — the sim computes 1 + x * (players - 1) and takes any x.
+	struct FDial { const TCHAR* Name; float Value; bool bMustBePositive; };
+	const FDial Required[] = {
+		{ TEXT("countScalePerExtraPlayer"), Dials.CountScalePerExtraPlayer, false },
+		{ TEXT("hpScalePerExtraPlayer"), Dials.HpScalePerExtraPlayer, false },
+		{ TEXT("endlessCountGrowthPerLap"), Dials.EndlessCountGrowthPerLap, true },
+		{ TEXT("hpGrowth"), Dials.HpGrowth, true },
+		{ TEXT("endlessHpGrowth"), Dials.EndlessHpGrowth, true },
+		{ TEXT("bountyScale"), Dials.BountyScale, false },
+		{ TEXT("bountyGrowth"), Dials.BountyGrowth, true },
+		{ TEXT("scrapGrowth"), Dials.ScrapGrowth, true },
 	};
-	for (const TPair<const TCHAR*, float>& Dial : Required)
+	for (const FDial& Dial : Required)
 	{
-		if (!(Dial.Value > 0.f))
+		if (!FMath::IsFinite(Dial.Value))
 		{
-			return Fail(FString::Printf(TEXT("balance dial '%s' is missing or not positive"), Dial.Key));
+			return Fail(FString::Printf(TEXT("balance dial '%s' is missing"), Dial.Name));
+		}
+		if (Dial.bMustBePositive ? Dial.Value <= 0.f : Dial.Value < 0.f)
+		{
+			return Fail(FString::Printf(TEXT("balance dial '%s' is %g; it must be %s"), Dial.Name, Dial.Value, Dial.bMustBePositive ? TEXT("positive") : TEXT("zero or more")));
 		}
 	}
 	return true;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include <cmath>
 
 // Deterministic float helpers, ported from sim/Sim.Core/Math/DetMath.cs. "Deterministic" means one
 // specific IEEE-754 single-precision result on every compiler: no fused multiply-add, no
@@ -50,17 +51,16 @@ struct FDFDetMath
 	 *  ties up, which puts one more enemy in some co-op waves than the sim does. */
 	static float RoundHalfToEven(float X)
 	{
+		DF_DET_FP_SCOPE
 		const float Floor = FMath::FloorToFloat(X);
 		const float Fraction = X - Floor;   // exact for any float with a fractional part
-		if (Fraction > 0.5f)
+		float Rounded = Floor;
+		if (Fraction > 0.5f || (Fraction == 0.5f && FMath::Fmod(Floor, 2.f) != 0.f))
 		{
-			return Floor + 1.f;
+			Rounded = Floor + 1.f;
 		}
-		if (Fraction < 0.5f)
-		{
-			return Floor;
-		}
-		return FMath::Fmod(Floor, 2.f) == 0.f ? Floor : Floor + 1.f;
+		// -0.5 rounds to -0 in .NET, not +0. No count can tell the difference; the golden vectors can.
+		return Rounded == 0.f ? std::copysign(0.f, X) : Rounded;
 	}
 };
 

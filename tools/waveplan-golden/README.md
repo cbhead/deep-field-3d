@@ -12,6 +12,7 @@ The `.inl` carries its own copy of the sim's wave tables, so the golden tests ke
     dotnet run --project tools/waveplan-golden -- unreal/DeepField/Source/DFEnemies/Private/Tests/DFWavePlanGolden.inl
 
 Regenerate only if `sim/Sim.Core` changes (it should not: it is frozen) or the hash recipe does.
-Plans are hashed in a canonical order (tick, def id, route id, lateral bits, hp bits) because
+Plans are hashed in a canonical order (tick, def id, route id, lateral bits, hp bits), with ids
+lower-cased (an FName has no stable case in a Game build), because
 `List.Sort` in .NET is unstable: the order of entries that tie on (tick, def id) is an
 implementation detail of the runtime, not a property of the plan.

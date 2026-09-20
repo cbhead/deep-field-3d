@@ -110,6 +110,27 @@ foreach (float x in new[] { Balance.HpGrowth, Balance.EndlessHpGrowth, Balance.E
 sb.AppendLine("};");
 sb.AppendLine();
 
+// --- MathF.Round ------------------------------------------------------------------------------
+// No wave in the sim's tables lands a body count exactly on .5 (checked over four laps at 1/2/4
+// players), so the plans above never exercise ties-to-even. These do: what .NET's MathF.Round —
+// the call WavePlan.cs makes — returns for ties, near-ties and the counts a night wave produces.
+sb.AppendLine("// x bits, MathF.Round(x) bits");
+sb.AppendLine("static const FGoldenRound GGoldenRound[] = {");
+{
+    var inputs = new List<float> { 0.5f, 1.5f, 2.5f, 3.5f, 34.5f, 35.5f, 80.5f, -0.5f, -1.5f, -2.5f, 2.4f, 2.6f, 7f, 0f };
+    foreach (float below in new[] { 0.5f, 2.5f, 34.5f })
+    {
+        inputs.Add(MathF.BitDecrement(below));
+        inputs.Add(MathF.BitIncrement(below));
+    }
+    for (int count = 1; count <= 9; count++) inputs.Add(count * 0.5f);          // night: authored stealth count x (1.5 - 1)
+    foreach (int count in new[] { 10, 30, 50, 70 }) inputs.Add(count * Balance.EndlessCountGrowthPerLap);   // a lap: 30 x 1.15f is 34.5 exactly
+    foreach (float x in inputs)
+        sb.AppendLine($"\t{{ {Hex(Bits(x))}, {Hex(Bits(MathF.Round(x)))} }},");
+}
+sb.AppendLine("};");
+sb.AppendLine();
+
 // --- Scales -----------------------------------------------------------------------------------
 sb.AppendLine("// map, waveIndex, players, HpScale bits, BountyScale bits, ScrapScale bits");
 sb.AppendLine("static const FGoldenScale GGoldenScales[] = {");
@@ -125,12 +146,18 @@ sb.AppendLine("};");
 sb.AppendLine();
 
 // --- Plans ------------------------------------------------------------------------------------
+// Ids are compared and hashed lower-cased. On the Unreal side they are FNames, which are
+// case-insensitive, and in a Game build FName::ToString() returns whichever spelling was registered
+// first in the process ("escape" comes back as "Escape" because InputCore got there first) — so the
+// only key that is a function of the id alone is a case-folded one.
+static string Key(string id) => id.ToLowerInvariant();
+
 static int Canonical(SpawnEntry a, SpawnEntry b, MapDef map)
 {
     if (a.TickOffset != b.TickOffset) return a.TickOffset.CompareTo(b.TickOffset);
-    int c = string.CompareOrdinal(a.DefId, b.DefId);
+    int c = string.CompareOrdinal(Key(a.DefId), Key(b.DefId));
     if (c != 0) return c;
-    c = string.CompareOrdinal(map.Routes[a.RouteIndex].Id, map.Routes[b.RouteIndex].Id);
+    c = string.CompareOrdinal(Key(map.Routes[a.RouteIndex].Id), Key(map.Routes[b.RouteIndex].Id));
     if (c != 0) return c;
     c = Bits(a.LateralOffset).CompareTo(Bits(b.LateralOffset));
     if (c != 0) return c;
@@ -142,7 +169,7 @@ static uint HashPlan(List<SpawnEntry> entries, MapDef map)
     uint h = 2166136261u;
     void Byte(uint b) { h ^= b & 0xFFu; h = unchecked(h * 16777619u); }
     void U32(uint v) { for (int i = 0; i < 4; i++) Byte(v >> (i * 8)); }
-    void Str(string s) { foreach (char ch in s) Byte(ch); Byte(0); }
+    void Str(string s) { foreach (char ch in Key(s)) Byte(ch); Byte(0); }
     foreach (var e in entries)
     {
         Str(e.DefId);
@@ -154,7 +181,7 @@ static uint HashPlan(List<SpawnEntry> entries, MapDef map)
     return h;
 }
 
-sb.AppendLine("// map, waveIndex, players, entry count, FNV-1a of the plan in canonical order");
+sb.AppendLine("// map, waveIndex, players, entry count, FNV-1a of the plan in canonical order (ids lower-cased)");
 sb.AppendLine("static const FGoldenPlan GGoldenPlans[] = {");
 int planCount = 0;
 foreach (var mapId in mapOrder)
