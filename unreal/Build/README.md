@@ -37,6 +37,10 @@ The build itself is the engine's script, always with `-WaitMutex` so concurrent 
 "$UE_ROOT/Engine/Build/BatchFiles/Mac/Build.sh" DeepFieldEditor Mac Development -Project="$PWD/unreal/DeepField/DeepField.uproject" -WaitMutex -NoHotReload | grep -E " error |Result:"
 ```
 
+## Windows (the GPU workstation)
+
+Nothing above runs on Windows yet: the shell scripts are zsh and Mac-pathed. [windows-bringup.md](windows-bringup.md) is the checklist that takes a bare Windows machine to a building, testing, packaging runner with the raw engine commands; the `.ps1`/`.bat` twins of these scripts and `unreal-win.yml` are WS-15 work that starts once it is green.
+
 ## Where the results go
 
 `unreal/DeepField/Saved/` is untracked: `Logs/test-*.log`, `Logs/smoke-*.log`, `Logs/ci-build.log`, `Logs/pr-build.log`, `Automation/Reports/test-*/index.json` (+ an `index.html` you can open). CI uploads the same files as the `unreal-mac-logs-<run>` artifact. The lanes and the self-hosted runner are described in `unreal/PLAN/CONTRACTS/ci.md`.
