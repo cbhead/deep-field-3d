@@ -181,11 +181,23 @@ bool UDFLevelImportCommandlet::ImportMap(const FString& MapId, bool bPreferLegac
 	FPlacement P;
 	P.World = World;
 	P.Level = GameplayLevel;
+	TArray<ADFWorldActor*> Duplicates;
 	for (AActor* Actor : GameplayLevel->Actors)
 	{
 		if (ADFWorldActor* Placed = Cast<ADFWorldActor>(Actor))
 		{
-			P.Existing.Add(PlacementKey(Placed->GetClass(), Placed->GetStableId()), Placed);
+			const FString Key = PlacementKey(Placed->GetClass(), Placed->GetStableId());
+			if (P.Existing.Contains(Key))
+			{
+				// Two actors in the level answer to one key: a level saved under an older keying
+				// (warp gates by node id alone) or a hand-made duplicate. Only one can be the one
+				// a re-import updates; the other could never be found by its id again, so it is
+				// removed with the stale ones — said out loud, never dropped from the map silently.
+				UE_LOG(LogDFLevelImport, Warning, TEXT("%s: two actors carry the key %s; %s is removed as a duplicate"), *MapId, *Key, *Placed->GetName());
+				Duplicates.Add(Placed);
+				continue;
+			}
+			P.Existing.Add(Key, Placed);
 		}
 	}
 	PlaceActors(P, Level, *Asset);
@@ -193,6 +205,11 @@ bool UDFLevelImportCommandlet::ImportMap(const FString& MapId, bool bPreferLegac
 	{
 		OutError = FString::Printf(TEXT("%d placement key(s) used twice in one import (see the errors above); nothing saved"), P.Collisions);
 		return false;
+	}
+	for (ADFWorldActor* Duplicate : Duplicates)
+	{
+		World->EditorDestroyActor(Duplicate, true);
+		++P.Removed;
 	}
 	for (const auto& Pair : P.Existing)
 	{
@@ -203,7 +220,19 @@ bool UDFLevelImportCommandlet::ImportMap(const FString& MapId, bool bPreferLegac
 			++P.Removed;
 		}
 	}
-	UE_LOG(LogDFLevelImport, Display, TEXT("%s: actors spawned %d, moved %d, removed %d"), *MapId, P.Spawned, P.Moved, P.Removed);
+	// What the level now holds, per class — the count a reviewer checks (four warp gates on Toaster).
+	TMap<FString, int32> PerClass;
+	for (AActor* Placed : P.Touched)
+	{
+		++PerClass.FindOrAdd(Placed->GetClass()->GetName());
+	}
+	TArray<FString> Counts;
+	for (const auto& Pair : PerClass)
+	{
+		Counts.Add(FString::Printf(TEXT("%s %d"), *Pair.Key, Pair.Value));
+	}
+	Counts.Sort();
+	UE_LOG(LogDFLevelImport, Display, TEXT("%s: actors spawned %d, moved %d, removed %d (%s)"), *MapId, P.Spawned, P.Moved, P.Removed, *FString::Join(Counts, TEXT(", ")));
 
 	// 4. Save: the asset, the sublevel, and the persistent level when it changed. A checked-out
 	//    tree has every committed .uasset/.umap read-only (LFS `lockable`, see the header): clear
