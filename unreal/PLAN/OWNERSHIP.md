@@ -10,7 +10,7 @@ CODEOWNERS-style. A PR titled `[WS-NN]` may add or modify **binary** files only 
 | `unreal/DeepField/Source/DFCore/**`, `unreal/DeepField/Source/DFMatch/**`, `unreal/DeepField/Content/DF/Core/**` | WS-00 (contract-append PRs from anyone; changes by RFC) |
 | `tools/content-export/**`, `unreal/content/schema/**` (except `terrain.schema.json`), `unreal/DeepField/Source/DFContentPipeline/**`, `unreal/DeepField/Content/DF/Data/Tables/**`, `unreal/DeepField/Source/DFCore/Public/Content/DFContentRows.h`, `unreal/content/README.md` | WS-01 |
 | `unreal/content/json/towers.json`, `traps.json` | WS-04 |
-| `unreal/content/json/enemies.json`, `elites.json`, `boss.json`, `waves_*.json` | WS-05 (WS-17 elites, WS-19 boss, WS-27 waves by delegation) |
+| `tools/waveplan-golden/**`, `unreal/content/json/enemies.json`, `elites.json`, `boss.json`, `waves_*.json` | WS-05 (WS-17 elites, WS-19 boss, WS-27 waves by delegation) |
 | `unreal/content/json/weapons.json`, `melee.json`, `attachments.json`, `ammo.json`, `balance.json` | WS-06 (WS-27 balance) |
 | `unreal/content/json/statuses.json`, `reactions.json` | WS-02 |
 | `unreal/content/json/factions.json` | WS-07 |
