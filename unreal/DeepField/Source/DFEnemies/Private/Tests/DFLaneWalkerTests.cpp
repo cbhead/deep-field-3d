@@ -109,7 +109,7 @@ bool FDFLaneWalkerWalksTest::RunTest(const FString& Parameters)
 	const FDFLaneItinerary& It = *G->FindItinerary(TEXT("ground"));
 	FRouting R(*G);
 	FDFLaneWalkerState S;
-	if (!TestTrue(TEXT("begins on the first edge"), FDFLaneWalker::Begin(*G, It, 0.f, S)))
+	if (!TestTrue(TEXT("begins on the first edge"), FDFLaneWalker::Begin(*G, It, Params(10.f), R, 0.f, S)))
 	{
 		return false;
 	}
@@ -165,7 +165,7 @@ bool FDFLaneWalkerSlopeTest::RunTest(const FString& Parameters)
 		G->RebuildIndex();
 		FRouting R(*G);
 		FDFLaneWalkerState S;
-		FDFLaneWalker::Begin(*G, G->Itineraries[0], 0.f, S);
+		FDFLaneWalker::Begin(*G, G->Itineraries[0], Params(10.f), R, 0.f, S);
 		int32 Frames = 0;
 		TArray<FDFWalkEvent> Events;
 		while (S.IsWalking() && Frames < 4000)
@@ -207,7 +207,7 @@ bool FDFLaneWalkerStrandedTest::RunTest(const FString& Parameters)
 	R.Rebuild(*G);
 
 	FDFLaneWalkerState S;
-	FDFLaneWalker::Begin(*G, It, 0.f, S);
+	FDFLaneWalker::Begin(*G, It, Params(10.f), R, 0.f, S);
 	// spawn-mid is 100 m = 10 s at 10 m/s; give it more than the exact answer.
 	TArray<FDFWalkEvent> Events = Run(*G, It, Params(10.f), R, S, 400);
 
@@ -256,14 +256,14 @@ bool FDFLaneWalkerSiegeTest::RunTest(const FString& Parameters)
 
 	// The drifter strands, as it should: nothing open, nothing it can do about it.
 	FDFLaneWalkerState Walker;
-	FDFLaneWalker::Begin(*G, It, 0.f, Walker);
+	FDFLaneWalker::Begin(*G, It, Drifter, R, 0.f, Walker);
 	Run(*G, It, Drifter, R, Walker, 400);
 	TestTrue(TEXT("a drifter strands at the shut gate"), Walker.bStranded);
 	TestEqual(TEXT("and sorts last"), FDFLaneWalker::RemainingToCoreMeters(*G, It, Walker, R.EdgeOpen), TNumericLimits<float>::Max());
 
 	// The ram does not: it takes the blocked edge and starts breaching.
 	FDFLaneWalkerState Sieger;
-	FDFLaneWalker::Begin(*G, It, 0.f, Sieger);
+	FDFLaneWalker::Begin(*G, It, Ram, R, 0.f, Sieger);
 	const TArray<FDFWalkEvent> Events = Run(*G, It, Ram, R, Sieger, 400);
 	TestFalse(TEXT("a ram is never stranded at a wall"), Sieger.bStranded);
 	TestEqual(TEXT("it announced the breach once"), CountOf(Events, EDFWalkEventKind::BreachStarted), 1);
@@ -274,9 +274,52 @@ bool FDFLaneWalkerSiegeTest::RunTest(const FString& Parameters)
 	TestTrue(FString::Printf(TEXT("the ram reports a real distance (%.1f m), not the cut-off sentinel"), Remaining), Remaining < 1000.f);
 	TestTrue(TEXT("and is nearer the core than the stranded drifter"), Remaining < FDFLaneWalker::RemainingToCoreMeters(*G, It, Walker, R.EdgeOpen));
 
-	// The bias is a real lever, not decoration: a wall in front of a short detour is worth going
-	// round, the same wall in front of a long one is not. Open the detour and make the barricade
-	// cheap to break, then expensive, and watch the choice change.
+	// The bias and the speed are real terms, not decoration. Pinning only "a cheap wall is taken and
+	// a dear one is not" leaves both factors deletable from the formula with the suite still green —
+	// the accidental-pass shape one level in, proving the branch is taken rather than the arithmetic
+	// right. So: hold the wall fixed and vary each factor alone, either side of the decision.
+	//
+	// Breaching is priced hp/dps x speed x bias against a ~141 m detour (mid-side 100 + side-core 141
+	// versus mid-core 100, so going round costs ~141 m more than straight through).
+	auto ChoiceWith = [&](float BarricadeHp, float Bias, float RowSpeed)
+	{
+		FRouting Wall(*G, BarricadeHp);
+		Wall.EdgeOpen[G->EdgeIndexOf(TEXT("mid-core"))] = false;
+		Wall.Rebuild(*G);
+		FDFLaneWalkerParams P = Params(10.f);
+		P.StructureDps = 14.f;
+		P.SiegeBreachBias = Bias;
+		P.RowSpeedMetersPerSec = RowSpeed;
+		int32 Cur = 1;
+		return G->Edges[FDFLaneWalker::ChooseNextEdge(*G, It, P, TEXT("mid"), Wall, Cur)].Id;
+	};
+	// One wall, one speed, two biases: 0.6 makes 300 hp look like ~129 m of walking (cheaper than
+	// the detour), 2.0 makes the same wall ~429 m (dearer). Only the bias moved.
+	TestEqual(TEXT("at bias 0.6 the wall is worth breaking"), ChoiceWith(300.f, 0.6f, 10.f), FName(TEXT("mid-core")));
+	TestEqual(TEXT("at bias 2.0 the same wall is worth walking round"), ChoiceWith(300.f, 2.0f, 10.f), FName(TEXT("mid-side")));
+	// One wall, one bias, two row speeds: a faster enemy pays more walking-distance per second of
+	// breaching, so the same wall it would break at 4 m/s it walks round at 20. Only the speed moved.
+	TestEqual(TEXT("a slow ram breaks it"), ChoiceWith(300.f, 0.6f, 4.f), FName(TEXT("mid-core")));
+	TestEqual(TEXT("a fast one goes round"), ChoiceWith(300.f, 0.6f, 20.f), FName(TEXT("mid-side")));
+
+	// And the row speed is the one that counts: a chilled Ram must value the wall as a Ram does.
+	{
+		FRouting Wall(*G, 300.f);
+		Wall.EdgeOpen[G->EdgeIndexOf(TEXT("mid-core"))] = false;
+		Wall.Rebuild(*G);
+		FDFLaneWalkerParams Chilled = Params(3.5f);   // 10 m/s row speed, chilled to 0.35x
+		Chilled.StructureDps = 14.f;
+		Chilled.RowSpeedMetersPerSec = 10.f;
+		FDFLaneWalkerParams Unchilled = Params(10.f);
+		Unchilled.StructureDps = 14.f;
+		Unchilled.RowSpeedMetersPerSec = 10.f;
+		int32 A = 1, B = 1;
+		TestEqual(TEXT("a chilled ram values the wall exactly as an unchilled one does"),
+			FDFLaneWalker::ChooseNextEdge(*G, It, Chilled, TEXT("mid"), Wall, A),
+			FDFLaneWalker::ChooseNextEdge(*G, It, Unchilled, TEXT("mid"), Wall, B));
+	}
+
+	// The original pair, kept: the wall's own hp still decides at a fixed bias and speed.
 	FRouting Detour(*G, /*BarricadeHp*/ 50.f);
 	Detour.EdgeOpen[G->EdgeIndexOf(TEXT("mid-core"))] = false;
 	Detour.Rebuild(*G);
@@ -325,7 +368,7 @@ bool FDFLaneWalkerWarpTest::RunTest(const FString& Parameters)
 	FRouting R(*G);
 
 	FDFLaneWalkerState S;
-	FDFLaneWalker::Begin(*G, G->Itineraries[0], 0.f, S);
+	FDFLaneWalker::Begin(*G, G->Itineraries[0], Params(10.f), R, 0.f, S);
 	TArray<FDFWalkEvent> Events = Run(*G, G->Itineraries[0], Params(10.f), R, S, 600);
 	TestEqual(TEXT("warped once"), CountOf(Events, EDFWalkEventKind::Warped), 1);
 	TestEqual(TEXT("and reached the core"), CountOf(Events, EDFWalkEventKind::ReachedCore), 1);
@@ -334,7 +377,7 @@ bool FDFLaneWalkerWarpTest::RunTest(const FString& Parameters)
 	// A frozen enemy standing on a departure pad still goes: a zero-length span is the one place
 	// this model cannot park anyone (Step.cs). Walk it to the gate, then freeze it.
 	FDFLaneWalkerState Frozen;
-	FDFLaneWalker::Begin(*G, G->Itineraries[0], 0.f, Frozen);
+	FDFLaneWalker::Begin(*G, G->Itineraries[0], Params(10.f), R, 0.f, Frozen);
 	TArray<FDFWalkEvent> Before;
 	for (int32 I = 0; I < 200 && CountOf(Before, EDFWalkEventKind::Warped) == 0; ++I)
 	{
@@ -343,7 +386,7 @@ bool FDFLaneWalkerWarpTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("it warped on the way"), CountOf(Before, EDFWalkEventKind::Warped), 1);
 
 	FDFLaneWalkerState AtGate;
-	FDFLaneWalker::Begin(*G, G->Itineraries[0], 0.f, AtGate);
+	FDFLaneWalker::Begin(*G, G->Itineraries[0], Params(10.f), R, 0.f, AtGate);
 	AtGate.EdgeIndex = G->EdgeIndexOf(TEXT("gate-pad"));
 	TArray<FDFWalkEvent> Stopped;
 	FDFLaneWalker::Advance(*G, G->Itineraries[0], Params(0.f), 1.f / 30.f, R, AtGate, Stopped);
@@ -365,7 +408,7 @@ bool FDFLaneWalkerFrameRateTest::RunTest(const FString& Parameters)
 	auto WalkFor = [&](float Dt, int32 Frames)
 	{
 		FDFLaneWalkerState S;
-		FDFLaneWalker::Begin(*G, It, 0.f, S);
+		FDFLaneWalker::Begin(*G, It, Params(10.f), R, 0.f, S);
 		TArray<FDFWalkEvent> Events;
 		for (int32 I = 0; I < Frames; ++I)
 		{
@@ -387,6 +430,120 @@ bool FDFLaneWalkerFrameRateTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFLaneWalkerWarpParityTest, "DF.Unit.LaneWalker.WarpArrivalBehavesLikeAnyOtherNode", DFLaneWalkerTest::Flags)
+bool FDFLaneWalkerWarpParityTest::RunTest(const FString& Parameters)
+{
+	using namespace DFLaneWalkerTest;
+	// The warp path used to be a second implementation of "arrive at a node and route from it", and
+	// it had drifted: it never cleared bStranded, never announced a breach, never checked for a
+	// core. The blocker was the first of those — a walker freed after stranding at a warp
+	// destination walked the rest of the way to the core still reporting cut off, so every tower
+	// sorted it LAST and ignored it all the way in. This test is the parity the shared routine buys.
+	UDFLaneGraphAsset* G = NewObject<UDFLaneGraphAsset>(GetTransientPackage());
+	G->Nodes = {
+		Node(TEXT("spawn"), FVector::ZeroVector, EDFLaneNodeKind::Spawn),
+		Node(TEXT("gate"), FVector(50 * M, 0, 0)),
+		Node(TEXT("pad"), FVector(500 * M, 0, 0), EDFLaneNodeKind::Spawn),
+		Node(TEXT("core"), FVector(550 * M, 0, 0), EDFLaneNodeKind::Core),
+	};
+	FDFLaneEdge Warp;
+	Warp.Id = TEXT("gate-pad");
+	Warp.From = TEXT("gate");
+	Warp.To = TEXT("pad");
+	Warp.Kind = EDFLaneEdgeKind::Warp;
+	Warp.Waypoints = { FVector(50 * M, 0, 0), FVector(500 * M, 0, 0) };
+	G->Edges = { Walk(TEXT("spawn"), TEXT("gate"), { FVector::ZeroVector, FVector(50 * M, 0, 0) }), Warp, Walk(TEXT("pad"), TEXT("core"), { FVector(500 * M, 0, 0), FVector(550 * M, 0, 0) }) };
+	FDFLaneItinerary It;
+	It.Id = TEXT("warped");
+	It.Via = { TEXT("spawn"), TEXT("gate"), TEXT("pad"), TEXT("core") };
+	G->Itineraries = { It };
+	G->RebuildIndex();
+
+	// Shut the only way out of the warp destination, then walk into it.
+	FRouting R(*G);
+	R.EdgeOpen[G->EdgeIndexOf(TEXT("pad-core"))] = false;
+	R.Rebuild(*G);
+
+	FDFLaneWalkerState S;
+	FDFLaneWalker::Begin(*G, G->Itineraries[0], Params(10.f), R, 0.f, S);
+	TArray<FDFWalkEvent> Events = Run(*G, G->Itineraries[0], Params(10.f), R, S, 400);
+	TestTrue(TEXT("it stranded at the warp destination"), S.bStranded);
+	TestEqual(TEXT("having warped exactly once"), CountOf(Events, EDFWalkEventKind::Warped), 1);
+	TestEqual(TEXT("and said so once"), CountOf(Events, EDFWalkEventKind::Stranded), 1);
+
+	// Where it stands is the arrival pad, not the departure pad half a map away.
+	TestTrue(TEXT("it is standing on the arrival pad"), FDFLaneWalker::LocationOf(*G, S).Equals(FVector(500 * M, 0, 0), 1.f));
+	TestEqual(TEXT("and sorts last while cut off"), FDFLaneWalker::RemainingToCoreMeters(*G, G->Itineraries[0], S, R.EdgeOpen), TNumericLimits<float>::Max());
+
+	// Staying stranded must not re-announce the crossing every frame.
+	TArray<FDFWalkEvent> WhileStuck = Run(*G, G->Itineraries[0], Params(10.f), R, S, 120);
+	TestEqual(TEXT("no second Warped while it waits"), CountOf(WhileStuck, EDFWalkEventKind::Warped), 0);
+	TestEqual(TEXT("and no second Stranded"), CountOf(WhileStuck, EDFWalkEventKind::Stranded), 0);
+
+	// **The blocker.** Open the way; it must unstrand and stop reporting cut off.
+	R.EdgeOpen[G->EdgeIndexOf(TEXT("pad-core"))] = true;
+	R.Rebuild(*G);
+	TArray<FDFWalkEvent> Freed;
+	FDFLaneWalker::Advance(*G, G->Itineraries[0], Params(10.f), 1.f / 30.f, R, S, Freed);
+	TestFalse(TEXT("it is no longer stranded"), S.bStranded);
+	TestEqual(TEXT("and said so"), CountOf(Freed, EDFWalkEventKind::Unstranded), 1);
+	const float Remaining = FDFLaneWalker::RemainingToCoreMeters(*G, G->Itineraries[0], S, R.EdgeOpen);
+	TestTrue(FString::Printf(TEXT("and reports a real distance (%.1f m), not cut off"), Remaining), Remaining < 1000.f);
+	Run(*G, G->Itineraries[0], Params(10.f), R, S, 400);
+	TestFalse(TEXT("and it reaches the core"), S.IsWalking());
+
+	// A sieging walker arriving at a warp destination announces its breach, as it does at any node.
+	FDFLaneWalkerParams Ram = Params(10.f);
+	Ram.StructureDps = 14.f;
+	Ram.RowSpeedMetersPerSec = 10.f;
+	FRouting Shut(*G, 50.f);
+	Shut.EdgeOpen[G->EdgeIndexOf(TEXT("pad-core"))] = false;
+	Shut.Rebuild(*G);
+	FDFLaneWalkerState Sieger;
+	FDFLaneWalker::Begin(*G, G->Itineraries[0], Ram, Shut, 0.f, Sieger);
+	TArray<FDFWalkEvent> SiegeEvents = Run(*G, G->Itineraries[0], Ram, Shut, Sieger, 400);
+	TestFalse(TEXT("a ram is not stranded past a warp either"), Sieger.bStranded);
+	TestEqual(TEXT("and announces the breach it starts there"), CountOf(SiegeEvents, EDFWalkEventKind::BreachStarted), 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFLaneWalkerBeginRoutesTest, "DF.Unit.LaneWalker.BeginRoutesItsFirstEdge", DFLaneWalkerTest::Flags)
+bool FDFLaneWalkerBeginRoutesTest::RunTest(const FString& Parameters)
+{
+	using namespace DFLaneWalkerTest;
+	// The spawn node is a routing decision like any other (Step.cs: "Its first edge is chosen the
+	// same way every later one is"). Taking the itinerary's first edge unconditionally would start a
+	// walker on a shut edge and walk it straight through the thing that was shut.
+	UDFLaneGraphAsset* G = Straight();
+	const FDFLaneItinerary& It = *G->FindItinerary(TEXT("ground"));
+
+	FRouting R(*G);
+	R.EdgeOpen[G->EdgeIndexOf(TEXT("spawn-mid"))] = false;   // the itinerary's own first edge
+	R.Rebuild(*G);
+
+	FDFLaneWalkerState S;
+	// Refusing is loud on purpose — a wave group whose route cannot start is a content fault, not a
+	// thing to swallow — so the test declares the log it is asking for.
+	AddExpectedMessage(TEXT("nothing open out of"), ELogVerbosity::Error, EAutomationExpectedMessageFlags::Contains, 1);
+	TestFalse(TEXT("it refuses to start on a shut first edge"), FDFLaneWalker::Begin(*G, It, Params(10.f), R, 0.f, S));
+	TestFalse(TEXT("and is not left walking one"), S.IsWalking());
+
+	// Open it again and the same call starts normally.
+	R.EdgeOpen[G->EdgeIndexOf(TEXT("spawn-mid"))] = true;
+	R.Rebuild(*G);
+	TestTrue(TEXT("and starts when the way is open"), FDFLaneWalker::Begin(*G, It, Params(10.f), R, 0.f, S));
+	TestEqual(TEXT("on the first edge"), G->Edges[S.EdgeIndex].Id, FName(TEXT("spawn-mid")));
+	TestFalse(TEXT("not stranded"), S.bStranded);
+
+	// A replicated or saved state with a stale edge index is not trusted input.
+	FDFLaneWalkerState Corrupt = S;
+	Corrupt.EdgeIndex = 9999;
+	AddExpectedMessage(TEXT("walker state holds edge index"), ELogVerbosity::Error, EAutomationExpectedMessageFlags::Contains, 1);
+	TestEqual(TEXT("an out-of-range edge index sorts last rather than reading past the array"),
+		FDFLaneWalker::RemainingToCoreMeters(*G, It, Corrupt, R.EdgeOpen), TNumericLimits<float>::Max());
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFLaneWalkerScatterTest, "DF.Unit.LaneWalker.ScatterIsLateralOnly", DFLaneWalkerTest::Flags)
 bool FDFLaneWalkerScatterTest::RunTest(const FString& Parameters)
 {
@@ -398,8 +555,8 @@ bool FDFLaneWalkerScatterTest::RunTest(const FString& Parameters)
 	FRouting R(*G);
 
 	FDFLaneWalkerState Centre, Offset;
-	FDFLaneWalker::Begin(*G, It, 0.f, Centre);
-	FDFLaneWalker::Begin(*G, It, 1.7f * M, Offset);   // half the 3.4 m corridor
+	FDFLaneWalker::Begin(*G, It, Params(10.f), R, 0.f, Centre);
+	FDFLaneWalker::Begin(*G, It, Params(10.f), R, 1.7f * M, Offset);   // half the 3.4 m corridor
 	TArray<FDFWalkEvent> E;
 	for (int32 I = 0; I < 60; ++I)
 	{

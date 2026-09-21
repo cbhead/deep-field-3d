@@ -49,9 +49,16 @@ struct DFENEMIES_API FDFLaneWalkerParams
 {
 	GENERATED_BODY()
 
-	/** Metres per second before any factor: the row's speed times status, enrage and stealth
-	 *  factors, which the caller has already resolved (they are GAS's, not the walker's). */
+	/** Metres per second as it walks *now*: the row's speed times status, enrage and stealth, which
+	 *  the caller has already resolved (they are GAS's, not the walker's). */
 	UPROPERTY() float SpeedMetersPerSec = 1.f;
+
+	/** The row's own speed, untouched by any modifier. Siege pricing uses this and not the effective
+	 *  speed: `Step.cs:1222` prices the wall with `def.SpeedMetersPerSec`, and every modifier in
+	 *  MoveEnemies writes a local rather than the def. Otherwise a chilled or enraged Ram values the
+	 *  same wall differently from one that is neither, and the breach-versus-detour decision flips
+	 *  at walls the sim would not flip at. Left at 0 it falls back to SpeedMetersPerSec. */
+	UPROPERTY() float RowSpeedMetersPerSec = 0.f;
 
 	/** ADR-0018 / B§1.5: climbing costs, descending pays. Applied per waypoint segment from that
 	 *  segment's own grade, never from the edge's steepest sample. */
@@ -121,10 +128,29 @@ struct DFENEMIES_API FDFLaneRouting
 	bool IsOpen(int32 EdgeIndex) const { return EdgeOpen.IsValidIndex(EdgeIndex) && EdgeOpen[EdgeIndex]; }
 };
 
+/** What arriving at a node did. */
+enum class EDFArrival : uint8
+{
+	Moving,     // routed onto a new edge
+	Stranded,   // nowhere open to go from here
+	Leaked,     // the node was a core
+};
+
 struct DFENEMIES_API FDFLaneWalker
 {
-	/** Put a walker at the start of an itinerary. False if the itinerary has no first edge. */
-	static bool Begin(const UDFLaneGraphAsset& Graph, const FDFLaneItinerary& Itinerary, float LateralOffsetCm, FDFLaneWalkerState& Out);
+	/** Arrive at a node and route from it — the core/strand/enter decision, in **one** place.
+	 *  Both the warp path and the end-of-edge path call it: they used to be two copies and the copies
+	 *  drifted, which is how the warp path ended up never clearing `bStranded`. Where a stranded
+	 *  walker *stands* differs between the two, so that stays the caller's to apply. */
+	static EDFArrival ArriveAtNode(const UDFLaneGraphAsset& Graph, const FDFLaneItinerary& Itinerary, const FDFLaneWalkerParams& Params,
+		const FDFLaneRouting& Routing, FName AtNode, const FVector& ArrivalLocation, FDFLaneWalkerState& State, TArray<FDFWalkEvent>& OutEvents);
+
+	/** Put a walker at the start of an itinerary, **routing its first edge the same way every later
+	 *  one is chosen** (Step.cs:1011). Taking `EdgesOf(Itinerary)[0]` unconditionally would start a
+	 *  walker on a shut edge and walk it through — the spawn node is a routing decision like any
+	 *  other. False if nothing is open out of the first via. */
+	static bool Begin(const UDFLaneGraphAsset& Graph, const FDFLaneItinerary& Itinerary, const FDFLaneWalkerParams& Params,
+		const FDFLaneRouting& Routing, float LateralOffsetCm, FDFLaneWalkerState& Out);
 
 	/** One step. Speed 0 (frozen, sieging) still crosses a warp it is standing on, as the sim does.
 	 *  EdgeOpen/DistToNode/DistToCore are the caller's routing tables, rebuilt when an edge changes

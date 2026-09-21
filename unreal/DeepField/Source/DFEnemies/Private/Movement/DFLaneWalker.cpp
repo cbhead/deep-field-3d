@@ -62,7 +62,9 @@ int32 FDFLaneWalker::ChooseNextEdge(const UDFLaneGraphAsset& Graph, const FDFLan
 	// long, so shutting a gate is what sends the Ram at the wall — a chain the player can read.
 	// Whether a via is still worth heading for is asked of the map as it IS (DistToNode).
 	const float Dps = Params.StructureDps;
-	const float Speed = Params.SpeedMetersPerSec;
+	// The row's speed, never the effective one: Step.cs:1222 prices with def.SpeedMetersPerSec and
+	// every modifier in MoveEnemies writes a local. A chilled Ram must value a wall as a Ram does.
+	const float Speed = Params.RowSpeedMetersPerSec > 0.f ? Params.RowSpeedMetersPerSec : Params.SpeedMetersPerSec;
 	const float Bias = Params.SiegeBreachBias;
 	const TFunction<float(int32)>& BlockingHpOf = Routing.BlockingHpOf;
 	return Graph.ChooseEdge(Itinerary, ViaCursor, AtNode, Routing.EdgeOpen, Routing.DistToNodeOpen, Routing.DistToCoreOpen,
@@ -115,19 +117,84 @@ float FDFLaneWalker::SlopeFactor(float Grade, const FDFLaneWalkerParams& Params)
 	return 1.f;
 }
 
-bool FDFLaneWalker::Begin(const UDFLaneGraphAsset& Graph, const FDFLaneItinerary& Itinerary, float LateralOffsetCm, FDFLaneWalkerState& Out)
+/** Arrive at a node and route from it. **One routine, both callers.** The warp path and the
+ *  end-of-edge path used to be two implementations of this, and they drifted: the warp copy forgot
+ *  to clear `bStranded` (so a walker that stranded at a warp destination and was later freed walked
+ *  the rest of the way reporting cut off, and every tower sorted it last), forgot `BreachStarted`,
+ *  and never checked for a core. Every one of those was the node path doing something this copy
+ *  had not been taught. They share it now, and the differences that are real — where a stranded
+ *  walker stands — are the caller's to apply afterwards. */
+EDFArrival FDFLaneWalker::ArriveAtNode(const UDFLaneGraphAsset& Graph, const FDFLaneItinerary& Itinerary, const FDFLaneWalkerParams& Params,
+	const FDFLaneRouting& Routing, FName AtNode, const FVector& ArrivalLocation, FDFLaneWalkerState& State, TArray<FDFWalkEvent>& OutEvents)
+{
+	if (const FDFLaneNode* Node = Graph.FindNode(AtNode); Node && Node->Kind == EDFLaneNodeKind::Core)
+	{
+		State.EdgeIndex = INDEX_NONE;
+		Add(OutEvents, EDFWalkEventKind::ReachedCore, AtNode, ArrivalLocation);
+		return EDFArrival::Leaked;
+	}
+
+	const int32 Next = ChooseNextEdge(Graph, Itinerary, Params, AtNode, Routing, State.ViaCursor);
+	if (Next == INDEX_NONE)
+	{
+		// A sieging walker routes through walls, so it has an edge wherever the map is connected at
+		// all: if one strands, the caller passed non-siege tables or forgot StructureDps, and the
+		// consequence is silent and inverted — it reports cut off, sorts LAST, and every tower in
+		// range ignores the enemy breaking the player's wall.
+		UE_CLOG(Params.StructureDps > 0.f && !State.bStranded, LogDFWalk, Error,
+			TEXT("a sieging walker stranded at node '%s' on itinerary '%s': routing tables are wrong, and it will now sort last instead of first"),
+			*AtNode.ToString(), *Itinerary.Id.ToString());
+		if (!State.bStranded)
+		{
+			State.bStranded = true;
+			Add(OutEvents, EDFWalkEventKind::Stranded, AtNode, ArrivalLocation);
+		}
+		return EDFArrival::Stranded;
+	}
+
+	if (State.bStranded)
+	{
+		State.bStranded = false;
+		Add(OutEvents, EDFWalkEventKind::Unstranded, AtNode, ArrivalLocation);
+	}
+	State.EdgeIndex = Next;
+	State.Segment = 0;
+	State.SegmentProgressCm = 0.f;
+	Add(OutEvents, EDFWalkEventKind::EnteredEdge, Graph.Edges[Next].Id, ArrivalLocation);
+	if (Params.StructureDps > 0.f && !Routing.IsOpen(Next))
+	{
+		// Say so once: the player gets the enemy, the wall and a countdown, long before the lane
+		// opens somewhere they were not looking (Step.cs announces on both arrival paths).
+		Add(OutEvents, EDFWalkEventKind::BreachStarted, Graph.Edges[Next].Id, ArrivalLocation);
+	}
+	return EDFArrival::Moving;
+}
+
+bool FDFLaneWalker::Begin(const UDFLaneGraphAsset& Graph, const FDFLaneItinerary& Itinerary, const FDFLaneWalkerParams& Params,
+	const FDFLaneRouting& Routing, float LateralOffsetCm, FDFLaneWalkerState& Out)
 {
 	Out = FDFLaneWalkerState();
 	Out.LateralOffsetCm = LateralOffsetCm;
-
-	const TArray<int32> Edges = Graph.EdgesOf(Itinerary);
-	if (Edges.Num() == 0 || Edges[0] == INDEX_NONE)
+	if (Itinerary.Via.Num() == 0)
 	{
-		UE_LOG(LogDFWalk, Error, TEXT("itinerary '%s' has no first edge; nothing can walk it"), *Itinerary.Id.ToString());
+		UE_LOG(LogDFWalk, Error, TEXT("itinerary '%s' names no nodes; nothing can walk it"), *Itinerary.Id.ToString());
 		return false;
 	}
-	Out.EdgeIndex = Edges[0];
-	Out.ViaCursor = 1;   // Via[0] is where it starts; routing asks about the next one
+
+	// The spawn node is a routing decision like any other (Step.cs:1011: "Its first edge is chosen
+	// the same way every later one is"). Taking EdgesOf(Itinerary)[0] would start a walker on a shut
+	// edge and walk it straight through.
+	Out.ViaCursor = 1;   // Via[0] is where it stands; routing asks about the next one
+	const FDFLaneNode* Start = Graph.FindNode(Itinerary.Via[0]);
+	const FVector At = Start ? Start->Position : FVector::ZeroVector;
+	TArray<FDFWalkEvent> Ignored;
+	if (ArriveAtNode(Graph, Itinerary, Params, Routing, Itinerary.Via[0], At, Out, Ignored) != EDFArrival::Moving)
+	{
+		UE_LOG(LogDFWalk, Error, TEXT("nothing open out of '%s' for itinerary '%s'"), *Itinerary.Via[0].ToString(), *Itinerary.Id.ToString());
+		Out.EdgeIndex = INDEX_NONE;
+		Out.bStranded = false;
+		return false;
+	}
 	return true;
 }
 
@@ -162,24 +229,26 @@ void FDFLaneWalker::Advance(const UDFLaneGraphAsset& Graph, const FDFLaneItinera
 		if (Edge->IsWarp())
 		{
 			const FVector Pad = Edge->Waypoints.Num() > 0 ? Edge->Waypoints.Last() : FVector::ZeroVector;
-			Add(OutEvents, EDFWalkEventKind::Warped, Edge->Id, Pad);
-			const FName ArrivedAt = Edge->To;
-			State.Segment = 0;
-			State.SegmentProgressCm = 0.f;
-			const int32 Next = ChooseNextEdge(Graph, Itinerary, Params, ArrivedAt, Routing, State.ViaCursor);
-			if (Next == INDEX_NONE)
+			// The crossing happens once. A walker parked on a warp because its destination had
+			// nowhere open is *standing on the pad*, not crossing again every frame.
+			if (!State.bStranded)
 			{
-				// Stranded on arrival: it keeps the pad as its position rather than the warp edge,
-				// which has no length to stand on.
-				if (!State.bStranded)
-				{
-					State.bStranded = true;
-					Add(OutEvents, EDFWalkEventKind::Stranded, ArrivedAt, Pad);
-				}
+				Add(OutEvents, EDFWalkEventKind::Warped, Edge->Id, Pad);
+			}
+			const EDFArrival Arrival = ArriveAtNode(Graph, Itinerary, Params, Routing, Edge->To, Pad, State, OutEvents);
+			if (Arrival == EDFArrival::Stranded)
+			{
+				// Park it at the arrival pad, which is where it actually is: leaving the cursor at
+				// the start of the warp edge would report the *departure* pad, half a map away.
+				const TArray<float> WarpLengths = SegmentLengthsCm(*Edge);
+				State.Segment = FMath::Max(0, WarpLengths.Num() - 1);
+				State.SegmentProgressCm = WarpLengths.Num() > 0 ? WarpLengths.Last() : 0.f;
 				return;
 			}
-			State.EdgeIndex = Next;
-			Add(OutEvents, EDFWalkEventKind::EnteredEdge, Graph.Edges[Next].Id, Pad);
+			if (Arrival == EDFArrival::Leaked)
+			{
+				return;
+			}
 			continue;
 		}
 
@@ -222,50 +291,21 @@ void FDFLaneWalker::Advance(const UDFLaneGraphAsset& Graph, const FDFLaneItinera
 
 		// At a node: the one place routing is decided.
 		const FVector NodeLocation = Edge->Waypoints.Last();
-		if (const FDFLaneNode* To = Graph.FindNode(Edge->To); To && To->Kind == EDFLaneNodeKind::Core)
+		const int32 FinishedEdge = State.EdgeIndex;
+		const EDFArrival Arrival = ArriveAtNode(Graph, Itinerary, Params, Routing, Edge->To, NodeLocation, State, OutEvents);
+		if (Arrival == EDFArrival::Leaked)
 		{
-			State.EdgeIndex = INDEX_NONE;
-			Add(OutEvents, EDFWalkEventKind::ReachedCore, Edge->To, NodeLocation);
 			return;
 		}
-
-		const int32 Next = ChooseNextEdge(Graph, Itinerary, Params, Edge->To, Routing, State.ViaCursor);
-		if (Next == INDEX_NONE)
+		if (Arrival == EDFArrival::Stranded)
 		{
 			// Nowhere open to go. The no-sealing rule is meant to make this unreachable, so it stops
-			// at the node and says so once rather than leaking or vanishing — a silent fallback here
-			// is how a deadlock ships. It stays on the edge it just finished, so it still has a
-			// position to be shot at.
+			// at the node rather than leaking or vanishing — a silent fallback here is how a
+			// deadlock ships. It stays on the edge it just finished, so it still has a position.
+			State.EdgeIndex = FinishedEdge;
 			State.Segment = Lengths.Num() - 1;
 			State.SegmentProgressCm = Lengths[State.Segment];
-			// A sieging walker routes through walls, so it has an edge wherever the map is connected
-			// at all: if one strands, the caller passed non-siege tables or forgot StructureDps, and
-			// the consequence is silent and inverted — it reports cut off, sorts LAST, and every
-			// tower in range ignores the enemy breaking the player's wall.
-			UE_CLOG(Params.StructureDps > 0.f && !State.bStranded, LogDFWalk, Error,
-				TEXT("a sieging walker stranded at node '%s' on itinerary '%s': routing tables are wrong, and it will now sort last instead of first"),
-				*Edge->To.ToString(), *Itinerary.Id.ToString());
-			if (!State.bStranded)
-			{
-				State.bStranded = true;
-				Add(OutEvents, EDFWalkEventKind::Stranded, Edge->To, NodeLocation);
-			}
 			return;
-		}
-
-		if (State.bStranded)
-		{
-			State.bStranded = false;
-			Add(OutEvents, EDFWalkEventKind::Unstranded, Edge->To, NodeLocation);
-		}
-		State.EdgeIndex = Next;
-		State.Segment = 0;
-		Add(OutEvents, EDFWalkEventKind::EnteredEdge, Graph.Edges[Next].Id, NodeLocation);
-		if (Params.StructureDps > 0.f && !Routing.IsOpen(Next))
-		{
-			// Say so once: the player gets the enemy, the wall and a countdown, long before the
-			// lane opens somewhere they were not looking (Step.cs AnnounceBreach).
-			Add(OutEvents, EDFWalkEventKind::BreachStarted, Graph.Edges[Next].Id, NodeLocation);
 		}
 	}
 
@@ -314,6 +354,13 @@ float FDFLaneWalker::RemainingToCoreMeters(const UDFLaneGraphAsset& Graph, const
 	if (!State.IsWalking())
 	{
 		return 0.f;   // leaked: on no edge, nothing left to walk (World.cs)
+	}
+	if (!Graph.Edges.IsValidIndex(State.EdgeIndex))
+	{
+		// This struct is replicated and written by a save, so the index is not trusted input; every
+		// other reader here checks it. Cut off is the safe answer: it sorts last, never first.
+		UE_LOG(LogDFWalk, Error, TEXT("walker state holds edge index %d, which '%s' does not have"), State.EdgeIndex, *Graph.MapId.ToString());
+		return TNumericLimits<float>::Max();
 	}
 	if (State.bStranded)
 	{
