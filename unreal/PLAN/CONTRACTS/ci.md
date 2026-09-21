@@ -64,3 +64,13 @@ unsafe reference") often enough that identical content failed and passed within 
 is not worth a session; the lanes still run in full whenever `game/`, `sim/` or the art contract moves,
 which is the only time they can tell anyone anything.
 
+## A red run on the Mac is unproven, not failed (INT, 2026-09-21)
+The Mac has produced a test failure caused by memory exhaustion rather than by the code: the editor
+asserted in `pthread_rwlock_init` (error 16) during world cleanup with 0.1 GB free and 5.9 GB of 7 GB
+swap in use, then hung until the timeout, on code that had passed 37/37 twelve minutes earlier. So:
+**re-run once before treating a red result from this machine as a defect**, and when you report it, say
+that you re-ran — a retry that is not disclosed is indistinguishable from hiding a failure. A result
+that reproduces is a result; a result that does not is a note about the machine. This is not licence to
+retry until green: two reds in a row are a defect until proven otherwise, and the rule dies the day a
+build machine exists that is not also the developer's laptop.
+
