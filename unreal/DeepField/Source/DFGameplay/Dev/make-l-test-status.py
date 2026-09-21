@@ -13,9 +13,12 @@ this map. Run headless through the editor lock, after the editor target has been
       -run=pythonscript -script=unreal/DeepField/Source/DFGameplay/Dev/make-l-test-status.py \
       -nullrhi -unattended -nop4 -nosplash -NoSound
 
-Idempotent: re-running overwrites the level. It lives beside the module (tools/ue-bridge/ue/ is
-WS-30's); the level sits in Content/DF/Dev (WS-15's glob) as the review asked — see the WS file's
-Needs INT.
+Idempotent: re-running overwrites the level. The script lives beside the module (tools/ue-bridge/ue/
+is WS-30's). The LEVEL IT WRITES IS NOT COMMITTED: Content/DF/Dev is WS-15's glob, so a .umap from a
+[WS-02] PR is an ownership-check violation until INT adds the row the WS file's Needs INT asks for.
+DF.Func.Status.ThermalShockInLevel therefore opens this level when it is on disk and otherwise falls
+back to WS-00's committed /Game/DF/Dev/L_Dev_Empty and spawns the rig itself — run this script when
+you want to LOOK at the DoD (the debug sphere, the label), not to make the test pass.
 """
 import unreal
 
