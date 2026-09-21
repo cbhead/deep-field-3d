@@ -57,4 +57,9 @@ the fact costs a wave-clear bug that only shows up with that content in play.
   `Validate`, not in `PlanWave` — a clamp there would be a deliberate divergence from the sim), and
   consider `maximum` bounds in `waves.schema.json` and `balance.json`'s schema so the importer refuses a
   fat-fingered number before a host ever allocates by it. Largest authored count today is 14.
+- 2026-09-21 · INT · **three damage dials are missing from `balance.json`** and live as `constexpr`
+  defaults in `DFDamageMath.h`: `shredFrontArcLeakFactor` (1.35), `postArmorDamageFloor` (0.5),
+  `rearThresholdDegrees` (150). Verified missing from the shipped `balance.json` (its single `default`
+  row has none of the three). Add them with the schema, and C4's "every number comes from the content
+  rows" becomes true rather than nearly true. See RFC-0002.
 
