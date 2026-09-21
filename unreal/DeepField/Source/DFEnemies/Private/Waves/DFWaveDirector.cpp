@@ -67,7 +67,14 @@ bool ADFWaveDirector::ResumeWave(int32 WaveIndex, int32 PlayerCount, int32 Alrea
 		return false;
 	}
 
+	// Bump first: an injection stream is foreign code too, and anything it does that touches this
+	// director must land against the new wave rather than the one being replaced.
+	++WaveGeneration;
 	TArray<FDFSpawnEntry> Plan = FDFWavePlan::PlanWave(Seed, Tables, WaveIndex, PlayerCount, InjectionStreams);
+	if (!IsValid(this))
+	{
+		return false;   // a stream destroyed us while planning
+	}
 	UE_LOG(LogDFWaves, Log, TEXT("wave %d on '%s': %d bodies for %d player(s), lap %d, hp x%.3f"),
 		WaveIndex, *Tables.MapId.ToString(), Plan.Num(), PlayerCount, FDFWavePlan::Lap(Tables, WaveIndex), FDFWavePlan::HpScale(Tables, WaveIndex, PlayerCount));
 
@@ -89,28 +96,40 @@ void ADFWaveDirector::Tick(float DeltaSeconds)
 		return;
 	}
 
+	// Every broadcast below hands control to foreign code that may destroy this actor, abort the
+	// wave, or abort and begin another. Capture which wave this frame is releasing and re-check
+	// after each one: Destroy() only marks the actor pending-kill, so none of these are crashes —
+	// they are a director quietly working for a match that is over, or for the wrong wave.
+	const uint64 Generation = WaveGeneration;
+
 	// A listener may kill the body on the spot; if that was the last one the wave would clear — and
 	// the next could begin — inside the release loop. Hold the verdict until the loop is done.
 	bReleasing = true;
-	Schedule.Advance(DeltaSeconds, [this](const FDFSpawnEntry& Entry)
+	Schedule.Advance(DeltaSeconds, [this, Generation](const FDFSpawnEntry& Entry)
 	{
 		++Alive;   // before the broadcast, for the same reason
 		OnSpawnRequested.Broadcast(Entry);
-		// The listener that just ran may have ended the match and destroyed us, or aborted the wave.
-		// Destroy() only marks the actor pending-kill — the memory is ours until the next GC — so
-		// this is not a crash but it would be worse: bodies requested for a match that is over.
-		return IsValid(this) && bWaveActive;
+		return IsStillReleasing(Generation);
 	});
 	if (!IsValid(this))
 	{
-		return;
+		return;   // destroyed mid-release: nothing here may touch a member again
 	}
 	bReleasing = false;
 
-	if (bWaveActive && Schedule.IsExhausted() && !bExhaustedAnnounced)   // a listener may have aborted the wave
+	if (!IsStillReleasing(Generation))
+	{
+		return;   // aborted, or a replacement wave began inside a broadcast — it owns the state now
+	}
+
+	if (Schedule.IsExhausted() && !bExhaustedAnnounced)
 	{
 		bExhaustedAnnounced = true;
 		OnWaveSpawnsExhausted.Broadcast(ActiveWave);
+		if (!IsStillReleasing(Generation))
+		{
+			return;
+		}
 	}
 	CheckCleared();
 }

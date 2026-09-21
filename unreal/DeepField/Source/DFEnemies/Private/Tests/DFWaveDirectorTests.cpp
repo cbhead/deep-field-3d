@@ -312,6 +312,79 @@ bool FDFWaveDirectorDestroyedMidReleaseTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFWaveDirectorGenerationTest, "DF.Unit.WaveDirector.AbortAndBeginInsideAReleaseDoesNotBleed", DFWaveDirectorTest::Flags)
+bool FDFWaveDirectorGenerationTest::RunTest(const FString& Parameters)
+{
+	using namespace DFWaveDirectorTest;
+	// bWaveActive is true for two different situations — "still wave A" and "A was aborted and B
+	// began inside a broadcast" — and a release loop that trusted it would carry on over B's
+	// entries against A's clock, releasing B's early bodies at once. The generation token is what
+	// makes those two answers different.
+	FDFTestWorld World;
+	ADFWaveDirector* Director = World.SpawnActor<ADFWaveDirector>();
+	FString Error;
+	Director->ConfigureWithTables(9u, Tables(), Error);
+
+	TMap<int32, int32> RequestedByWave;
+	bool bSwapped = false;
+	Director->OnSpawnRequested.AddLambda([&](const FDFSpawnEntry&)
+	{
+		RequestedByWave.FindOrAdd(Director->GetWaveIndex())++;
+		if (!bSwapped)
+		{
+			// The listener replaces the wave mid-release: the loop must stop, not continue over
+			// the new schedule.
+			bSwapped = true;
+			Director->AbortWave();
+			Director->BeginWave(1, 1);
+		}
+	});
+
+	Director->BeginWave(0, 1);
+	Director->Tick(2.f);   // long enough that every one of wave 0's four grunts is due at once
+
+	TestEqual(TEXT("wave 0 released exactly the one body before it was replaced"), RequestedByWave.FindRef(0), 1);
+	TestEqual(TEXT("and none of wave 1's bodies came out on wave 0's clock"), RequestedByWave.FindRef(1), 0);
+	TestTrue(TEXT("wave 1 is the active one"), Director->IsWaveActive() && Director->GetWaveIndex() == 1);
+	TestEqual(TEXT("nothing has been released from it yet"), Director->GetSchedule().NumReleased(), 0);
+
+	// And it runs normally from the next frame, on its own clock.
+	Director->Tick(1.f / 60.f);
+	TestTrue(TEXT("wave 1 starts releasing on its own time"), RequestedByWave.FindRef(1) > 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFWaveDirectorDestroyedInExhaustedTest, "DF.Unit.WaveDirector.DestroyedInsideTheExhaustedBroadcast", DFWaveDirectorTest::Flags)
+bool FDFWaveDirectorDestroyedInExhaustedTest::RunTest(const FString& Parameters)
+{
+	using namespace DFWaveDirectorTest;
+	// The release loop was guarded; the broadcast right after it was not. A listener that ends the
+	// match from OnWaveSpawnsExhausted left CheckCleared writing members on a pending-kill actor
+	// and broadcasting OnWaveCleared into a torn-down match — silent, like every one of these.
+	FDFTestWorld World;
+	ADFWaveDirector* Director = World.SpawnActor<ADFWaveDirector>();
+	FString Error;
+	Director->ConfigureWithTables(9u, Tables(), Error);
+
+	int32 Cleared = 0;
+	int32 Exhausted = 0;
+	Director->OnSpawnRequested.AddLambda([Director](const FDFSpawnEntry&) { Director->NotifyEnemyRemoved(); });
+	Director->OnWaveSpawnsExhausted.AddLambda([Director, &Exhausted](int32) { ++Exhausted; Director->Destroy(); });
+	Director->OnWaveCleared.AddLambda([&Cleared](int32) { ++Cleared; });
+
+	Director->BeginWave(0, 1);
+	// Long enough to exhaust the plan, not merely to make every entry due: wave 0's four grunts are
+	// 20 ticks apart plus up to 20 % jitter, so the last is due around 2.4 s. A 2 s frame releases
+	// three of them, leaves the schedule unexhausted, and never reaches the broadcast under test —
+	// which is exactly what the first version of this fixture did.
+	Director->Tick(5.f);
+
+	TestEqual(TEXT("the exhausted broadcast fired, which is the one being guarded"), Exhausted, 1);
+	TestFalse(TEXT("the director is gone"), IsValid(Director));
+	TestEqual(TEXT("and no wave cleared out of a destroyed director"), Cleared, 0);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFWaveDirectorDescribeTest, "DF.Unit.WaveDirector.DescribeWaveAndContent", DFWaveDirectorTest::Flags)
 bool FDFWaveDirectorDescribeTest::RunTest(const FString& Parameters)
 {

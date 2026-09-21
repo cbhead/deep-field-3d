@@ -77,6 +77,16 @@ public:
 private:
 	void CheckCleared();
 
+	/** Whether a release loop is still working on the wave it started on, and on a live actor.
+	 *
+	 *  Every broadcast this class makes hands control to foreign code that may destroy the director,
+	 *  abort the wave, or abort and immediately begin another. `bWaveActive` cannot tell the last of
+	 *  those from "nothing happened" — it is true either way — and a loop that trusted it would keep
+	 *  releasing the *replacement* wave's entries against the old wave's clock. So "still this wave"
+	 *  is a token the code compares rather than a state it infers, and it is re-checked after every
+	 *  broadcast rather than after the ones that have bitten us. */
+	bool IsStillReleasing(uint64 Generation) const { return IsValid(this) && bWaveActive && WaveGeneration == Generation; }
+
 	FDFWavePlanTables Tables;
 	FDFWaveSchedule Schedule;
 	TArray<TSharedRef<const IDFWaveInjectionStream>> InjectionStreams;
@@ -87,4 +97,5 @@ private:
 	bool bWaveActive = false;
 	bool bExhaustedAnnounced = false;
 	bool bReleasing = false;
+	uint64 WaveGeneration = 0;   // bumped by every wave that begins; never reused
 };
