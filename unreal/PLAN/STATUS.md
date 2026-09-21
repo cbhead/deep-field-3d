@@ -1,32 +1,32 @@
 # Workstream status
 
-Generated 2026-09-20T04:28:03Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-21T04:55:35Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
 active: 7 · claimed: 1 · review: 1 · unclaimed: 40
 
 | WS | Title | Phase | CP | State | Owner | Lease expires | Last commit | Editor-heavy | Blocked on |
 |---|---|---|---|---|---|---|---|---|---|
 | WS-00 | Foundation & contracts | P1 | CP | review (lease expired) | session-75b58b1b (INT) | 2026-09-18T07:17:27Z | ff379ca | yes | git-lfs for committing L_Dev_Empty.umap; WS-15 for CI |
-| WS-01 | Content pipeline | P1 | CP | active | session-75b58b1b/agent-ws01 | 2026-09-20T15:21:30Z | d8168ba |  | — |
-| WS-02 | Gameplay core (GAS) | P1-P2 | CP | active | session-75b58b1b/agent-ws02 | 2026-09-20T15:16:34Z | — |  | — |
+| WS-01 | Content pipeline | P1 | CP | active (lease expired) | session-75b58b1b/agent-ws01 | 2026-09-20T15:21:30Z | d8168ba |  | — |
+| WS-02 | Gameplay core (GAS) | P1-P2 | CP | active (lease expired) | session-75b58b1b/agent-ws02 | 2026-09-20T15:16:34Z | — |  | — |
 | WS-03 | Player | P2 | CP | unclaimed | — | — | — | yes | — |
 | WS-04 | Towers & build | P2-P3 | CP | unclaimed | — | — | — | yes | — |
-| WS-05 | Enemies & AI | P2-P3 | CP | claimed | session-62767025 | 2026-09-20T23:20:27Z | — | yes | — |
+| WS-05 | Enemies & AI | P2-P3 | CP | claimed (lease expired) | session-62767025 | 2026-09-20T23:20:27Z | — | yes | — |
 | WS-06 | Economy, scrap, gunsmith | P3 |  | unclaimed | — | — | — |  | — |
 | WS-07 | Factions & abilities | P2-P4 | CP | unclaimed | — | — | — |  | — |
 | WS-08 | Vehicles | P3-P4 |  | unclaimed | — | — | — | yes | — |
-| WS-09 | World: lanes, sockets, traversal, conditions, terrain import | P1-P4 | CP | active | session-75b58b1b/agent-ws09 | 2026-09-20T15:16:34Z | — | yes | — |
+| WS-09 | World: lanes, sockets, traversal, conditions, terrain import | P1-P4 | CP | active (lease expired) | session-75b58b1b/agent-ws09 | 2026-09-20T15:16:34Z | — | yes | — |
 | WS-10a | Map redesign: Foundry | P2 | CP | unclaimed | — | — | — | yes | — |
 | WS-10b | Map redesign: Switchyard | P3 |  | unclaimed | — | — | — | yes | — |
 | WS-10c | Map redesign: Spire | P3 |  | unclaimed | — | — | — | yes | — |
 | WS-10d | Map redesign: Toaster | P3 |  | unclaimed | — | — | — | yes | — |
 | WS-10e | Map design: Sluice (new) | P4 |  | unclaimed | — | — | — | yes | — |
 | WS-10f | Map design: Crown (new) | P4 |  | unclaimed | — | — | — | yes | — |
-| WS-11 | Online, lobby, profile (EOS) | P1-P3 | CP | active | session-75b58b1b/agent-ws11 | 2026-09-20T22:15:00Z | ba05fc5 |  | — |
-| WS-12 | UI (Common UI + MVVM) | P2-P5 | CP | active | session-fae2d0c5 | 2026-09-20T21:33:47Z | 278e262 | yes | — |
+| WS-11 | Online, lobby, profile (EOS) | P1-P3 | CP | active (lease expired) | session-75b58b1b/agent-ws11 | 2026-09-20T22:15:00Z | ba05fc5 |  | — |
+| WS-12 | UI (Common UI + MVVM) | P2-P5 | CP | active (lease expired) | session-fae2d0c5 | 2026-09-20T21:33:47Z | 278e262 | yes | — |
 | WS-13 | Audio (MetaSounds) | P2-P5 |  | unclaimed | — | — | — | yes | — |
 | WS-14 | VFX (Niagara) | P2-P5 |  | unclaimed | — | — | — | yes | — |
-| WS-15 | Automation, CI, packaging, store | P1+ |  | active | session-75b58b1b/agent-ws15 | 2026-09-20T21:35:55Z | bd9d16a |  | — |
+| WS-15 | Automation, CI, packaging, store | P1+ |  | active (lease expired) | session-75b58b1b/agent-ws15 | 2026-09-20T21:35:55Z | bd9d16a |  | — |
 | WS-16 | Overclock tower + grid | P4 |  | unclaimed | — | — | — |  | — |
 | WS-17 | Elite modifiers | P4 |  | unclaimed | — | — | — |  | — |
 | WS-18 | Weak points + Specter passive | P4 |  | unclaimed | — | — | — |  | — |
@@ -39,7 +39,7 @@ active: 7 · claimed: 1 · review: 1 · unclaimed: 40
 | WS-25 | Physics layer | P4 |  | unclaimed | — | — | — | yes | — |
 | WS-26 | Co-op verbs & security rules | P4 |  | unclaimed | — | — | — |  | — |
 | WS-27 | Waves, tiers, endless, balance | P4 (last) |  | unclaimed | — | — | — |  | — |
-| WS-30 | Art pipeline (Claude Design → Unreal, terrain lane, validators) | P1+ |  | active | session-75b58b1b/agent-ws30 | 2026-09-20T15:16:34Z | 76f3662 | yes | — |
+| WS-30 | Art pipeline (Claude Design → Unreal, terrain lane, validators) | P1+ |  | active (lease expired) | session-75b58b1b/agent-ws30 | 2026-09-20T15:16:34Z | 76f3662 | yes | — |
 | WS-31 | Materials & palette | P1+ |  | unclaimed | — | — | — | yes | — |
 | WS-32 | Skeletons & animation contract | P2+ |  | unclaimed | — | — | — | yes | — |
 | WS-33 | Towers art | P5 |  | unclaimed | — | — | — | yes | — |
