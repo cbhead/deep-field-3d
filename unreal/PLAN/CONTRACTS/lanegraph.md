@@ -46,3 +46,19 @@ the problem the sentinel exists to prevent. WS-05 owns a test that pins it; WS-0
 as an opaque sort key and never do arithmetic on it (float max plus anything is still float max, and
 subtracting two of them is zero).
 
+## A warp arrival pad is a Spawn node, and that is what protects it (INT, 2026-09-21)
+`DFLaneGraphBuilder.cpp:212` marks the arrival pad of every teleport leg `EDFLaneNodeKind::Spawn` — "an
+arrival pad is an entrance in every sense the apron rule means" — and `EverySpawnReachesCore` walks every
+Spawn-kind node, so `WouldSeal` **already refuses** a closure that would cut a warp destination off from
+every core. Recorded because it is load-bearing and not obvious: INT reasoned about a walker stranded
+past a warp on the assumption that shutting the only edge out of an arrival pad was a legal authored
+layout, and WS-05 corrected it from the builder. The correction was right.
+
+**The consequence belongs to WS-24 and to anything else that flips `EdgeOpen` at runtime.** Because
+authored gates cannot produce that state, the way to produce it is a code path that closes an edge
+*without* asking `WouldSeal` — a mutable, a destructible wall, a scripted event. RFC-0001 already sets
+the rule (the closable set may seal in combination; the runtime refuses the closure that would be the
+last), and this is the concrete reason it must be honoured by every closer rather than only by the lever
+gates: a walker stranded past a warp is a wave that stops, and until #46's `ArriveAtNode` fix it was also
+a wave every tower ignored.
+

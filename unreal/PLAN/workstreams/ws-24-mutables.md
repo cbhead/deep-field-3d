@@ -46,3 +46,14 @@ blocked_on:
 (the director owns "what spawns when" and "when the wave is over", and counts only what it knows about).
 This reaches a hidden nest or any mutable that releases bodies. INT recorded it on 2026-09-21 from PR #45; it is a one-line call, and finding it after
 the fact costs a wave-clear bug that only shows up with that content in play.
+
+## From INT (2026-09-21) — every closer asks WouldSeal, not just the lever gates
+An authored lane gate cannot seal a spawn from a core: `WouldSeal` → `EverySpawnReachesCore` refuses it,
+and warp arrival pads count as Spawn nodes (`DFLaneGraphBuilder.cpp:212`), so they are protected too.
+That guarantee is only as good as the set of things that ask. **A floodgate, a crusher holding an edge
+shut, a container dropped into a `containerGate`, or any scripted closure must go through the same
+refusal** (RFC-0001: the closable set may seal in combination; the runtime refuses the closure that
+would be the last). A destructible wall *opening* an edge cannot seal and needs no check.
+The cost of skipping it is not an error message: it is a wave that stops walking, and — before #46
+fixed the walker — a wave every tower ignored, because a stranded walker reports the cut-off sentinel.
+
