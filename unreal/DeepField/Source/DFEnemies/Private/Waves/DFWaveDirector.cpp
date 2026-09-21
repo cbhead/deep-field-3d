@@ -136,7 +136,7 @@ void ADFWaveDirector::Tick(float DeltaSeconds)
 
 void ADFWaveDirector::NotifyEnemyAdded(int32 Count)
 {
-	if (bWaveActive)
+	if (IsLiveWave())
 	{
 		Alive += FMath::Max(0, Count);
 	}
@@ -144,7 +144,10 @@ void ADFWaveDirector::NotifyEnemyAdded(int32 Count)
 
 void ADFWaveDirector::NotifyEnemyRemoved(int32 Count)
 {
-	if (!bWaveActive)
+	// A straggler reporting in after the director died is the caller doing nothing wrong: WS-19's
+	// brood vents and WS-24's mutables are told to report every body, and a torn-down match is not
+	// their business. It is this class's business not to announce a cleared wave out of one.
+	if (!IsLiveWave())
 	{
 		return;
 	}
@@ -154,6 +157,18 @@ void ADFWaveDirector::NotifyEnemyRemoved(int32 Count)
 		Alive = 0;
 	}
 	CheckCleared();
+}
+
+void ADFWaveDirector::EndPlay(const EEndPlayReason::Type Reason)
+{
+	// Not AbortWave: that resets the schedule and touches the tick function, which is more than a
+	// dying actor should do. Teardown is not a wave clearing either, so nothing is broadcast.
+	// This is the tidy path, not the guard: EndPlay does not run for an actor that never began
+	// play, so IsLiveWave's IsValid term is what actually closes the hole.
+	bWaveActive = false;
+	ActiveWave = INDEX_NONE;
+	bReleasing = false;
+	Super::EndPlay(Reason);
 }
 
 void ADFWaveDirector::AbortWave()
@@ -167,7 +182,7 @@ void ADFWaveDirector::AbortWave()
 
 void ADFWaveDirector::CheckCleared()
 {
-	if (!bWaveActive || bReleasing || !Schedule.IsExhausted() || Alive > 0)
+	if (!IsLiveWave() || bReleasing || !Schedule.IsExhausted() || Alive > 0)
 	{
 		return;
 	}
