@@ -527,6 +527,7 @@ void UDFStatusComponent::ApplyBurst(const FDFStatusApplyOutcome& Outcome, AActor
 			Params.Instigator = Source;
 			Params.RawMagnitude = Burst;
 			Params.NormalizedMagnitude = Outcome.BurstFraction;
+			UDFGameplayCueNotify_Base::RegisterNativeCues();   // heals a cue set the manager rebuilt (it Empty()s on re-init)
 			ASC->ExecuteGameplayCue(Cue, Params);
 		}
 	}
@@ -549,6 +550,9 @@ void UDFStatusComponent::FireCue(FName StatusId, const TCHAR* Verb, float Magnit
 	FGameplayCueParameters Params;
 	Params.Instigator = Source;
 	Params.RawMagnitude = Magnitude;
+	// Two O(1) map lookups when the families are registered (the common case); it re-adds them when
+	// the GameplayCueManager rebuilt its runtime library, which empties the set.
+	UDFGameplayCueNotify_Base::RegisterNativeCues();
 	ASC->ExecuteGameplayCue(Cue, Params);
 }
 

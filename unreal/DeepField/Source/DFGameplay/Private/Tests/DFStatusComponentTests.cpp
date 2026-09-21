@@ -525,12 +525,14 @@ bool FDFStatusRefreshRetargetsDotTest::RunTest(const FString& Parameters)
 	}
 	TestTrue(TEXT("every tick before the refresh is the first applier's"), bAllFirst);
 
+	const FActiveGameplayEffectHandle Before = F.Status->GetChannelEffectHandle(EDFStatusChannel::Thermal);
+	TestTrue(TEXT("a Thermal effect is running"), Before.IsValid());
 	TestEqual(TEXT("same burn from the second applier refreshes"), F.Status->Apply(DFTags::Status_Burn, Second), EDFStatusApplyResult::Refreshed);
 	TestEqual(TEXT("slot source moved"), F.Status->GetResolver().Slot(EDFStatusChannel::Thermal).SourceId, static_cast<int32>(Second->GetUniqueID()));
 	TestEqual(TEXT("no extra tick fired by the refresh itself (the effect was not re-applied)"), Instigators.Num(), TicksBeforeRefresh);
-	FGameplayTagContainer Thermal;
-	Thermal.AddTag(DFTags::Status_Channel_Thermal);
-	TestEqual(TEXT("still exactly one Thermal effect"), F.ASC->GetActiveEffectsWithAllTags(Thermal).Num(), 1);
+	TestTrue(TEXT("the SAME Thermal effect still runs (retargeted, not re-applied)"), F.Status->GetChannelEffectHandle(EDFStatusChannel::Thermal) == Before);
+	TestTrue(TEXT("and it is still active on the ASC"), F.ASC->GetActiveGameplayEffect(Before) != nullptr);
+	TestTrue(TEXT("the channel tag is still granted"), F.ASC->HasMatchingGameplayTag(DFTags::Status_Channel_Thermal));
 
 	F.Tick(0.5f);
 	TestTrue(TEXT("the burn kept ticking"), Instigators.Num() > TicksBeforeRefresh);

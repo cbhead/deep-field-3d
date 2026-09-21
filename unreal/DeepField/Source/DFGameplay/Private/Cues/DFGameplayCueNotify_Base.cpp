@@ -36,9 +36,17 @@ namespace
 
 void UDFGameplayCueNotify_Base::RegisterNativeCues()
 {
+	// Silence is the failure mode to avoid here: an unregistered family means every DF cue is
+	// dropped by the cue set and nothing says so, so each reason warns once per process.
+	static bool bWarnedNoManager = false;
+	static bool bWarnedNoSet = false;
+	static bool bWarnedNoTags = false;
+
 	UGameplayCueManager* Manager = UAbilitySystemGlobals::Get().GetGameplayCueManager();
 	if (!Manager)
 	{
+		UE_CLOG(!bWarnedNoManager, LogDFCues, Warning, TEXT("no GameplayCueManager (InitGlobalData not run?): DF cues will not be handled"));
+		bWarnedNoManager = true;
 		return;
 	}
 	UGameplayCueSet* Set = Manager->GetRuntimeCueSet();
@@ -51,6 +59,8 @@ void UDFGameplayCueNotify_Base::RegisterNativeCues()
 		Set = Manager->GetRuntimeCueSet();
 		if (!Set)
 		{
+			UE_CLOG(!bWarnedNoSet, LogDFCues, Warning, TEXT("the GameplayCueManager has no runtime cue set: DF cues will not be handled"));
+			bWarnedNoSet = true;
 			return;
 		}
 	}
@@ -64,9 +74,16 @@ void UDFGameplayCueNotify_Base::RegisterNativeCues()
 		const FGameplayTag& Tag = Native.Tag;
 		if (!Tag.IsValid())
 		{
-			continue;   // no leaf of that family in Config/Tags: nothing to handle
+			// No leaf of that family in Config/Tags — or the tag was first asked for before the tag
+			// manager had loaded the ini, which caches an invalid tag for the process.
+			UE_CLOG(!bWarnedNoTags, LogDFCues, Warning, TEXT("a DF cue family root tag is invalid: %s handles nothing"), *GetNameSafe(Native.Class));
+			bWarnedNoTags = true;
+			continue;
 		}
-		const bool bRegistered = Set->GameplayCueData.ContainsByPredicate([&Tag](const FGameplayCueNotifyData& Data) { return Data.GameplayCueTag == Tag; });
+		// O(1), and precise: the acceleration map also carries parent tags pointing at a child's
+		// entry, so the entry's own tag has to be the one we are looking for.
+		const int32* Index = Set->GameplayCueDataMap.Find(Tag);
+		const bool bRegistered = Index && Set->GameplayCueData.IsValidIndex(*Index) && Set->GameplayCueData[*Index].GameplayCueTag == Tag;
 		if (!bRegistered)
 		{
 			ToAdd.Emplace(Tag, FSoftObjectPath(Native.Class));
@@ -79,6 +96,19 @@ void UDFGameplayCueNotify_Base::RegisterNativeCues()
 		{
 			UE_LOG(LogDFCues, Log, TEXT("native cue handler %s -> %s"), *Pair.GameplayCueTag.ToString(), *Pair.StringRef.ToString());
 		}
+	}
+	static bool bReported = false;
+	if (!bReported)
+	{
+		bReported = true;
+		// One line that says whether the cue path can work at all: the families, and whether the ini
+		// leaves the component fires resolve (they come from Config/Tags/DF_Gameplay.ini).
+		const FGameplayTag SampleStatus = DFGameplayLocalTags::StatusCue(TEXT("chill"), TEXT("Applied"));
+		const FGameplayTag SampleReaction = DFGameplayLocalTags::ReactionCue(TEXT("thermalShock"));
+		UE_LOG(LogDFCues, Log, TEXT("native cue families: %d added, the runtime cue set holds %d cue(s); leaves: %s=%s, %s=%s"),
+			ToAdd.Num(), Set->GameplayCueData.Num(),
+			*DFGameplayLocalTags::StatusCueRoot().ToString(), SampleStatus.IsValid() ? TEXT("ok") : TEXT("MISSING"),
+			*DFGameplayLocalTags::ReactionCueRoot().ToString(), SampleReaction.IsValid() ? TEXT("ok") : TEXT("MISSING"));
 	}
 }
 

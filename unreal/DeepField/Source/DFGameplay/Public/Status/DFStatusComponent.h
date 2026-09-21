@@ -95,6 +95,11 @@ public:
 	/** The server-side resolver (empty on clients). */
 	const FDFStatusResolver& GetResolver() const { return Resolver; }
 
+	/** The channel's running UDFGE_Status_<Channel>, or an invalid handle when the slot is empty.
+	 *  A same-id refresh keeps this handle (the effect is retargeted, never re-applied), which is
+	 *  how a caller tells a refresh from a re-application. */
+	FActiveGameplayEffectHandle GetChannelEffectHandle(EDFStatusChannel Channel) const { return ChannelEffects[static_cast<int32>(Channel)]; }
+
 	// ---- target facts the gates read ----
 
 	/** Enemy row Mass; Tether is refused at >= the resolver's TetherImmuneMass (6). */
