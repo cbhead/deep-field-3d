@@ -90,6 +90,59 @@ TArray<float> FDFLaneWalker::SegmentLengthsCm(const FDFLaneEdge& Edge)
 	return Lengths;
 }
 
+float FDFLaneWalker::KnockBack(const UDFLaneGraphAsset& Graph, FDFLaneWalkerState& State, float Meters)
+{
+	if (!State.IsWalking() || !Graph.Edges.IsValidIndex(State.EdgeIndex) || Meters <= 0.f)
+	{
+		return 0.f;
+	}
+
+	float RemainingCm = Meters * CmPerMeter;
+	const float AskedCm = RemainingCm;
+
+	// Bounded for the same reason Advance is: a corrupt graph must not spin here. A knockback
+	// crosses at most one edge boundary in the sim (one edge of memory), so two is already generous.
+	int32 Guard = 64;
+	while (RemainingCm > 0.f && Guard-- > 0)
+	{
+		if (State.SegmentProgressCm >= RemainingCm)
+		{
+			State.SegmentProgressCm -= RemainingCm;
+			State.TotalTraveledCm -= RemainingCm;
+			RemainingCm = 0.f;
+			break;
+		}
+
+		RemainingCm -= State.SegmentProgressCm;
+		State.TotalTraveledCm -= State.SegmentProgressCm;
+		State.SegmentProgressCm = 0.f;
+
+		if (State.Segment == 0)
+		{
+			// Off the front of this edge. The edge before it is where it came from — unless that is
+			// a warp, and nothing pushes an enemy back through one of those.
+			if (!Graph.Edges.IsValidIndex(State.PrevEdgeIndex) || Graph.Edges[State.PrevEdgeIndex].IsWarp())
+			{
+				break;   // parked at the start of this edge (or on the arrival pad); as far back as it goes
+			}
+			State.EdgeIndex = State.PrevEdgeIndex;
+			State.PrevEdgeIndex = INDEX_NONE;   // one edge of memory, spent
+			State.Segment = SegmentLengthsCm(Graph.Edges[State.EdgeIndex]).Num();
+		}
+
+		const TArray<float> Lengths = SegmentLengthsCm(Graph.Edges[State.EdgeIndex]);
+		if (Lengths.Num() == 0)
+		{
+			break;
+		}
+		State.Segment = FMath::Clamp(State.Segment - 1, 0, Lengths.Num() - 1);
+		State.SegmentProgressCm = Lengths[State.Segment];
+	}
+
+	State.TotalTraveledCm = FMath::Max(0.f, State.TotalTraveledCm);
+	return (AskedCm - FMath::Max(0.f, RemainingCm)) / CmPerMeter;
+}
+
 float FDFLaneWalker::SegmentGrade(const FDFLaneEdge& Edge, int32 Segment)
 {
 	if (!Edge.Waypoints.IsValidIndex(Segment) || !Edge.Waypoints.IsValidIndex(Segment + 1))
@@ -157,6 +210,7 @@ EDFArrival FDFLaneWalker::ArriveAtNode(const UDFLaneGraphAsset& Graph, const FDF
 		State.bStranded = false;
 		Add(OutEvents, EDFWalkEventKind::Unstranded, AtNode, ArrivalLocation);
 	}
+	State.PrevEdgeIndex = State.EdgeIndex;   // one edge of memory, for a knockback to spend
 	State.EdgeIndex = Next;
 	State.Segment = 0;
 	State.SegmentProgressCm = 0.f;

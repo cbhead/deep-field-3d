@@ -588,6 +588,104 @@ bool FDFLaneWalkerBeginRoutesTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFLaneWalkerKnockBackTest, "DF.Unit.LaneWalker.KnockBackTravelsTheLaneBackwards", DFLaneWalkerTest::Flags)
+bool FDFLaneWalkerKnockBackTest::RunTest(const FString& Parameters)
+{
+	using namespace DFLaneWalkerTest;
+	// Displacement is along the lane, not through space (Step.cs KnockBack). A Maul, a launcher trap
+	// and a Nova crater all move a body back through the segments it walked — so an enemy shoved off
+	// a bridge does not end up beside the lane, it ends up further down it.
+	UDFLaneGraphAsset* G = Straight();
+	const FDFLaneItinerary& It = *G->FindItinerary(TEXT("ground"));
+	FRouting R(*G);
+
+	FDFLaneWalkerState S;
+	FDFLaneWalker::Begin(*G, It, Params(10.f), R, 0.f, S, Spawned);
+	Run(*G, It, Params(10.f), R, S, 90);   // 3 s at 10 m/s: 30 m along spawn-mid
+	const float Before = S.TotalTraveledCm;
+	TestTrue(TEXT("walked about 30 m"), FMath::IsNearlyEqual(Before, 30.f * M, 1.f * M));
+
+	// Within the current segment: straightforward subtraction.
+	TestTrue(TEXT("gave up the full 8 m"), FMath::IsNearlyEqual(FDFLaneWalker::KnockBack(*G, S, 8.f), 8.f, 0.01f));
+	TestTrue(TEXT("and is 8 m further back"), FMath::IsNearlyEqual(S.TotalTraveledCm, Before - 8.f * M, 1.f));
+	TestTrue(TEXT("still on the lane, not beside it"), FDFLaneWalker::LocationOf(*G, S).Equals(FVector(22.f * M, 0, 0), 1.f));
+
+	// Across a segment boundary within one edge. spawn-mid is two 50 m segments, so walking 70 m
+	// puts it 20 m into the second and a 40 m shove must carry it back onto the first at 30 m.
+	// (The first version of this block walked 22 + 80 = 102 m, which is past the 100 m edge
+	// entirely — it was testing an edge crossing while claiming to test a segment one.)
+	FDFLaneWalkerState Seg;
+	FDFLaneWalker::Begin(*G, It, Params(10.f), R, 0.f, Seg, Spawned);
+	Run(*G, It, Params(10.f), R, Seg, 210);   // 70 m at 10 m/s, 30 Hz
+	TestEqual(TEXT("now on the second segment"), Seg.Segment, 1);
+	TestTrue(TEXT("70 m along"), FMath::IsNearlyEqual(Seg.TotalTraveledCm, 70.f * M, 1.f * M));
+
+	FDFLaneWalker::KnockBack(*G, Seg, 40.f);
+	TestEqual(TEXT("knocked back over the boundary onto the first"), Seg.Segment, 0);
+	TestTrue(TEXT("exactly 30 m along"), FMath::IsNearlyEqual(Seg.TotalTraveledCm, 30.f * M, 1.f * M));
+	TestTrue(TEXT("30 m into the segment, which is 30 m down the lane"), FMath::IsNearlyEqual(Seg.SegmentProgressCm, 30.f * M, 1.f * M));
+	TestTrue(TEXT("and standing there"), FDFLaneWalker::LocationOf(*G, Seg).Equals(FVector(30.f * M, 0, 0), 1.f * M));
+
+	// Off the front of an edge: it crosses onto the one it came from, once.
+	FDFLaneWalkerState Crossed;
+	FDFLaneWalker::Begin(*G, It, Params(10.f), R, 0.f, Crossed, Spawned);
+	Run(*G, It, Params(10.f), R, Crossed, 330);   // 110 m: just onto mid-core
+	TestEqual(TEXT("it is on the second edge"), G->Edges[Crossed.EdgeIndex].Id, FName(TEXT("mid-core")));
+	TestEqual(TEXT("with one edge of memory"), G->Edges[Crossed.PrevEdgeIndex].Id, FName(TEXT("spawn-mid")));
+	FDFLaneWalker::KnockBack(*G, Crossed, 30.f);
+	TestEqual(TEXT("knocked back onto the edge it came from"), G->Edges[Crossed.EdgeIndex].Id, FName(TEXT("spawn-mid")));
+	TestEqual(TEXT("and the memory is spent"), Crossed.PrevEdgeIndex, INDEX_NONE);
+
+	// A second knockback has no memory left, so it stops at the start of the edge rather than
+	// walking back down a route it no longer remembers.
+	const float Given = FDFLaneWalker::KnockBack(*G, Crossed, 1000.f);
+	TestTrue(FString::Printf(TEXT("it gave up only the lane it had (%.1f m of 1000)"), Given), Given < 200.f);
+	TestEqual(TEXT("parked at the start of the edge"), Crossed.Segment, 0);
+	TestTrue(TEXT("with nothing walked"), FMath::IsNearlyEqual(Crossed.TotalTraveledCm, 0.f, 1.f));
+	TestTrue(TEXT("and never negative"), Crossed.TotalTraveledCm >= 0.f);
+
+	// Nothing pushes a body back through a warp: the arrival pad is as far as a launcher gets it.
+	UDFLaneGraphAsset* W = NewObject<UDFLaneGraphAsset>(GetTransientPackage());
+	W->Nodes = {
+		Node(TEXT("spawn"), FVector::ZeroVector, EDFLaneNodeKind::Spawn),
+		Node(TEXT("gate"), FVector(50 * M, 0, 0)),
+		Node(TEXT("pad"), FVector(500 * M, 0, 0), EDFLaneNodeKind::Spawn),
+		Node(TEXT("core"), FVector(600 * M, 0, 0), EDFLaneNodeKind::Core),
+	};
+	FDFLaneEdge Warp;
+	Warp.Id = TEXT("gate-pad");
+	Warp.From = TEXT("gate");
+	Warp.To = TEXT("pad");
+	Warp.Kind = EDFLaneEdgeKind::Warp;
+	Warp.Waypoints = { FVector(50 * M, 0, 0), FVector(500 * M, 0, 0) };
+	W->Edges = { Walk(TEXT("spawn"), TEXT("gate"), { FVector::ZeroVector, FVector(50 * M, 0, 0) }), Warp, Walk(TEXT("pad"), TEXT("core"), { FVector(500 * M, 0, 0), FVector(600 * M, 0, 0) }) };
+	FDFLaneItinerary WIt;
+	WIt.Id = TEXT("warped");
+	WIt.Via = { TEXT("spawn"), TEXT("gate"), TEXT("pad"), TEXT("core") };
+	W->Itineraries = { WIt };
+	W->RebuildIndex();
+	FRouting WR(*W);
+
+	FDFLaneWalkerState Warped;
+	FDFLaneWalker::Begin(*W, W->Itineraries[0], Params(10.f), WR, 0.f, Warped, Spawned);
+	Run(*W, W->Itineraries[0], Params(10.f), WR, Warped, 200);   // through the warp, onto pad-core
+	TestEqual(TEXT("it is past the warp"), W->Edges[Warped.EdgeIndex].Id, FName(TEXT("pad-core")));
+	FDFLaneWalker::KnockBack(*W, Warped, 500.f);
+	TestEqual(TEXT("a huge shove leaves it on this side of the warp"), W->Edges[Warped.EdgeIndex].Id, FName(TEXT("pad-core")));
+	TestTrue(TEXT("standing on the arrival pad"), FDFLaneWalker::LocationOf(*W, Warped).Equals(FVector(500 * M, 0, 0), 1.f));
+
+	// A knockback is lane arithmetic, not a status: it moves nobody who has already leaked, and a
+	// zero or negative shove does nothing.
+	FDFLaneWalkerState Leaked;
+	FDFLaneWalker::Begin(*G, It, Params(10.f), R, 0.f, Leaked, Spawned);
+	Run(*G, It, Params(10.f), R, Leaked, 700);
+	TestFalse(TEXT("it leaked"), Leaked.IsWalking());
+	TestEqual(TEXT("and cannot be knocked back out of the core"), FDFLaneWalker::KnockBack(*G, Leaked, 50.f), 0.f);
+	TestEqual(TEXT("a zero shove does nothing"), FDFLaneWalker::KnockBack(*G, S, 0.f), 0.f);
+	TestEqual(TEXT("nor a negative one"), FDFLaneWalker::KnockBack(*G, S, -5.f), 0.f);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFLaneWalkerScatterTest, "DF.Unit.LaneWalker.ScatterIsLateralOnly", DFLaneWalkerTest::Flags)
 bool FDFLaneWalkerScatterTest::RunTest(const FString& Parameters)
 {

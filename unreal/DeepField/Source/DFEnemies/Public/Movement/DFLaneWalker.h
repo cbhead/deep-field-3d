@@ -95,6 +95,10 @@ struct DFENEMIES_API FDFLaneWalkerState
 	GENERATED_BODY()
 
 	UPROPERTY() int32 EdgeIndex = INDEX_NONE;   // INDEX_NONE once the core is reached
+	/** The edge it came from, and **one edge of memory only** — spent the first time a knockback
+	 *  uses it (Step.cs KnockBack). That is the sim's rule and it is load-bearing: without a bound,
+	 *  a chain of launchers could walk a body back down a whole route it no longer remembers. */
+	UPROPERTY() int32 PrevEdgeIndex = INDEX_NONE;
 	UPROPERTY() int32 Segment = 0;              // which waypoint pair
 	UPROPERTY() float SegmentProgressCm = 0.f;  // distance into that pair
 	UPROPERTY() int32 ViaCursor = 0;            // how far along the itinerary's vias routing has got
@@ -180,6 +184,15 @@ struct DFENEMIES_API FDFLaneWalker
 	 *  a cut-off enemy sorts last, a leaked one has nothing left. A stranded walker reports cut off
 	 *  even though the graph's own metric cannot see it — see the note in the .cpp. */
 	static float RemainingToCoreMeters(const UDFLaneGraphAsset& Graph, const FDFLaneItinerary& Itinerary, const FDFLaneWalkerState& State, const TArray<bool>& EdgeOpen);
+
+	/** Push a walker back along the lane it came down. **Displacement is along the lane, not through
+	 *  space** (Step.cs KnockBack): a Maul, a launcher trap or a Nova crater moves an enemy backward
+	 *  through the segments it walked, and across an edge boundary when it runs out of them. It is
+	 *  not a status, it fills no cc-resist, and it never pushes anyone through a warp — the arrival
+	 *  pad is as far back as a launcher gets a body, because the alternative is an enemy parked on a
+	 *  zero-length span or reappearing across the map because somebody stood on a trap. Returns the
+	 *  metres actually given up, which is less than asked when it runs out of lane. */
+	static float KnockBack(const UDFLaneGraphAsset& Graph, FDFLaneWalkerState& State, float Meters);
 
 	/** The signed grade of one waypoint segment as a fraction (+ uphill), 0 where it is vertical or degenerate. */
 	static float SegmentGrade(const FDFLaneEdge& Edge, int32 Segment);
