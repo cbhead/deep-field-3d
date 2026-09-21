@@ -47,3 +47,23 @@ git pull --rebase origin unreal/main && git push origin HEAD:unreal/main   # the
 python3 unreal/Build/plan-status.py            # writes unreal/PLAN/STATUS.md from workstream frontmatter
 python3 unreal/Build/plan-scaffold.py          # creates any workstream file missing from registry.json (never overwrites)
 ```
+
+## INT: do not write into a workstream file while its PR is open
+Three ledger conflicts tonight had one cause. A workstream's `.md` is edited by its own branch *and*
+pushed to directly — by its owner renewing a §6.2 lease, and by INT recording a ruling. The moment both
+happen, the open PR conflicts, and the conflict is always the same shape: an append-only session log
+where both sides are correct and the resolution is a union in date order, never a winner.
+
+WS-05 drew the rule for itself first: **a direct ledger push is only safe while no open PR of yours
+edits that file — otherwise rebase the PR immediately, not hours later.** INT then hit the same wall
+from the other side, twice, by recording rulings in `ws-05-enemies-ai.md` and `ws-02-gameplay-core.md`
+while both had PRs in flight.
+
+So, for INT specifically:
+- Prefer the **contract doc, the RFC, or the digest** for a ruling. Those are INT-owned and nobody's PR
+  edits them. A ruling in `CONTRACTS/lanegraph.md` is also more findable later than one in a ws file.
+- Write into a **workstream file** only when the note must be read by whoever claims it next (the
+  `NotifyEnemyAdded` invariant in ws-17/19/20/24 is the right use — those are unclaimed), and check
+  `gh pr list` first when the workstream is active.
+- When a conflict happens anyway, the resolution is mechanical: union both sides' dated entries, sort
+  by date, keep the newer frontmatter. Never take one side wholesale — both are real history.
