@@ -4,6 +4,14 @@
 
 Transport (ADR-0004): the host broadcasts locally then `ADFEventRelay::NetMulticast_Event(FDFEventEnvelope)` for team-wide messages, or `Client_Refused(Tag, Reason)` for refusals to the issuing client only. UI, audio and VFX subscribe to messages and cues; nothing polls.
 
+**Who broadcasts (INT ruling, 2026-09-21).** A system that *produces* a discrete fact builds the payload;
+**DFMatch broadcasts it.** `ADFWaveDirector::DescribeWave` returns the `FDFMsg_Wave` fields (lap, threat =
+the hp scale, condition tag) and never touches the bus; DFMatch's relay is the one multicast path, so a
+client can never receive `WaveStarted` for a wave the match state has not entered. This follows from
+ADR-0004 (one relay) and from the module layering — DFEnemies is layer 3 and cannot see DFMatch — and it
+generalises: towers, economy and world systems hand DFMatch a payload rather than broadcasting their own.
+The exception is a refusal, which goes `Client_Refused` to the issuing client from wherever it was refused.
+
 Messages mirror `sim/Sim.Core/Events.cs:17-317` one-to-one (same names, same fields) — the port must keep the list; new ones are appended:
 
 **Lobby/match:** `PlayerJoined, PlayerLeft, JoinRejected{reason,yourBuild,hostBuild}, FactionSet, MatchLaunched, WaveStarted, WaveCleared, Intermission, Victory, Defeat, CoreBreached{lives}, ConditionAnnounced{next}, EndlessLap, TierSet, EarlyCallVote{player,vote}, EarlyCalled{bonus}`.

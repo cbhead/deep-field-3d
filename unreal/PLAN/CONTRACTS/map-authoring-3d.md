@@ -26,3 +26,14 @@
 
 ## 3. Lessons and briefs
 Each level file carries `brief.lesson` (one sentence, e.g. "the ground you hold is not the ground the wave is on") and `brief.intent` (a paragraph). The redesign of an existing map must preserve its lesson and its route-length ratios within ±20 %; socket counts may change. The previous `level.json` is copied to `unreal/content/levels/legacy/<map>.level.json` as the brief's record.
+
+## Route ids are referenced by the wave tables (INT, 2026-09-21)
+`waves_<map>.json` names a `routeId` per wave group, and those ids are the itinerary ids in
+`<map>.level.json`. A WS-10x redesign that renames or removes a route **must rename it in
+`waves_<map>.json` in the same PR**. `DF.Map.Validate` enforces it: every `routeId` in the map's wave
+table resolves to an itinerary in the lane graph, and the failure names both files. It is a validator
+rule and not a runtime refusal on purpose — a wave that cannot find its route is an authoring error
+caught before the map lands, not a match that dies at wave 7. WS-05 verified on 2026-09-21 that every
+routeId in the five shipped wave tables resolves today (foundry air/ground, switchyard +groundShort,
+spire air/escape/stair, toaster air/direct/long/west, testlane ground), so the rule starts green.
+

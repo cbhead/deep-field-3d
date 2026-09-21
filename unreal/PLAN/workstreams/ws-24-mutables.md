@@ -39,3 +39,10 @@ blocked_on:
 
 ## Session log
 <!-- append-only: date · session · what landed · what's next -->
+
+## Invariant from WS-05 (wave director) — read before you write a spawner
+**Anything that puts an enemy into the world outside the wave plan MUST call
+`ADFWaveDirector::NotifyEnemyAdded` for it**, or the wave clears while your bodies are still alive
+(the director owns "what spawns when" and "when the wave is over", and counts only what it knows about).
+This reaches a hidden nest or any mutable that releases bodies. INT recorded it on 2026-09-21 from PR #45; it is a one-line call, and finding it after
+the fact costs a wave-clear bug that only shows up with that content in play.
