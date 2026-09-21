@@ -99,3 +99,29 @@ Corollary for a "safety" test: **a test for "X is safe when Y happens" must asse
 Two of the six were fixtures that never reached the event they existed to test — one failed for an
 unrelated reason and one would have passed while testing nothing.
 
+## A green run on a stale binary (INT, 2026-09-21)
+`test.sh` now **refuses to run** when any file under `Source/`, `Config/` or the `.uproject` is newer
+than the project's built modules, and says which file. `DF_TEST_ALLOW_STALE=1` overrides it and warns
+loudly, because a silent override is the same bug.
+
+Why it is in `test.sh` rather than in `pr-check.sh` where it was found: `test.sh` is the single choke
+point — `pr-check`, `int-merge` and `ci-local` all route through it — so every test run is protected
+rather than one flag.
+
+What happened. WS-05 ran `pr-check --no-build` after a fix whose **build had failed** — a stray `*/`
+that UHT rejected in 7 seconds. `--no-build` ran the *previous* binary and reported `tests: OK — 34
+passed`, `pr-check: OK`. The author reported "all four taken" on the strength of a fix that had been
+written and never compiled, and only caught it because they went back and looked at the build log.
+
+`--no-build` is not the problem and should stay: it is the difference between a 350 s run and a 4000 s
+one on this machine. The problem is that it could not tell *"the editor is built for this tree"* from
+*"the editor is built for the tree as it was twenty minutes ago"*, and both produce the identical word
+`OK`.
+
+**Note what this failure defeats.** It passes the falsification rule above — revert your fix, rebuild
+(fails), test the stale binary, watch the named tests go red for the reason you expected. It passes
+ownership, layering and schema checks. It survives review, because the code being reviewed is correct;
+it simply was not the code that ran. A verdict is only worth what the thing it ran against is worth,
+and every other check in this programme assumes that link without testing it. That is the general
+lesson: **when a check reports on an artefact, something must prove the artefact came from the input.**
+

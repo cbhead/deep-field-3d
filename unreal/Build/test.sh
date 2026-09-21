@@ -25,6 +25,32 @@ export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Develope
 
 ED="$UE_ROOT/Engine/Binaries/Mac/UnrealEditor-Cmd"
 if [ ! -x "$ED" ]; then echo "tests: no editor at $ED (set UE_ROOT)"; exit 2; fi
+
+# A green run on a stale binary is the worst verdict this harness can produce: it is
+# indistinguishable from a real pass, and the falsification rule cannot catch it either — a stale
+# binary passes that too, for the same reason. WS-05 nearly shipped on one (a stray `*/` failed the
+# build in 7 seconds; `--no-build` then tested the previous binary and reported "34 passed").
+# So: whatever the caller did or skipped, the project's modules must be newer than the code they
+# were built from. DF_TEST_ALLOW_STALE=1 for the rare deliberate case (testing a known-good binary
+# after a doc-only edit); it prints what it is ignoring, because a silent override is the same bug.
+BIN_DIR="$REPO/unreal/DeepField/Binaries/Mac"
+NEWEST_BIN=$(ls -t "$BIN_DIR"/*.dylib "$BIN_DIR"/*.target 2>/dev/null | head -1)
+if [ -z "$NEWEST_BIN" ]; then
+  echo "tests: nothing built at $BIN_DIR — build before testing"; exit 2
+fi
+NEWEST_SRC=$(find "$REPO/unreal/DeepField/Source" "$REPO/unreal/DeepField/Config" "$REPO/unreal/DeepField/DeepField.uproject" \
+  -type f \( -name '*.cpp' -o -name '*.h' -o -name '*.inl' -o -name '*.cs' -o -name '*.ini' -o -name '*.uproject' \) \
+  -newer "$NEWEST_BIN" -print 2>/dev/null | head -1)
+if [ -n "$NEWEST_SRC" ]; then
+  REL="${NEWEST_SRC#$REPO/}"
+  if [ "${DF_TEST_ALLOW_STALE:-0}" = "1" ]; then
+    echo "tests: WARNING — $REL is newer than the built modules; testing anyway (DF_TEST_ALLOW_STALE=1)"
+  else
+    echo "tests: REFUSING — $REL is newer than $(basename "$NEWEST_BIN"), so the editor would test code that is not in it."
+    echo "       Build first (this is what a green run on a stale binary looks like), or set DF_TEST_ALLOW_STALE=1 if you mean it."
+    exit 2
+  fi
+fi
 mkdir -p "$SAVED/Logs"
 rm -rf "$REPORT"; mkdir -p "$REPORT"      # a stale report must never supply the verdict
 
