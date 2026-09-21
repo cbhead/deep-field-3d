@@ -11,7 +11,7 @@
 #include "Messages/DFMessageBus.h"
 #include "Status/DFStatusComponent.h"
 
-DEFINE_LOG_CATEGORY_STATIC(LogDFCues, Log, All);
+DEFINE_LOG_CATEGORY(LogDFCues);
 
 namespace
 {

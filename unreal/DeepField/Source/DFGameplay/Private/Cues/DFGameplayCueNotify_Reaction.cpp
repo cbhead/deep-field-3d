@@ -7,8 +7,6 @@
 #include "GameplayEffectTypes.h"
 #include "Tint/DFPaletteSettings.h"
 
-DEFINE_LOG_CATEGORY_STATIC(LogDFCues, Log, All);
-
 bool UDFGameplayCueNotify_Reaction::OnExecute_Implementation(AActor* MyTarget, const FGameplayCueParameters& Parameters) const
 {
 	const FGameplayTag Cue = Parameters.OriginalTag.IsValid() ? Parameters.OriginalTag : GameplayCueTag;

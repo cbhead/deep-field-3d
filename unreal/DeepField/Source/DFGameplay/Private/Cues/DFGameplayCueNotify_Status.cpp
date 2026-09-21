@@ -3,8 +3,6 @@
 #include "GameFramework/Actor.h"
 #include "GameplayEffectTypes.h"
 
-DEFINE_LOG_CATEGORY_STATIC(LogDFCues, Log, All);
-
 FString UDFGameplayCueNotify_Status::VerbOf(const FGameplayTag& CueTag)
 {
 	FString Leaf = CueTag.ToString();

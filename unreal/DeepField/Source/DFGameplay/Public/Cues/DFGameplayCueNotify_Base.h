@@ -8,6 +8,10 @@
 
 class AActor;
 
+/** Every DF cue notify logs here (one definition for the family: a per-file
+ *  DEFINE_LOG_CATEGORY_STATIC collides in a unity build). */
+DFGAMEPLAY_API DECLARE_LOG_CATEGORY_EXTERN(LogDFCues, Log, All);
+
 /** Which GAS cue event a forwarded cue was (EGameplayCueEvent without the GAS header for subscribers). */
 UENUM(BlueprintType)
 enum class EDFCueEvent : uint8
