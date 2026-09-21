@@ -45,3 +45,22 @@ The Mac M1 8 GB is the only machine that has the engine (ADR-0016), so it is the
 
 ## GPU-box lane: checks added by INT (2026-09-19)
 - **Floating-point pinning on Game targets.** `BuildSettingsVersion.V7` builds Editor targets FP-precise but leaves Game/Client/Server at Default (`/fp:fast` on MSVC). Any code that must be bit-identical across hosts (`DFEnemies/Waves`: `FDFWavePlan`, `DFDetMath`, `DFDetRng`) pins precision by pragma; the Windows lane runs `DF.Unit.WavePlan*` on a **Game** target build, not only the Editor target, and fails the lane if the golden vectors drift. Also confirm `-ffp-contract` (clang) / `/fp:contract` (MSVC) do not fuse multiply-adds in those files.
+
+## Which lanes run on an Unreal pull request (INT, 2026-09-21)
+| Workflow | Runs when | Covers |
+|---|---|---|
+| `unreal-checks` | `unreal/**`, `tools/**`, `sim/**`, `unreal-*.yml` | python ledger checks + `content-export --diff` (hosted) |
+| `unreal-mac` | nightly 08:00 UTC + `workflow_dispatch` | full Mac suite (**self-hosted; no runner is registered yet, so this lane has never run**) |
+| `ci` (Godot + sim) | `game/**`, `sim/**`, `docs/**`, the art-contract scripts, its own file | the frozen client and sim; **path-filtered on 2026-09-21** |
+
+An Unreal-only PR therefore runs `unreal-checks` and nothing else, and its verification comes from
+`int-merge` on the Mac (build + `DF.Unit`+`DF.Content` + listen smoke) rather than from GitHub. That is
+the honest position until a runner exists: **GitHub currently proves almost nothing about the Unreal
+tree**, and no one should read a green PR as more than "the ledger and the schemas are consistent".
+
+Why `ci` was filtered rather than fixed: its `smoke` lane aborts at Mono teardown (exit 134, "Leaked
+unsafe reference") often enough that identical content failed and passed within the hour on
+2026-09-21, and it gates code that is frozen and deleted at G3. Repairing a retired client's teardown
+is not worth a session; the lanes still run in full whenever `game/`, `sim/` or the art contract moves,
+which is the only time they can tell anyone anything.
+
