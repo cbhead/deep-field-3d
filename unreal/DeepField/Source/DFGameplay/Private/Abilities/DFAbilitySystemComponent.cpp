@@ -1,6 +1,7 @@
 #include "Abilities/DFAbilitySystemComponent.h"
 
 #include "AbilitySystemGlobals.h"
+#include "Cues/DFGameplayCueNotify_Base.h"
 #include "DFGameplayTags.h"
 #include "Damage/DFDamageContext.h"
 #include "Effects/DFGE_Damage.h"
@@ -10,6 +11,12 @@ UDFAbilitySystemComponent::UDFAbilitySystemComponent(const FObjectInitializer& O
 {
 	SetIsReplicatedByDefault(true);
 	ReplicationMode = EGameplayEffectReplicationMode::Minimal;
+}
+
+void UDFAbilitySystemComponent::InitAbilityActorInfo(AActor* InOwnerActor, AActor* InAvatarActor)
+{
+	Super::InitAbilityActorInfo(InOwnerActor, InAvatarActor);
+	UDFGameplayCueNotify_Base::RegisterNativeCues();
 }
 
 UDFAbilitySystemComponent* UDFAbilitySystemComponent::FindOn(const AActor* Actor)

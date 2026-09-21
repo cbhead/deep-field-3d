@@ -20,6 +20,10 @@ namespace DFGameplayLocalTags
 	DFGAMEPLAY_API FGameplayTag StatusCue(FName StatusId, const TCHAR* Verb);
 	/** GameplayCue.DF.Reaction.<PascalId>. */
 	DFGAMEPLAY_API FGameplayTag ReactionCue(FName ReactionId);
+	/** GameplayCue.DF.Status — the family root every status cue descends from (the native fallback registers here). */
+	DFGAMEPLAY_API FGameplayTag StatusCueRoot();
+	/** GameplayCue.DF.Reaction — the family root every reaction cue descends from. */
+	DFGAMEPLAY_API FGameplayTag ReactionCueRoot();
 
 	/** The content id (lower camelCase) of a DF.Status.* / DF.Reaction.* tag: DF.Status.Chill -> "chill". */
 	DFGAMEPLAY_API FName ContentIdFromTag(const FGameplayTag& Tag);

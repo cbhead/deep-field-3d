@@ -19,6 +19,9 @@ class DFGAMEPLAY_API UDFAbilitySystemComponent : public UAbilitySystemComponent
 public:
 	UDFAbilitySystemComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
+	/** Also enters WS-02's native cue handlers into the runtime cue set (UDFGameplayCueNotify_Base::RegisterNativeCues). */
+	virtual void InitAbilityActorInfo(AActor* InOwnerActor, AActor* InAvatarActor) override;
+
 	/** The ASC on an actor, or null (UAbilitySystemGlobals lookup, cast to the DF class). */
 	static UDFAbilitySystemComponent* FindOn(const AActor* Actor);
 

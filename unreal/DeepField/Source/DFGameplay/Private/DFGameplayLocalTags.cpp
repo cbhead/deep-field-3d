@@ -59,6 +59,18 @@ namespace DFGameplayLocalTags
 		return Cached(*FString::Printf(TEXT("GameplayCue.DF.Reaction.%s"), *PascalCase(ReactionId)));
 	}
 
+	FGameplayTag StatusCueRoot()
+	{
+		static const FGameplayTag Tag = Cached(TEXT("GameplayCue.DF.Status"));
+		return Tag;
+	}
+
+	FGameplayTag ReactionCueRoot()
+	{
+		static const FGameplayTag Tag = Cached(TEXT("GameplayCue.DF.Reaction"));
+		return Tag;
+	}
+
 	FName ContentIdFromTag(const FGameplayTag& Tag)
 	{
 		if (!Tag.IsValid())

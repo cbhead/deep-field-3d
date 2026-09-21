@@ -4,15 +4,10 @@
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
+#include "GameplayEffectTypes.h"
 #include "Tint/DFPaletteSettings.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogDFCues, Log, All);
-
-FDFReactionCueEvent& UDFGameplayCueNotify_Reaction::OnReactionCue()
-{
-	static FDFReactionCueEvent Event;
-	return Event;
-}
 
 bool UDFGameplayCueNotify_Reaction::OnExecute_Implementation(AActor* MyTarget, const FGameplayCueParameters& Parameters) const
 {
@@ -38,6 +33,5 @@ bool UDFGameplayCueNotify_Reaction::OnExecute_Implementation(AActor* MyTarget, c
 		}
 	}
 #endif
-	OnReactionCue().Broadcast(MyTarget, Cue, Parameters);
 	return true;
 }
