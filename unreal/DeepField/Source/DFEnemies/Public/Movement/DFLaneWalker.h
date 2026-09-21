@@ -26,6 +26,9 @@ enum class EDFWalkEventKind : uint8
 	Warped,        // crossed a warp edge; the body should be moved, not interpolated
 	Stranded,      // nowhere open to go from this node (Detail = the node id); fires once
 	Unstranded,    // an edge opened and it is moving again
+	BreachStarted, // a siege enemy took a blocked edge (Detail = its id): the player gets the
+	               // enemy, the wall and a countdown, long before the lane opens somewhere they
+	               // were not looking (Step.cs AnnounceBreach)
 	ReachedCore,   // the caller applies the leak damage and removes the body
 };
 
@@ -55,9 +58,22 @@ struct DFENEMIES_API FDFLaneWalkerParams
 	UPROPERTY() float SlopeSpeedUp = 0.85f;
 	UPROPERTY() float SlopeSpeedDown = 1.1f;
 
-	/** The grade either factor starts at, as a fraction (0.15 = 15 %). Applied symmetrically: a
-	 *  segment gentler than this in either direction is walked at the flat speed. */
+	/** The grade either factor starts at, as a fraction (0.15 = 15 %). Applied symmetrically —
+	 *  uphill above +15 %, downhill below -15 % — so micro-undulation is walked flat and the rule
+	 *  stays a lever for a climb or a drop that reads as one (PROGRAMME.md §3.2, B§1.5). */
 	UPROPERTY() float SlopeGradeThreshold = 0.15f;
+
+	/** > 0 means this enemy sieges (FDFEnemyRow::StructureDps), and **routing changes shape**: it is
+	 *  priced through shut edges rather than stopped by them, so a Ram walks at a barricade when
+	 *  breaking it is cheaper than walking round. A sieging walker is therefore never stranded at a
+	 *  wall — which matters more than it looks, because a stranded walker reports cut off and sorts
+	 *  LAST, so getting this wrong makes every tower in range ignore the enemy breaking the
+	 *  player's wall. Step.cs NextEdge. */
+	UPROPERTY() float StructureDps = 0.f;
+
+	/** Balance.SiegeBreachBias: below 1 it makes breaching look cheaper than it is, so a wall in
+	 *  front of a short detour is worth going round and one in front of a long detour is not. */
+	UPROPERTY() float SiegeBreachBias = 0.6f;
 
 	// Air lanes need nothing here: the importer already places an air edge's waypoints at the
 	// authored height above ground (FDFLaneEdge::AglMeters), so a flyer following the spine is
@@ -82,6 +98,29 @@ struct DFENEMIES_API FDFLaneWalkerState
 	bool IsWalking() const { return EdgeIndex != INDEX_NONE; }
 };
 
+/** The routing tables a step needs. Rebuilt when an edge changes state, not per enemy per frame.
+ *  A sieging walker needs both sets: it is costed against tables that see through gates (or the far
+ *  side of a shut edge reads as unreachable and the wall in front of it is invisible), while whether
+ *  a via is still worth heading for is asked of the map as it actually is. */
+struct DFENEMIES_API FDFLaneRouting
+{
+	TArray<bool> EdgeOpen;
+	TArray<TArray<float>> DistToNode;       // the map as it is
+	TArray<float> DistToCore;
+	TArray<TArray<float>> DistToNodeOpen;   // as if every edge were open; siege only
+	TArray<float> DistToCoreOpen;
+
+	/** Structure hp standing in a closed edge (a barricade, a wall), for siege pricing. Unbound is
+	 *  treated as "nothing there", which prices a shut edge as free to breach — so bind it whenever
+	 *  anything can be sieged. */
+	TFunction<float(int32)> BlockingHpOf;
+
+	/** Fill every table from a graph and an open-state array. */
+	void Rebuild(const UDFLaneGraphAsset& Graph);
+
+	bool IsOpen(int32 EdgeIndex) const { return EdgeOpen.IsValidIndex(EdgeIndex) && EdgeOpen[EdgeIndex]; }
+};
+
 struct DFENEMIES_API FDFLaneWalker
 {
 	/** Put a walker at the start of an itinerary. False if the itinerary has no first edge. */
@@ -91,8 +130,12 @@ struct DFENEMIES_API FDFLaneWalker
 	 *  EdgeOpen/DistToNode/DistToCore are the caller's routing tables, rebuilt when an edge changes
 	 *  state — not per enemy per frame. Events append in the order they happened. */
 	static void Advance(const UDFLaneGraphAsset& Graph, const FDFLaneItinerary& Itinerary, const FDFLaneWalkerParams& Params,
-		float DeltaSeconds, const TArray<bool>& EdgeOpen, const TArray<TArray<float>>& DistToNode, const TArray<float>& DistToCore,
-		FDFLaneWalkerState& State, TArray<FDFWalkEvent>& OutEvents);
+		float DeltaSeconds, const FDFLaneRouting& Routing, FDFLaneWalkerState& State, TArray<FDFWalkEvent>& OutEvents);
+
+	/** The edge routing would take out of AtNode, sieging or not. Exposed because it is the whole
+	 *  difference between a Ram that walks at your wall and one that stands at it sorting last. */
+	static int32 ChooseNextEdge(const UDFLaneGraphAsset& Graph, const FDFLaneItinerary& Itinerary, const FDFLaneWalkerParams& Params,
+		FName AtNode, const FDFLaneRouting& Routing, int32& ViaCursor);
 
 	/** Where the body is: the spine at the current segment, pushed sideways by the scatter. */
 	static FVector LocationOf(const UDFLaneGraphAsset& Graph, const FDFLaneWalkerState& State);

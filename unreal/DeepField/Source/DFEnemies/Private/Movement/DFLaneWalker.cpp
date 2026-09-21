@@ -26,6 +26,58 @@ namespace
 	}
 }
 
+void FDFLaneRouting::Rebuild(const UDFLaneGraphAsset& Graph)
+{
+	if (EdgeOpen.Num() != Graph.Edges.Num())
+	{
+		EdgeOpen.Init(true, Graph.Edges.Num());
+	}
+	TArray<bool> AllOpen;
+	AllOpen.Init(true, Graph.Edges.Num());
+
+	DistToCore = Graph.DistanceToCore(&EdgeOpen);
+	DistToCoreOpen = Graph.DistanceToCore(&AllOpen);
+	DistToNode.Reset();
+	DistToNodeOpen.Reset();
+	for (const FDFLaneNode& Node : Graph.Nodes)
+	{
+		DistToNode.Add(Graph.DistanceToNode(Node.Id, &EdgeOpen));
+		DistToNodeOpen.Add(Graph.DistanceToNode(Node.Id, &AllOpen));
+	}
+}
+
+int32 FDFLaneWalker::ChooseNextEdge(const UDFLaneGraphAsset& Graph, const FDFLaneItinerary& Itinerary, const FDFLaneWalkerParams& Params,
+	FName AtNode, const FDFLaneRouting& Routing, int32& ViaCursor)
+{
+	if (Params.StructureDps <= 0.f)
+	{
+		return Graph.ChooseEdge(Itinerary, ViaCursor, AtNode, Routing.EdgeOpen, Routing.DistToNode, Routing.DistToCore);
+	}
+
+	// Siege routing sees through gates, so it has to be costed against tables that do too —
+	// otherwise the far side of a shut edge reads as unreachable and the wall it is standing in
+	// front of is invisible. Breaching is priced as the time it takes: hp / dps, in metres at this
+	// enemy's speed, biased below 1 so a wall in front of a short detour is worth going round and
+	// one in front of a long detour is not. The player's own barricade is what makes the detour
+	// long, so shutting a gate is what sends the Ram at the wall — a chain the player can read.
+	// Whether a via is still worth heading for is asked of the map as it IS (DistToNode).
+	const float Dps = Params.StructureDps;
+	const float Speed = Params.SpeedMetersPerSec;
+	const float Bias = Params.SiegeBreachBias;
+	const TFunction<float(int32)>& BlockingHpOf = Routing.BlockingHpOf;
+	return Graph.ChooseEdge(Itinerary, ViaCursor, AtNode, Routing.EdgeOpen, Routing.DistToNodeOpen, Routing.DistToCoreOpen,
+		[&Routing, &BlockingHpOf, Dps, Speed, Bias](int32 EdgeIndex)
+		{
+			if (Routing.IsOpen(EdgeIndex))
+			{
+				return 0.f;
+			}
+			const float BlockingHp = BlockingHpOf ? BlockingHpOf(EdgeIndex) : 0.f;
+			return BlockingHp / Dps * Speed * Bias;
+		},
+		&Routing.DistToNode);
+}
+
 TArray<float> FDFLaneWalker::SegmentLengthsCm(const FDFLaneEdge& Edge)
 {
 	TArray<float> Lengths;
@@ -80,8 +132,7 @@ bool FDFLaneWalker::Begin(const UDFLaneGraphAsset& Graph, const FDFLaneItinerary
 }
 
 void FDFLaneWalker::Advance(const UDFLaneGraphAsset& Graph, const FDFLaneItinerary& Itinerary, const FDFLaneWalkerParams& Params,
-	float DeltaSeconds, const TArray<bool>& EdgeOpen, const TArray<TArray<float>>& DistToNode, const TArray<float>& DistToCore,
-	FDFLaneWalkerState& State, TArray<FDFWalkEvent>& OutEvents)
+	float DeltaSeconds, const FDFLaneRouting& Routing, FDFLaneWalkerState& State, TArray<FDFWalkEvent>& OutEvents)
 {
 	if (!State.IsWalking())
 	{
@@ -115,7 +166,7 @@ void FDFLaneWalker::Advance(const UDFLaneGraphAsset& Graph, const FDFLaneItinera
 			const FName ArrivedAt = Edge->To;
 			State.Segment = 0;
 			State.SegmentProgressCm = 0.f;
-			const int32 Next = Graph.ChooseEdge(Itinerary, State.ViaCursor, ArrivedAt, EdgeOpen, DistToNode, DistToCore);
+			const int32 Next = ChooseNextEdge(Graph, Itinerary, Params, ArrivedAt, Routing, State.ViaCursor);
 			if (Next == INDEX_NONE)
 			{
 				// Stranded on arrival: it keeps the pad as its position rather than the warp edge,
@@ -178,7 +229,7 @@ void FDFLaneWalker::Advance(const UDFLaneGraphAsset& Graph, const FDFLaneItinera
 			return;
 		}
 
-		const int32 Next = Graph.ChooseEdge(Itinerary, State.ViaCursor, Edge->To, EdgeOpen, DistToNode, DistToCore);
+		const int32 Next = ChooseNextEdge(Graph, Itinerary, Params, Edge->To, Routing, State.ViaCursor);
 		if (Next == INDEX_NONE)
 		{
 			// Nowhere open to go. The no-sealing rule is meant to make this unreachable, so it stops
@@ -187,6 +238,13 @@ void FDFLaneWalker::Advance(const UDFLaneGraphAsset& Graph, const FDFLaneItinera
 			// position to be shot at.
 			State.Segment = Lengths.Num() - 1;
 			State.SegmentProgressCm = Lengths[State.Segment];
+			// A sieging walker routes through walls, so it has an edge wherever the map is connected
+			// at all: if one strands, the caller passed non-siege tables or forgot StructureDps, and
+			// the consequence is silent and inverted — it reports cut off, sorts LAST, and every
+			// tower in range ignores the enemy breaking the player's wall.
+			UE_CLOG(Params.StructureDps > 0.f && !State.bStranded, LogDFWalk, Error,
+				TEXT("a sieging walker stranded at node '%s' on itinerary '%s': routing tables are wrong, and it will now sort last instead of first"),
+				*Edge->To.ToString(), *Itinerary.Id.ToString());
 			if (!State.bStranded)
 			{
 				State.bStranded = true;
@@ -203,6 +261,12 @@ void FDFLaneWalker::Advance(const UDFLaneGraphAsset& Graph, const FDFLaneItinera
 		State.EdgeIndex = Next;
 		State.Segment = 0;
 		Add(OutEvents, EDFWalkEventKind::EnteredEdge, Graph.Edges[Next].Id, NodeLocation);
+		if (Params.StructureDps > 0.f && !Routing.IsOpen(Next))
+		{
+			// Say so once: the player gets the enemy, the wall and a countdown, long before the
+			// lane opens somewhere they were not looking (Step.cs AnnounceBreach).
+			Add(OutEvents, EDFWalkEventKind::BreachStarted, Graph.Edges[Next].Id, NodeLocation);
+		}
 	}
 
 	if (EdgeBudget <= 0)
