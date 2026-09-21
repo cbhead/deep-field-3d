@@ -84,6 +84,16 @@ rebase_onto_main() {
       echo "STATUS.md conflict: regenerated"
       python3 unreal/Build/plan-status.py >/dev/null || return 1
       git add unreal/PLAN/STATUS.md
+    elif [ -n "$conflicted" ] && ! echo "$conflicted" | grep -qvE '^unreal/PLAN/(workstreams/ws-[0-9a-z-]+\.md|STATUS\.md)$'; then
+      # Only workstream ledgers (and STATUS) conflict: their dated sections are append-only, so the
+      # resolution is a union in date order, never a winner. See PLAN/README.md, "INT: do not write
+      # into a workstream file while its PR is open" — this is the fourth time in one night.
+      echo "$conflicted" | while IFS= read -r F; do
+        case "$F" in
+          unreal/PLAN/STATUS.md) python3 unreal/Build/plan-status.py >/dev/null && git add "$F";;
+          *) python3 unreal/Build/merge-ws-log.py "$F" || exit 1;;
+        esac
+      done || return 1
     elif [ -n "$conflicted" ]; then
       echo "conflicts left for a human (resolve and STAGE them, then rerun with --resume):"; echo "$conflicted"; return 1
     fi
