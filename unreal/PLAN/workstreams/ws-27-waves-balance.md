@@ -47,3 +47,14 @@ blocked_on:
 (the director owns "what spawns when" and "when the wave is over", and counts only what it knows about).
 This reaches endless elite packs and PCG wave variants. INT recorded it on 2026-09-21 from PR #45; it is a one-line call, and finding it after
 the fact costs a wave-clear bug that only shows up with that content in play.
+- 2026-09-21 · INT · **hardening follow-up from the PR #42 review** (refuted as a defect there, real as a
+  gap): `FDFWaveGroupRow::Count` is still an unbounded content number. `SetWavesFromRows` now bounds
+  `totalWaves` and every `waveIndex`, but `PlanWave` multiplies `Count` by the co-op and lap scales and
+  casts to int32 with no bound — faithful to `WavePlan.cs:31-33`, which does the same, so it is not a
+  port defect; the sim would blow up identically. The gap is that no schema in `unreal/content/schema/`
+  carries a numeric `maximum` for any field. When this workstream owns the dials and the 74 authored
+  waves, add a `MaxAuthoredGroupCount` beside `MaxAuthoredWaves=512` (enforced in `SetWavesFromRows` or
+  `Validate`, not in `PlanWave` — a clamp there would be a deliberate divergence from the sim), and
+  consider `maximum` bounds in `waves.schema.json` and `balance.json`'s schema so the importer refuses a
+  fat-fingered number before a host ever allocates by it. Largest authored count today is 14.
+
