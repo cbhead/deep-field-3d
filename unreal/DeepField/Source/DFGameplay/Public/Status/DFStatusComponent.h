@@ -86,6 +86,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "DF|Status") bool IsChannelActive(EDFStatusChannel Channel) const;
 	UFUNCTION(BlueprintPure, Category = "DF|Status") FGameplayTag ActiveStatus(EDFStatusChannel Channel) const;
 	UFUNCTION(BlueprintPure, Category = "DF|Status") float ActiveMagnitude(EDFStatusChannel Channel) const;
+	/** Seconds left on the channel, correct on the host AND on a joining client: the replicated
+	 *  EndTimeServer is a server timestamp, so it is subtracted from the shared server clock
+	 *  (AGameStateBase::GetServerWorldTimeSeconds), never from the local world time. */
 	UFUNCTION(BlueprintPure, Category = "DF|Status") float TimeRemaining(EDFStatusChannel Channel) const;
 	UFUNCTION(BlueprintPure, Category = "DF|Status") bool IsControlled() const;
 	UFUNCTION(BlueprintPure, Category = "DF|Status") float GetCcResist() const { return Resolver.CcResist; }
@@ -151,6 +154,7 @@ protected:
 
 private:
 	bool HasAuthority() const;
+	/** The one clock every slot timestamp is in: the server's world time, as this machine knows it. */
 	float Now() const;
 	/** Health > 0 on the owner's UDFHealthSet (true when it has none). */
 	bool IsAlive() const;

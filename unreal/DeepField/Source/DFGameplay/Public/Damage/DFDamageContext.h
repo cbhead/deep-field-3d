@@ -41,6 +41,20 @@ public:
 	/** DF.Reaction.* behind a burst. */
 	UPROPERTY(BlueprintReadWrite) FGameplayTag ReactionTag;
 
+	/** Whether this hit is a weapon hit that carries the source's own factors.
+	 *
+	 *  Step.cs never multiplies a source factor inside Damage(): the shooter's build factor is
+	 *  applied at the CALL SITE (`weapon.Damage * build.DamageFactor(armored)`, Step.cs:558), and
+	 *  the two appliers that are NOT shots pass the row's own number and nothing else —
+	 *  UpdateStatuses ticks `def.DamagePerSecond * Balance.Dt` (Step.cs:1041) and a reaction bursts
+	 *  `enemy.MaxHp * reaction.BurstFraction` (Step.cs:1086). So a DoT tick and a reaction burst
+	 *  see NO source factors at all: false here makes UDFDamageExecution drop every one of them —
+	 *  the snapshot-captured UDFCombatSet.DamageFactor included — so a burn applied by a 1.2x
+	 *  Overclock hero still ticks 0.2, not 0.24. The instigator still rides on the context (bounty
+	 *  and scrap credit follow slot.Source); only its factors are dropped. A weapon hit, a trap and
+	 *  an ability leave it true. */
+	UPROPERTY(BlueprintReadWrite) bool bAppliesSourceFactors = true;
+
 	// Source-side factors (also accepted as DF.SetByCaller.* magnitudes on the spec; the spec wins when present).
 	UPROPERTY(BlueprintReadWrite) float AmmoFactor = 1.f;
 	UPROPERTY(BlueprintReadWrite) float UnarmoredBonusFactor = 1.f;
@@ -75,7 +89,8 @@ public:
 	void SetSourceLocation(const FVector& InSourceLocation);
 	void SetTargetArmor(const FDFEnemyRow& Row, const FVector& TargetForward);
 	void SetAmmo(const FDFAmmoRow& Row);
-	/** DoT tick: poison ignores armor and shield, burn neither. */
+	/** DoT tick: poison ignores armor and shield, burn neither; and a tick is not a shot, so it
+	 *  carries no source factors (clears bAppliesSourceFactors). */
 	void SetStatus(const FDFStatusRow& Row, const FGameplayTag& InStatusTag);
 
 	/** Overrides the three rule dials from Balance (rearThresholdDegrees, shredFrontArcLeakFactor, postArmorDamageFloor) when content is loaded. */

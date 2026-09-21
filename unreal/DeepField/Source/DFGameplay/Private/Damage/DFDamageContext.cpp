@@ -53,6 +53,9 @@ void UDFDamageContext::SetStatus(const FDFStatusRow& Row, const FGameplayTag& In
 	StatusTag = InStatusTag;
 	bIgnoresFlatArmor = Row.bIgnoresArmor;
 	bIgnoresShield = Row.bIgnoresShield;
+	// Step.cs UpdateStatuses damages with `def.DamagePerSecond * Balance.Dt` and nothing else —
+	// a tick is not a weapon hit, so the applier's build factors never reach it.
+	bAppliesSourceFactors = false;
 }
 
 void UDFDamageContext::ReadBalance(const UObject* WorldContext)

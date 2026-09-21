@@ -1,4 +1,5 @@
 #include "Abilities/DFAbilitySystemComponent.h"
+#include "AbilitySystemGlobals.h"
 #include "Attributes/DFCombatSet.h"
 #include "Attributes/DFHealthSet.h"
 #include "Attributes/DFMovementSet.h"
@@ -6,6 +7,9 @@
 #include "DFGameplayLocalTags.h"
 #include "DFGameplayTags.h"
 #include "DFTestRows.h"
+#include "Damage/DFDamageContext.h"
+#include "Damage/DFDamageMath.h"
+#include "Effects/DFGE_Damage.h"
 #include "Effects/DFGE_FactionPassive.h"
 #include "Effects/DFGE_Passive_Ember.h"
 #include "Effects/DFGE_Passive_Forge.h"
@@ -16,6 +20,7 @@
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/GameStateBase.h"
 #include "GameFramework/WorldSettings.h"
 #include "Messages/DFMessageBus.h"
 #include "Messages/DFMessages.h"
@@ -143,18 +148,47 @@ namespace
 			return true;
 		}
 
-		/** Another actor with its own ASC carrying LooseTag (an Ember hero, say). */
-		AActor* SpawnApplier(const FGameplayTag& LooseTag)
+		/** Another actor with its own ASC carrying LooseTag (an Ember hero, say). DamageFactor >= 0
+		 *  gives it a UDFCombatSet at that DamageFactor — an Overclock / faction feed, the source
+		 *  attribute the damage execution snapshot-captures from the instigator. */
+		AActor* SpawnApplier(const FGameplayTag& LooseTag, float DamageFactor = -1.f)
 		{
 			AActor* Applier = World->SpawnActor<AActor>();
 			UDFAbilitySystemComponent* ApplierASC = NewObject<UDFAbilitySystemComponent>(Applier, TEXT("ASC"));
 			ApplierASC->RegisterComponent();
+			if (DamageFactor >= 0.f)
+			{
+				UDFCombatSet* Combat = NewObject<UDFCombatSet>(Applier, TEXT("CombatSet"));
+				ApplierASC->AddAttributeSetSubobject(Combat);
+			}
 			ApplierASC->InitAbilityActorInfo(Applier, Applier);
+			if (DamageFactor >= 0.f)
+			{
+				ApplierASC->SetNumericAttributeBase(UDFCombatSet::GetDamageFactorAttribute(), DamageFactor);
+			}
 			if (LooseTag.IsValid())
 			{
 				ApplierASC->AddLooseGameplayTag(LooseTag);
 			}
 			return Applier;
+		}
+
+		/** A game state whose server clock runs SkewSeconds ahead of this world's — what a client
+		 *  that joined SkewSeconds after the server's level load sees. ServerWorldTimeSecondsDelta
+		 *  is a protected UPROPERTY, so the test writes it the way replication would. */
+		AGameStateBase* SpawnGameState(float SkewSeconds)
+		{
+			AGameStateBase* GameState = World->SpawnActor<AGameStateBase>();
+			if (!GameState)
+			{
+				return nullptr;
+			}
+			FProperty* Delta = AGameStateBase::StaticClass()->FindPropertyByName(TEXT("ServerWorldTimeSecondsDelta"));
+			if (FFloatProperty* AsFloat = CastField<FFloatProperty>(Delta))
+			{
+				AsFloat->SetPropertyValue_InContainer(GameState, SkewSeconds);
+			}
+			return GameState;
 		}
 
 		void Tick(float Seconds) { TickWorld(World, Seconds); }
@@ -701,6 +735,245 @@ bool FDFStatusCueForwardsToBusTest::RunTest(const FString& Parameters)
 	TestNotNull(TEXT("the consumed chill's Removed cue reached the bus"), ChillRemoved);
 	TestTrue(TEXT("health 88 after the burst"), FMath::IsNearlyEqual(F.Health->GetHealth(), 88.f, 1e-3f));
 	Bus->Unsubscribe(Handle);
+	F.Shutdown();
+	return true;
+}
+
+// Step.cs applies the shooter's build factor at the WEAPON call site (`weapon.Damage *
+// build.DamageFactor(armored)`, Step.cs:558) and Damage() itself applies none — so the two
+// appliers that are not shots carry the row's own number and nothing else: UpdateStatuses ticks
+// `def.DamagePerSecond * Balance.Dt` (Step.cs:1041) and a reaction bursts `enemy.MaxHp *
+// reaction.BurstFraction` (Step.cs:1086). A 1.2x hero's burn ticks 0.2, not 0.24, and its
+// thermalShock bursts 12, not 14.4.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFStatusDotIgnoresSourceFactorsTest, "DF.Unit.Status.DotIgnoresSourceFactors", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+bool FDFStatusDotIgnoresSourceFactorsTest::RunTest(const FString& Parameters)
+{
+	// The DoT tick: 100 hp, no armor, burn 6 dps / 30 Hz = 0.2 a tick — from an Overclocked hero.
+	FWorldFixture F;
+	if (!TestTrue(TEXT("standalone world"), F.Init(100.f)))
+	{
+		return false;
+	}
+	AActor* Overclocked = F.SpawnApplier(FGameplayTag(), /*DamageFactor*/ 1.2f);
+	UAbilitySystemComponent* ApplierASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Overclocked);
+	if (!TestNotNull(TEXT("the applier has an ASC"), ApplierASC))
+	{
+		F.Shutdown();
+		return false;
+	}
+	// Without this the rest proves nothing: the factor must really be on the instigator's set,
+	// which is what MakeOutgoingSpec snapshot-captures.
+	TestTrue(TEXT("the applier really carries DamageFactor 1.2"),
+		FMath::IsNearlyEqual(ApplierASC->GetNumericAttribute(UDFCombatSet::GetDamageFactorAttribute()), 1.2f, 1e-4f));
+
+	FDFTickCounter Ticks;
+	Ticks.Bind(F.Health, 0.2f);   // 0.24 if the applier's DamageFactor reached the tick
+	TestEqual(TEXT("burn applied by the Overclocked hero"), F.Status->Apply(DFTags::Status_Burn, Overclocked), EDFStatusApplyResult::Applied);
+	F.Tick(1.f);
+	TestTrue(*FString::Printf(TEXT("every tick is the row's 0.2, not 1.2 x 0.2 = 0.24 (%d ticks)"), Ticks.Ticks), Ticks.bEveryTickExpected && Ticks.Ticks > 0);
+	TestTrue(*FString::Printf(TEXT("~30 ticks in a second (got %d)"), Ticks.Ticks), Ticks.Ticks >= MinTicksPerSecond && Ticks.Ticks <= MaxTicksPerSecond);
+	TestTrue(*FString::Printf(TEXT("health lost 0.2 x %d (got %.3f)"), Ticks.Ticks, 100.f - F.Health->GetHealth()),
+		FMath::IsNearlyEqual(100.f - F.Health->GetHealth(), 0.2f * Ticks.Ticks, 1e-2f));
+	// The instigator is still the applier — only its factors were dropped (bounty and scrap credit).
+	TestTrue(TEXT("the Overclocked hero is still the DoT's source"),
+		F.Status->GetResolver().Slot(EDFStatusChannel::Thermal).SourceId == static_cast<int32>(Overclocked->GetUniqueID()));
+	F.Shutdown();
+
+	// The reaction burst: 12% of 100 hp is 12, whoever lit it.
+	FWorldFixture B;
+	if (!TestTrue(TEXT("standalone world 2"), B.Init(100.f)))
+	{
+		return false;
+	}
+	AActor* BurstApplier = B.SpawnApplier(FGameplayTag(), /*DamageFactor*/ 1.2f);
+	TestEqual(TEXT("chill applied"), B.Status->Apply(DFTags::Status_Chill, BurstApplier), EDFStatusApplyResult::Applied);
+	TestEqual(TEXT("burn onto chill reacts"), B.Status->Apply(DFTags::Status_Burn, BurstApplier), EDFStatusApplyResult::Reacted);
+	TestTrue(*FString::Printf(TEXT("health 88: the burst is 12, not 1.2 x 12 = 14.4 (got %.2f)"), B.Health->GetHealth()),
+		FMath::IsNearlyEqual(B.Health->GetHealth(), 88.f, 1e-3f));
+	B.Shutdown();
+	return true;
+}
+
+// FDFStatusSlotRep::EndTimeServer is a SERVER timestamp, written on the server and replicated
+// verbatim. Subtracting it from a client's own UWorld::GetTimeSeconds() — seconds since ITS level
+// load — is meaningless: a client that joined 120 s after the server's level load would read a
+// 1.5 s chill as 121.5 s on every status bar. Both machines must read the one shared clock,
+// AGameStateBase::GetServerWorldTimeSeconds(). The skew here is constructed, never assumed zero.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFStatusTimeRemainingUsesServerClockTest, "DF.Unit.Status.TimeRemainingUsesServerClock", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+bool FDFStatusTimeRemainingUsesServerClockTest::RunTest(const FString& Parameters)
+{
+	FWorldFixture F;
+	if (!TestTrue(TEXT("standalone world"), F.Init(100.f)))
+	{
+		return false;
+	}
+	AGameStateBase* GameState = F.SpawnGameState(/*SkewSeconds*/ 120.f);
+	if (!TestNotNull(TEXT("a game state to carry the server clock"), GameState))
+	{
+		F.Shutdown();
+		return false;
+	}
+	TestTrue(TEXT("the world reports it"), F.World->GetGameState() == GameState);
+
+	const float LocalNow = F.World->GetTimeSeconds();
+	const float ServerNow = static_cast<float>(GameState->GetServerWorldTimeSeconds());
+	if (!TestTrue(*FString::Printf(TEXT("the clocks really are 120 s apart (local %.2f, server %.2f)"), LocalNow, ServerNow),
+		FMath::IsNearlyEqual(ServerNow - LocalNow, 120.f, 1e-2f)))
+	{
+		F.Shutdown();
+		return false;
+	}
+
+	TestEqual(TEXT("chill applied"), F.Status->Apply(DFTags::Status_Chill, nullptr), EDFStatusApplyResult::Applied);
+	const float EndTimeServer = F.Status->GetSlots()[static_cast<int32>(EDFStatusChannel::Movement)].EndTimeServer;
+
+	// What goes on the wire is in the server's clock, because that is the only clock a client can
+	// reconstruct. This is the assertion the old local-clock Now() fails.
+	TestTrue(*FString::Printf(TEXT("EndTimeServer is a SERVER timestamp: %.2f, not the local %.2f"), EndTimeServer, LocalNow + 1.5f),
+		FMath::IsNearlyEqual(EndTimeServer, ServerNow + 1.5f, 1e-2f));
+	TestTrue(TEXT("and so it is not the local clock's value"), EndTimeServer > LocalNow + 100.f);
+	// Stated plainly: read against the local clock this slot would claim 121.5 s left.
+	TestTrue(TEXT("a local-clock read would have said 121.5 s"), FMath::IsNearlyEqual(EndTimeServer - LocalNow, 121.5f, 1e-2f));
+	TestTrue(*FString::Printf(TEXT("TimeRemaining is the row's 1.5 s (got %.3f)"), F.Status->TimeRemaining(EDFStatusChannel::Movement)),
+		FMath::IsNearlyEqual(F.Status->TimeRemaining(EDFStatusChannel::Movement), 1.5f, 1e-2f));
+
+	// The skew does not disturb expiry either: the resolver ticks on the same clock it stamped.
+	F.Tick(1.f);
+	TestTrue(TEXT("still chilled after 1 s"), F.Status->IsChannelActive(EDFStatusChannel::Movement));
+	TestTrue(*FString::Printf(TEXT("~0.5 s left (got %.3f)"), F.Status->TimeRemaining(EDFStatusChannel::Movement)),
+		FMath::IsNearlyEqual(F.Status->TimeRemaining(EDFStatusChannel::Movement), 0.5f, 1.5e-1f));
+	F.Tick(0.8f);
+	TestFalse(TEXT("expired on time despite the skew"), F.Status->IsChannelActive(EDFStatusChannel::Movement));
+	TestTrue(TEXT("an empty channel has no time left"), FMath::IsNearlyEqual(F.Status->TimeRemaining(EDFStatusChannel::Movement), 0.f, 1e-4f));
+	F.Shutdown();
+	return true;
+}
+
+// Statuses.cs: poison is the status that bypasses armor AND shield — its entire reason to exist
+// (Step.cs:1042 `ignoreFlatArmor: def.IgnoresArmor, ignoreShield: def.IgnoresShield`). The one line
+// that carries a row's identity into the damage path is UDFDamageContext::SetStatus, so this drives
+// a Toxin DoT through the world on a Warden-like target: armor 2, shield 20.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFStatusPoisonBypassesArmorAndShieldTest, "DF.Unit.Status.PoisonDotBypassesArmorAndShield", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+bool FDFStatusPoisonBypassesArmorAndShieldTest::RunTest(const FString& Parameters)
+{
+	// Poison, 3 dps / 30 Hz = 0.1 a tick, on 2 flat armor behind a 20 shield: neither touches it.
+	FWorldFixture Warden;
+	if (!TestTrue(TEXT("standalone world"), Warden.Init(100.f, /*FlatArmor*/ 2.f, /*Shield*/ 20.f)))
+	{
+		return false;
+	}
+	FDFTickCounter PoisonTicks;
+	PoisonTicks.Bind(Warden.Health, 0.1f);   // 0.5 if the armor floor bit; the row says it does not
+	TestEqual(TEXT("poison lands through the shield"), Warden.Status->Apply(DFTags::Status_Poison, nullptr), EDFStatusApplyResult::Applied);
+	Warden.Tick(1.f);
+	TestTrue(*FString::Printf(TEXT("every poison tick is 0.1, not the 0.5 armor floor (%d ticks)"), PoisonTicks.Ticks), PoisonTicks.bEveryTickExpected && PoisonTicks.Ticks > 0);
+	TestTrue(*FString::Printf(TEXT("~30 ticks in a second (got %d)"), PoisonTicks.Ticks), PoisonTicks.Ticks >= MinTicksPerSecond && PoisonTicks.Ticks <= MaxTicksPerSecond);
+	TestTrue(*FString::Printf(TEXT("the shield never soaked a tick (got %.2f)"), Warden.Health->GetShield()), FMath::IsNearlyEqual(Warden.Health->GetShield(), 20.f, 1e-3f));
+	TestTrue(*FString::Printf(TEXT("health took all of it: 0.1 x %d (got %.3f)"), PoisonTicks.Ticks, 100.f - Warden.Health->GetHealth()),
+		FMath::IsNearlyEqual(100.f - Warden.Health->GetHealth(), 0.1f * PoisonTicks.Ticks, 1e-2f));
+	Warden.Shutdown();
+
+	// Burn on the same armor does NOT bypass: 0.2 floored to 0.5 by the 2 armor. (A shield would
+	// refuse burn outright — Step.cs ApplyStatus — so the comparison target is unshielded.)
+	FWorldFixture Ram;
+	if (!TestTrue(TEXT("standalone world 2"), Ram.Init(100.f, /*FlatArmor*/ 2.f)))
+	{
+		return false;
+	}
+	FDFTickCounter BurnTicks;
+	BurnTicks.Bind(Ram.Health, 0.5f);
+	TestEqual(TEXT("burn applied"), Ram.Status->Apply(DFTags::Status_Burn, nullptr), EDFStatusApplyResult::Applied);
+	Ram.Tick(1.f);
+	TestTrue(*FString::Printf(TEXT("burn is armor-floored to 0.5 — it bypasses nothing (%d ticks)"), BurnTicks.Ticks), BurnTicks.bEveryTickExpected && BurnTicks.Ticks > 0);
+	Ram.Shutdown();
+
+	// The two flags are independent, and poison (which sets both) cannot tell them apart. Two
+	// fixture rows that set exactly one each pin which flag SetStatus writes to which field.
+	// acid: Toxin, 6 dps, ignores ARMOR only -> 0.2 a tick, and the shield soaks all of it.
+	// venom: Toxin, 6 dps, ignores SHIELD only -> 0.2 floored to 0.5 by the armor, straight to health.
+	FWorldFixture Acid;
+	if (!TestTrue(TEXT("standalone world 3"), Acid.Init(100.f, /*FlatArmor*/ 2.f, /*Shield*/ 20.f)))
+	{
+		return false;
+	}
+	Acid.Status->AddStatusRowOverride(TEXT("acid"), DFTestRows::Status(EDFStatusChannel::Toxin, 6.f, 1.f, 6.f, 1.f, 0.f, false, /*bIgnoresArmor*/ true, /*bIgnoresShield*/ false));
+	FDFTickCounter AcidTicks;
+	AcidTicks.Bind(Acid.Health, 0.2f);   // 0.5 if the flags were swapped, 0.5 if SetStatus never ran
+	TestEqual(TEXT("acid applied"), Acid.Status->ApplyById(TEXT("acid"), nullptr), EDFStatusApplyResult::Applied);
+	Acid.Tick(1.f);
+	TestTrue(*FString::Printf(TEXT("acid ticks 0.2: armor ignored, shield not (%d ticks)"), AcidTicks.Ticks), AcidTicks.bEveryTickExpected && AcidTicks.Ticks > 0);
+	TestTrue(*FString::Printf(TEXT("the shield soaked every acid tick (got %.2f)"), Acid.Health->GetShield()),
+		FMath::IsNearlyEqual(Acid.Health->GetShield(), 20.f - 0.2f * AcidTicks.Ticks, 1e-2f));
+	TestTrue(*FString::Printf(TEXT("health untouched behind the shield (got %.2f)"), Acid.Health->GetHealth()), FMath::IsNearlyEqual(Acid.Health->GetHealth(), 100.f, 1e-3f));
+	Acid.Shutdown();
+
+	FWorldFixture Venom;
+	if (!TestTrue(TEXT("standalone world 4"), Venom.Init(100.f, /*FlatArmor*/ 2.f, /*Shield*/ 20.f)))
+	{
+		return false;
+	}
+	Venom.Status->AddStatusRowOverride(TEXT("venom"), DFTestRows::Status(EDFStatusChannel::Toxin, 6.f, 1.f, 6.f, 1.f, 0.f, false, /*bIgnoresArmor*/ false, /*bIgnoresShield*/ true));
+	FDFTickCounter VenomTicks;
+	VenomTicks.Bind(Venom.Health, 0.5f);   // 0.2 if the flags were swapped
+	TestEqual(TEXT("venom applied"), Venom.Status->ApplyById(TEXT("venom"), nullptr), EDFStatusApplyResult::Applied);
+	Venom.Tick(1.f);
+	TestTrue(*FString::Printf(TEXT("venom ticks the 0.5 armor floor: shield ignored, armor not (%d ticks)"), VenomTicks.Ticks), VenomTicks.bEveryTickExpected && VenomTicks.Ticks > 0);
+	TestTrue(*FString::Printf(TEXT("the shield never soaked a venom tick (got %.2f)"), Venom.Health->GetShield()), FMath::IsNearlyEqual(Venom.Health->GetShield(), 20.f, 1e-3f));
+	TestTrue(*FString::Printf(TEXT("health took 0.5 x %d (got %.2f)"), VenomTicks.Ticks, 100.f - Venom.Health->GetHealth()),
+		FMath::IsNearlyEqual(100.f - Venom.Health->GetHealth(), 0.5f * VenomTicks.Ticks, 1e-2f));
+	Venom.Shutdown();
+	return true;
+}
+
+// Step.cs:545 `bool armored = enemyDef.FlatArmor > 0f || enemyDef.FrontArmorArcDegrees > 0f` — read
+// off the enemy DEFINITION, so shred (which only lowers the per-hit armor) can never turn a Ram
+// into a valid hollow-point target (Gunsmith.cs:144-150). It lives with the world tests because the
+// end-to-end half needs a real shred on a real attribute aggregator.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFDamageShredKeepsTargetArmoredTest, "DF.Unit.Damage.ShredKeepsTargetArmored", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+bool FDFDamageShredKeepsTargetArmoredTest::RunTest(const FString& Parameters)
+{
+	// The pure-math half: the row says 2, shred took the attribute to 0, hollow point still misses out.
+	{
+		FDFDamageInput Shredded;
+		Shredded.BaseDamage = 7.f;
+		Shredded.RowFlatArmor = 2.f;        // enemyDef.FlatArmor
+		Shredded.FlatArmor = 0.f;           // the attribute, after shred -2
+		Shredded.bTargetShredded = true;
+		Shredded.UnarmoredBonusFactor = 1.3f;
+		TestTrue(TEXT("a shredded ram is still armored"), Shredded.IsArmored());
+		TestTrue(TEXT("7, not 9.1: no hollow-point bonus"), FMath::IsNearlyEqual(FDFDamageMath::Compute(Shredded).Damage, 7.f, 1e-4f));
+
+		// A genuinely unarmored target (the row says 0) still gets the bonus.
+		FDFDamageInput Drifter = Shredded;
+		Drifter.RowFlatArmor = 0.f;
+		TestFalse(TEXT("a drifter is unarmored"), Drifter.IsArmored());
+		TestTrue(TEXT("hollow point on a drifter: 9.1"), FMath::IsNearlyEqual(FDFDamageMath::Compute(Drifter).Damage, 9.1f, 1e-4f));
+	}
+
+	// The world half: a real Defense status on a real FlatArmor aggregator. Base 2, shred -2 -> 0.
+	FWorldFixture F;
+	if (!TestTrue(TEXT("standalone world"), F.Init(100.f, /*FlatArmor*/ 2.f)))
+	{
+		return false;
+	}
+	TestEqual(TEXT("shred applied"), F.Status->Apply(DFTags::Status_Shred, nullptr), EDFStatusApplyResult::Applied);
+	TestTrue(TEXT("shred drove the FlatArmor attribute to 0"), FMath::IsNearlyEqual(F.ASC->GetNumericAttribute(UDFHealthSet::GetFlatArmorAttribute()), 0.f, 1e-4f));
+
+	// A hollow-point hit: 10 base, UnarmoredBonusFactor 1.3 on the context, no arc.
+	UDFDamageContext* Hit = UDFDamageContext::Make(F.Enemy, DFTags::Damage_Type_Kinetic, FGameplayTag());
+	Hit->UnarmoredBonusFactor = 1.3f;
+	FGameplayEffectContextHandle HitContext = F.ASC->MakeEffectContext();
+	Hit->AttachTo(HitContext);
+	FGameplayEffectSpecHandle Spec = F.ASC->MakeOutgoingSpec(UDFGE_Damage::StaticClass(), 1.f, HitContext);
+	if (!TestTrue(TEXT("damage spec"), Spec.IsValid()))
+	{
+		F.Shutdown();
+		return false;
+	}
+	Spec.Data->SetSetByCallerMagnitude(DFTags::SetByCaller_Damage, 10.f);
+	F.ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data);
+	TestTrue(*FString::Printf(TEXT("health 90: 10, not 13 — the row's armor still says armored (got %.2f)"), F.Health->GetHealth()),
+		FMath::IsNearlyEqual(F.Health->GetHealth(), 90.f, 1e-3f));
 	F.Shutdown();
 	return true;
 }

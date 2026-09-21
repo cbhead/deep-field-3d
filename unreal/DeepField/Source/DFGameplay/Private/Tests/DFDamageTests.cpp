@@ -115,6 +115,13 @@ bool FDFDamageFlatArmorAndApTest::RunTest(const FString& Parameters)
 	FDFDamageInput HpAegis = Hp;
 	HpAegis.FrontArmorArcDegrees = 140.f;
 	TestTrue(TEXT("an arc counts as armor"), FMath::IsNearlyEqual(FDFDamageMath::Compute(HpAegis).Damage, 7.f, 1e-4f));
+	// Step.cs:545 reads `armored` off the enemy ROW, so shred cannot unarmor a ram for hollow point:
+	// RowFlatArmor is the row, FlatArmor the shred-modified attribute (DF.Unit.Damage.ShredKeepsTargetArmored).
+	FDFDamageInput HpShreddedRam = HpRam;
+	HpShreddedRam.RowFlatArmor = 2.f;
+	HpShreddedRam.FlatArmor = 0.f;
+	TestTrue(TEXT("the row still says armored"), HpShreddedRam.IsArmored());
+	TestTrue(TEXT("shredded ram takes 7, not 9.1"), FMath::IsNearlyEqual(FDFDamageMath::Compute(HpShreddedRam).Damage, 7.f, 1e-4f));
 
 	// Source factors multiply before armor: DamageFactor 1.25 (glacier vs chilled) x weak point 2 x PaP 1.25.
 	FDFDamageInput Stack = Ram;

@@ -14,6 +14,7 @@
 #include "Effects/DFGE_StatusBase.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/GameStateBase.h"
 #include "Messages/DFMessageBus.h"
 #include "Messages/DFMessages.h"
 #include "Net/Core/PushModel/PushModel.h"
@@ -77,7 +78,23 @@ bool UDFStatusComponent::HasAuthority() const
 float UDFStatusComponent::Now() const
 {
 	const UWorld* World = GetWorld();
-	return World ? World->GetTimeSeconds() : 0.f;
+	if (!World)
+	{
+		return 0.f;
+	}
+	// Every slot timestamp is a SERVER timestamp: FDFStatusSlotRep::EndTimeServer is written here
+	// and replicated verbatim, and TimeRemaining() subtracts this clock from it on whichever
+	// machine asks. A client's own GetTimeSeconds() is seconds since ITS level load and has no
+	// relation to the server's — a client that joined 120 s into a match would read a 1.5 s chill
+	// as 121.5 s. AGameStateBase::GetServerWorldTimeSeconds() is the one clock both sides share:
+	// the server's own world time on the server (delta 0, so a listen host is unchanged) and the
+	// client's replicated estimate of it on a client. DF.Unit.Status.TimeRemainingUsesServerClock.
+	if (const AGameStateBase* GameState = World->GetGameState())
+	{
+		return static_cast<float>(GameState->GetServerWorldTimeSeconds());
+	}
+	// No game state (a dev map, a unit-test world): there is only one clock, so it is the one.
+	return World->GetTimeSeconds();
 }
 
 UAbilitySystemComponent* UDFStatusComponent::GetASC() const
@@ -509,6 +526,9 @@ void UDFStatusComponent::ApplyBurst(const FDFStatusApplyOutcome& Outcome, AActor
 		// like any other hit, as Step.cs Damage() did for reactions.
 		UDFDamageContext* Damage = UDFDamageContext::Make(this, FGameplayTag(), DFTags::Damage_Source_Reaction);
 		Damage->ReactionTag = DFTags::ForContentId(TEXT("DF.Reaction"), Outcome.ReactionId);
+		// Step.cs:1086 bursts `enemy.MaxHp * reaction.BurstFraction` — the reaction's own number.
+		// The reactor is the instigator (xp and credit), but none of its factors scale the burst.
+		Damage->bAppliesSourceFactors = false;
 		Damage->AttachTo(Context);
 		FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(UDFGE_Damage::StaticClass(), 1.f, Context);
 		if (Spec.IsValid())

@@ -79,6 +79,16 @@ void UDFDamageExecution::Execute_Implementation(const FGameplayEffectCustomExecu
 	In.BaseDamage = Spec.GetSetByCallerMagnitude(DFTags::SetByCaller_Damage, /*WarnIfNotFound*/ false, 0.f);
 	In.DamageFactor = CapturedOr(ExecutionParams, DamageStatics().DamageFactorDef, Eval, 1.f);
 	In.FlatArmor = CapturedOr(ExecutionParams, DamageStatics().FlatArmorDef, Eval, 0.f);
+	// Step.cs:545 reads "armored" off the enemy DEFINITION (`enemyDef.FlatArmor > 0f || ...`), so
+	// shred — a modifier on the FlatArmor aggregator — can never unarmor a target for hollow
+	// point's UnarmoredBonusFactor. The aggregator's BASE value is that row number.
+	{
+		float BaseFlatArmor = 0.f;
+		if (ExecutionParams.AttemptCalculateCapturedAttributeBaseValue(DamageStatics().FlatArmorDef, BaseFlatArmor))
+		{
+			In.RowFlatArmor = BaseFlatArmor;
+		}
+	}
 	In.DamageTakenFactor = CapturedOr(ExecutionParams, DamageStatics().DamageTakenFactorDef, Eval, 1.f);
 	In.Shield = CapturedOr(ExecutionParams, DamageStatics().ShieldDef, Eval, 0.f);
 	In.bTargetShredded = Eval.TargetTags && Eval.TargetTags->HasTag(DFTags::Status_Channel_Defense);
@@ -107,6 +117,19 @@ void UDFDamageExecution::Execute_Implementation(const FGameplayEffectCustomExecu
 	In.AmmoFactor = FactorOr(Spec, DFGameplayLocalTags::SetByCaller_AmmoFactor(), In.AmmoFactor);
 	In.WeakPointFactor = FactorOr(Spec, DFGameplayLocalTags::SetByCaller_WeakPointFactor(), In.WeakPointFactor);
 	In.PackAPunchFactor = FactorOr(Spec, DFGameplayLocalTags::SetByCaller_PackAPunchFactor(), In.PackAPunchFactor);
+
+	// A DoT tick and a reaction burst are not shots: Step.cs applies the shooter's build factor at
+	// the weapon call site and passes Damage() the row's own magnitude, so nothing source-side —
+	// not the snapshot-captured UDFCombatSet.DamageFactor, not an ammo or weak-point set-by-caller
+	// an ability might have left on the spec — multiplies them. Last, so it wins over both routes.
+	if (Context && !Context->bAppliesSourceFactors)
+	{
+		In.DamageFactor = 1.f;
+		In.AmmoFactor = 1.f;
+		In.UnarmoredBonusFactor = 1.f;
+		In.WeakPointFactor = 1.f;
+		In.PackAPunchFactor = 1.f;
+	}
 
 	const FDFDamageResult Result = FDFDamageMath::Compute(In);
 	if (Result.Damage > 0.f)

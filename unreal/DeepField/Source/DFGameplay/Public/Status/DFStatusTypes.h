@@ -22,7 +22,8 @@ enum class EDFStatusApplyResult : uint8
 	RejectedHero,      // the target is a hero: only Movement statuses and stagger land on heroes (C5, B§1.6)
 };
 
-/** One channel slot. Active when StatusId is set; EndTime is in the owner's clock (world seconds). */
+/** One channel slot. Active when StatusId is set; EndTime is in SERVER world seconds
+ *  (UDFStatusComponent::Now() — AGameStateBase::GetServerWorldTimeSeconds when there is a game state). */
 USTRUCT(BlueprintType)
 struct DFGAMEPLAY_API FDFStatusSlot
 {
@@ -54,6 +55,9 @@ struct DFGAMEPLAY_API FDFStatusSlotRep
 {
 	GENERATED_BODY()
 	UPROPERTY(BlueprintReadOnly) FGameplayTag StatusTag;
+	/** The server's world time at which the slot ends. Compare it only against
+	 *  AGameStateBase::GetServerWorldTimeSeconds() (what UDFStatusComponent::Now() returns) —
+	 *  never against a client's own UWorld::GetTimeSeconds(), which counts from ITS level load. */
 	UPROPERTY(BlueprintReadOnly) float EndTimeServer = 0.f;
 	UPROPERTY(BlueprintReadOnly) float Magnitude = 0.f;
 

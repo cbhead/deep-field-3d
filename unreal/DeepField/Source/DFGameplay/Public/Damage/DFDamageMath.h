@@ -65,14 +65,21 @@ struct DFGAMEPLAY_API FDFDamageInput
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float RearWeakFactor = 1.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float RearThresholdDegrees = DFDamageDefaults::RearThresholdDegrees;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float FlatArmor = 0.f;             // UDFHealthSet on the target (shred already applied)
+	/** The enemy ROW's own flat armor — the FlatArmor attribute's BASE value, which shred (a modifier)
+	 *  never moves. Only IsArmored() reads it; the subtraction uses FlatArmor above. Negative means the
+	 *  applier did not know the row and the attribute stands in for it. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float RowFlatArmor = -1.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) bool bTargetShredded = false;      // DF.Status.Channel.Defense on the target
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float ShredFrontArcLeakFactor = DFDamageDefaults::ShredFrontArcLeakFactor;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float PostArmorDamageFloor = DFDamageDefaults::PostArmorDamageFloor;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float DamageTakenFactor = 1.f;     // UDFHealthSet on the target
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float Shield = 0.f;                // UDFHealthSet on the target (for the split preview)
 
-	/** Step.cs: "armored" = flat armor or a front arc; hollow-point's bonus applies only when it is false. */
-	bool IsArmored() const { return FlatArmor > 0.f || FrontArmorArcDegrees > 0.f; }
+	/** Step.cs:545 `bool armored = enemyDef.FlatArmor > 0f || enemyDef.FrontArmorArcDegrees > 0f` — read
+	 *  off the enemy DEFINITION, so it is static and shred cannot flip it. Hollow point's
+	 *  UnarmoredBonusFactor applies only when this is false: a shredded Ram at FlatArmor 0 is still
+	 *  armored (DF.Unit.Damage.ShredKeepsTargetArmored). */
+	bool IsArmored() const { return (RowFlatArmor >= 0.f ? RowFlatArmor : FlatArmor) > 0.f || FrontArmorArcDegrees > 0.f; }
 };
 
 USTRUCT(BlueprintType)
