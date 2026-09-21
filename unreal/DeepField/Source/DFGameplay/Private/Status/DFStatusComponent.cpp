@@ -5,6 +5,8 @@
 #include "Attributes/DFControlSet.h"
 #include "Attributes/DFHealthSet.h"
 #include "Content/DFContentSubsystem.h"
+#include "Cues/DFGameplayCueNotify_Base.h"
+#include "DFBalanceDial.h"
 #include "DFGameplayLocalTags.h"
 #include "DFGameplayTags.h"
 #include "Damage/DFDamageContext.h"
@@ -44,6 +46,7 @@ void UDFStatusComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 void UDFStatusComponent::BeginPlay()
 {
 	Super::BeginPlay();
+	UDFGameplayCueNotify_Base::RegisterNativeCues();   // the cues this component fires have a handler even with no asset in Content
 	Resolver.FindStatusRow = [this](FName Id) { return FindStatusRow(Id); };
 	if (HasAuthority())
 	{
@@ -95,8 +98,9 @@ bool UDFStatusComponent::IsAlive() const
 bool UDFStatusComponent::IsEmberApplier(const AActor* Source)
 {
 	// Step.cs: `playerId is int pid && w.Players[pid].FactionId == Factions.Ember.Id` — only a
-	// player applier, never a tower or trap. The faction tag sits on the hero's ASC; a weapon or
-	// projectile actor reaches it through its owner or instigator.
+	// player applier, never a tower or trap. The faction tag (or the granted UDFGE_Passive_Ember tag,
+	// DF.Ability.Passive.BurnDuration) sits on the hero's ASC; a weapon or projectile actor reaches
+	// it through its owner or instigator.
 	const AActor* Candidates[] = { Source, Source ? Source->GetOwner() : nullptr, Source ? Source->GetInstigator() : nullptr };
 	for (const AActor* Actor : Candidates)
 	{
@@ -105,7 +109,7 @@ bool UDFStatusComponent::IsEmberApplier(const AActor* Source)
 			continue;
 		}
 		const UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Actor, /*LookForComponent*/ true);
-		if (ASC && ASC->HasMatchingGameplayTag(DFTags::Faction_Ember))
+		if (ASC && (ASC->HasMatchingGameplayTag(DFTags::Faction_Ember) || ASC->HasMatchingGameplayTag(DFTags::Ability_Passive_BurnDuration)))
 		{
 			return true;
 		}
@@ -125,11 +129,12 @@ void UDFStatusComponent::ReadRates()
 	const UDFContentSubsystem* Content = UDFContentSubsystem::Get(this);
 	if (Content && Content->IsReady())
 	{
-		Resolver.CcResistFillPerSecond = Content->Balance(TEXT("ccResistFillPerSecond"), Resolver.CcResistFillPerSecond);
-		Resolver.CcResistDecayPerSecond = Content->Balance(TEXT("ccResistDecayPerSecond"), Resolver.CcResistDecayPerSecond);
-		Resolver.TetherImmuneMass = Content->Balance(TEXT("tetherImmuneMass"), Resolver.TetherImmuneMass);
-		EmberBurnDurationFactor = Content->Balance(TEXT("emberBurnDurationFactor"), EmberBurnDurationFactor);
-		StatusTickHz = FMath::Max(1.f, Content->Balance(TEXT("tickHz"), StatusTickHz));
+		// DFBalance::Dial: a dial the table lacks (tetherImmuneMass, RFC'd) is a one-time warning and the sim's number.
+		Resolver.CcResistFillPerSecond = DFBalance::Dial(this, TEXT("ccResistFillPerSecond"), Resolver.CcResistFillPerSecond);
+		Resolver.CcResistDecayPerSecond = DFBalance::Dial(this, TEXT("ccResistDecayPerSecond"), Resolver.CcResistDecayPerSecond);
+		Resolver.TetherImmuneMass = DFBalance::Dial(this, TEXT("tetherImmuneMass"), Resolver.TetherImmuneMass);
+		EmberBurnDurationFactor = DFBalance::Dial(this, TEXT("emberBurnDurationFactor"), EmberBurnDurationFactor);
+		StatusTickHz = FMath::Max(1.f, DFBalance::Dial(this, TEXT("tickHz"), StatusTickHz));
 		return;
 	}
 	if (const UAbilitySystemComponent* ASC = GetASC())

@@ -36,13 +36,14 @@ DECLARE_MULTICAST_DELEGATE(FDFSlotsChanged);
 //
 // Two Step.cs rules live here rather than in the resolver because they need the world:
 //   * Ember's passive — a burn applied by an Ember hero (DF.Faction.Ember on the source's ASC,
-//     or its owner's / instigator's) lasts Balance("emberBurnDurationFactor", 1.3) times longer.
+//     or its owner's / instigator's — or DF.Ability.Passive.BurnDuration, the tag UDFGE_Passive_Ember
+//     grants) lasts Balance("emberBurnDurationFactor", 1.3) times longer.
 //     The factor goes into the resolver BEFORE its refresh / strongest-wins branch, so an Ember
 //     refresh also keeps the longer duration (DF.Unit.Status.EmberDurationOnRefresh).
 //   * a same-id refresh keeps the running channel effect (period and phase untouched, no extra
 //     on-application tick) and moves its effect-context instigator to the refresher, because
 //     Step.cs UpdateStatuses damages with slot.Source: the DoT is credited to whoever refreshed
-//     it (DF.Unit.Status.RefreshMovesDotAttribution);
+//     it (DF.Unit.Status.RefreshRetargetsDot);
 //   * the reaction burst — bound to the resolver's OnReaction: the consumed status's effect is
 //     removed first, then BurstFraction x MaxHealth goes through UDFGE_Damage with no source
 //     location (no arc; mark, flat armor and shield apply), and the resolver only writes the

@@ -1,3 +1,9 @@
+// GENERATED VALUES — every colour below is docs/palette.json (1.0, 2026-09-06) transcribed field
+// for field, and is the interim DA_Palette (C8 / ADR-0017: gameplay code asks this object, never
+// spells a colour). Do not hand-edit a hex here: change docs/palette.json and regenerate — the
+// RFC in ws-02-gameplay-core.md asks WS-01's import_tokens.py to write this constructor (or the
+// [/Script/DFGameplay.DFPaletteSettings] section of DefaultGame.ini, which overrides it) so the
+// palette has one source. FromHex turns sRGB hex into linear at construction.
 #include "Tint/DFPaletteSettings.h"
 
 #include "DFGameplayLocalTags.h"

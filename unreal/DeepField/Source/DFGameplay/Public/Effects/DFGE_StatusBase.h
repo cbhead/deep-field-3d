@@ -5,12 +5,16 @@
 #include "GameplayEffect.h"
 #include "DFGE_StatusBase.generated.h"
 
-// C5 — GE_Status_<id> in C++: one infinite effect class per channel. The class grants
-// DF.Status.Channel.<Channel>; the status id (DF.Status.<Id>) is added as a dynamic granted
-// tag on the spec, and the row's magnitude arrives as DF.SetByCaller.Magnitude, so the eight
-// classes cover every current and future status row without a new asset. Duration is NOT the
-// effect's: UDFStatusComponent owns the slot timers (strongest-wins, refresh, reactions) and
-// removes the effect when the slot ends, which keeps the replicated slots the single source
+// C5 — CONTRACT DEVIATION, RFC'd in unreal/PLAN/workstreams/ws-02-gameplay-core.md: status.md names
+// one `GE_Status_<id>` ASSET per status under Content/DF/Gameplay/GE; this branch ships instead
+// "GE_Status_<id> assets -> UDFGE_Status_<Channel> C++ classes with the id tag granted dynamically":
+// one infinite effect class per channel (UDFGE_Status_Movement, _Thermal, _Toxin, _Defense,
+// _Vulnerability, _Control, _Tether, _Detection). The class grants DF.Status.Channel.<Channel>; the
+// status id (DF.Status.<Id>) is added as a dynamic granted tag on the spec, and the row's magnitude
+// arrives as DF.SetByCaller.Magnitude, so the eight classes cover every current and future status
+// row without a new asset — WS-14 cues and WS-05 key on the tags, never on an asset name. Duration
+// is NOT the effect's: UDFStatusComponent owns the slot timers (strongest-wins, refresh, reactions)
+// and removes the effect when the slot ends, which keeps the replicated slots the single source
 // clients derive tint and VFX from.
 UCLASS(Abstract)
 class DFGAMEPLAY_API UDFGE_StatusBase : public UGameplayEffect
