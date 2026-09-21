@@ -171,7 +171,7 @@ EDFArrival FDFLaneWalker::ArriveAtNode(const UDFLaneGraphAsset& Graph, const FDF
 }
 
 bool FDFLaneWalker::Begin(const UDFLaneGraphAsset& Graph, const FDFLaneItinerary& Itinerary, const FDFLaneWalkerParams& Params,
-	const FDFLaneRouting& Routing, float LateralOffsetCm, FDFLaneWalkerState& Out)
+	const FDFLaneRouting& Routing, float LateralOffsetCm, FDFLaneWalkerState& Out, TArray<FDFWalkEvent>& OutEvents)
 {
 	Out = FDFLaneWalkerState();
 	Out.LateralOffsetCm = LateralOffsetCm;
@@ -187,15 +187,25 @@ bool FDFLaneWalker::Begin(const UDFLaneGraphAsset& Graph, const FDFLaneItinerary
 	Out.ViaCursor = 1;   // Via[0] is where it stands; routing asks about the next one
 	const FDFLaneNode* Start = Graph.FindNode(Itinerary.Via[0]);
 	const FVector At = Start ? Start->Position : FVector::ZeroVector;
-	TArray<FDFWalkEvent> Ignored;
-	if (ArriveAtNode(Graph, Itinerary, Params, Routing, Itinerary.Via[0], At, Out, Ignored) != EDFArrival::Moving)
+	const EDFArrival Arrival = ArriveAtNode(Graph, Itinerary, Params, Routing, Itinerary.Via[0], At, Out, OutEvents);
+	if (Arrival == EDFArrival::Moving)
+	{
+		return true;
+	}
+
+	// Two different faults, two different diagnoses: an itinerary that starts *at* a core is an
+	// authoring error in the route, not a lane that happens to be shut today.
+	if (Arrival == EDFArrival::Leaked)
+	{
+		UE_LOG(LogDFWalk, Error, TEXT("itinerary '%s' starts at core node '%s'"), *Itinerary.Id.ToString(), *Itinerary.Via[0].ToString());
+	}
+	else
 	{
 		UE_LOG(LogDFWalk, Error, TEXT("nothing open out of '%s' for itinerary '%s'"), *Itinerary.Via[0].ToString(), *Itinerary.Id.ToString());
-		Out.EdgeIndex = INDEX_NONE;
-		Out.bStranded = false;
-		return false;
 	}
-	return true;
+	Out.EdgeIndex = INDEX_NONE;
+	Out.bStranded = false;
+	return false;
 }
 
 void FDFLaneWalker::Advance(const UDFLaneGraphAsset& Graph, const FDFLaneItinerary& Itinerary, const FDFLaneWalkerParams& Params,

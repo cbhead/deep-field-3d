@@ -148,9 +148,16 @@ struct DFENEMIES_API FDFLaneWalker
 	/** Put a walker at the start of an itinerary, **routing its first edge the same way every later
 	 *  one is chosen** (Step.cs:1011). Taking `EdgesOf(Itinerary)[0]` unconditionally would start a
 	 *  walker on a shut edge and walk it through — the spawn node is a routing decision like any
-	 *  other. False if nothing is open out of the first via. */
+	 *  other. False if nothing is open out of the first via.
+	 *
+	 *  `OutEvents` is **not optional**: the spawn node produces the same events every other node
+	 *  does, `BreachStarted` among them, and a Ram spawning in front of a barricaded first edge must
+	 *  put the enemy, the wall and a countdown on the player's HUD exactly as one that meets a wall
+	 *  mid-walk does (Step.cs announces at spawn too). Discarding them here was a fourth call site
+	 *  quietly not behaving like the other three — the thing sharing the routine was meant to stop.
+	 */
 	static bool Begin(const UDFLaneGraphAsset& Graph, const FDFLaneItinerary& Itinerary, const FDFLaneWalkerParams& Params,
-		const FDFLaneRouting& Routing, float LateralOffsetCm, FDFLaneWalkerState& Out);
+		const FDFLaneRouting& Routing, float LateralOffsetCm, FDFLaneWalkerState& Out, TArray<FDFWalkEvent>& OutEvents);
 
 	/** One step. Speed 0 (frozen, sieging) still crosses a warp it is standing on, as the sim does.
 	 *  EdgeOpen/DistToNode/DistToCore are the caller's routing tables, rebuilt when an edge changes
