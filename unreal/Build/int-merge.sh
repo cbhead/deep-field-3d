@@ -92,7 +92,7 @@ rebase_onto_main() {
       echo "$conflicted" | while IFS= read -r F; do
         case "$F" in
           unreal/PLAN/STATUS.md) echo "STATUS.md conflict: regenerated"; python3 unreal/Build/plan-status.py >/dev/null && git add "$F";;
-          *) python3 unreal/Build/merge-ws-log.py "$F" || exit 1;;
+          *) python3 "$HERE/merge-ws-log.py" "$F" || exit 1;;   # $HERE, not the branch: a branch older than the tool does not carry it
         esac
       done || { echo "could not resolve a ledger conflict automatically"; return 1; }
     fi
