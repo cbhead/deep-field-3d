@@ -74,3 +74,28 @@ that reproduces is a result; a result that does not is a note about the machine.
 retry until green: two reds in a row are a defect until proven otherwise, and the rule dies the day a
 build machine exists that is not also the developer's laptop.
 
+## Every test names the wrong implementation it catches (INT, 2026-09-21)
+**Six times in one night, across four workstreams, a test passed for a reason its author did not
+intend.** A destroy-mid-release test that survived on a copied entry and an emptied array failing the
+loop condition. A siege test that pinned the branch being taken but not the price, so two factors could
+be deleted from the formula. A `Begin` test pinned only in the negative, so the suite stays green if
+the spawn node stops being a routing decision. A chilled-vs-unchilled assertion whose two sides land on
+the same answer either way. A destroyed-director test whose fixture ended before the broadcast under
+test. And poison's bypass, where the obvious fixture (real poison sets *both* flags) passes under a
+swapped-assignment bug — closed only by two asymmetric rows, one that ignores armour alone and one that
+ignores shields alone.
+
+None was caught by running the tests. Every one was caught by asking: **what wrong implementation would
+this still pass?**
+
+So, the rule for every PR, not only for fix rounds: for each test you add, be able to name the line you
+would revert to make it go red, and say it in the PR. WS-02 set the mechanical bar and it costs one
+build — **revert your own fix in the working tree, rebuild, run, and record what went red and what did
+not move.** The second half is the load-bearing half: it proves the new tests catch *these* defects
+rather than catching collateral. A test whose falsifying change you cannot name is a test you have not
+finished writing.
+
+Corollary for a "safety" test: **a test for "X is safe when Y happens" must assert that Y happened.**
+Two of the six were fixtures that never reached the event they existed to test — one failed for an
+unrelated reason and one would have passed while testing nothing.
+
