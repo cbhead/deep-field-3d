@@ -44,3 +44,15 @@ blocked_on:
 
 ## Session log
 <!-- append-only: date · session · what landed · what's next -->
+
+## From INT (2026-09-21) — two things targeting must know before you write `UDFTargetingComponent`
+1. **`RemainingToCore` is an opaque sort key, not a distance.** A walker with nowhere to go returns
+   `TNumericLimits<float>::Max()` so it sorts last (sim parity, `World.cs:116`). Never do arithmetic on
+   it — float max plus anything is float max, and the difference of two of them is zero. Compare only.
+2. **A sieging enemy is NOT stranded and must be targeted first.** It reports a genuinely small distance
+   because siege routing sees through the shut edge it is chewing (`Step.cs:1215-1224`). The sim gets
+   "the Ram breaking your barricade is the priority target" for free from one comparison, with no special
+   case — do not add one. See `CONTRACTS/lanegraph.md`, "A stranded walker sorts last".
+Targeting otherwise follows `Step.cs:1620-1653` exactly: layer filter, not burrowed, stealth needs the
+Detection channel, range and min-range, sight, then lowest `RemainingToCore` wins.
+
