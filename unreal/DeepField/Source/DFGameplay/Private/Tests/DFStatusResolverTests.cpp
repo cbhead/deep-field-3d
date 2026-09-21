@@ -509,8 +509,8 @@ bool FDFStatusTieKeepsActiveTest::RunTest(const FString& Parameters)
 // Thermal/Toxin." Not a Step.cs rule (the sim's heroes carried no statuses): a hero target refuses
 // everything but Movement rows and the stagger row, before the reaction scan, and its stagger
 // neither fills nor consults the cc-resist gauge.
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFStatusHeroCarriesOnlyMovementAndStaggerTest, "DF.Unit.Status.HeroCarriesOnlyMovementAndStagger", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
-bool FDFStatusHeroCarriesOnlyMovementAndStaggerTest::RunTest(const FString& Parameters)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFStatusHeroRejectsThermalAndToxinTest, "DF.Unit.Status.HeroRejectsThermalAndToxin", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+bool FDFStatusHeroRejectsThermalAndToxinTest::RunTest(const FString& Parameters)
 {
 	DFTestRows::FResolverFixture Hero;
 	Hero.Target.bHero = true;

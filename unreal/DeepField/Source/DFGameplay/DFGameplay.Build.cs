@@ -25,5 +25,11 @@ public class DFGameplay : ModuleRules
 		PrivateDependencyModuleNames.AddRange(new string[] {
 			// (none)
 		});
+
+		if (Target.bBuildEditor)
+		{
+			// DF.Func.Status.* open a map and run it in PIE: FEndPlayMapCommand (Tests/AutomationEditorCommon.h).
+			PrivateDependencyModuleNames.Add("UnrealEd");
+		}
 	}
 }

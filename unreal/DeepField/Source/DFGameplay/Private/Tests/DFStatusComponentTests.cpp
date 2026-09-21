@@ -1,8 +1,17 @@
 #include "Abilities/DFAbilitySystemComponent.h"
+#include "Attributes/DFCombatSet.h"
 #include "Attributes/DFHealthSet.h"
 #include "Attributes/DFMovementSet.h"
+#include "Cues/DFGameplayCueNotify_Base.h"
+#include "DFGameplayLocalTags.h"
 #include "DFGameplayTags.h"
 #include "DFTestRows.h"
+#include "Effects/DFGE_FactionPassive.h"
+#include "Effects/DFGE_Passive_Ember.h"
+#include "Effects/DFGE_Passive_Forge.h"
+#include "Effects/DFGE_Passive_Glacier.h"
+#include "Effects/DFGE_Passive_Specter.h"
+#include "Effects/DFGE_Passive_Tempest.h"
 #include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
@@ -491,9 +500,9 @@ bool FDFStatusEmberDurationOnRefreshTest::RunTest(const FString& Parameters)
 // Step.cs UpdateStatuses: `Damage(w, enemy, dps * dt, slot.Source, ...)` — every tick is credited to
 // the slot's CURRENT source, and a same-id refresh moves the source. The running periodic effect
 // is kept (no re-apply: its period and phase stand, no extra on-application tick) and its context
-// instigator is moved to the refresher, so the ticks after the refresh belong to the second applier.
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFStatusRefreshMovesDotAttributionTest, "DF.Unit.Status.RefreshMovesDotAttribution", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
-bool FDFStatusRefreshMovesDotAttributionTest::RunTest(const FString& Parameters)
+// instigator is retargeted to the refresher, so the ticks after the refresh belong to the second applier.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFStatusRefreshRetargetsDotTest, "DF.Unit.Status.RefreshRetargetsDot", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+bool FDFStatusRefreshRetargetsDotTest::RunTest(const FString& Parameters)
 {
 	FWorldFixture F;
 	if (!TestTrue(TEXT("standalone world"), F.Init(100.f)))
@@ -557,6 +566,139 @@ bool FDFStatusHeroComponentTest::RunTest(const FString& Parameters)
 	F.Tick(0.2f);
 	TestEqual(TEXT("gauge untouched by a hero's stagger"), F.Status->GetCcResist(), 0.f);
 	TestTrue(TEXT("health untouched"), FMath::IsNearlyEqual(F.Health->GetHealth(), 100.f, 1e-3f));
+	F.Shutdown();
+	return true;
+}
+
+// The five faction passives (PROGRAMME §5.2 WS-02) as effects: each grants its DF.Ability.Passive.<Id>
+// tag, the two with an attribute write UDFCombatSet from the Balance dial (through
+// UDFMMC_BalanceDial), and Ember's tag alone makes an applier an Ember applier for the status
+// component — the granter (WS-07) never spells a number.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFStatusFactionPassivesTest, "DF.Unit.Status.FactionPassives", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+bool FDFStatusFactionPassivesTest::RunTest(const FString& Parameters)
+{
+	FWorldFixture F;
+	if (!TestTrue(TEXT("standalone world"), F.Init(100.f)))
+	{
+		return false;
+	}
+	AActor* Hero = F.SpawnApplier(FGameplayTag());
+	UDFAbilitySystemComponent* ASC = UDFAbilitySystemComponent::FindOn(Hero);
+	if (!TestNotNull(TEXT("hero ASC"), ASC))
+	{
+		return false;
+	}
+	UDFCombatSet* Combat = NewObject<UDFCombatSet>(Hero, TEXT("CombatSet"));
+	ASC->AddAttributeSetSubobject(Combat);
+	TestEqual(TEXT("RateFactor starts at 1"), Combat->GetRateFactor(), 1.f);
+	TestEqual(TEXT("ChilledBonus starts at 1"), Combat->GetChilledBonus(), 1.f);
+
+	struct FExpected
+	{
+		FGameplayTag Faction;
+		TSubclassOf<UDFGE_FactionPassive> Class;
+		FGameplayTag Passive;
+		FName Dial;
+		float Magnitude;
+	};
+	const FExpected Table[] = {
+		{ DFTags::Faction_Forge,   UDFGE_Passive_Forge::StaticClass(),   DFTags::Ability_Passive_BuildDiscount, TEXT("forgeBuildDiscount"),         0.9f  },
+		{ DFTags::Faction_Ember,   UDFGE_Passive_Ember::StaticClass(),   DFTags::Ability_Passive_BurnDuration,  TEXT("emberBurnDurationFactor"),    1.3f  },
+		{ DFTags::Faction_Tempest, UDFGE_Passive_Tempest::StaticClass(), DFTags::Ability_Passive_ReloadSpeed,   TEXT("tempestRateFactor"),          1.12f },
+		{ DFTags::Faction_Glacier, UDFGE_Passive_Glacier::StaticClass(), DFTags::Ability_Passive_ChilledBonus,  TEXT("glacierChilledDamageFactor"), 1.25f },
+		{ DFTags::Faction_Specter, UDFGE_Passive_Specter::StaticClass(), DFTags::Ability_Passive_WeakPoints,    NAME_None,                          1.f   },
+	};
+	TestEqual(TEXT("five passives"), UDFGE_FactionPassive::AllClasses().Num(), 5);
+	TestTrue(TEXT("no passive for a non-faction tag"), UDFGE_FactionPassive::ClassForFaction(DFTags::Status_Burn) == nullptr);
+	TMap<FName, FActiveGameplayEffectHandle> Handles;
+	for (const FExpected& E : Table)
+	{
+		const FString Who = E.Faction.ToString();
+		const TSubclassOf<UDFGE_FactionPassive> Class = UDFGE_FactionPassive::ClassForFaction(E.Faction);
+		TestTrue(*FString::Printf(TEXT("%s -> %s"), *Who, *GetNameSafe(E.Class)), Class == E.Class);
+		const UDFGE_FactionPassive* Passive = E.Class.GetDefaultObject();
+		TestEqual(*FString::Printf(TEXT("%s grants %s"), *Who, *E.Passive.ToString()), Passive->GetPassiveTag(), E.Passive);
+		TestEqual(*FString::Printf(TEXT("%s dial"), *Who), Passive->GetDial(), E.Dial);
+		TestTrue(*FString::Printf(TEXT("%s magnitude %.2f (got %.3f)"), *Who, E.Magnitude, Passive->Magnitude(Hero)), FMath::IsNearlyEqual(Passive->Magnitude(Hero), E.Magnitude, 1e-4f));
+		TestFalse(*FString::Printf(TEXT("%s tag absent before"), *Who), ASC->HasMatchingGameplayTag(E.Passive));
+		const FActiveGameplayEffectHandle Handle = ASC->ApplyGameplayEffectToSelf(Passive, 1.f, ASC->MakeEffectContext());
+		TestTrue(*FString::Printf(TEXT("%s applied (infinite)"), *Who), Handle.IsValid());
+		TestTrue(*FString::Printf(TEXT("%s tag granted"), *Who), ASC->HasMatchingGameplayTag(E.Passive));
+		Handles.Add(E.Dial.IsNone() ? FName(*Who) : E.Dial, Handle);
+	}
+	TestTrue(*FString::Printf(TEXT("Tempest: RateFactor x1.12 (got %.3f)"), Combat->GetRateFactor()), FMath::IsNearlyEqual(Combat->GetRateFactor(), 1.12f, 1e-4f));
+	TestTrue(*FString::Printf(TEXT("Glacier: ChilledBonus x1.25 (got %.3f)"), Combat->GetChilledBonus()), FMath::IsNearlyEqual(Combat->GetChilledBonus(), 1.25f, 1e-4f));
+	TestEqual(TEXT("Specter: WeakPointBonus untouched"), Combat->GetWeakPointBonus(), 1.f);
+	TestEqual(TEXT("DamageFactor untouched"), Combat->GetDamageFactor(), 1.f);
+
+	// Ember by passive: no DF.Faction.Ember on the hero, the granted tag alone stretches its burn to 3.9 s.
+	TestFalse(TEXT("no faction tag"), ASC->HasMatchingGameplayTag(DFTags::Faction_Ember));
+	TestTrue(TEXT("Ember passive makes an Ember applier"), UDFStatusComponent::IsEmberApplier(Hero));
+	TestEqual(TEXT("burn from the passive hero"), F.Status->Apply(DFTags::Status_Burn, Hero), EDFStatusApplyResult::Applied);
+	TestTrue(TEXT("burn ends 3.9 s out"), FMath::IsNearlyEqual(F.Status->GetResolver().Slot(EDFStatusChannel::Thermal).EndTime, F.Now() + 3.9f, 1e-3f));
+
+	// Removing the passive removes the tag and the factor: the next burn is the row's 3 s.
+	ASC->RemoveActiveGameplayEffect(Handles.FindChecked(TEXT("emberBurnDurationFactor")));
+	TestFalse(TEXT("Ember tag gone"), ASC->HasMatchingGameplayTag(DFTags::Ability_Passive_BurnDuration));
+	TestFalse(TEXT("no longer an Ember applier"), UDFStatusComponent::IsEmberApplier(Hero));
+	F.Status->ClearChannel(EDFStatusChannel::Thermal);
+	TestEqual(TEXT("plain burn"), F.Status->Apply(DFTags::Status_Burn, Hero), EDFStatusApplyResult::Applied);
+	TestTrue(TEXT("burn ends 3 s out"), FMath::IsNearlyEqual(F.Status->GetResolver().Slot(EDFStatusChannel::Thermal).EndTime, F.Now() + 3.f, 1e-3f));
+	ASC->RemoveActiveGameplayEffect(Handles.FindChecked(TEXT("tempestRateFactor")));
+	TestTrue(TEXT("RateFactor back to 1"), FMath::IsNearlyEqual(Combat->GetRateFactor(), 1.f, 1e-4f));
+	F.Shutdown();
+	return true;
+}
+
+// The cue path of C5 without a map: UDFGameplayCueNotify_Base registers the native family handlers
+// in the runtime cue set (no asset in Content), and every cue the component executes reaches
+// UDFMessageBus as FDFMsg_GameplayCue keyed by the cue tag — the status Applied cue, then the
+// thermalShock reaction cue carrying the 12 % burst. This is what WS-14 / WS-13 subscribe to.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFStatusCueForwardsToBusTest, "DF.Unit.Status.CueForwardsToBus", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+bool FDFStatusCueForwardsToBusTest::RunTest(const FString& Parameters)
+{
+	FWorldFixture F;
+	if (!TestTrue(TEXT("standalone world"), F.Init(100.f)))
+	{
+		return false;
+	}
+	UDFMessageBus* Bus = UDFMessageBus::Get(F.World);
+	if (!TestNotNull(TEXT("message bus"), Bus))
+	{
+		return false;
+	}
+	TArray<FDFMsg_GameplayCue> Seen;
+	const FGameplayTag Root = FGameplayTag::RequestGameplayTag(FName(TEXT("GameplayCue.DF")), /*ErrorIfNotFound*/ false);
+	TestTrue(TEXT("GameplayCue.DF exists"), Root.IsValid());
+	const FDFMessageHandle Handle = Bus->Subscribe<FDFMsg_GameplayCue>(Root, [&Seen](const FGameplayTag&, const FDFMsg_GameplayCue& Msg) { Seen.Add(Msg); });
+
+	AActor* Applier = F.SpawnApplier(FGameplayTag());
+	TestEqual(TEXT("chill lands"), F.Status->Apply(DFTags::Status_Chill, Applier), EDFStatusApplyResult::Applied);
+	const FGameplayTag ChillApplied = DFGameplayLocalTags::StatusCue(TEXT("chill"), TEXT("Applied"));
+	TestTrue(TEXT("one cue so far: chill Applied"), Seen.Num() == 1 && Seen[0].Cue == ChillApplied);
+	if (Seen.Num() == 1)
+	{
+		TestEqual(TEXT("handled by the native status fallback (GameplayCue.DF.Status)"), Seen[0].HandlerTag, DFGameplayLocalTags::StatusCueRoot());
+		TestTrue(TEXT("target is the enemy"), Seen[0].Target == F.Enemy);
+		TestTrue(TEXT("instigator is the applier"), Seen[0].Instigator == Applier);
+		TestEqual(TEXT("event: Executed"), Seen[0].Event, EDFCueEvent::Executed);
+		TestTrue(TEXT("RawMagnitude = the slot magnitude 0.35"), FMath::IsNearlyEqual(Seen[0].RawMagnitude, 0.35f, 1e-4f));
+	}
+
+	TestEqual(TEXT("burn reacts"), F.Status->Apply(DFTags::Status_Burn, Applier), EDFStatusApplyResult::Reacted);
+	const FGameplayTag ThermalShock = DFGameplayLocalTags::ReactionCue(TEXT("thermalShock"));
+	const FDFMsg_GameplayCue* Reaction = Seen.FindByPredicate([&ThermalShock](const FDFMsg_GameplayCue& M) { return M.Cue == ThermalShock; });
+	if (TestNotNull(TEXT("GameplayCue.DF.Reaction.ThermalShock reached the bus"), Reaction))
+	{
+		TestEqual(TEXT("handled by the native reaction fallback (GameplayCue.DF.Reaction)"), Reaction->HandlerTag, DFGameplayLocalTags::ReactionCueRoot());
+		TestTrue(TEXT("burst 12 of 100"), FMath::IsNearlyEqual(Reaction->RawMagnitude, 12.f, 1e-3f));
+		TestTrue(TEXT("fraction 0.12"), FMath::IsNearlyEqual(Reaction->NormalizedMagnitude, 0.12f, 1e-4f));
+		TestTrue(TEXT("target is the enemy"), Reaction->Target == F.Enemy);
+	}
+	const FDFMsg_GameplayCue* ChillRemoved = Seen.FindByPredicate([](const FDFMsg_GameplayCue& M) { return M.Cue == DFGameplayLocalTags::StatusCue(TEXT("chill"), TEXT("Removed")); });
+	TestNotNull(TEXT("the consumed chill's Removed cue reached the bus"), ChillRemoved);
+	TestTrue(TEXT("health 88 after the burst"), FMath::IsNearlyEqual(F.Health->GetHealth(), 88.f, 1e-3f));
+	Bus->Unsubscribe(Handle);
 	F.Shutdown();
 	return true;
 }

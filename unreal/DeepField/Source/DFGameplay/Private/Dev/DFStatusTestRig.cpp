@@ -6,11 +6,12 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Content/DFContentSubsystem.h"
-#include "Cues/DFGameplayCueNotify_Reaction.h"
+#include "Cues/DFGameplayCueNotify_Base.h"
+#include "DFGameplayLocalTags.h"
 #include "DFGameplayTags.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
-#include "GameplayEffectTypes.h"
+#include "Messages/DFMessages.h"
 #include "Status/DFStatusComponent.h"
 #include "Tint/DFTintComponent.h"
 #include "TimerManager.h"
@@ -43,6 +44,7 @@ ADFStatusTestRig::ADFStatusTestRig()
 	HealthSet = CreateDefaultSubobject<UDFHealthSet>(TEXT("HealthSet"));
 	MovementSet = CreateDefaultSubobject<UDFMovementSet>(TEXT("MovementSet"));
 	Status = CreateDefaultSubobject<UDFStatusComponent>(TEXT("Status"));
+	Status->TargetId = 1;   // C15 id the messages carry (the only target in the level)
 	Tint = CreateDefaultSubobject<UDFTintComponent>(TEXT("Tint"));
 }
 
@@ -73,7 +75,15 @@ void ADFStatusTestRig::BeginPlay()
 		Status->AddReactionRowOverride(TEXT("thermalShock"), ThermalShock);
 	}
 
-	CueHandle = UDFGameplayCueNotify_Reaction::OnReactionCue().AddUObject(this, &ADFStatusTestRig::OnReactionCue);
+	// The two things the DoD names, both on the bus: the reaction CUE (forwarded by the native
+	// notify) and the component's DF.Message.ReactionTriggered.
+	if (UDFMessageBus* Bus = UDFMessageBus::Get(this))
+	{
+		CueHandle = Bus->Subscribe<FDFMsg_GameplayCue>(DFGameplayLocalTags::ReactionCueRoot(),
+			[this](const FGameplayTag& Tag, const FDFMsg_GameplayCue& Msg) { OnReactionCue(Tag, Msg); });
+		MessageHandle = Bus->Subscribe<FDFMsg_Status>(DFTags::Message_ReactionTriggered,
+			[this](const FGameplayTag& Tag, const FDFMsg_Status& Msg) { OnReactionMessage(Tag, Msg); });
+	}
 	if (HasAuthority())
 	{
 		StartCycle();
@@ -86,7 +96,11 @@ void ADFStatusTestRig::BeginPlay()
 
 void ADFStatusTestRig::EndPlay(const EEndPlayReason::Type Reason)
 {
-	UDFGameplayCueNotify_Reaction::OnReactionCue().Remove(CueHandle);
+	if (UDFMessageBus* Bus = UDFMessageBus::Get(this))
+	{
+		Bus->Unsubscribe(CueHandle);
+		Bus->Unsubscribe(MessageHandle);
+	}
 	if (UWorld* World = GetWorld())
 	{
 		World->GetTimerManager().ClearTimer(ChillTimer);
@@ -113,6 +127,8 @@ void ADFStatusTestRig::StartCycle()
 	LastCueHandlerTag = FGameplayTag();
 	LastCueBurst = 0.f;
 	LastCueFraction = 0.f;
+	bLastMessageSeen = false;
+	LastMessageReaction = FGameplayTag();
 	LastReactionId = NAME_None;
 	LastHealthAfterBurst = 0.f;
 	SetState(FString::Printf(TEXT("cycle %d: %.0f hp; chill at +%.1f s, burn at +%.1f s"), CompletedCycles + 1, MaxHealth, ChillAtSeconds, BurnAtSeconds));
@@ -137,26 +153,37 @@ void ADFStatusTestRig::ApplyBurn()
 	LastHealthAfterBurst = HealthSet->GetHealth();
 	++CompletedCycles;
 
-	// The DoD line. The cue executed synchronously inside Apply (a local multicast), so
-	// bLastCueSeen already says whether GC_DF_Reaction_ThermalShock ran.
-	const FString Line = FString::Printf(TEXT("chill + burn -> %s (%s) %.0f%% = %.1f of %.0f hp, health %.1f, %s"),
+	// The DoD line. The cue executed synchronously inside Apply (ExecuteGameplayCue -> the notify ->
+	// the bus), so bLastCueSeen already says whether GameplayCue.DF.Reaction.ThermalShock ran.
+	const FString Line = FString::Printf(TEXT("chill + burn -> %s (%s) %.0f%% = %.1f of %.0f hp, health %.1f, %s, %s"),
 		*Outcome.ReactionId.ToString(), *UEnum::GetValueAsString(Result), Outcome.BurstFraction * 100.f, LastCueBurst, MaxHealth,
-		LastHealthAfterBurst, bLastCueSeen ? *FString::Printf(TEXT("via %s"), *LastCueTag.ToString()) : TEXT("cue NOT seen"));
+		LastHealthAfterBurst, bLastCueSeen ? *FString::Printf(TEXT("via cue %s"), *LastCueTag.ToString()) : TEXT("cue NOT seen"),
+		bLastMessageSeen ? TEXT("ReactionTriggered seen") : TEXT("ReactionTriggered NOT seen"));
 	UE_LOG(LogDFStatusRig, Display, TEXT("L_Test_Status: %s"), *Line);
 	SetState(Line);
 }
 
-void ADFStatusTestRig::OnReactionCue(AActor* Target, const FGameplayTag& CueTag, const FGameplayCueParameters& Params)
+void ADFStatusTestRig::OnReactionCue(const FGameplayTag& CueTag, const FDFMsg_GameplayCue& Msg)
 {
-	if (Target != this)
+	if (Msg.Target.Get() != this)
 	{
 		return;
 	}
 	bLastCueSeen = true;
-	LastCueTag = CueTag;
-	LastCueHandlerTag = Params.MatchedTagName;
-	LastCueBurst = Params.RawMagnitude;
-	LastCueFraction = Params.NormalizedMagnitude;
+	LastCueTag = Msg.Cue;
+	LastCueHandlerTag = Msg.HandlerTag;
+	LastCueBurst = Msg.RawMagnitude;
+	LastCueFraction = Msg.NormalizedMagnitude;
+}
+
+void ADFStatusTestRig::OnReactionMessage(const FGameplayTag& MessageTag, const FDFMsg_Status& Msg)
+{
+	if (Msg.TargetId != Status->TargetId)
+	{
+		return;
+	}
+	bLastMessageSeen = true;
+	LastMessageReaction = Msg.Status;
 }
 
 void ADFStatusTestRig::SetState(const FString& Text)

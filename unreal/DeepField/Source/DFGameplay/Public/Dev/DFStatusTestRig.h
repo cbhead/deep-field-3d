@@ -4,6 +4,7 @@
 #include "Engine/EngineTypes.h"
 #include "GameFramework/Actor.h"
 #include "GameplayTagContainer.h"
+#include "Messages/DFMessageBus.h"
 #include "DFStatusTestRig.generated.h"
 
 class UDFAbilitySystemComponent;
@@ -13,18 +14,21 @@ class UDFStatusComponent;
 class UDFTintComponent;
 class UStaticMeshComponent;
 class UTextRenderComponent;
-struct FGameplayCueParameters;
+struct FDFMsg_GameplayCue;
+struct FDFMsg_Status;
 
 // L_Test_Status (PROGRAMME.md §5.2 WS-02 DoD: "L_Test_Status shows chill+burn -> thermalShock 12%
-// via cue"). A stand-in enemy — DF ASC, health + movement sets, status and tint components, a
-// sphere and a floating label — that chills itself ChillAtSeconds into every cycle and burns
-// itself at BurnAtSeconds: the status component detonates thermalShock for 12 % of MaxHealth and
-// executes GameplayCue.DF.Reaction.ThermalShock, which Content/DF/Gameplay/Cues/
-// GC_DF_Reaction_ThermalShock (a UDFGameplayCueNotify_Reaction) draws and reports. The rig hears
-// that report through UDFGameplayCueNotify_Reaction::OnReactionCue, writes what the cue carried
-// into the Result properties, logs the DoD line and updates the label, then starts the next cycle.
-// DF.Func.Status.ThermalShockViaCue opens the map and reads the Result properties.
-// Rows: the content tables when UDFContentSubsystem is ready, else the Statuses.cs literals.
+// via cue"; the level is /Game/DF/Dev/L_Test_Status, built by Source/DFGameplay/Dev/make-l-test-status.py).
+// A stand-in enemy — DF ASC, health + movement sets, status and tint components, a sphere and a
+// floating label — that chills itself ChillAtSeconds into every cycle and burns itself at
+// BurnAtSeconds: the status component detonates thermalShock for 12 % of MaxHealth on UDFHealthSet
+// and executes GameplayCue.DF.Reaction.ThermalShock, which the native UDFGameplayCueNotify_Reaction
+// handles (debug sphere + on-screen line in the palette's Danger swatch) and forwards to
+// UDFMessageBus as FDFMsg_GameplayCue. The rig hears the cue on the bus and the component's
+// DF.Message.ReactionTriggered, writes what they carried into the Result properties, logs the DoD
+// line, updates the label, then starts the next cycle. DF.Func.Status.ThermalShockInLevel opens the
+// map in PIE and reads the Result properties. Rows: the content tables when UDFContentSubsystem is
+// ready, else the Statuses.cs literals.
 UCLASS(HideCategories = (Replication, Collision, Input, HLOD, Physics, Networking, LevelInstance, Cooking))
 class DFGAMEPLAY_API ADFStatusTestRig : public AActor
 {
@@ -43,18 +47,22 @@ public:
 	UPROPERTY(VisibleInstanceOnly, Transient, Category = "DF|Rig|Result") int32 CompletedCycles = 0;
 	/** DF.Reaction row id the component reported (thermalShock). */
 	UPROPERTY(VisibleInstanceOnly, Transient, Category = "DF|Rig|Result") FName LastReactionId;
-	/** Health right after the burst (88 of 100). */
+	/** UDFHealthSet.Health right after the burst (88 of 100). */
 	UPROPERTY(VisibleInstanceOnly, Transient, Category = "DF|Rig|Result") float LastHealthAfterBurst = 0.f;
-	/** True when the reaction cue's notify ran on this machine during the cycle. */
+	/** True when the reaction cue reached the bus (the notify ran on this machine) during the cycle. */
 	UPROPERTY(VisibleInstanceOnly, Transient, Category = "DF|Rig|Result") bool bLastCueSeen = false;
 	/** The cue as fired (GameplayCue.DF.Reaction.ThermalShock). */
 	UPROPERTY(VisibleInstanceOnly, Transient, Category = "DF|Rig|Result") FGameplayTag LastCueTag;
-	/** The tag the handling asset registered for: the leaf when GC_DF_Reaction_ThermalShock handled it, the parent when only the fallback did. */
+	/** The tag the handling notify registered for: GameplayCue.DF.Reaction for the native fallback, the leaf once WS-14 ships GC_DF_Reaction_ThermalShock. */
 	UPROPERTY(VisibleInstanceOnly, Transient, Category = "DF|Rig|Result") FGameplayTag LastCueHandlerTag;
 	/** RawMagnitude the cue carried: the burst damage (12). */
 	UPROPERTY(VisibleInstanceOnly, Transient, Category = "DF|Rig|Result") float LastCueBurst = 0.f;
 	/** NormalizedMagnitude the cue carried: the row's BurstFraction (0.12). */
 	UPROPERTY(VisibleInstanceOnly, Transient, Category = "DF|Rig|Result") float LastCueFraction = 0.f;
+	/** True when DF.Message.ReactionTriggered reached the bus during the cycle. */
+	UPROPERTY(VisibleInstanceOnly, Transient, Category = "DF|Rig|Result") bool bLastMessageSeen = false;
+	/** The reaction the message named (DF.Reaction.ThermalShock). */
+	UPROPERTY(VisibleInstanceOnly, Transient, Category = "DF|Rig|Result") FGameplayTag LastMessageReaction;
 	/** The label text. */
 	UPROPERTY(VisibleInstanceOnly, Transient, Category = "DF|Rig|Result") FString StateText;
 
@@ -69,7 +77,8 @@ private:
 	void StartCycle();
 	void ApplyChill();
 	void ApplyBurn();
-	void OnReactionCue(AActor* Target, const FGameplayTag& CueTag, const FGameplayCueParameters& Params);
+	void OnReactionCue(const FGameplayTag& CueTag, const FDFMsg_GameplayCue& Msg);
+	void OnReactionMessage(const FGameplayTag& MessageTag, const FDFMsg_Status& Msg);
 	void SetState(const FString& Text);
 
 	UPROPERTY(VisibleAnywhere, Category = "DF|Rig") TObjectPtr<UStaticMeshComponent> Body;
@@ -83,5 +92,6 @@ private:
 	FTimerHandle ChillTimer;
 	FTimerHandle BurnTimer;
 	FTimerHandle CycleTimer;
-	FDelegateHandle CueHandle;
+	FDFMessageHandle CueHandle;
+	FDFMessageHandle MessageHandle;
 };
