@@ -67,3 +67,19 @@ So, for INT specifically:
   `gh pr list` first when the workstream is active.
 - When a conflict happens anyway, the resolution is mechanical: union both sides' dated entries, sort
   by date, keep the newer frontmatter. Never take one side wholesale — both are real history.
+
+## The verify worktree belongs to the landing, not to whoever wants an editor
+`/Volumes/Toshiba/Deepfield-Unreal/int-verify` is claimed by `int-merge` through `int-verify.lock`, and
+that lock serialises **landings against each other**. It does not protect the worktree from an operator
+running something in it by hand.
+
+INT proved this the direct way: started a full-suite run there for ground truth, then started the #46
+landing a moment later. The landing checked its branch out from under the running test, and `test.sh`
+refused with *"DFGameplay.Build.cs is newer than libUnrealEditor-DFOnline.dylib"* — a correct refusal of
+a genuinely inconsistent state, caught by the guard added an hour earlier for a different reason. Had
+the guard not existed, that run would have reported a verdict for a mixture of two trees.
+
+So: **do not run tests, commandlets or the editor in `int-verify` by hand.** For an ad-hoc run, add a
+throwaway worktree, or wait for `int-verify.lock` to clear and hold it. The cost of the rule is one
+extra build; the cost of breaking it is a verdict about nothing in particular.
+
