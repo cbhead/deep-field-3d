@@ -70,6 +70,7 @@ current_branch() {   # the branch even mid-rebase, when HEAD is detached and onl
 # we cannot tell what the human intended — stopping there is the only safe move, because `--skip` on a
 # merely-unstaged resolution silently drops the author's commit.
 rebase_onto_main() {
+  local guard=0 before
   while :; do
     if ! in_rebase; then
       git merge-base --is-ancestor origin/unreal/main HEAD && return 0
@@ -79,36 +80,44 @@ rebase_onto_main() {
         echo "git rebase refused to start (or stopped without conflicts):"; git status --short | head -5; return 1
       fi
     fi
+    guard=$((guard+1))
+    [ "$guard" -gt 200 ] && { echo "rebase: 200 steps without finishing — stopping"; return 1; }
+
     local conflicted; conflicted=$(git diff --name-only --diff-filter=U)
-    if [ "$conflicted" = "unreal/PLAN/STATUS.md" ]; then
-      echo "STATUS.md conflict: regenerated"
-      python3 unreal/Build/plan-status.py >/dev/null || return 1
-      git add unreal/PLAN/STATUS.md
-    elif [ -n "$conflicted" ] && ! echo "$conflicted" | grep -qvE '^unreal/PLAN/(workstreams/ws-[0-9a-z-]+\.md|STATUS\.md)$'; then
-      # Only workstream ledgers (and STATUS) conflict: their dated sections are append-only, so the
-      # resolution is a union in date order, never a winner. See PLAN/README.md, "INT: do not write
-      # into a workstream file while its PR is open" — this is the fourth time in one night.
+    if [ -n "$conflicted" ]; then
+      # Generated or append-only ledger files resolve themselves; anything else is a human's call.
+      if echo "$conflicted" | grep -qvE '^unreal/PLAN/(workstreams/ws-[0-9a-z-]+\.md|STATUS\.md)$'; then
+        echo "conflicts left for a human (resolve and STAGE them, then rerun with --resume):"; echo "$conflicted"; return 1
+      fi
       echo "$conflicted" | while IFS= read -r F; do
         case "$F" in
-          unreal/PLAN/STATUS.md) python3 unreal/Build/plan-status.py >/dev/null && git add "$F";;
+          unreal/PLAN/STATUS.md) echo "STATUS.md conflict: regenerated"; python3 unreal/Build/plan-status.py >/dev/null && git add "$F";;
           *) python3 unreal/Build/merge-ws-log.py "$F" || exit 1;;
         esac
-      done || return 1
-    elif [ -n "$conflicted" ]; then
-      echo "conflicts left for a human (resolve and STAGE them, then rerun with --resume):"; echo "$conflicted"; return 1
+      done || { echo "could not resolve a ledger conflict automatically"; return 1; }
     fi
+
     if ! git diff --quiet || [ -n "$(git ls-files --others --exclude-standard)" ]; then
       echo "unstaged or untracked changes in $WT — stage what belongs in the commit, discard the rest, then rerun with --resume:"
       git status --short | head -10; return 1
     fi
-    if git diff --cached --quiet; then       # index == HEAD: this commit really is empty after the rebase
+
+    # `git rebase --continue` exits non-zero when it commits successfully and then stops at the NEXT
+    # conflict, which is the normal case here and not a failure — the loop re-inspects. Only a step
+    # that changes nothing at all is stuck.
+    before=$(git rev-parse HEAD 2>/dev/null)
+    if git diff --cached --quiet; then
       echo "a commit became empty after the rebase; skipping it"
-      GIT_EDITOR=true git rebase --skip 2>&1 | tail -2 || { echo "git rebase --skip failed"; git status --short | head -5; return 1; }
+      GIT_EDITOR=true git rebase --skip >/dev/null 2>&1
     else
-      GIT_EDITOR=true git rebase --continue 2>&1 | tail -2 || { echo "git rebase --continue failed"; git status --short | head -5; return 1; }
+      GIT_EDITOR=true git rebase --continue >/dev/null 2>&1
+    fi
+    if in_rebase && [ "$(git rev-parse HEAD 2>/dev/null)" = "$before" ] && [ -z "$(git diff --name-only --diff-filter=U)" ]; then
+      echo "rebase is stuck: nothing conflicted, nothing applied. git says:"; git status | head -12; return 1
     fi
   done
 }
+
 regen_status_commit() {   # STATUS.md for the state about to land, as its own commit if it moved
   python3 unreal/Build/plan-status.py >/dev/null
   git diff --quiet -- unreal/PLAN/STATUS.md && return 0
