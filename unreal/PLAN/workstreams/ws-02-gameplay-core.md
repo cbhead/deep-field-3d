@@ -42,3 +42,17 @@ blocked_on:
 
 ## Session log
 <!-- append-only: date · session · what landed · what's next -->
+- 2026-09-21 · INT · **landing round 2 with one open minor, deliberately.** The review confirmed one
+  finding and refuted four. `UDFStatusComponent::Now()` falls back to `World->GetTimeSeconds()` when the
+  world has no game state, and that fallback is unconditional — so on a **joining client, in the window
+  before the `AGameStateBase` channel opens**, a replicated `EndTimeServer` is subtracted from the
+  client's own clock and `TimeRemaining` is wrong again, exactly as F2 was. It is narrow (one actor-
+  channel window, cosmetic until something gameplay-facing reads it) and the fallback is *required* for
+  the dev map and the unit-test world, which have no game state at all. Not landed-with-a-fix because
+  the right behaviour on a client that cannot yet know the server clock is a display decision shared
+  with WS-12 — "unknown" is not the same as "zero" or "full duration", and inventing that at a landing
+  would be worse than leaving it named. **Fix in the next round**: make the fallback conditional on
+  authority (or on `GetWorld()->GetNetMode() != NM_Client`), and decide with WS-12 what a client shows
+  for a status whose clock it does not have yet. C4/C5 land now because six workstreams are waiting on
+  them and this does not touch the rules.
+
