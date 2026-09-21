@@ -15,7 +15,7 @@ int64 FDFWaveSchedule::CurrentTick() const
 	return static_cast<int64>(FMath::FloorToDouble(ElapsedSeconds * static_cast<double>(TickHz) + 1e-6));
 }
 
-int32 FDFWaveSchedule::Advance(float DeltaSeconds, TFunctionRef<void(const FDFSpawnEntry&)> Emit)
+int32 FDFWaveSchedule::Advance(float DeltaSeconds, TFunctionRef<bool(const FDFSpawnEntry&)> Emit)
 {
 	ElapsedSeconds += FMath::Max(0.f, DeltaSeconds);
 	const int64 Tick = CurrentTick();
@@ -25,8 +25,12 @@ int32 FDFWaveSchedule::Advance(float DeltaSeconds, TFunctionRef<void(const FDFSp
 		// Advance the cursor first: Emit may look at the schedule (is this the last one?). A copy,
 		// because Emit is foreign code and a reference into Entries would not survive a Reset.
 		const FDFSpawnEntry Entry = Entries[Next++];
-		Emit(Entry);
+		const bool bContinue = Emit(Entry);
 		++Released;
+		if (!bContinue)
+		{
+			break;
+		}
 	}
 	return Released;
 }

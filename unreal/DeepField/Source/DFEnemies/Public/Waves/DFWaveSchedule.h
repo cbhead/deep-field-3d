@@ -11,9 +11,15 @@ struct DFENEMIES_API FDFWaveSchedule
 {
 	void Reset(TArray<FDFSpawnEntry> InEntries, float InTickHz);
 
-	/** Advance by world seconds and hand every entry now due to Emit, in plan order. Returns how many.
-	 *  A TickOffset of 0 is due on the first call, whatever its delta. */
-	int32 Advance(float DeltaSeconds, TFunctionRef<void(const FDFSpawnEntry&)> Emit);
+	/** Advance by world seconds and hand every entry now due to Emit, in plan order; returns how many
+	 *  were handed over. A TickOffset of 0 is due on the first call, whatever its delta.
+	 *
+	 *  Emit returns whether to carry on. It is foreign code and may do anything — end the match,
+	 *  destroy the actor that owns this schedule, reset it — so it gets the say over whether the rest
+	 *  of this frame's entries are released. Returning false stops after the current one (which
+	 *  counts as released and keeps its place in the cursor); elapsed time still advanced, so the
+	 *  entries left behind are due immediately on the next Advance. */
+	int32 Advance(float DeltaSeconds, TFunctionRef<bool(const FDFSpawnEntry&)> Emit);
 
 	/** Drop the first Count entries without emitting them (resume). */
 	void SkipReleased(int32 Count);

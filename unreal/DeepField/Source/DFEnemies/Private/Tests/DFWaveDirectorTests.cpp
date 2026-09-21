@@ -79,7 +79,7 @@ bool FDFWaveScheduleReleaseTest::RunTest(const FString& Parameters)
 	Schedule.Reset({ At(0), At(15), At(15, TEXT("lurker")), At(30) }, Hz);
 
 	TArray<FName> Released;
-	auto Emit = [&Released](const FDFSpawnEntry& E) { Released.Add(E.DefId); };
+	auto Emit = [&Released](const FDFSpawnEntry& E) { Released.Add(E.DefId); return true; };
 
 	TestEqual(TEXT("tick 0 is due before any time passes"), Schedule.Advance(0.f, Emit), 1);
 	TestEqual(TEXT("nothing at 0.49 s (tick 14)"), Schedule.Advance(0.49f, Emit), 0);
@@ -98,7 +98,7 @@ bool FDFWaveScheduleReleaseTest::RunTest(const FString& Parameters)
 	int32 Count = 0;
 	for (int32 I = 0; I < 30; ++I)
 	{
-		Count += Steady.Advance(1.f / Hz, [](const FDFSpawnEntry&) {});
+		Count += Steady.Advance(1.f / Hz, [](const FDFSpawnEntry&) { return true; });
 	}
 	TestEqual(TEXT("30 frames at the tick rate reach tick 30"), Steady.CurrentTick(), static_cast<int64>(30));
 	TestEqual(TEXT("and release the tick-30 entry"), Count, 1);
@@ -108,7 +108,17 @@ bool FDFWaveScheduleReleaseTest::RunTest(const FString& Parameters)
 	Resumed.Reset({ At(0), At(0), At(10) }, Hz);
 	Resumed.SkipReleased(2);
 	TestEqual(TEXT("only the unreleased entry is left"), Resumed.NumRemaining(), 1);
-	TestEqual(TEXT("and nothing at tick 0 fires again"), Resumed.Advance(0.f, [](const FDFSpawnEntry&) {}), 0);
+	TestEqual(TEXT("and nothing at tick 0 fires again"), Resumed.Advance(0.f, [](const FDFSpawnEntry&) { return true; }), 0);
+
+	// A release that says stop: the entry it stopped on counts as released and keeps its place, and
+	// the ones behind it are due immediately next time — the clock moved even though they did not.
+	FDFWaveSchedule Stopping;
+	Stopping.Reset({ At(0), At(0), At(0), At(0) }, Hz);
+	int32 Seen = 0;
+	TestEqual(TEXT("stops after the entry that said so"), Stopping.Advance(0.f, [&Seen](const FDFSpawnEntry&) { return ++Seen < 2; }), 2);
+	TestEqual(TEXT("two released"), Stopping.NumReleased(), 2);
+	TestEqual(TEXT("the rest come on the next advance, with no time passing"), Stopping.Advance(0.f, [](const FDFSpawnEntry&) { return true; }), 2);
+	TestTrue(TEXT("exhausted"), Stopping.IsExhausted());
 	return true;
 }
 
@@ -176,7 +186,7 @@ bool FDFWaveDirectorReleaseTest::RunTest(const FString& Parameters)
 	TArray<double> ReleasedAt;
 	int32 Exhausted = 0;
 	TArray<int32> Cleared;
-	Director->OnSpawnRequested.AddLambda([&](const FDFSpawnEntry&) { ReleasedAt.Add(Elapsed); });
+	Director->OnSpawnRequested.AddLambda([&ReleasedAt, &Elapsed](const FDFSpawnEntry&) { ReleasedAt.Add(Elapsed); });
 	Director->OnWaveSpawnsExhausted.AddLambda([&](int32) { ++Exhausted; });
 	Director->OnWaveCleared.AddLambda([&](int32 Wave) { Cleared.Add(Wave); });
 
@@ -264,6 +274,41 @@ bool FDFWaveDirectorReentrancyTest::RunTest(const FString& Parameters)
 	Aborting->Tick(Frame);
 	TestEqual(TEXT("an aborted wave announces nothing"), Announced, 0);
 	TestFalse(TEXT("and is over"), Aborting->IsWaveActive());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFWaveDirectorDestroyedMidReleaseTest, "DF.Unit.WaveDirector.DestroyedInsideItsOwnBroadcast", DFWaveDirectorTest::Flags)
+bool FDFWaveDirectorDestroyedMidReleaseTest::RunTest(const FString& Parameters)
+{
+	using namespace DFWaveDirectorTest;
+	// The worst thing a listener can do: end the match from inside the release broadcast, destroying
+	// the director while its own loop is running. Destroy() only marks the actor pending-kill, so
+	// the memory survives to the next GC and nothing crashes — which is what makes this quiet. What
+	// must not happen is the rest of the frame's bodies being requested for a match that is over.
+	FDFTestWorld World;
+	ADFWaveDirector* Director = World.SpawnActor<ADFWaveDirector>();
+	FString Error;
+	Director->ConfigureWithTables(9u, Tables(), Error);
+
+	// Wave 0 is four grunts 20 ticks apart; a 2 s frame makes every one of them due at once.
+	int32 Requested = 0;
+	int32 Cleared = 0;
+	Director->OnSpawnRequested.AddLambda([&Requested, Director](const FDFSpawnEntry&)
+	{
+		if (++Requested == 1)
+		{
+			Director->Destroy();   // "the host lost, tear the match down"
+		}
+	});
+	Director->OnWaveCleared.AddLambda([&Cleared](int32) { ++Cleared; });
+
+	Director->BeginWave(0, 1);
+	TestTrue(TEXT("more than one body is due this frame"), Director->GetSchedule().Num() > 1);
+	Director->Tick(2.f);
+
+	TestEqual(TEXT("exactly one body was requested before the director died"), Requested, 1);
+	TestFalse(TEXT("the director is no longer valid"), IsValid(Director));
+	TestEqual(TEXT("and no wave cleared out of a destroyed director"), Cleared, 0);
 	return true;
 }
 

@@ -96,7 +96,15 @@ void ADFWaveDirector::Tick(float DeltaSeconds)
 	{
 		++Alive;   // before the broadcast, for the same reason
 		OnSpawnRequested.Broadcast(Entry);
+		// The listener that just ran may have ended the match and destroyed us, or aborted the wave.
+		// Destroy() only marks the actor pending-kill — the memory is ours until the next GC — so
+		// this is not a crash but it would be worse: bodies requested for a match that is over.
+		return IsValid(this) && bWaveActive;
 	});
+	if (!IsValid(this))
+	{
+		return;
+	}
 	bReleasing = false;
 
 	if (bWaveActive && Schedule.IsExhausted() && !bExhaustedAnnounced)   // a listener may have aborted the wave
