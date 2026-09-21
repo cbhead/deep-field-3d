@@ -125,3 +125,33 @@ it simply was not the code that ran. A verdict is only worth what the thing it r
 and every other check in this programme assumes that link without testing it. That is the general
 lesson: **when a check reports on an artefact, something must prove the artefact came from the input.**
 
+## What a landing actually runs, and what it has never run (INT, 2026-09-21)
+Counting registrations on `unreal/main` by their `IMPLEMENT_*_TEST` macro rather than by what anyone
+assumed:
+
+| suite | tests | gated a landing? |
+|---|---|---|
+| `DF.Unit` | 69 | yes |
+| `DF.Content` | 3 | yes |
+| `DF.Online` | 6 | **no** |
+| `DF.Editor` | 4 | **no** |
+| `DF.UI` | 4 (+39 arriving with #44) | **no** |
+| `DF.Func` | 1 | **no** |
+
+`int-merge` and `ci-local` both run `DF.Unit+DF.Content` and nothing else, so **15 of 87 registered
+tests have never gated anything** — WS-11's entire online suite, WS-09's terrain and map-validate
+editor tests, WS-02's `DF.Func.Status.ThermalShockInLevel` (the workstream's own Definition of Done),
+and WS-12's tag-registration guard. Every one was written, run once by its author, reported green, and
+then never run again.
+
+This is the same shape as the stale binary above, one level out: **a check that reports on less than
+the reader believes.** `tests: OK — 71 passed` reads as "the tests pass" and means "the two suites in
+this filter pass". Nobody lied and nobody was careless; the filter was written when `DF.Unit` was all
+there was, and it never grew as the suites did.
+
+The fix is not simply to widen the filter, because a suite that has never gated may be red for reasons
+nobody has looked at, and turning that into a hard gate at 5 a.m. blocks every landing. The order is:
+run the full `DF` filter once to get ground truth, record what is red and why, then widen the landing
+filter to everything that is green and name each exclusion with its reason. An exclusion with a reason
+is a decision; a filter that silently omits four suites is an accident.
+
