@@ -1,6 +1,5 @@
 #include "DFEventRelay.h"
 
-#include "DFMatchState.h"
 #include "Engine/World.h"
 #include "Messages/DFMessageBus.h"
 
@@ -14,18 +13,49 @@ ADFEventRelay::ADFEventRelay()
 	PrimaryActorTick.bCanEverTick = false;
 }
 
+void ADFEventRelay::BeginPlay()
+{
+	Super::BeginPlay();
+	// On a networked host, become the bus's team relay, so every system that produces a discrete fact
+	// (UDFMessageBus::BroadcastTeam, including those in layers below DFMatch) reaches the clients.
+	UWorld* World = GetWorld();
+	if (HasAuthority() && World && World->GetNetMode() != NM_Standalone && World->GetNetMode() != NM_Client)
+	{
+		if (UDFMessageBus* Bus = UDFMessageBus::Get(this))
+		{
+			TWeakObjectPtr<ADFEventRelay> WeakThis(this);
+			Bus->SetTeamRelay([WeakThis](const FGameplayTag& Tag, const FInstancedStruct& Payload)
+			{
+				if (ADFEventRelay* Relay = WeakThis.Get())
+				{
+					Relay->Multicast_Event(Tag, Payload);
+				}
+			});
+			bRegisteredWithBus = true;
+		}
+	}
+}
+
+void ADFEventRelay::EndPlay(const EEndPlayReason::Type Reason)
+{
+	if (bRegisteredWithBus)
+	{
+		if (UDFMessageBus* Bus = UDFMessageBus::Get(this))
+		{
+			Bus->SetTeamRelay(nullptr);
+		}
+		bRegisteredWithBus = false;
+	}
+	Super::EndPlay(Reason);
+}
+
 void ADFEventRelay::Publish(const UObject* WorldContext, const FGameplayTag& Tag, const FInstancedStruct& Payload)
 {
+	// The relay is registered with the bus (BeginPlay), so a team send is the bus's: local broadcast,
+	// then the multicast when a relay is registered.
 	if (UDFMessageBus* Bus = UDFMessageBus::Get(WorldContext))
 	{
-		Bus->Broadcast(Tag, Payload);
-	}
-	const UWorld* World = WorldContext ? WorldContext->GetWorld() : nullptr;
-	const ADFMatchState* MatchState = World ? World->GetGameState<ADFMatchState>() : nullptr;
-	ADFEventRelay* Relay = MatchState ? MatchState->GetEventRelay() : nullptr;
-	if (Relay && Relay->HasAuthority() && World->GetNetMode() != NM_Standalone)
-	{
-		Relay->Multicast_Event(Tag, Payload);
+		Bus->BroadcastTeam(Tag, Payload);
 	}
 }
 

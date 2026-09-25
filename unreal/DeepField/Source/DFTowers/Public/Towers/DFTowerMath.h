@@ -29,7 +29,7 @@ namespace DFTowerMath
 	DFTOWERS_API int32 PathIndex(const FDFTowerRow& Row, FName PathId);
 
 	/** Purchases made on path i (0 when PathLevels is shorter than the path list). */
-	DFTOWERS_API int32 PurchasesOn(TConstArrayView<int32> PathLevels, int32 PathIndex);
+	DFTOWERS_API int32 PurchasesOn(TConstArrayView<int32> PathLevels, int32 Index);
 
 	/** The multiplier path PathId has earned: PerLevelFactor^purchases, computed with FDFDetMath::PowInt
 	 *  (bit-identical to the sim's DetMath). 1 for an untouched path or a path the tower does not have. */
@@ -61,7 +61,7 @@ namespace DFTowerMath
 
 	/** What RangeMeters would be after one more purchase on PathIndex: the number a player is deciding
 	 *  about with the upgrade panel open. Unchanged for a path that does not move range, or one at its cap. */
-	DFTOWERS_API float RangeAfterUpgradeMeters(const FDFTowerRow& Row, FName TowerId, TConstArrayView<int32> PathLevels, int32 PathIndex, const FDFConditionRow* Condition);
+	DFTOWERS_API float RangeAfterUpgradeMeters(const FDFTowerRow& Row, FName TowerId, TConstArrayView<int32> PathLevels, int32 Index, const FDFConditionRow* Condition);
 
 	/** Damage per shot (per second for a Beam, before the ramp): Damage x the "damage" path. */
 	DFTOWERS_API float EffectiveDamage(const FDFTowerRow& Row, TConstArrayView<int32> PathLevels);
@@ -130,7 +130,7 @@ namespace DFTowerMath
 	 * insufficientScrap (a breakpoint recipe against the team pool). Pure: the caller takes the money
 	 * and the scrap and bumps PathLevels when the quote is allowed.
 	 */
-	DFTOWERS_API FDFUpgradeQuote QuoteUpgrade(const FDFTowerRow& Row, TConstArrayView<int32> PathLevels, int32 PathIndex, int32 Money, const TMap<EDFScrapType, int32>& TeamScrap);
+	DFTOWERS_API FDFUpgradeQuote QuoteUpgrade(const FDFTowerRow& Row, TConstArrayView<int32> PathLevels, int32 Index, int32 Money, const TMap<EDFScrapType, int32>& TeamScrap);
 
 	/** What selling returns: everything spent on the tower (build + upgrades, money only) x sellRefundPercent / 100, integer division. */
 	DFTOWERS_API int32 SellRefund(int32 Spent, int32 SellRefundPercent);
@@ -167,6 +167,12 @@ namespace DFTowerMath
 	 */
 	DFTOWERS_API int32 PickTarget(const FDFTowerRow& Row, const FVector& TowerPositionCm, float RangeMeters, TConstArrayView<FDFTargetCandidate> Candidates);
 
+	/** As PickTarget, but the sight test is asked lazily, only for a candidate that passed every cheaper
+	 *  filter. Sight is the sim's last check and the expensive one (a world trace), so a tower that sees
+	 *  forty enemies traces only the few in range. The flag version is this with `bSightBlocked` read back. */
+	DFTOWERS_API int32 PickTarget(const FDFTowerRow& Row, const FVector& TowerPositionCm, float RangeMeters, TConstArrayView<FDFTargetCandidate> Candidates,
+		TFunctionRef<bool(int32 /*CandidateIndex*/)> IsSightBlocked);
+
 	/** Step.cs SightBlocked's geometry, for one sight-blocking body (a Monolith): it stands between the
 	 *  tower and the target, nearer than the target, within BlockRadiusCm of the line of fire. */
 	DFTOWERS_API bool IsSightBlockedByBody(const FVector& FromCm, const FVector& TargetCm, const FVector& BlockerCm, float BlockRadiusCm = 160.f);
@@ -182,4 +188,34 @@ namespace DFTowerMath
 	 *  there is no condition or no delay, and 0 for a marked target (Vulnerability active) when the
 	 *  condition exempts marked targets. */
 	DFTOWERS_API float AcquisitionDelaySeconds(const FDFConditionRow* Condition, bool bTargetMarked);
+
+	// ---- shots in flight (Step.cs StepTowerProjectiles) --------------------------------------------
+
+	/** A Bolt / Mortar / Flak round: it homes on its target, as the sim's do. */
+	struct FDFTowerShot
+	{
+		int32 TargetId = INDEX_NONE;
+		FVector PositionCm = FVector::ZeroVector;
+		float SpeedMetersPerSecond = 0.f;
+		float Damage = 0.f;
+		float SplashRadiusMeters = 0.f;
+		float SplashFalloff = 1.f;
+	};
+
+	/** The sim aims 0.8 m above an enemy's position (`target.Pos + (0, 0.8, 0)`). */
+	constexpr float ShotAimHeightCm = 80.f;
+	/** The sim fires from 1.5 m above the tower (`tower.Pos + (0, 1.5, 0)`). */
+	constexpr float ShotMuzzleHeightCm = 150.f;
+
+	/**
+	 * One step of a shot toward AimPointCm. True when it lands this step: within the step's travel plus
+	 * the balance dial projectileHitRadius (0.4 m), exactly the sim's test, and then the position is not
+	 * moved. Otherwise it advances SpeedMetersPerSecond x DeltaSeconds straight at the aim point. A shot
+	 * whose target is gone is the caller's to drop (the sim kills it; it does not land anywhere).
+	 */
+	DFTOWERS_API bool AdvanceShot(FDFTowerShot& Shot, const FVector& AimPointCm, float DeltaSeconds, float HitRadiusMeters);
+
+	/** Splash damage factor at DistanceMeters from the struck target: 1 - (1 - falloff) x (d / radius),
+	 *  so 1 at the centre and SplashFalloff at the rim; 0 beyond the radius (not hit at all). */
+	DFTOWERS_API float SplashFactor(float DistanceMeters, float SplashRadiusMeters, float SplashFalloff);
 }

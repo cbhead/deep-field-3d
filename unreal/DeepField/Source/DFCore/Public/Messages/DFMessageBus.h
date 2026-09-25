@@ -65,6 +65,25 @@ public:
 
 	void Unsubscribe(const FDFMessageHandle& Handle);
 
+	// ---- team-wide sends (C15 append, 2026-09-25) --------------------------------------------------
+	// A system that produces a discrete fact calls BroadcastTeam: it broadcasts here, then hands the
+	// message to the team relay so every client re-broadcasts it (messages.md, "who broadcasts"). The
+	// relay is DFMatch's ADFEventRelay, which registers itself on the host. Lower layers (towers,
+	// enemies, economy) cannot name it, so they reach it through this hook. With no relay registered
+	// (a client, a unit-test world, a dev map without a match), BroadcastTeam is a local broadcast.
+	void BroadcastTeam(const FGameplayTag& Tag, const FInstancedStruct& Payload);
+
+	template <typename T>
+	void BroadcastTeam(const FGameplayTag& Tag, const T& Payload)
+	{
+		BroadcastTeam(Tag, FInstancedStruct::Make<T>(Payload));
+	}
+
+	using FTeamRelay = TFunction<void(const FGameplayTag& /*Tag*/, const FInstancedStruct& /*Payload*/)>;
+	/** The host's relay registers here (and passes nullptr to unregister). One relay per game instance. */
+	void SetTeamRelay(FTeamRelay InRelay) { TeamRelay = MoveTemp(InRelay); }
+	bool HasTeamRelay() const { return static_cast<bool>(TeamRelay); }
+
 	/** Number of messages broadcast since startup (tests and the INT smoke read it). */
 	int64 GetBroadcastCount() const { return BroadcastCount; }
 
@@ -76,6 +95,7 @@ private:
 		FDFMessageDelegate Callback;
 	};
 
+	FTeamRelay TeamRelay;
 	TMap<FGameplayTag, TArray<FSubscription>> Subscriptions;
 	int32 NextId = 1;
 	int64 BroadcastCount = 0;
