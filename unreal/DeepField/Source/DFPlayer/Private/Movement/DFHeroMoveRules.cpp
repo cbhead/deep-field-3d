@@ -24,6 +24,20 @@ float DFHeroMove::MaxSpeed(const FDFHeroMoveSpeeds& Speeds, bool bCrouched, bool
 	return bWantsSprint ? Speeds.Sprint : Speeds.Walk;
 }
 
+float DFHeroMove::MaxSpeedForLife(EDFHeroLife Life, float StandingSpeed, float DownedSpeed)
+{
+	switch (Life)
+	{
+	case EDFHeroLife::Downed:
+		return DownedSpeed;
+	case EDFHeroLife::Respawning:
+		return 0.f;
+	case EDFHeroLife::Up:
+		break;
+	}
+	return StandingSpeed;
+}
+
 float DFHeroMove::JumpApexCm(float JumpZ, float GravityZ)
 {
 	const float G = FMath::Abs(GravityZ);

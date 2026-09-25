@@ -110,8 +110,12 @@ public:
 
 	// ---- host only (ignored elsewhere) ----------------------------------------------------------
 
-	/** Health reached 0 (see DFHeroLife::Deplete). Leaves any seat. */
-	EDFHeroDown HostDeplete(int32 ConnectedPlayers);
+	/**
+	 * Health reached 0 (see DFHeroLife::Deplete). Leaves any seat. BleedoutSeconds, when above 0,
+	 * replaces the balance dial for this down: the hero passes its UDFHeroSet attribute, which faction
+	 * passives and tiers may have scaled.
+	 */
+	EDFHeroDown HostDeplete(int32 ConnectedPlayers, float BleedoutSeconds = 0.f);
 
 	/** Reviver starts holding the revive on this hero. False if this hero is not down, the reviver is not up, or someone else is already reviving. */
 	bool HostBeginRevive(UDFHeroStateComponent* Reviver);

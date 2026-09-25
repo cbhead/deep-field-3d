@@ -193,6 +193,38 @@ bool FDFHeroLifeRangeTest::RunTest(const FString&)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFHeroRegenTest, "DF.Unit.Player.RegenMatchesSim", DFHeroLifeTest::Flags)
+bool FDFHeroRegenTest::RunTest(const FString&)
+{
+	using namespace DFHeroLifeTest;
+	// Balance.cs: PlayerRegenDelaySeconds 6, PlayerRegenPerSecond 10, PlayerMaxHp 100.
+	FDFHeroRegen Regen;
+	float Health = 50.f;
+	DFHeroLife::NoteDamaged(Regen, 6.f);
+	for (int32 Step = 1; Step <= 23; ++Step)
+	{
+		Health = DFHeroLife::RegenStep(Regen, Health, 100.f, 10.f, Dt);
+	}
+	TestEqual(TEXT("nothing for the first 5.75 s"), Health, 50.f, Tol);
+	Health = DFHeroLife::RegenStep(Regen, Health, 100.f, 10.f, Dt);
+	TestEqual(TEXT("regen starts on the step the delay ends (Step.cs)"), Health, 52.5f, Tol);
+	for (int32 Step = 1; Step <= 4; ++Step)
+	{
+		Health = DFHeroLife::RegenStep(Regen, Health, 100.f, 10.f, Dt);
+	}
+	TestEqual(TEXT("10 hp per second"), Health, 62.5f, Tol);
+
+	DFHeroLife::NoteDamaged(Regen, 6.f);
+	Health = DFHeroLife::RegenStep(Regen, Health, 100.f, 10.f, Dt);
+	TestEqual(TEXT("damage restarts the delay"), Health, 62.5f, Tol);
+
+	FDFHeroRegen Quiet;
+	TestEqual(TEXT("capped at max"), DFHeroLife::RegenStep(Quiet, 99.f, 100.f, 10.f, Dt), 100.f, Tol);
+	FDFHeroRegen AtZero;
+	TestEqual(TEXT("no regen from 0: getting up is a revive or a respawn"), DFHeroLife::RegenStep(AtZero, 0.f, 100.f, 10.f, Dt), 0.f, Tol);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFHeroStateHostFlowTest, "DF.Unit.Player.HeroStateHostFlow", DFHeroLifeTest::Flags)
 bool FDFHeroStateHostFlowTest::RunTest(const FString&)
 {
@@ -293,6 +325,11 @@ bool FDFHeroStateHostFlowTest::RunTest(const FString&)
 	TestTrue(TEXT("event: respawned"), Seen.Num() == 6 && Seen[5].Event == EDFHeroLifeEvent::Respawned);
 	A->HostRespawn();
 	TestEqual(TEXT("respawning a standing hero does nothing"), Seen.Num(), 6);
+
+	// The hero passes its UDFHeroSet BleedoutSeconds, which passives may have scaled.
+	A->HostDeplete(2, 45.f);
+	TestTrue(TEXT("bleedout override: bleedout left"), A->TryGetBleedoutSecondsLeft(Bleedout));
+	TestEqual(TEXT("bleedout override: 45 s"), Bleedout, 45.f, Tol);
 
 	A->OnHeroLifeEvent.Clear();   // Seen goes out of scope before the world tears A down
 	return true;

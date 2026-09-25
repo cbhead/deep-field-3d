@@ -1,13 +1,21 @@
 #pragma once
 
+#include "AbilitySystemInterface.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Hero/DFHeroLife.h"
+#include "Hero/DFHeroStateComponent.h"
 #include "DFHeroCharacter.generated.h"
 
+class UAbilitySystemComponent;
 class UCameraComponent;
+class UDFAbilitySystemComponent;
+class UDFHealthSet;
 class UDFHeroMovementComponent;
+class UDFHeroSet;
 class UInputAction;
 class UInputMappingContext;
+struct FGameplayEffectSpec;
 struct FInputActionValue;
 
 /**
@@ -18,11 +26,17 @@ struct FInputActionValue;
  * IA_Jump, IA_Sprint, IA_Crouch, IA_Aim in IMC_DF_Default) that do not exist yet; they are assigned on
  * the hero's Blueprint when they do, and until then the hero binds nothing and still spawns.
  *
- * Weapons, melee, interaction, the build ghost and downed/revive/drag (UDFHeroStateComponent,
- * ADR-0024) arrive in later PRs.
+ * Health (PROGRAMME.md §3.3 puts the hero's attributes on ADFHeroCharacter, so its ASC is here, Mixed
+ * replication as C4 says for player-owned pawns): UDFHealthSet at playerMaxHp and UDFHeroSet at the
+ * regen and bleedout dials. On the host, 0 health calls HostDeplete on the player's
+ * UDFHeroStateComponent; a revive sets health to RevivedHpFraction of max and a respawn to max;
+ * a standing hero regenerates after RegenDelay without damage (Step.cs). The hero follows its state
+ * component on host and clients, which caps its movement while down.
+ *
+ * Weapons, melee, interaction, the build ghost and drag arrive in later PRs.
  */
 UCLASS()
-class DFPLAYER_API ADFHeroCharacter : public ACharacter
+class DFPLAYER_API ADFHeroCharacter : public ACharacter, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
@@ -31,11 +45,22 @@ public:
 
 	UDFHeroMovementComponent* GetHeroMovement() const;
 	UCameraComponent* GetFirstPersonCamera() const;
+	UDFAbilitySystemComponent* GetHeroAbilitySystem() const;
+	UDFHealthSet* GetHealthSet() const;
+	UDFHeroSet* GetHeroSet() const;
 
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+
+	virtual void PossessedBy(AController* NewController) override;
+	virtual void UnPossessed() override;
+	virtual void OnRep_PlayerState() override;
 	virtual void PawnClientRestart() override;
 	virtual void BecomeViewTarget(APlayerController* PC) override;
+	virtual void Tick(float DeltaSeconds) override;
 
 protected:
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
 	/** Added to the owning local player at priority 0 when this hero is possessed (C16: IMC_DF_Default). */
@@ -66,6 +91,33 @@ protected:
 private:
 	UPROPERTY(VisibleAnywhere, Category = "DF|Camera")
 	TObjectPtr<UCameraComponent> FirstPersonCamera;
+
+	UPROPERTY(VisibleAnywhere, Category = "DF|Abilities")
+	TObjectPtr<UDFAbilitySystemComponent> AbilitySystem;
+
+	/** Attribute sets as subobjects of the hero: the ASC registers them in InitializeComponent. */
+	UPROPERTY()
+	TObjectPtr<UDFHealthSet> HealthSet;
+
+	UPROPERTY()
+	TObjectPtr<UDFHeroSet> HeroSet;
+
+	/** Host: playerMaxHp, playerRegenPerSecond, playerRegenDelaySeconds, bleedoutSeconds. */
+	void InitHeroAttributes();
+
+	/** Follow the player state's UDFHeroStateComponent, if it has one yet (host and clients). */
+	void BindHeroState();
+	void UnbindHeroState();
+
+	void HandleHealthDepleted(AActor* Instigator, AActor* Causer, const FGameplayEffectSpec* Spec, float Magnitude, float OldValue, float NewValue);
+	void HandleDamaged(AActor* Instigator, AActor* Causer, const FGameplayEffectSpec* Spec, float Magnitude, float OldValue, float NewValue);
+	void HandleHeroLifeEvent(EDFHeroLifeEvent Event, UDFHeroStateComponent* Reviver);
+	void HandleHeroStateChanged(UDFHeroStateComponent* State);
+
+	TWeakObjectPtr<UDFHeroStateComponent> BoundHeroState;
+	FDelegateHandle HeroStateChangedHandle;
+	FDelegateHandle HeroLifeEventHandle;
+	FDFHeroRegen Regen;
 
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);

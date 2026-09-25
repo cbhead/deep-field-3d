@@ -1,3 +1,6 @@
+#include "Abilities/DFAbilitySystemComponent.h"
+#include "Attributes/DFHealthSet.h"
+#include "Attributes/DFHeroSet.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "DFHeroCharacter.h"
@@ -166,6 +169,34 @@ bool FDFHeroDefaultsTest::RunTest(const FString&)
 	TestFalse(TEXT("body ignores the controller's pitch"), Hero->bUseControllerRotationPitch != 0);
 
 	TestEqual(TEXT("pitch limit is Godot's 1.5 rad"), DFHeroMove::PitchLimitDegrees, FMath::RadiansToDegrees(1.5f), Tol);
+
+	// PROGRAMME.md §3.3: the hero's attributes live on the hero.
+	const UAbilitySystemComponent* ASC = Hero->GetAbilitySystemComponent();
+	TestTrue(TEXT("carries the DF ASC"), ASC != nullptr && ASC->IsA<UDFAbilitySystemComponent>());
+	TestNotNull(TEXT("health set"), Hero->GetHealthSet());
+	TestNotNull(TEXT("hero set"), Hero->GetHeroSet());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFHeroDownedMovementTest, "DF.Unit.Player.DownedMovement", DFHeroMovementTest::Flags)
+bool FDFHeroDownedMovementTest::RunTest(const FString&)
+{
+	using namespace DFHeroMovementTest;
+	TestEqual(TEXT("crawl is B§1.14's 1 m/s"), GetDefault<UDFHeroMovementComponent>()->MaxDownedSpeed, 1.f * 100.f, Tol);
+	TestEqual(TEXT("standing: the standing speed"), DFHeroMove::MaxSpeedForLife(EDFHeroLife::Up, 650.f, 100.f), 650.f, Tol);
+	TestEqual(TEXT("downed: crawl"), DFHeroMove::MaxSpeedForLife(EDFHeroLife::Downed, 1000.f, 100.f), 100.f, Tol);
+	TestEqual(TEXT("waiting to respawn: still"), DFHeroMove::MaxSpeedForLife(EDFHeroLife::Respawning, 650.f, 100.f), 0.f, Tol);
+
+	UDFHeroMovementComponent* Move = NewObject<UDFHeroMovementComponent>(GetTransientPackage());
+	Move->MovementMode = MOVE_Walking;
+	Move->SetWantsToSprint(true);
+	Move->SetHeroLife(EDFHeroLife::Downed);
+	TestEqual(TEXT("downed: crawl, whatever the wants"), Move->GetMaxSpeed(), Move->MaxDownedSpeed, Tol);
+	TestFalse(TEXT("no sprint while downed"), Move->IsSprinting());
+	Move->SetHeroLife(EDFHeroLife::Respawning);
+	TestEqual(TEXT("waiting to respawn: no movement"), Move->GetMaxSpeed(), 0.f, Tol);
+	Move->SetHeroLife(EDFHeroLife::Up);
+	TestEqual(TEXT("up again: the sprint comes back"), Move->GetMaxSpeed(), Move->MaxSprintSpeed, Tol);
 	return true;
 }
 

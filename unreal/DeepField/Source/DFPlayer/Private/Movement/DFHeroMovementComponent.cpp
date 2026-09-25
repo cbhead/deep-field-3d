@@ -90,7 +90,7 @@ UDFHeroMovementComponent::UDFHeroMovementComponent()
 
 bool UDFHeroMovementComponent::IsSprinting() const
 {
-	return bWantsToSprint && DFHeroMove::CanSprint(IsCrouching(), bWantsToAim);
+	return HeroLife == EDFHeroLife::Up && bWantsToSprint && DFHeroMove::CanSprint(IsCrouching(), bWantsToAim);
 }
 
 FDFHeroMoveSpeeds UDFHeroMovementComponent::GetHeroSpeeds() const
@@ -110,10 +110,21 @@ float UDFHeroMovementComponent::GetMaxSpeed() const
 	case MOVE_Walking:
 	case MOVE_NavWalking:
 	case MOVE_Falling:
-		return DFHeroMove::MaxSpeed(GetHeroSpeeds(), IsCrouching(), bWantsToAim, bWantsToSprint);
+		return DFHeroMove::MaxSpeedForLife(HeroLife,
+			DFHeroMove::MaxSpeed(GetHeroSpeeds(), IsCrouching(), bWantsToAim, bWantsToSprint), MaxDownedSpeed);
 	default:
 		return Super::GetMaxSpeed();
 	}
+}
+
+bool UDFHeroMovementComponent::CanAttemptJump() const
+{
+	return HeroLife == EDFHeroLife::Up && Super::CanAttemptJump();
+}
+
+bool UDFHeroMovementComponent::CanCrouchInCurrentState() const
+{
+	return HeroLife == EDFHeroLife::Up && Super::CanCrouchInCurrentState();
 }
 
 FNetworkPredictionData_Client* UDFHeroMovementComponent::GetPredictionData_Client() const

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Hero/DFHeroLife.h"
 
 /**
  * How fast a hero moves, as pure functions (WS-03, B§1.1). The movement component asks these; so do
@@ -27,6 +28,7 @@ namespace DFHeroMove
 	constexpr float JumpZCmPerSec  = 480.f;    // Player.cs JumpVelocity 4.8
 	constexpr float CrouchCmPerSec = 300.f;    // B§1.1 crouch 3.0
 	constexpr float AimCmPerSec    = 350.f;    // B§1.1 ADS 3.5
+	constexpr float DownedCrawlCmPerSec = 100.f;   // B§1.14 downed crawl 1 m/s
 
 	/**
 	 * Godot writes the hero's velocity directly every physics frame, so it starts, stops and turns
@@ -63,6 +65,12 @@ namespace DFHeroMove
 	 * any direction, as it does in Godot.
 	 */
 	DFPLAYER_API float MaxSpeed(const FDFHeroMoveSpeeds& Speeds, bool bCrouched, bool bAiming, bool bWantsSprint);
+
+	/**
+	 * Top speed for a hero's life state (B§1.14): standing moves at StandingSpeed (MaxSpeed above), a
+	 * downed hero crawls at DownedSpeed, and a hero waiting for the solo respawn does not move.
+	 */
+	DFPLAYER_API float MaxSpeedForLife(EDFHeroLife Life, float StandingSpeed, float DownedSpeed);
 
 	/** Height a jump of JumpZ (cm/s) reaches under GravityZ (cm/s², either sign): v² / 2g. 0 without gravity. */
 	DFPLAYER_API float JumpApexCm(float JumpZ, float GravityZ);
