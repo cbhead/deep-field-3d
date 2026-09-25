@@ -1,13 +1,15 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Waves/DFDetMath.h"   // DF_DET_FP_*
+#include "Determinism/DFDetMath.h"   // DF_DET_FP_*
 
 // Deterministic randomness, ported bit for bit from sim/Sim.Core/Util/Rng.cs. Gameplay that must
 // be a pure function of (seed, stream, index) draws from here and never from FMath::Rand or
 // FRandomStream: wave N's content is identical whatever waves 1..N-1 drew, which is what resume
 // under a new host, join-in-progress and the balance sweeps rely on (B§1.11).
-// Header-only and free of DF dependencies so it can move to DFCore when a second module needs it.
+// Header-only and free of DF dependencies. Lives in DFCore (INT ruling R2, 2026-09-25) because the
+// wave plan (WS-05), the faction level curve (WS-07), condition hazards (WS-09) and scrap (WS-06) all
+// draw from it; append-only, and a change to what a stream returns is an RFC (goldens pin it).
 
 DF_DET_FP_PUSH
 

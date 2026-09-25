@@ -381,6 +381,25 @@ float UDFStatusComponent::TimeRemaining(EDFStatusChannel Channel) const
 	return FMath::Max(0.f, Slots[static_cast<int32>(Channel)].EndTimeServer - Now());
 }
 
+bool UDFStatusComponent::TryGetTimeRemaining(EDFStatusChannel Channel, float& OutSeconds) const
+{
+	OutSeconds = 0.f;
+	if (!IsChannelActive(Channel))
+	{
+		return true;
+	}
+	// Now() falls back to the local clock when the world has no game state. That is the right clock
+	// on a dev map or in a unit-test world (there is only one), and the wrong one on a joining client
+	// before its game state's channel opens — so there, the answer is "unknown", not a number.
+	const UWorld* World = GetWorld();
+	if (!World || !IsServerClockKnown(World->GetGameState() != nullptr, World->GetNetMode()))
+	{
+		return false;
+	}
+	OutSeconds = TimeRemaining(Channel);
+	return true;
+}
+
 bool UDFStatusComponent::IsControlled() const
 {
 	return IsChannelActive(EDFStatusChannel::Control);

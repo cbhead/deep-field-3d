@@ -1,6 +1,6 @@
 #include "Movement/DFLaneWalker.h"
 
-#include "Waves/DFDetMath.h"
+#include "Determinism/DFDetMath.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DFLaneWalker)
 

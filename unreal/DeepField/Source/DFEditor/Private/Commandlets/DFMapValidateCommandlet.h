@@ -19,6 +19,9 @@ class UDFLaneGraphAsset;
 //   coverage (5)      every 4 m of every walk edge sees >= 3 tower pads within range (16 m ground /
 //                     15 m air) by a real DF_Sight trace, 1.6 m over the pad to 1.6 m over the lane;
 //                     dead-ground report to unreal/content/levels/reports/<map>.coverage.json
+//   routeIds          every routeId in unreal/content/json/waves_<map>.json is an itinerary id in the
+//                     lane graph (map-authoring-3d.md "Route ids are referenced by the wave tables");
+//                     the failure names the row, the route and both files; SKIP when the map has no table
 // Ratchet: unreal/map-validation-baseline.tsv lists (map, rule) pairs known to fail; those are
 // warnings, anything else failing is an error and the commandlet exits 1.
 // Writes only the report (text, not LFS-lockable); it loads L_<Map> and saves no package, so it
@@ -60,8 +63,10 @@ private:
 	FResult CheckSocketOffset(const UDFLaneGraphAsset& Graph);
 	FResult CheckCorridor(const UDFLaneGraphAsset& Graph);
 	FResult CheckCoverage(UWorld* World, const UDFLaneGraphAsset& Graph, const FString& MapId);
+	FResult CheckRouteIds(const UDFLaneGraphAsset& Graph, const FString& MapId);
 
 	static TSet<FString> LoadBaseline();
+	static FString WaveTablePath(const FString& MapId);
 	static FString BaselinePath();
 	static FString ReportPath(const FString& MapId);
 	static float DistanceToPolylineCm(const FVector& P, const TArray<FVector>& Points);

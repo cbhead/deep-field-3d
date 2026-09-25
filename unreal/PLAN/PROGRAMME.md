@@ -171,6 +171,10 @@ graph TD
   WS10a --> G2
   WS11 --> G2
   WS12 --> G2
+  WS02 --> WS28[WS-28 Match flow]
+  WS05 --> WS28
+  WS28 --> WS12
+  WS28 --> G2
   G2 --> WS10b[WS-10b/c/d maps]
   G2 --> WS06
   G2 --> WS08
@@ -191,7 +195,7 @@ graph TD
   WS44 --> G4
   G4 --> P6[P6 balance/hardening/launch]
 ```
-Critical path to G2: P0 → WS-00 → WS-01 → WS-02 → (WS-03 ∥ WS-04 ∥ WS-05) → G2, with WS-09→WS-10a and WS-11 in parallel from week 1. Longest chain is WS-02 → WS-05; claim WS-05 the moment C4/C5 headers land.
+Critical path to G2: P0 → WS-00 → WS-01 → WS-02 → (WS-03 ∥ WS-04 ∥ WS-05) → WS-28 (match flow, ADR-0024; added 2026-09-25) → G2, with WS-09→WS-10a and WS-11 in parallel from week 1. Longest chain is WS-02 → WS-05; claim WS-05 the moment C4/C5 headers land.
 
 ### 4.3 Parallelism per phase
 P1: 5–7 sessions (00 first, then 01, 15, 12, 11-spike, 30, 31). P2: 10–12 (02, 03, 04, 05, 07, 09, 10a, 11, 12, 14, 13, 30/31 continuing) + INT. P3: up to 16 + INT. P4/P5: gameplay lane (up to 10) and art lane (up to 10) concurrently + INT; **editor-heavy sessions capped at 2 concurrently on the Mac** (Section 6.7).
@@ -209,7 +213,7 @@ Legend: **CP** critical path; sizes S ≤1 wk, M 1–3, L 3–6, XL >6 (one sess
 ### 5.1 Foundation
 | WS | Purpose | Owns | Needs | DoD | Size / phase |
 |---|---|---|---|---|---|
-| **WS-00 Foundation & contracts** (CP) | uproject, modules, native tags, message structs, content subsystem, message bus, collision/input, material param names, ledger scaffold, ADRs | `unreal/DeepField/{.uproject,Config/*,Source/DFCore,Source/DFMatch skeleton}`, `unreal/PLAN/**` (until INT), `Content/DF/Core` | — | Editor opens; Mac build; `L_Dev_Empty` listen host + PIE client; tags compile; CONTRACTS docs written; CI builds | M / P1 |
+| **WS-00 Foundation & contracts** (CP) | uproject, modules, native tags, message structs, content subsystem, message bus, collision/input, material param names, ledger scaffold, ADRs | `unreal/DeepField/{.uproject,Config/*,Source/DFCore,Source/DFMatch skeleton (handed to WS-28, ADR-0024)}`, `unreal/PLAN/**` (until INT), `Content/DF/Core` | — | Editor opens; Mac build; `L_Dev_Empty` listen host + PIE client; tags compile; CONTRACTS docs written; CI builds | M / P1 |
 | **WS-01 Content pipeline** (CP) | `tools/content-export`, JSON schemas, `DFContentPipeline` commandlet (JSON→DT), `DT_ContentRegistry`, `DF.Content.RoundTrip/Bindings/TagCoverage`, palette + tokens import | `tools/content-export/**`, `unreal/content/**`, `Plugins/DFContentPipeline/**`, `Content/DF/Data/Tables/**`, `DFContentRows.h` | WS-00 | Every table exported, imported, round-trips; registry audit fails on any id without a row/binding or any `Placeholder=true` asset in a cook | M / P1 |
 | **WS-15 Automation, CI, packaging, store** | Test base classes, Gauntlet controllers, `unreal/Build/*.py` (layering, ownership, LFS lock audit, plan-status), GitHub Actions (self-hosted Mac nightly; GPU-box lanes later), packaging Mac/Win, EGS BuildPatchTool, crash reporting | `Plugins/DFAutomation/**`, `Source/DFTests/**`, `unreal/Build/**`, `.github/workflows/unreal-*.yml`, `Content/DF/Dev/**` | WS-00 | Nightly build + all `DF.*` on Mac; packaged Mac (and later Windows) builds to the EGS dev sandbox | M / P1→ |
 | **INT Integration** (role) | Merges, owns shared files, pre-merge checklist, ledger regeneration, digest, "Needs INT" requests | `unreal/PLAN/**`, `Config/Default*.ini`, `.uproject`, module lists, `.gitattributes`, `.lfsconfig`, `OWNERSHIP.md` | — | Section 6.8 checklist run each cycle | ongoing |
@@ -230,6 +234,7 @@ Legend: **CP** critical path; sizes S ≤1 wk, M 1–3, L 3–6, XL >6 (one sess
 | **WS-12 UI (Common UI + MVVM)** (CP for HUD/wheel/lobby/connection) | 17 screens + teleport picker + world markers + coverage decal driver + boss bar + elite strip + ping UI + early-call vote + tiers; `M_UI_Chamfer`, styles from `DA_UITokens`, `BP_ModelWell` render-target studio (`L_UIStudio`), icons registry, magenta-chip missing-icon fallback | `Source/DFUI/**`, `Content/DF/UI/**` | WS-00, WS-01 | Every screen reachable in `L_Test_UI` with a fake view model; no net branching (CI grep); settings persisted | XL / P2–P5 |
 | **WS-13 Audio (MetaSounds)** | Cue→MetaSound map, `MS_Music_Director` (Quartz, states, per-map stems, threat-driven layers), hue-coded tower timbres, faction/reaction stingers, enemy vocabularies, weather beds, occlusion/reverb, UI; **CC0/generated sources only, logged in `LICENSES.md`** | `Source/DFAudio/**`, `Content/DF/Audio/**`, `L_<Map>_Audio` | WS-00, WS-14 timing | `DF.Audio.EveryCueHasSound`; reload beats align with montage notifies | XL / P2–P5 |
 | **WS-14 VFX (Niagara)** | ~110 systems on ~12 emitter templates (C10, Appendix C§5), `DT_VFX` variants, held-effect registry, decal pool (256 cap), `PPM_RevealPulse/HeatShimmer/Downed`, reduce-flash | `Source/DFVfx/**`, `Content/DF/VFX/**` | WS-02 cues, C8 | `DF.Vfx.EveryCueDraws`; corrode/cryofield/revealpulse/teleport-burst/implosion exist | XL / P2–P5 |
+| **WS-28 Match flow (DFMatch)** (CP; added 2026-09-25, ADR-0024) | `ADFGameMode` (from WS-00's skeleton), `ADFMatchState` + `ADFPlayerState` as hosts of domain-owned state components (economy WS-06, lane/mutable states WS-09, faction/level WS-07, loadout WS-06, hero state WS-03), `ADFPlayerController` Server RPC surface (1:1 with `Commands.cs`), `ADFEventRelay`, the phase machine (port of `Step.cs` `UpdateWaves` + `CheckEndState`: lobby Launch gate, intermission + early call, `BeginWave` on the director, `Wave*` messages, lives-first Victory/Defeat), endless toggle, campaign/sector chain, the host match record | `Source/DFMatch/**`, `Content/DF/Match/**` | WS-02, WS-05 director | `DF.Unit.Match.*` reproduce the Step.cs phase order (incl. `LastLeakIsDefeat`); WS-12 reads real replicated state on listen host + 1 client; `DF.Match.Solo.Testlane` to victory | L / P2–P3 |
 
 ### 5.3 Gameplay expansion (P4; each is an RFC-backed PR into the owning core WS, or a new module where noted)
 | WS | Item (Appendix B ref) | Lands in | Needs | Size |

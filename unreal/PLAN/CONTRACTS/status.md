@@ -9,4 +9,5 @@
 - Heroes may carry only Movement statuses and `Stagger` (Control-like, 0.25 s, no cc-resist), never Thermal/Toxin.
 - Conditions multiply channel *durations* (`ConditionRow.ChannelDurationFactors`), never touch status ids.
 - Replication: `ADFEnemy::StatusSlots[8] {StatusTag, EndTimeServer}` (push-model); clients derive tint/overhead/VFX from the slots only.
+- Time left (INT rulings, 2026-09-21 and R13 2026-09-25): `EndTimeServer` is a **server** timestamp; `UDFStatusComponent::TimeRemaining()` subtracts the shared server clock (`AGameStateBase::GetServerWorldTimeSeconds`). A view reads `TryGetTimeRemaining()`, which returns false on a client whose game state has not replicated yet — the view then shows the status icon **without** its countdown (never a zero, never a full ring).
 - Cues: `GameplayCue.DF.Status.<id>.Applied/Removed/Tick` — VFX (C10) and audio (C11) subscribe; the tint component (C8) is driven by the status component directly on both sides.

@@ -97,3 +97,16 @@ correct it in place as you go, in the same PR as whatever turned out different.
   odd failure, compare `git log` against `origin` before assuming you imagined it.
 - **`test.sh` now refuses to run against a binary older than the source** (`1f0f18f`). If you see
   that refusal, do not pass `DF_TEST_ALLOW_STALE=1` to get past it — build.
+
+## Addendum, 2026-09-25 (INT rulings branch `claude/happy-babbage-t6qrhw`)
+Written after the above and merged on top of it. If the branch has landed:
+- **DFMatch has an owner:** WS-28 *Match flow* (ADR-0024, registered, unclaimed). The first PR's shells —
+  phase machine, `ADFMatchState`, `ADFPlayerState`, `ADFPlayerController`, `ADFEventRelay`, 13
+  `DF.Unit.Match` tests — are written but were **never built**. They sit between item 3 above (`ADFEnemy`)
+  and a match that runs to victory: the director's `OnSpawnRequested` needs a spawner, and
+  `ADFMatchState` is what begins the waves.
+- **The deterministic headers moved** to `Source/DFCore/Public/Determinism/` (R2). Include
+  `Determinism/DFDetMath.h`, not `Waves/DFDetMath.h`. The merge fixed `DFLaneWalker.cpp`.
+- **Every open Needs-INT item has been ruled** (`rfcs/needs-int-rulings-2026-09-25.md`, ADRs 0024–0027,
+  RFC-0003). None of that branch's C++ has been compiled: build, then `test.sh DF.Unit+DF.Content`,
+  `DF.Online`, and the smoke, before trusting any of it.

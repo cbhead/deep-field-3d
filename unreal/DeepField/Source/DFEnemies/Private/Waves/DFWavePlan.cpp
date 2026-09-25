@@ -1,8 +1,8 @@
 #include "Waves/DFWavePlan.h"
 
 #include "Content/DFContentRows.h"
-#include "Waves/DFDetMath.h"
-#include "Waves/DFDetRng.h"
+#include "Determinism/DFDetMath.h"
+#include "Determinism/DFDetRng.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DFWavePlan)
 

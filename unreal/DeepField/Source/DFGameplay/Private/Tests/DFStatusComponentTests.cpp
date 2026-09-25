@@ -978,4 +978,33 @@ bool FDFDamageShredKeepsTargetArmoredTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFStatusTimeRemainingUnknownBeforeServerClockTest, "DF.Unit.Status.TimeRemainingUnknownBeforeServerClock", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+bool FDFStatusTimeRemainingUnknownBeforeServerClockTest::RunTest(const FString& Parameters)
+{
+	// Ruling R13: a client that has not yet received its game state cannot know the server clock,
+	// and a countdown read against its own clock would be wrong (the F2 bug again, for one channel
+	// open). The rule itself, every combination:
+	TestFalse(TEXT("client, no game state: unknown"), UDFStatusComponent::IsServerClockKnown(false, NM_Client));
+	TestTrue(TEXT("client with a game state: known"), UDFStatusComponent::IsServerClockKnown(true, NM_Client));
+	TestTrue(TEXT("listen host without a game state: its own clock is the server's"), UDFStatusComponent::IsServerClockKnown(false, NM_ListenServer));
+	TestTrue(TEXT("dedicated server: known"), UDFStatusComponent::IsServerClockKnown(false, NM_DedicatedServer));
+	TestTrue(TEXT("standalone (dev map, unit-test world): known"), UDFStatusComponent::IsServerClockKnown(false, NM_Standalone));
+
+	// And the component applies it: a standalone world with no game state knows its one clock.
+	FWorldFixture F;
+	if (!TestTrue(TEXT("standalone world"), F.Init(100.f)))
+	{
+		return false;
+	}
+	float Seconds = -1.f;
+	TestTrue(TEXT("an empty channel is known"), F.Status->TryGetTimeRemaining(EDFStatusChannel::Movement, Seconds));
+	TestTrue(TEXT("and has nothing left"), FMath::IsNearlyEqual(Seconds, 0.f, 1e-4f));
+	TestEqual(TEXT("chill applied"), F.Status->Apply(DFTags::Status_Chill, nullptr), EDFStatusApplyResult::Applied);
+	TestTrue(TEXT("standalone, no game state: the time is known"), F.Status->TryGetTimeRemaining(EDFStatusChannel::Movement, Seconds));
+	TestTrue(*FString::Printf(TEXT("and it is the row's 1.5 s (got %.3f)"), Seconds), FMath::IsNearlyEqual(Seconds, 1.5f, 1e-2f));
+	TestTrue(TEXT("and it agrees with TimeRemaining"), FMath::IsNearlyEqual(Seconds, F.Status->TimeRemaining(EDFStatusChannel::Movement), 1e-4f));
+	F.Shutdown();
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

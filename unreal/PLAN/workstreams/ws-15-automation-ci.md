@@ -69,3 +69,5 @@ all of them. It is a few lines, it is O(files) forever, and it converts an entir
 misconfiguration into a red test. Worth pairing with an assertion that every tag the native list
 declares is also resolvable, so the two registration paths are both pinned.
 
+- 2026-09-25 · INT · `DF.Unit.Tags.EveryIniTagRegisters` (your INT ask) and `test-gate-check.py` + `test-gate-exclusions.tsv` are on `claude/happy-babbage-t6qrhw` for review (written in a cloud session; the C++ is not built). **R14:** at the next INT cycle, one `editor-lock.sh test.sh DF` run, then each green suite moves into both landing filters with its exclusion row deleted (ci.md, 2026-09-25).
+- 2026-09-25 · INT · Correction to the note above: R14 landed on main as `a6505ad` (the gate is defined once as `DF_GATE_FILTER` in `test.sh`, enforced by `check-test-coverage.py`, and all four suites were green and are gated). `test-gate-check.py` and its exclusion file were retired when PR #48 merged main; `ci-local.sh`'s `coverage` step and `unreal-checks.yml` now run `check-test-coverage.py`. `DF.Unit.Tags.EveryIniTagRegisters` is unaffected.

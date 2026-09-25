@@ -36,6 +36,7 @@ bool FDFContentTagCoverageTest::RunTest(const FString& Parameters)
 		{ TEXT("meleeAttachments"), TEXT("DF.MeleeAttachment") },
 		{ TEXT("ammo"),             TEXT("DF.Ammo") },
 		{ TEXT("conditions"),       TEXT("DF.Condition") },
+		{ TEXT("vehicles"),         TEXT("DF.Vehicle") },
 	};
 
 	UGameplayTagsManager& Tags = UGameplayTagsManager::Get();
