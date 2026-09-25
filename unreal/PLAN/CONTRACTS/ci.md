@@ -155,3 +155,48 @@ run the full `DF` filter once to get ground truth, record what is red and why, t
 filter to everything that is green and name each exclusion with its reason. An exclusion with a reason
 is a decision; a filter that silently omits four suites is an accident.
 
+## Ground truth on the four never-gated suites (INT, 2026-09-24)
+Measured, not assumed — one full run against `origin/unreal/main` at `da752b1`, build verified first:
+
+| suite | tests | result |
+|---|---|---|
+| `DF.Unit` | 79 | all pass |
+| `DF.Online` | 6 | **all pass** — had never gated a landing |
+| `DF.Editor` | 4 | **all pass** — had never gated a landing |
+| `DF.UI` | 4 | **all pass** — had never gated a landing |
+| `DF.Content` | 3 | all pass |
+| `DF.Func` | 1 | **passes** — had never gated a landing |
+
+97 of ours, all green, so **all four are now in the gate** and nothing had to be excluded. The only
+failure in the run was `Slate.Window.GetCurrentWindowZone.WindowedFullscreen`, an engine test about
+window zones that cannot mean anything under `-nullrhi` with no real window.
+
+**Two traps found doing this, both worth more than the result.**
+
+1. **The automation filter is a case-insensitive SUBSTRING match, not a prefix.** `Automation RunTests
+   DF` ran **230** tests, not 97: `DF` matches `Share`**`dF`**`ragments`, `Range`**`dF`**`or`,
+   `An`**`dF`**`requency`, `Payloa`**`dF`**`or`. 133 engine tests came along, which is why the run took
+   far longer than it should and why a naive `DF` filter is not the gate. The roots are spelled out in
+   `DF_GATE_FILTER` for that reason.
+2. **A filter that omits a suite is indistinguishable from a suite that does not exist**, which is why
+   this went unnoticed for weeks. So the gate is now defined **once**, as `DF_GATE_FILTER` in
+   `test.sh` — `int-merge`, `ci-local` and `pr-check` pass no filter and inherit it — and
+   `check-test-coverage.py` fails a landing when a registered `DF.*` root is outside the gate without a
+   recorded reason. Its `EXCLUDED` table holds `DF.Perf` and `DF.Soak` with the reason each cannot run
+   in a landing. **An exclusion with a reason is a decision; an omission is an accident**, and the
+   check is what keeps them distinguishable. Verified by falsification: with the gate set back to
+   `DF.Unit+DF.Content` the checker exits 1 and names all four suites.
+
+## Asserting log content: `AddExpectedMessage` has three traps
+Established from the 5.8 source while closing WS-05's F4 gap. `FAutomationTestFramework::InternalStopTest`
+(`AutomationTest.cpp:1376`) does verify expectations, and `Occurrences` defaults to 1, so a registered
+message that never appears **does** fail the test. But:
+- the default `CompareType` is **`Contains`** (`AutomationTest.h:161`), so a pattern that is a substring
+  of two different diagnostics is satisfied by either — the assertion then proves *a* message appeared,
+  not *that* one. Use `Exact` with the full sentence, or a phrase unique to the one branch.
+- verbosity is a **minimum, inclusive upward**: registering at `Warning` also intercepts `Error` and
+  `Fatal`, and never sees a `Display` or `Log` line.
+- **there is no "must not occur".** `Occurrences = 0` means *at least once* (`:1840-1848` fails when the
+  actual count is 0), so the natural way to write "the wrong diagnosis is gone" asserts the opposite of
+  what it reads like. Asserting absence needs your own log sink.
+

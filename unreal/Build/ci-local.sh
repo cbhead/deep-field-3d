@@ -23,7 +23,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"; REPO="$(cd "$HERE/../.." && pwd)"
 UE_ROOT="${UE_ROOT:-/Users/Shared/Epic Games/UE_5.8}"
 PROJECT="$REPO/unreal/DeepField/DeepField.uproject"
 export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
-FILTER="DF.Unit+DF.Content"
+FILTER=""        # empty: test.sh applies DF_GATE_FILTER, the one definition
 WS="INT"
 BASE="origin/unreal/main"
 CLIENTS=1

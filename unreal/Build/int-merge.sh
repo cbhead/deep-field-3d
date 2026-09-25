@@ -150,6 +150,7 @@ checks() {
   python3 unreal/Build/layering-check.py || fail layering
   python3 unreal/Build/ownership-check.py --ws "$WS" --base origin/unreal/main || fail ownership
   python3 unreal/Build/validate-content-json.py > /tmp/int-schema.log || { cat /tmp/int-schema.log; fail schema; }
+  python3 unreal/Build/check-test-coverage.py || fail "test coverage (a registered suite is outside the gate)"
 }
 verify() {
   checks
@@ -158,7 +159,7 @@ verify() {
   "$UE_ROOT/Engine/Build/BatchFiles/Mac/Build.sh" DeepFieldEditor Mac Development -Project="$WT/unreal/DeepField/DeepField.uproject" -WaitMutex -NoHotReload 2>&1 | grep -E " error |Result:|Total time" | tee /tmp/int-build.log
   grep -q "Result: Succeeded" /tmp/int-build.log || fail build
   step "tests"
-  unreal/Build/editor-lock.sh unreal/Build/test.sh DF.Unit+DF.Content || fail tests
+  unreal/Build/editor-lock.sh unreal/Build/test.sh || fail tests   # no filter: test.sh owns the gate list
   if [ "$SMOKE" = 1 ]; then
     step "smoke"
     unreal/Build/editor-lock.sh unreal/Build/smoke-listen.sh || fail smoke
