@@ -1,4 +1,6 @@
 #include "Combat/DFTargetable.h"
+#include "Components/BoxComponent.h"
+#include "DFWorldCollision.h"
 #include "Content/DFContentSubsystem.h"
 #include "DFTowerTestDummy.h"
 #include "Misc/AutomationTest.h"
@@ -209,6 +211,44 @@ bool FDFTowerFireLoopTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("and is gone"), Tower->GetShotsInFlight(), 0);
 		TestEqual(TEXT("and nothing dead is fired at"), Fired, 2);
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFTowerSightTraceTest, "DF.Unit.Tower.SightBlockedByGeometry", DFTowerActorTest::Flags)
+bool FDFTowerSightTraceTest::RunTest(const FString& Parameters)
+{
+	using namespace DFTowerActorTest;
+	// §3.2: "towers need line of sight; terrain blocks it". A real DF_Sight trace against a real body:
+	// a wall that blocks the Sight channel hides the target; one that only blocks other channels (a
+	// socket pad, which ignores Sight on purpose) does not.
+	FDFTestWorld World;
+	AActor* Tower = World.SpawnActor<ADFTowerTestDummy>();
+	UDFTargetingComponent* Targeting = NewObject<UDFTargetingComponent>(Tower);
+	Targeting->RegisterComponent();
+	ADFTowerTestDummy* Target = Spawn(World, 1, 8.f, 10.f);
+	AActor* Wall = World.SpawnActor<ADFTowerTestDummy>(FTransform(FVector(400.f, 0.f, 0.f)));
+	if (!TestNotNull(TEXT("actors"), Tower) || !TestNotNull(TEXT("actors"), Target) || !TestNotNull(TEXT("actors"), Wall))
+	{
+		return false;
+	}
+	UBoxComponent* Box = NewObject<UBoxComponent>(Wall);
+	Box->SetupAttachment(Wall->GetRootComponent());
+	Box->SetBoxExtent(FVector(50.f, 200.f, 300.f));   // 1 m thick, 4 m wide, 6 m tall, halfway along the line
+	Box->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	Box->SetCollisionResponseToAllChannels(ECR_Ignore);
+	Box->SetCollisionResponseToChannel(DFCollision::Build, ECR_Block);
+	Box->RegisterComponent();
+
+	FDFTowerRow Row;
+	Row.TargetLayers = { EDFEnemyLayer::Ground };
+	TestTrue(TEXT("a body that ignores DF_Sight does not block it (a socket pad)"), Targeting->PickTarget(Row, 12.f) == Target);
+
+	Box->SetCollisionResponseToChannel(DFCollision::Sight, ECR_Block);
+	TestNull(TEXT("a body that blocks DF_Sight hides the target"), Targeting->PickTarget(Row, 12.f));
+	TestTrue(TEXT("and the sight test says why"), Targeting->IsSightBlocked(Target, TArray<AActor*>{ Target }));
+
+	Wall->SetActorLocation(FVector(400.f, 1000.f, 0.f));   // off the line
+	TestTrue(TEXT("moved off the line: seen again"), Targeting->PickTarget(Row, 12.f) == Target);
 	return true;
 }
 
