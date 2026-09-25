@@ -1,8 +1,8 @@
 # Workstream status
 
-Generated 2026-09-25T22:46:52Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-25T23:28:01Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
-active: 5 · paused: 6 · review: 1 · unclaimed: 38
+active: 6 · paused: 6 · review: 1 · unclaimed: 37
 
 | WS | Title | Phase | CP | State | Owner | Lease expires | Last commit | Editor-heavy | Blocked on |
 |---|---|---|---|---|---|---|---|---|---|
@@ -39,7 +39,7 @@ active: 5 · paused: 6 · review: 1 · unclaimed: 38
 | WS-25 | Physics layer | P4 |  | unclaimed | — | — | — | yes | — |
 | WS-26 | Co-op verbs & security rules | P4 |  | unclaimed | — | — | — |  | — |
 | WS-27 | Waves, tiers, endless, balance | P4 (last) |  | unclaimed | — | — | — |  | — |
-| WS-28 | Match flow (DFMatch) | P2-P3 | CP | unclaimed | — | — | — |  | — |
+| WS-28 | Match flow (DFMatch) | P2-P3 | CP | active | session-01DTQRZ3-cloud | 2026-09-26T22:58:32Z | — |  | — |
 | WS-30 | Art pipeline (Claude Design → Unreal, terrain lane, validators) | P1+ |  | paused | — | — | 76f3662 | yes | — |
 | WS-31 | Materials & palette | P1+ |  | unclaimed | — | — | — | yes | — |
 | WS-32 | Skeletons & animation contract | P2+ |  | unclaimed | — | — | — | yes | — |
