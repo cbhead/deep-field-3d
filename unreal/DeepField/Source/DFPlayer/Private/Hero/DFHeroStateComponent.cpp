@@ -175,13 +175,18 @@ const FDFHeroLifeRules& UDFHeroStateComponent::GetRules() const
 
 // ---- host ---------------------------------------------------------------------------------------
 
-EDFHeroDown UDFHeroStateComponent::HostDeplete(int32 ConnectedPlayers)
+EDFHeroDown UDFHeroStateComponent::HostDeplete(int32 ConnectedPlayers, float BleedoutSeconds)
 {
 	if (!HasHostAuthority())
 	{
 		return EDFHeroDown::Ignored;
 	}
-	const EDFHeroDown Down = DFHeroLife::Deplete(LifeState, GetRules(), ConnectedPlayers);
+	FDFHeroLifeRules Rules = GetRules();
+	if (BleedoutSeconds > 0.f)
+	{
+		Rules.BleedoutSeconds = BleedoutSeconds;
+	}
+	const EDFHeroDown Down = DFHeroLife::Deplete(LifeState, Rules, ConnectedPlayers);
 	if (Down == EDFHeroDown::Ignored)
 	{
 		return Down;

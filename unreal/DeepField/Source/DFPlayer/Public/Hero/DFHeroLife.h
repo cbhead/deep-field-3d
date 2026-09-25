@@ -49,6 +49,12 @@ struct FDFHeroLifeRules
 	float RevivedHpFraction = 0.5f;
 };
 
+/** Health regeneration state (Step.cs player update): seconds until regen may start. */
+struct FDFHeroRegen
+{
+	float DelayLeft = 0.f;
+};
+
 struct FDFHeroLifeState
 {
 	EDFHeroLife Life = EDFHeroLife::Up;
@@ -102,4 +108,14 @@ namespace DFHeroLife
 
 	/** Back to standing with every timer cleared (Step.cs RespawnPlayer; full health and the spawn point are the caller's). */
 	DFPLAYER_API void Respawn(FDFHeroLifeState& State);
+
+	/** The hero took damage: regen waits RegenDelaySeconds again (Step.cs: RegenDelay = PlayerRegenDelaySeconds). */
+	DFPLAYER_API void NoteDamaged(FDFHeroRegen& Regen, float RegenDelaySeconds);
+
+	/**
+	 * One step of regeneration for a standing hero; returns the new health. The delay runs down first,
+	 * and on the step it reaches 0 health already grows, at RegenPerSecond up to MaxHealth (Step.cs).
+	 * A hero at 0 health does not regenerate: getting up is a revive or a respawn.
+	 */
+	DFPLAYER_API float RegenStep(FDFHeroRegen& Regen, float Health, float MaxHealth, float RegenPerSecond, float DeltaSeconds);
 }

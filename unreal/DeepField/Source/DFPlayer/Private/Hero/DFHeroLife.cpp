@@ -84,3 +84,18 @@ void DFHeroLife::Respawn(FDFHeroLifeState& State)
 	State.RespawnLeft = 0.f;
 	State.ReviveProgress = 0.f;
 }
+
+void DFHeroLife::NoteDamaged(FDFHeroRegen& Regen, float RegenDelaySeconds)
+{
+	Regen.DelayLeft = RegenDelaySeconds;
+}
+
+float DFHeroLife::RegenStep(FDFHeroRegen& Regen, float Health, float MaxHealth, float RegenPerSecond, float DeltaSeconds)
+{
+	Regen.DelayLeft = FMath::Max(0.f, Regen.DelayLeft - DeltaSeconds);
+	if (Health <= 0.f || Regen.DelayLeft > 0.f || Health >= MaxHealth)
+	{
+		return Health;
+	}
+	return FMath::Min(MaxHealth, Health + RegenPerSecond * DeltaSeconds);
+}
