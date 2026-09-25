@@ -1,19 +1,110 @@
 # Deep Field 3D on Unreal Engine 5.8 — runbook
 
 This is the Unreal rebuild of Deep Field 3D. It lives on the `unreal/main` branch, beside the frozen
-Godot client (`../game/`) and the C# sim (`../sim/`, which is now the written spec). This page takes
-you from a bare Mac to a built project with its tests passing, then to playing a map.
+Godot client (`../game/`) and the C# sim (`../sim/`, which is now the written spec).
 
-**Who this is for:** anyone setting up the Mac to build, test or play the Unreal project. The Windows
-GPU workstation has its own checklist, [Build/windows-bringup.md](Build/windows-bringup.md), and
-registering the CI runner is covered in [PLAN/CONTRACTS/ci.md](PLAN/CONTRACTS/ci.md).
+- **On Windows** (a developer, a tester or a player): one script does everything. It checks the
+  machine, installs what is missing, clones the repository, builds, and runs the game. Follow
+  [§0 Windows](#0-windows-one-script) and nothing else on this page.
+- **On the Mac:** [§1](#1-prerequisites) onwards takes you from a bare Mac to a built project with its
+  tests passing, then to playing a map. Do the sections in order; each step says what to run and what
+  you should see. If you see something else, look it up in [Troubleshooting](#8-troubleshooting).
 
-**How to read it:** do the sections in order. Each step says what to run and what you should see. If
-you see something else, stop and look it up in [Troubleshooting](#8-troubleshooting) before going on.
+Registering the CI runner is covered in [PLAN/CONTRACTS/ci.md](PLAN/CONTRACTS/ci.md). The GPU
+workstation's extra checks (Nanite/Lumen, packaging, the floating-point check) are in
+[Build/windows-bringup.md](Build/windows-bringup.md).
 
-> Every command here comes from this repository's own scripts and config (`Build/*.sh`, `.lfsconfig`,
-> `DeepField/Config/DefaultEngine.ini`). If a step turns out different on your machine, correct this
-> file in the same change as whatever you had to do.
+> Every command here comes from this repository's own scripts and config (`Build/*.sh`,
+> `Build/deepfield.ps1`, `.lfsconfig`, `DeepField/Config/DefaultEngine.ini`). If a step turns out
+> different on your machine, correct this file in the same change as whatever you had to do.
+
+---
+
+## 0. Windows: one script
+
+### 0.1 What you need before you start
+
+Only these. The script installs everything else.
+
+| What | Why |
+|---|---|
+| Windows 11, or Windows 10 version 2004 or later, 64-bit | Unreal Engine 5.8's minimum |
+| An administrator account (you will approve a few UAC prompts) | Visual Studio, Git and long-path support install machine-wide |
+| **About 250 GB free** (the engine ~60 GB, Visual Studio ~20 GB, the clone, its cache and build output 100+ GB) | The script warns below 150 GB on the drive it clones to |
+| A free Epic Games account | Unreal Engine is installed through Epic's launcher, which needs a sign-in |
+| A GPU with DirectX 12 and current drivers (NVIDIA, AMD or Intel Arc) | To open the editor or play; building and tests do not need one |
+| Internet, and time: 1-3 hours the first time, mostly downloads | The engine is ~40 GB and Visual Studio ~20 GB |
+
+### 0.2 Run it
+
+**On a machine that does not have the repository yet**, open **PowerShell** (Start menu, type
+`PowerShell`, Enter; the ordinary window, not "as administrator") and paste this one line:
+
+```powershell
+irm https://raw.githubusercontent.com/cbhead/deep-field-3d/unreal/main/unreal/Build/deepfield.ps1 -OutFile "$env:TEMP\deepfield.ps1"; powershell -NoProfile -ExecutionPolicy Bypass -File "$env:TEMP\deepfield.ps1" setup
+```
+
+**If you already have a clone**, double-click `unreal\deepfield.cmd` in it, or run `unreal\deepfield setup`
+in a terminal.
+
+`setup` never assumes a bare machine. It works in two passes:
+
+1. **Check.** It looks for everything below and changes nothing. That includes things installed
+   somewhere unusual: Git or Python that isn't on PATH (including GitHub Desktop's Git), any Visual
+   Studio 2022/2026 or Build Tools, the engine wherever the launcher put it (or a source build), and
+   an existing clone. For the clone it checks the folder you're in, the last clone it used, `X:\DF\deepfield-3d` on
+   every drive, the usual folders under your user profile, and then searches three folders deep on each
+   drive. It then prints a summary, *already in place: N* and *missing: …*, and asks **Go ahead? [Y/n]**.
+2. **Fix.** Only the items listed as missing are installed or changed. Everything marked OK is left
+   alone. `-Yes` skips the question.
+
+`deepfield doctor` runs pass 1 alone. Running `setup` again is safe, and it is also how you continue after stopping.
+
+| Step | What it checks | What it does if it is missing |
+|---|---|---|
+| Windows | 64-bit, build 19041+; long paths enabled | Enables long paths (one UAC prompt) |
+| Git | Git for Windows and Git LFS | Installs them with winget |
+| Python | Python 3.9+ (the Store's fake `python.exe` does not count) | Installs Python 3.12 with winget |
+| Visual Studio | VS 2022 (or 2026) with an MSVC toolset UE 5.8 accepts (14.44.35211+, not a banned one), and a Windows SDK 10.0.19041+ | Installs VS 2022 Community with the C++ game workloads, or updates and modifies the one you have |
+| Repository | An existing clone anywhere on the machine (see pass 1; `-Dir` picks one when there are several) | Clones `unreal/main` to `D:\DF\deepfield-3d` (else `C:\DF\deepfield-3d`, or `-Dir`), turns off line-ending conversion, fetches every LFS file |
+| Unreal Engine | The version `DeepField.uproject` names (5.8), ideally patch 5.8.2 | Installs the Epic Games Launcher and opens it. **This is the one manual step:** sign in, then Unreal Engine > Library > **+** next to *Engine versions* > **5.8.2** > Install. Press Enter in the script's window when it has finished. Sets `UE_ROOT` for you. |
+| Build | - | Builds the editor (10-30 minutes the first time) |
+
+It ends with `setup: done`. From then on, in a terminal in the clone's `unreal\` folder (in PowerShell, type
+`.\deepfield` instead of `deepfield`):
+
+| Command | What it does |
+|---|---|
+| `deepfield play` | Builds if needed, then runs the game in a window. `-Map /Game/DF/Maps/Testlane/L_Testlane` plays another map ([§6.2](#62-play-a-map) lists what works today). |
+| `deepfield host` / `deepfield join <ip>` | Host a game others on your network can join (port 7777), or join one. Allow UnrealEditor through Windows Firewall when asked. |
+| `deepfield editor` | Builds if needed, then opens the Unreal editor. The first open compiles shaders: slow once, fast afterwards. |
+| `deepfield test [filter]` | Builds, then runs the automated tests headless and prints PASS/FAIL per test. No filter = the landing gate from `Build/test.sh`. Example: `deepfield test DF.Unit.Tower`. |
+| `deepfield check` | The repository checks that need no engine (layering, content schemas, test coverage). Seconds. |
+| `deepfield build` | Only the build (DeepFieldEditor Win64 Development). |
+| `deepfield solution` | Generates `DeepField.sln` for working on the C++ in Visual Studio or Rider. |
+| `deepfield doctor` | Checks everything above and reports. Installs and changes nothing. |
+| `deepfield help` | All commands and options. |
+
+Logs: the build and test logs are in `unreal\DeepField\Saved\Logs\`, and a transcript of every
+run is at `%LOCALAPPDATA%\DeepField\deepfield-<command>.log`.
+
+### 0.3 If it stops
+
+It stops at the first thing it cannot fix itself and says what to do, in red. Do that, then run the
+same command again; everything done so far is kept.
+
+| It says | Do this |
+|---|---|
+| `winget is not available` | Microsoft Store > search **App Installer** > Install/Update, then run it again. |
+| `Unreal Engine 5.8 is not installed yet` (after you typed Q) | Finish the install in the Epic Games Launcher, then `deepfield setup`. |
+| `not found yet` although the launcher shows 5.8 installed | It is in an unusual place: `deepfield setup -EngineDir "E:\Epic\UE_5.8"` (the folder that contains `Engine\`). |
+| `no MSVC toolset UE 5.8 accepts` | Visual Studio Installer > Update, then Modify > Individual components > **MSVC v143 - VS 2022 C++ x64/x86 build tools (Latest)**. |
+| `the build failed` | The compiler errors are printed in red above it. Paste them to whoever owns the code, or into a Claude session. |
+| `... is newer than the built modules` (tests) | The source changed after the last build. `deepfield test` builds first, so this only appears when that build failed. |
+| `the clone converts line endings, and there are uncommitted changes` | Commit or stash your changes, then run `deepfield setup` again. |
+| Anything marked `Unexpected error` | A bug in the script. Report it with the transcript it names. |
+
+---
 
 ---
 

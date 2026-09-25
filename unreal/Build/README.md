@@ -2,6 +2,12 @@
 
 Everything CI runs is a script here, and every script runs by hand the same way. Paths are relative to the repository root; `python3` is the system 3.9+ (no third-party packages; otherwise [python.org](https://www.python.org/downloads/)), the shell scripts are zsh. The engine ([Unreal Engine 5.8.2](https://www.unrealengine.com/download) through the [Epic Games Launcher](https://store.epicgames.com/download)) is found through `UE_ROOT` (default `/Users/Shared/Epic Games/UE_5.8`); [Xcode](https://apps.apple.com/app/xcode/id497799835) through `DEVELOPER_DIR` (default `/Applications/Xcode.app/Contents/Developer`). The full install list with versions is in [../README.md](../README.md#12-software).
 
+## Windows
+
+| Script | What it does | Exit |
+|---|---|---|
+| `deepfield.ps1` (start it with `unreal\deepfield.cmd <command>`) | The whole Windows path in one script: `setup` checks and installs every prerequisite (winget: Git, Git LFS, Python, Visual Studio 2022 with an MSVC toolset UE 5.8 accepts; the Epic launcher for the engine), clones with LFS and `core.autocrlf=false`, sets `UE_ROOT`, builds. `doctor` checks without changing anything. `build`, `test [filter]` (reads `DF_GATE_FILTER` from `test.sh`, keeps its stale-binary refusal and JSON-report verdict), `check` (the python checks), `editor`, `play`/`host`/`join`, `solution`. The `.sh` scripts below are Mac-only. | 1 when a check or step fails; 2 on a script error |
+
 ## Before a PR / for INT
 
 | Script | What it does | Exit |
