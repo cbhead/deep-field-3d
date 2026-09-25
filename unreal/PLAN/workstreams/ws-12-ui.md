@@ -2,11 +2,11 @@
 ws: 12
 slug: ui
 title: UI (Common UI + MVVM)
-state: paused
-owner: 
-claimed_at: 2026-09-19T20:58:00Z
-lease_expires: 
-branch: ws/12-ui/viewmodels
+state: active
+owner: session-fae2d0c5
+claimed_at: 2026-09-25T02:11:40Z
+lease_expires: 2026-09-26T02:11:40Z
+branch: ws/12-ui/tokens-screens
 last_commit: 278e262
 editor_heavy: true
 phase: P2-P5
@@ -52,3 +52,5 @@ blocked_on:
 - 2026-09-19 · session-fae2d0c5 · **session end** — PR 1 on `ws/12-ui/viewmodels` (`278e262`): the five C12 view models, `UDFViewModelSubsystem` ("DFMatch" in the MVVM global collection, ConnectionState from the bus), `FDFFakeMatchFeed`, DFCore append `Match/DFMatchTypes.h`. Verified on the Mac: `DeepFieldEditor Mac Development` builds; `DF.UI` 4/4 green with `-nullrhi` (`NoNetBranching` caught a comment of mine on its first run, which is the check working); `layering-check` OK; `ownership-check --ws 12` 0 violations (3 expected text warnings); `smoke-listen.sh` OK. No LFS locks taken, no editor slot taken. **Next:** PR 2 = `DA_UITokens` C++ type + `import_tokens.py` input contract with WS-45/WS-30, `UDFActivatableScreen`/layer stack (`UCommonActivatableWidget` bases, no assets); PR 3 (needs an editor slot) = `L_Test_UI` + `WBP_Kit_*` against the fake feed. Blocked piece: the replicated-state feed, until `ADFMatchState`/`ADFPlayerState` exist (see Open questions).
 - 2026-09-25 · INT · Rulings for WS-12: **R1 / ADR-0024** — `ADFMatchState` / `ADFPlayerState` belong to the new **WS-28 Match flow**; its first PR is the shells with WS-28's own fields (phase, wave, timer, threat, endless, seats, stats), and each domain's fields arrive as components (economy WS-06, lane states WS-09, faction/level WS-07, loadout WS-06, hero state WS-03) — keep the fake feed per field until its component lands. **R10** — the connection-state tags already exist (`DF.Online.Connection.*`, WS-11's `DF_Online.ini`); `DF.Vehicle.{Buggy,Dagator,Grnmchn,Vehickle}` are now native C1 tags, so `UDFVehicleViewModel::DefTag` can be filled and the `VehicleId` workaround retired. **R13** — any status countdown reads `TryGetTimeRemaining`; on false show the icon without the ring. **R4 / ADR-0026** — two new UI pieces: a "Share code" panel (lobby and pause menu, copy button, shows the rotated code after each admission) and a **non-modal** admit toast (joiner's name, hold a key to admit, never pauses play or takes input).
 - 2026-09-25 · INT · The real feed's first half exists (not yet built): `ADFMatchState` replicates phase, wave index, total waves, lobby, endless, threat, lap, enemies remaining and `GetPhaseSecondsLeft()` (a server-time deadline, so no per-frame replication) and fires `OnMatchStateChanged` on host and clients; `ADFPlayerState` carries seat and the match stats and fires `OnPlayerStateChanged`. Bind `UDFMatchViewModel` / `UDFPlayerViewModel` to those for WS-28's fields; money, lives, scrap, faction etc. stay on the fake feed until their components land (ADR-0024). Lobby Launch and the early call are `ADFPlayerController::Server_Launch` / `Server_CallEarly`.
+- 2026-09-25 · session-fae2d0c5 · **re-claim** — the same session that opened PR #44; the lease expired on the 20th and INT's sweep paused the workstream, so this re-claims it rather than continuing a dead lease. Read the cycle-3 digest, NEXT.md and INT's rulings above. Taking NEXT.md item 2: fix PR #44's three confirmed findings and land it. Still code-only, no editor slot.
+
