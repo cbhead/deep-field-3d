@@ -50,6 +50,8 @@ param(
   # The engine folder (the one containing Engine\). Default: found through the launcher's records.
   [string]$EngineDir = '',
   [string]$Map = '/Game/DF/Dev/L_Dev_Empty',
+  # setup: the branch to clone (default unreal/main), e.g. a PR branch to try before it merges.
+  [string]$Branch = '',
   [int]$Port = 7777,
   # setup: keep the light clone (skip Megascans and the art/lighting sublevels, as the Mac does).
   [switch]$LightClone,
@@ -530,8 +532,9 @@ function Assert-Repo {
         Write-Warn2 ("{0:N0} GB free on {1}; the clone, DDC and build output want {2}+ GB. Pass -Dir to clone elsewhere." -f $free, $parent, $MinFreeGB)
       }
       New-Item -ItemType Directory -Force -Path $parent | Out-Null
-      Write-Fix "cloning $RepoUrl ($RepoBranch) into $target"
-      $rc = Invoke-Native 'git' @('clone', '--branch', $RepoBranch, '-c', 'core.autocrlf=false', '-c', 'core.longpaths=true', $RepoUrl, $target)
+      $cloneBranch = $RepoBranch; if ($Branch) { $cloneBranch = $Branch }
+      Write-Fix "cloning $RepoUrl ($cloneBranch) into $target"
+      $rc = Invoke-Native 'git' @('clone', '--branch', $cloneBranch, '-c', 'core.autocrlf=false', '-c', 'core.longpaths=true', $RepoUrl, $target)
       if ($rc -ne 0) { Fail "git clone failed (exit $rc)" 'Check the network connection, then run this again.'; return }
       $repo = (Resolve-Path $target).Path
     }
