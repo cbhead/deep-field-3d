@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
+#include "Hero/DFHeroStateComponent.h"
 #include "DFPlayerState.generated.h"
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FDFOnPlayerStateChanged, class ADFPlayerState* /*PlayerState*/);
@@ -10,7 +11,12 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FDFOnPlayerStateChanged, class ADFPlayerStat
  * One seat in the match (WS-28, ADR-0024). WS-28's own fields are the seat and the match stats (the
  * host match record WS-11 persists). Every other per-player field arrives as a component its domain
  * writes and attaches here: faction and level (WS-07), personal scrap and builds (WS-06), downed,
- * revive and vehicle seat (WS-03).
+ * revive and vehicle seat (WS-03, UDFHeroStateComponent — attached).
+ *
+ * The hero state's host events become C15 messages here, where the seat is known: Downed/SoloDowned
+ * → PlayerDowned, Revived → PlayerRevived (PlayerId = the reviver's seat, TargetPlayerId = this seat;
+ * the reviver is credited a revive and ReviveMatchXp), Respawned → PlayerRespawned, after the pawn is
+ * moved to a player start (Step.cs RespawnPlayer puts the hero at the map's hero spawn).
  *
  * CopyProperties carries the seat and stats across a seamless travel. Holding them for a player who
  * disconnects and rejoins (World.cs holds the seat) arrives with WS-11's rejoin flow: AGameModeBase
@@ -24,6 +30,10 @@ class DFMATCH_API ADFPlayerState : public APlayerState
 public:
 	ADFPlayerState();
 
+	/** Match XP a reviver earns per revive (Step.cs:931). */
+	static constexpr int32 ReviveMatchXp = 5;
+
+	virtual void PostInitializeComponents() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void CopyProperties(APlayerState* PlayerState) override;
 
@@ -34,6 +44,9 @@ public:
 	int32 GetTowersBuilt() const { return TowersBuilt; }
 	int32 GetRevives() const { return Revives; }
 	int32 GetMatchXp() const { return MatchXp; }
+
+	/** WS-03's downed / revive / seat state for this player (ADR-0024). */
+	UDFHeroStateComponent* GetHeroState() const { return HeroState; }
 
 	// ---- host only ------------------------------------------------------------------------------
 	void SetSeat(int32 InSeat);
@@ -53,6 +66,12 @@ private:
 	void OnRep_Match();
 
 	void Changed();
+
+	void HandleHeroLifeEvent(EDFHeroLifeEvent Event, UDFHeroStateComponent* Reviver);
+	void MovePawnToHeroSpawn();
+
+	UPROPERTY(VisibleAnywhere, Category = "DF|Match")
+	TObjectPtr<UDFHeroStateComponent> HeroState;
 
 	UPROPERTY(ReplicatedUsing = OnRep_Match) int32 Seat = 0;
 	UPROPERTY(ReplicatedUsing = OnRep_Match) int32 Kills = 0;

@@ -96,7 +96,14 @@ public:
 	/** World.cs LaunchSeat: the lowest connected seat, 1 if nobody is seated. */
 	int32 GetLaunchSeat() const;
 
-	/** Host: just before a wave begins (WS-03 respawns players whose bleedout ran out). */
+	/**
+	 * Host: respawn every seated hero whose bleedout ran out (UDFHeroStateComponent::ShouldRespawnAtWaveBoundary).
+	 * Run at the wave boundary before OnWaveBoundary, as Step.cs UpdateWaves does; a hero still bleeding stays
+	 * down into the next wave.
+	 */
+	void HostRespawnBledOutHeroes();
+
+	/** Host: just before a wave begins, after bled-out heroes have respawned. */
 	FDFOnWaveBoundary OnWaveBoundary;
 	/** Host: a seat called the next wave early (WS-06 pays the early-call bonus, B§1.8). */
 	FDFOnEarlyCalled OnEarlyCalled;

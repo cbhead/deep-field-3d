@@ -6,6 +6,7 @@
 #include "DFPlayerState.h"
 #include "DFWorldSubsystem.h"
 #include "Engine/World.h"
+#include "Hero/DFHeroStateComponent.h"
 #include "LaneGraph/DFLaneGraphAsset.h"
 #include "Match/DFMatchSeams.h"
 #include "Net/UnrealNetwork.h"
@@ -180,6 +181,23 @@ void ADFMatchState::BindDirector()
 	}
 }
 
+void ADFMatchState::HostRespawnBledOutHeroes()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	for (APlayerState* PlayerState : PlayerArray)
+	{
+		const ADFPlayerState* Seated = Cast<ADFPlayerState>(PlayerState);
+		UDFHeroStateComponent* Hero = Seated != nullptr ? Seated->GetHeroState() : nullptr;
+		if (Hero != nullptr && Hero->ShouldRespawnAtWaveBoundary())
+		{
+			Hero->HostRespawn();
+		}
+	}
+}
+
 int32 ADFMatchState::GetConnectedPlayerCount() const
 {
 	int32 Count = 0;
@@ -261,6 +279,7 @@ void ADFMatchState::ApplyStep(EDFMatchStep Step)
 	{
 		const int32 Wave = Machine.WaveIndex;
 		const int32 PreviousLap = Lap;
+		HostRespawnBledOutHeroes();
 		OnWaveBoundary.Broadcast(Wave);
 		if (Director && Director->IsConfigured() && !Director->BeginWave(Wave, PlayersForPlan()))
 		{

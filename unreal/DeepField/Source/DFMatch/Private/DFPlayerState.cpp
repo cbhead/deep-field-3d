@@ -1,11 +1,92 @@
 #include "DFPlayerState.h"
 
+#include "DFEventRelay.h"
+#include "DFGameplayTags.h"
+#include "Engine/World.h"
+#include "GameFramework/Controller.h"
+#include "GameFramework/GameModeBase.h"
+#include "GameFramework/Pawn.h"
+#include "Messages/DFMessages.h"
 #include "Net/UnrealNetwork.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DFPlayerState)
 
+namespace DFPlayerStatePrivate
+{
+	FDFMsg_Player PlayerMessage(const ADFPlayerState& State)
+	{
+		FDFMsg_Player Msg;
+		Msg.PlayerId = State.GetSeat();
+		Msg.Name = FName(*State.GetPlayerName());
+		if (const APawn* Pawn = State.GetPawn())
+		{
+			Msg.Location = Pawn->GetActorLocation();
+		}
+		return Msg;
+	}
+}
+
 ADFPlayerState::ADFPlayerState()
 {
+	HeroState = CreateDefaultSubobject<UDFHeroStateComponent>(TEXT("HeroState"));
+}
+
+void ADFPlayerState::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	// Only the host raises life events, so binding on every machine is harmless and keeps one path.
+	HeroState->OnHeroLifeEvent.AddUObject(this, &ADFPlayerState::HandleHeroLifeEvent);
+}
+
+void ADFPlayerState::HandleHeroLifeEvent(EDFHeroLifeEvent Event, UDFHeroStateComponent* Reviver)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	switch (Event)
+	{
+	case EDFHeroLifeEvent::Downed:
+	case EDFHeroLifeEvent::SoloDowned:
+		// Step.cs emits PlayerDowned for both.
+		ADFEventRelay::Publish(this, DFTags::Message_PlayerDowned, DFPlayerStatePrivate::PlayerMessage(*this));
+		break;
+
+	case EDFHeroLifeEvent::Revived:
+	{
+		ADFPlayerState* By = Reviver != nullptr ? Cast<ADFPlayerState>(Reviver->GetOwner()) : nullptr;
+		FDFMsg_Player Msg = By != nullptr ? DFPlayerStatePrivate::PlayerMessage(*By) : FDFMsg_Player();
+		Msg.TargetPlayerId = Seat;
+		if (By != nullptr)
+		{
+			By->AddRevive();
+			By->AddMatchXp(ReviveMatchXp);
+		}
+		ADFEventRelay::Publish(this, DFTags::Message_PlayerRevived, Msg);
+		break;
+	}
+
+	case EDFHeroLifeEvent::Respawned:
+		MovePawnToHeroSpawn();
+		ADFEventRelay::Publish(this, DFTags::Message_PlayerRespawned, DFPlayerStatePrivate::PlayerMessage(*this));
+		break;
+	}
+}
+
+void ADFPlayerState::MovePawnToHeroSpawn()
+{
+	APawn* Pawn = GetPawn();
+	AController* Controller = Cast<AController>(GetOwner());
+	UWorld* World = GetWorld();
+	AGameModeBase* GameMode = World != nullptr ? World->GetAuthGameMode() : nullptr;
+	if (Pawn == nullptr || Controller == nullptr || GameMode == nullptr)
+	{
+		return;
+	}
+	if (AActor* Start = GameMode->FindPlayerStart(Controller))
+	{
+		Pawn->TeleportTo(Start->GetActorLocation(), Start->GetActorRotation());
+	}
 }
 
 void ADFPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
