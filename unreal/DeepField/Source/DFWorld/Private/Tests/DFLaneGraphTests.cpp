@@ -574,6 +574,7 @@ bool FDFLaneGraphLevelFileVectorsTest::RunTest(const FString& Parameters)
 		{ TEXT("armory missing"),              TEXT(R"("armory":[1,0,0],)"),      TEXT(""),                    TEXT("armory") },
 		{ TEXT("heroSpawn is a number"),       TEXT(R"("heroSpawn":[0,0,0])"),    TEXT(R"("heroSpawn":5)"),    TEXT("heroSpawn") },
 		{ TEXT("route waypoint too short"),    TEXT(R"([10,0,0])"),               TEXT(R"([10,0])"),           TEXT("route 'r'") },
+		{ TEXT("node id carries an '@'"),      TEXT(R"("id":"start")"),           TEXT(R"("id":"st@rt")"),     TEXT("laneNodeNames 'st@rt'") },
 	};
 	for (const FCase& Case : Cases)
 	{

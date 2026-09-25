@@ -188,7 +188,75 @@ bool UDFMapValidateCommandlet::ValidateMap(const FString& MapId, TArray<FResult>
 	OutResults.Add(CheckSocketOffset(*Graph));
 	OutResults.Add(CheckCorridor(*Graph));
 	OutResults.Add(CheckCoverage(World, *Graph, MapId));
+	OutResults.Add(CheckRouteIds(*Graph, MapId));
 	return true;
+}
+
+FString UDFMapValidateCommandlet::WaveTablePath(const FString& MapId)
+{
+	return FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectDir(), TEXT("../content/json"), FString::Printf(TEXT("waves_%s.json"), *MapId)));
+}
+
+UDFMapValidateCommandlet::FResult UDFMapValidateCommandlet::CheckRouteIds(const UDFLaneGraphAsset& Graph, const FString& MapId)
+{
+	// CONTRACTS/map-authoring-3d.md "Route ids are referenced by the wave tables": every routeId in
+	// waves_<map>.json names an itinerary in the lane graph. Read from the JSON (the source of truth,
+	// ADR-0005), not the imported DataTable, so a stale DT_Waves cannot hide a rename.
+	FResult R;
+	R.Rule = TEXT("routeIds");
+	const FString WavePath = WaveTablePath(MapId);
+	const FString LevelPath = FDFLevelFile::ResolvePath(MapId, /*bPreferLegacy*/ false);
+	const FString LevelName = LevelPath.IsEmpty() ? MapId + TEXT(".level.json") : FPaths::GetCleanFilename(LevelPath);
+	if (!FPaths::FileExists(WavePath))
+	{
+		R.Status = EStatus::Skip;
+		R.Notes.Add(FString::Printf(TEXT("no wave table at %s"), *WavePath));
+		return R;
+	}
+
+	FString Text;
+	TSharedPtr<FJsonObject> Root;
+	const TArray<TSharedPtr<FJsonValue>>* Rows = nullptr;
+	const bool bRead = FFileHelper::LoadFileToString(Text, *WavePath);
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Text);
+	if (!bRead || !FJsonSerializer::Deserialize(Reader, Root) || !Root.IsValid()
+		|| !Root->TryGetArrayField(TEXT("rows"), Rows) || !Rows)
+	{
+		R.Status = EStatus::Fail;
+		R.Notes.Add(FString::Printf(TEXT("%s is not a readable wave table (no \"rows\" array)"), *WavePath));
+		return R;
+	}
+
+	TSet<FName> Checked;
+	for (const TSharedPtr<FJsonValue>& Value : *Rows)
+	{
+		const TSharedPtr<FJsonObject>* Row = nullptr;
+		if (!Value.IsValid() || !Value->TryGetObject(Row) || !Row) { continue; }
+		FString RowId;
+		FString RouteText;
+		(*Row)->TryGetStringField(TEXT("id"), RowId);
+		(*Row)->TryGetStringField(TEXT("routeId"), RouteText);
+		const FName RouteId(*RouteText);
+		if (RouteId.IsNone())
+		{
+			R.Status = EStatus::Fail;
+			R.Notes.Add(FString::Printf(TEXT("waves_%s.json row %s has no routeId"), *MapId, *RowId));
+			continue;
+		}
+		Checked.Add(RouteId);
+		if (!Graph.FindItinerary(RouteId))
+		{
+			R.Status = EStatus::Fail;
+			R.Notes.Add(FString::Printf(TEXT("waves_%s.json row %s names route '%s', which is no itinerary in %s — rename it in both files in the same PR"),
+				*MapId, *RowId, *RouteId.ToString(), *LevelName));
+		}
+	}
+	TArray<FString> Names;
+	for (const FName& Id : Checked) { Names.Add(Id.ToString()); }
+	Names.Sort();
+	R.Notes.Insert(FString::Printf(TEXT("%d row(s), route(s) {%s} against %d itinerary(ies) in %s"),
+		Rows->Num(), *FString::Join(Names, TEXT(", ")), Graph.Itineraries.Num(), *LevelName), 0);
+	return R;
 }
 
 UDFMapValidateCommandlet::FResult UDFMapValidateCommandlet::CheckSealing(const UDFLaneGraphAsset& Graph)
