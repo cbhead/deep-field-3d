@@ -15,7 +15,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/../.." && pwd)"
 UE_ROOT="${UE_ROOT:-/Users/Shared/Epic Games/UE_5.8}"
 PROJECT="$REPO/unreal/DeepField/DeepField.uproject"
-# The landing gate, defined once here so int-merge and ci-local inherit it (pr-check.sh still defaults to DF.Unit+DF.Content).
+# The landing gate, defined once here so int-merge, ci-local and pr-check all inherit it.
 # check-test-coverage.py fails if a registered DF.* suite is missing from this list without a
 # recorded reason — the gate ran DF.Unit+DF.Content for weeks while four suites gated nothing.
 # NOTE on filter semantics: the automation filter is a case-insensitive SUBSTRING match, not a

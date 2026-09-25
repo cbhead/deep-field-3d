@@ -227,9 +227,9 @@ condition against the new join path before relying on it (PLAN/NEXT.md).
 
 ### 5.4 Before you open a PR
 
-This is the job `Build/pr-check.sh` did, run against the full landing gate rather than that script's
-`DF.Unit+DF.Content` default, since the gate is what your branch will be landed on: `deepfield check`,
-then your workstream's ownership check, then `deepfield test`. Add §5.3 if you touched anything networked.
+This is `Build/pr-check.sh`'s job: `deepfield check`, then your workstream's ownership check, then
+`deepfield test` with no filter, which is the full landing gate, the same tests your branch will be
+landed on. A filtered run is for iterating, not for a PR. Add §5.3 if you touched anything networked.
 
 ```bat
 python unreal\Build\ownership-check.py --ws <NN> --base origin/unreal/main

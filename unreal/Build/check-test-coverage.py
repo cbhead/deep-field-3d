@@ -9,8 +9,8 @@ that does not exist. This makes the omission fail a check.
   python3 unreal/Build/check-test-coverage.py            # exit 1 if a suite is outside the gate
   python3 unreal/Build/check-test-coverage.py --list      # print the roots it found and where
 
-The gate filter is test.sh's own default (DF_GATE_FILTER), so there is exactly one definition, and
-int-merge and ci-local inherit it (pr-check.sh still defaults to DF.Unit+DF.Content).
+The gate filter is test.sh's own default (DF_GATE_FILTER), so there is exactly one definition and
+int-merge, ci-local and pr-check all inherit it.
 """
 from __future__ import annotations
 import re, subprocess, sys

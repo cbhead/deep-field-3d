@@ -185,7 +185,7 @@ window zones that cannot mean anything under `-nullrhi` with no real window.
    `DF_GATE_FILTER` for that reason.
 2. **A filter that omits a suite is indistinguishable from a suite that does not exist**, which is why
    this went unnoticed for weeks. So the gate is now defined **once**, as `DF_GATE_FILTER` in
-   `test.sh` — `int-merge` and `ci-local` pass no filter and inherit it (correction, 2026-09-25: `pr-check.sh` does not; its default is still `DF.Unit+DF.Content`) — and
+   `test.sh` — `int-merge`, `ci-local` and `pr-check` pass no filter and inherit it (pr-check only since 2026-09-25; until then it defaulted to `DF.Unit+DF.Content` despite this line) — and
    `check-test-coverage.py` fails a landing when a registered `DF.*` root is outside the gate without a
    recorded reason. Its `EXCLUDED` table holds `DF.Perf` and `DF.Soak` with the reason each cannot run
    in a landing. **An exclusion with a reason is a decision; an omission is an accident**, and the
