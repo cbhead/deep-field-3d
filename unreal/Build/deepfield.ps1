@@ -16,6 +16,12 @@
              plus your workstream's ownership check, the build, then the landing gate. The workstream
              comes from the branch name (ws/NN-slug/topic) or -Ws NN. A filter (`pr-check DF.Unit`)
              runs only that and is reported PARTIAL, never OK.
+    smoke    Build, then the network smoke (Build/smoke-listen.sh on Windows): a headless listen host
+             and -Clients N headless clients (default 1, at most 3) that must all be admitted and seated.
+    ci-local The INT pre-merge set and the nightly lane in one command (Build/ci-local.sh on Windows):
+             layering, ownership (-Ws, default INT), schemas, test coverage, plan-status (a warning
+             unless -Strict), build, the landing gate, the smoke. -Skip smoke,plan-status skips steps.
+             Stops at the first failure and prints a summary table either way.
     check    The fast repository checks (Python, no engine): layering, content schemas, test coverage.
     editor   Build, then open the Unreal editor on the project.
     play     Build, then run the game in a window. `-Map /Game/DF/Maps/Testlane/L_Testlane` for another map.
@@ -45,14 +51,16 @@
 .EXAMPLE
   deepfield pr-check -Ws 04
 .EXAMPLE
+  deepfield ci-local -Skip smoke
+.EXAMPLE
   deepfield play -Map /Game/DF/Maps/Testlane/L_Testlane
 #>
 [CmdletBinding()]
 param(
   [Parameter(Position = 0)]
-  [ValidateSet('setup', 'doctor', 'build', 'test', 'pr-check', 'check', 'editor', 'play', 'host', 'join', 'solution', 'help')]
+  [ValidateSet('setup', 'doctor', 'build', 'test', 'pr-check', 'smoke', 'ci-local', 'check', 'editor', 'play', 'host', 'join', 'solution', 'help')]
   [string]$Command = 'setup',
-  # test, pr-check: the automation filter (default: the landing gate from test.sh). join: the host address.
+  # test, pr-check, ci-local: the automation filter (default: the landing gate from test.sh). join: the host address.
   [Parameter(Position = 1)]
   [string]$Arg = '',
   # Where to clone when the script is not inside a clone. Default D:\DF\deepfield-3d, or C:\DF\deepfield-3d without a D: drive.
@@ -63,9 +71,16 @@ param(
   # setup: the branch to clone (default unreal/main), e.g. a PR branch to try before it merges.
   [string]$Branch = '',
   # pr-check: the workstream whose ownership globs apply (default: from the branch name ws/NN-slug/topic).
+  # ci-local: the ownership view (default INT, which lists everything and fails only on binaries outside every glob).
   [string]$Ws = '',
-  # pr-check: the ref the ownership check diffs against.
+  # pr-check, ci-local: the ref the ownership check diffs against.
   [string]$Base = 'origin/unreal/main',
+  # smoke, ci-local: how many headless clients join the listen host (1-3: the host takes one of the 4 seats).
+  [int]$Clients = 1,
+  # ci-local: steps to skip, e.g. -Skip smoke or -Skip smoke,plan-status.
+  [string[]]$Skip = @(),
+  # ci-local: a stale STATUS.md fails the run instead of warning.
+  [switch]$Strict,
   [int]$Port = 7777,
   # setup: keep the light clone (skip Megascans and the art/lighting sublevels, as the Mac does).
   [switch]$LightClone,
@@ -971,6 +986,150 @@ function Invoke-PrCheck([string]$Filter) {
   return $true
 }
 
+function Read-SharedText([string]$Path) {
+  # A log the engine may still be writing: open it shared, and read a missing file as empty.
+  if (-not (Test-Path $Path)) { return '' }
+  $fs = $null; $sr = $null
+  try {
+    $fs = New-Object IO.FileStream($Path, [IO.FileMode]::Open, [IO.FileAccess]::Read, ([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
+    $sr = New-Object IO.StreamReader($fs)
+    return $sr.ReadToEnd()
+  } catch { return '' } finally { if ($sr) { $sr.Dispose() } elseif ($fs) { $fs.Dispose() } }
+}
+
+function Invoke-Smoke([int]$ClientCount, [int]$SmokePort) {
+  # Build/smoke-listen.sh on Windows: a headless listen host and N headless clients that join it (the
+  # stand-in for DF.Net.ListenHostPlusClient). The pass condition, re-derived against the join path PR #48
+  # added (ADFGameMode::PreLogin asks the C14 join validators before anyone is admitted):
+  #   - every client logs 'Welcomed by server'. The server sends it only after PreLogin accepted the
+  #     connection. ('Bringing up level for play took' is not enough: a client that fails to connect
+  #     falls back to its default map and logs that too.)
+  #   - the host logs 'player joined' (ADFGameMode::PostLogin, after PreLogin) for its own player and
+  #     for each client, every one of them seated (seat 1-4, never 0);
+  #   - the host logs no 'join refused' (PreLogin's refusal, with its reason).
+  # A bare 127.0.0.1 join is admitted by UDFOnlineSubsystem's dev-join branch: a '?listen' host is not a
+  # hosted session, so there is no handshake to check. The run reports when that branch was taken.
+  if ($ClientCount -lt 1 -or $ClientCount -gt 3) { Fail "the smoke takes 1 to 3 clients, not $ClientCount" 'The host takes one of the 4 seats (ADFGameMode::MaxSeats).'; return $false }
+  $p = Get-Paths
+  $logs = Join-Path $p.Saved 'Logs'
+  New-Item -ItemType Directory -Force -Path $logs | Out-Null
+  $hostLog = Join-Path $logs 'smoke-host.log'
+  $clientLogs = @(1..$ClientCount | ForEach-Object { Join-Path $logs "smoke-client-$_.log" })
+  Remove-Item -Path (@($hostLog) + $clientLogs) -Force -ErrorAction SilentlyContinue
+  $common = @('-game', '-nullrhi', '-unattended', '-nop4', '-nosplash', '-NoSound', '-log')
+  $timeout = 180; if ($env:DF_SMOKE_TIMEOUT) { $timeout = [int]$env:DF_SMOKE_TIMEOUT }
+  $need = $ClientCount + 1
+  Write-Step "Smoke: a listen host and $ClientCount client(s) on $Map (port $SmokePort)"
+  Write-Info "headless editors, up to $timeout s for the joins. Logs: $logs\smoke-*.log"
+  $procs = New-Object System.Collections.ArrayList
+  try {
+    $hostArgs = @("`"$($script:Project)`"", "$Map`?listen", "-port=$SmokePort") + $common + @("-abslog=`"$hostLog`"")
+    [void]$procs.Add((Start-Process $p.EditorCmd -ArgumentList $hostArgs -PassThru -WindowStyle Hidden))
+    $until = (Get-Date).AddSeconds(120)   # the host brings its map up first
+    while ((Get-Date) -lt $until -and (Read-SharedText $hostLog) -notmatch 'LogNet: .*listening|LogWorld: Bringing up level|Game class is') { Start-Sleep -Seconds 1 }
+    Start-Sleep -Seconds 5
+    for ($c = 1; $c -le $ClientCount; $c++) {
+      $clientArgs = @("`"$($script:Project)`"", "127.0.0.1:$SmokePort") + $common + @("-abslog=`"$($clientLogs[$c - 1])`"")
+      [void]$procs.Add((Start-Process $p.EditorCmd -ArgumentList $clientArgs -PassThru -WindowStyle Hidden))
+      if ($c -lt $ClientCount) { Start-Sleep -Seconds 4 }
+    }
+    $until = (Get-Date).AddSeconds($timeout)
+    while ((Get-Date) -lt $until) {
+      $h = Read-SharedText $hostLog
+      if ($h -match 'join refused') { break }
+      $joined = ([regex]::Matches($h, 'player joined: ')).Count
+      $welcomed = @($clientLogs | Where-Object { (Read-SharedText $_) -match 'Welcomed by server' }).Count
+      if ($joined -ge $need -and $welcomed -eq $ClientCount) { break }
+      if (@($procs | Where-Object { $_.HasExited }).Count -gt 0) { break }   # an editor that died will not join
+      Start-Sleep -Seconds 1
+    }
+    Start-Sleep -Seconds 5
+  } finally {
+    foreach ($pr in $procs) { if ($pr -and -not $pr.HasExited) { Stop-Process -Id $pr.Id -Force -ErrorAction SilentlyContinue } }
+  }
+
+  $h = Read-SharedText $hostLog
+  Write-Host '   -- host'
+  @($h -split "`r?`n" | Where-Object { $_ -match 'player joined|join refused|join rejected|dev join|LogNet: .*listening|Error:' } | Select-Object -First 25) | ForEach-Object { Write-Info $_.Trim() }
+  $problems = @()
+  foreach ($m in [regex]::Matches($h, 'join refused \(([^)]*)\)')) { $problems += "the host refused a client ($($m.Groups[1].Value))" }
+  $joins = @([regex]::Matches($h, 'player joined: \S+ \(seat (\d+)\)'))
+  if ($joins.Count -lt $need) { $problems += "the host saw $($joins.Count) player(s) join, needed $need (its own player + $ClientCount client(s))" }
+  $unseated = @($joins | Where-Object { $_.Groups[1].Value -eq '0' }).Count
+  if ($unseated -gt 0) { $problems += "$unseated player(s) joined without a seat (seat 0)" }
+  for ($c = 1; $c -le $ClientCount; $c++) {
+    $t = Read-SharedText $clientLogs[$c - 1]
+    Write-Host "   -- client $c"
+    @($t -split "`r?`n" | Where-Object { $_ -match 'Welcomed by server|Bringing up level|Failure|Error:' } | Select-Object -First 25) | ForEach-Object { Write-Info $_.Trim() }
+    if ($t -notmatch 'Welcomed by server') { $problems += "client $c was never admitted (no 'Welcomed by server' in its log)" }
+  }
+  if ($problems.Count -gt 0) { Fail "the smoke failed: $($problems -join '; ')" "Logs: $logs\smoke-*.log"; return $false }
+  $dev = ([regex]::Matches($h, 'dev join')).Count
+  if ($dev -gt 0) { Write-Info "admitted through the dev-join branch ($dev): a bare IP join to a '?listen' host. A hosted session runs the full handshake." }
+  Write-Ok "host + $ClientCount client(s) joined $Map, seats $(($joins | ForEach-Object { $_.Groups[1].Value }) -join ', ')"
+  return $true
+}
+
+function Invoke-CiLocal([string]$Filter, [int]$ClientCount, [int]$SmokePort) {
+  # Build/ci-local.sh on Windows: the INT pre-merge set (PROGRAMME.md 6.8), what the nightly lane runs and
+  # what INT runs on a rebased branch before it lands. Every step in order, stop at the first failure,
+  # and a summary table whatever happened. plan-status is a warning unless -Strict: claims and lease
+  # renewals land on unreal/main between INT cycles by design, so the committed STATUS.md is often stale.
+  $steps = @('layering', 'ownership', 'schema', 'coverage', 'plan-status', 'build', 'tests', 'smoke')
+  $skipList = @($Skip | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+  foreach ($s in $skipList) { if ($steps -notcontains $s) { Fail "unknown step '$s' in -Skip" "The steps are: $($steps -join ' ')"; return $false } }
+  $wsId = $Ws; if (-not $wsId) { $wsId = 'INT' }
+  $build = Join-Path $script:Repo 'unreal\Build'
+  $result = @{}; $secs = @{}
+  foreach ($s in $steps) { $result[$s] = 'not run'; $secs[$s] = '' }
+  $warned = @(); $failedStep = ''; $t0 = Get-Date
+  $start = Get-Date
+  try {
+    foreach ($s in $steps) {
+      if ($skipList -contains $s) { $result[$s] = 'skipped'; Write-Step "$($s): skipped"; continue }
+      $failedStep = $s   # until it passes: a step that stops the script (Fail) is recorded as the failure
+      $t0 = Get-Date
+      $ok = $false
+      switch ($s) {
+        'layering'    { $ok = ((Invoke-Python @((Join-Path $build 'layering-check.py'))) -eq 0) }
+        'ownership'   { $ok = ((Invoke-Python @((Join-Path $build 'ownership-check.py'), '--ws', $wsId, '--base', $Base)) -eq 0) }
+        'schema'      { $ok = ((Invoke-Python @((Join-Path $build 'validate-content-json.py'))) -eq 0) }
+        'coverage'    { $ok = ((Invoke-Python @((Join-Path $build 'check-test-coverage.py'))) -eq 0) }
+        'plan-status' { $ok = ((Invoke-Python @((Join-Path $build 'plan-status.py'), '--check')) -eq 0) }
+        'build'       { $ok = (Invoke-Build) }
+        'tests'       { $ok = (Invoke-Tests $Filter) }
+        'smoke'       { $ok = (Invoke-Smoke $ClientCount $SmokePort) }
+      }
+      $secs[$s] = [int]((Get-Date) - $t0).TotalSeconds
+      if (-not $ok) {
+        if ($s -eq 'plan-status' -and -not $Strict) {
+          $result[$s] = 'WARN'; $warned += $s; $failedStep = ''
+          Write-Warn2 'STATUS.md is stale (not blocking; -Strict makes it fail). Regenerate: python unreal\Build\plan-status.py, then commit it.'
+          continue
+        }
+        $result[$s] = 'FAIL'
+        Fail "ci-local failed at $s" 'The output above says what is wrong.'
+        return $false
+      }
+      $result[$s] = 'ok'; $failedStep = ''
+    }
+  } catch [System.OperationCanceledException] {
+    if ($failedStep) { $result[$failedStep] = 'FAIL'; if ($secs[$failedStep] -eq '') { $secs[$failedStep] = [int]((Get-Date) - $t0).TotalSeconds } }
+    throw
+  } finally {
+    Write-Host ''
+    Write-Host "ci-local summary ($([int]((Get-Date) - $start).TotalSeconds) s total)"
+    Write-Host ('  {0,-12} {1,-9} {2}' -f 'step', 'result', 'seconds')
+    foreach ($s in $steps) { Write-Host ('  {0,-12} {1,-9} {2}' -f $s, $result[$s], $secs[$s]) }
+    if ($failedStep) { Write-Host "ci-local: FAILED at $failedStep" -ForegroundColor Red }
+    elseif ($Filter -and $skipList -notcontains 'tests') { Write-Host "ci-local: PARTIAL (tests: $Filter only, not the landing gate)" -ForegroundColor Yellow }
+    elseif ($warned.Count -gt 0) { Write-Host "ci-local: OK with warnings ($($warned -join ', '))" -ForegroundColor Yellow }
+    elseif ($skipList.Count -gt 0) { Write-Host "ci-local: OK, with $($skipList -join ', ') skipped" -ForegroundColor Yellow }
+    else { Write-Host 'ci-local: OK' -ForegroundColor Green }
+  }
+  return $true
+}
+
 function Start-Game([string[]]$Extra, [string]$What) {
   $p = Get-Paths
   $log = Join-Path $p.Saved "Logs\$What.log"
@@ -1044,11 +1203,11 @@ try {
     $script:Repo = @(Find-ExistingClones) | Select-Object -First 1
     if (-not $script:Repo) { Fail 'no clone found' 'Run: deepfield setup' }
     $script:Project = Join-Path $script:Repo 'unreal\DeepField\DeepField.uproject'
-    if (@('check', 'pr-check') -contains $Command) {
+    if (@('check', 'pr-check', 'ci-local') -contains $Command) {
       $script:Python = Find-Python
       if (-not $script:Python) { Fail 'Python is not installed' 'Run: deepfield setup' }
     }
-    if ($Command -eq 'pr-check') {
+    if (@('pr-check', 'ci-local') -contains $Command) {
       # The ownership check runs git from Python, so git must be on PATH for this process and its
       # children; use an installed-but-off-PATH Git (as setup does) rather than failing.
       if (-not (Get-Command git -ErrorAction SilentlyContinue)) { $off = Find-GitOffPath; if ($off) { $env:Path = "$off;$env:Path" } }
@@ -1058,12 +1217,14 @@ try {
       Read-EngineAssociation
       $script:Engine = Find-Engine $script:EngineAssociation
       if (-not $script:Engine) { Fail "Unreal Engine $($script:EngineAssociation) is not installed" 'Run: deepfield setup' }
-      if (@('build', 'test', 'pr-check', 'editor', 'play', 'host', 'join') -contains $Command -and -not (Get-VsVerdict | Where-Object { $_.Good.Count -gt 0 })) {
+      if (@('build', 'test', 'pr-check', 'smoke', 'ci-local', 'editor', 'play', 'host', 'join') -contains $Command -and -not (Get-VsVerdict | Where-Object { $_.Good.Count -gt 0 })) {
         Fail 'Visual Studio with an MSVC toolset UE 5.8 accepts is not installed' 'Run: deepfield setup'
       }
     }
   }
 
+  # The smoke's own port, so it never collides with a `deepfield host` on 7777; -Port overrides it.
+  $smokePort = 7788; if ($PSBoundParameters.ContainsKey('Port')) { $smokePort = $Port }
   switch ($Command) {
     'doctor' {
       Write-Host ''
@@ -1086,6 +1247,8 @@ try {
     'build'    { [void](Invoke-Build) }
     'test'     { if (Invoke-Build) { [void](Invoke-Tests $Arg) } }
     'pr-check' { [void](Invoke-PrCheck $Arg) }
+    'smoke'    { if (Invoke-Build) { [void](Invoke-Smoke $Clients $smokePort) } }
+    'ci-local' { [void](Invoke-CiLocal -Filter $Arg -ClientCount $Clients -SmokePort $smokePort) }
     'check'    { Invoke-RepoChecks }
     'editor'   {
       if (Invoke-Build) {

@@ -1,6 +1,6 @@
 @echo off
 rem Deep Field 3D (Unreal) on Windows: double-click to set this machine up and build,
-rem or run from a terminal:  deepfield [setup|doctor|build|test|pr-check|check|editor|play|host|join|solution|help]
+rem or run from a terminal:  deepfield [setup|doctor|build|test|pr-check|smoke|ci-local|check|editor|play|host|join|solution|help]
 rem Everything is in Build\deepfield.ps1; this file only starts it past the execution policy.
 setlocal
 set "DF_PAUSE="

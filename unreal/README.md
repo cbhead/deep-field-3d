@@ -7,8 +7,9 @@ one script, `Build/deepfield.ps1`, does the setup and the everyday jobs.
 
 - **To set up a machine and play, build or test:** [§1](#1-set-up-and-run-one-script), and nothing
   else, is enough.
-- **For the jobs the script does not do** (the map validator, the network smoke, the pre-PR checks,
-  packaging, the importers): §3–§7, using the engine's own commands.
+- **For the jobs the script does not do** (the map validator, packaging, the importers): §5.2, §6.3
+  and §7, using the engine's own commands. §3–§5 also explain what `check`, `build`, `test`,
+  `smoke`, `pr-check` and `ci-local` do and what they print.
 - **Commissioning the GPU box** (first light, the first package, the floating-point check, the CI
   runner) is tracked in [Build/windows-bringup.md](Build/windows-bringup.md). What the box
   measurably has right now is in [Build/machines/windows-gpu.md](Build/machines/windows-gpu.md).
@@ -80,6 +81,8 @@ It ends with `setup: done`. From then on, in a terminal in the clone's `unreal\`
 | `deepfield editor` | Builds if needed, then opens the Unreal editor. The first open compiles shaders: slow once, fast afterwards. |
 | `deepfield test [filter]` | Builds, then runs the automated tests headless and prints PASS/FAIL per test. No filter = the landing gate from `Build/test.sh`. Example: `deepfield test DF.Unit.Tower`. |
 | `deepfield pr-check` | Everything to run before opening a PR: the repository checks, your workstream's ownership check, the build, then the landing gate ([§5.4](#54-before-you-open-a-pr)). |
+| `deepfield smoke` | Builds, then a headless listen host and client(s) that must join it ([§5.3](#53-the-network-smoke-test-a-listen-host-and-headless-clients)). |
+| `deepfield ci-local` | Everything CI and a landing run, in order, with a summary table ([§5.5](#55-the-full-pre-merge-set)). |
 | `deepfield check` | The repository checks that need no engine (layering, content schemas, test coverage). Seconds. |
 | `deepfield build` | Only the build (DeepFieldEditor Win64 Development). |
 | `deepfield solution` | Generates `DeepField.sln` for working on the C++ in Visual Studio or Rider. |
@@ -196,33 +199,32 @@ report: `unreal\DeepField\Saved\Automation\Reports\test-<filter>\index.html`.
 **What you should see:** one `DFMapValidate <map>: N pass, 0 fail, …` line per map, and exit code 0.
 Failures listed in `unreal/map-validation-baseline.tsv` show as warnings, not errors.
 
-### 5.3 The network smoke test (a listen host and a headless client)
-
-This is what `Build/smoke-listen.sh` did. Start the host in its own window:
+### 5.3 The network smoke test (a listen host and headless clients)
 
 ```bat
-start "df-host" "%UE%" "%PROJ%" /Game/DF/Dev/L_Dev_Empty?listen -port=7788 -game -nullrhi -unattended -nop4 -nosplash -NoSound -log -abslog="%CD%\unreal\DeepField\Saved\Logs\smoke-host.log"
+unreal\deepfield smoke
 ```
 
-Once the host's log shows its map is up (about 30 s), start a client:
+It builds, then starts a headless listen host on `/Game/DF/Dev/L_Dev_Empty` (port 7788, so it never
+collides with a `deepfield host` on 7777) and one headless client that joins it. `-Clients 2` or `3`
+adds more (the host takes one of the four seats), `-Map` picks another map and `-Port` another port.
+Logs: `unreal\DeepField\Saved\Logs\smoke-host.log` and `smoke-client-<n>.log`.
 
-```bat
-start "df-client-1" "%UE%" "%PROJ%" 127.0.0.1:7788 -game -nullrhi -unattended -nop4 -nosplash -NoSound -log -abslog="%CD%\unreal\DeepField\Saved\Logs\smoke-client-1.log"
-```
+**What you should see:** `[ OK ] host + 1 client(s) joined /Game/DF/Dev/L_Dev_Empty, seats 1, 2`. The
+pass condition was re-derived against the join path PR #48 added, where `ADFGameMode::PreLogin` asks the
+join validators before anyone is admitted:
 
-After another 30 s or so, check both logs:
+- every client logs `Welcomed by server`, which the server sends only after `PreLogin` accepts. A
+  client's `Bringing up level for play took` is not proof: a client that fails to connect loads its own
+  default map and logs that too, which the old check accepted;
+- the host logs `player joined` (`PostLogin`, after `PreLogin`) for its own player and every client,
+  each with a seat from 1 to 4, never 0;
+- the host logs no `join refused`. If it does, the smoke names the reason.
 
-```bat
-findstr /c:"player joined" unreal\DeepField\Saved\Logs\smoke-host.log
-findstr /c:"Welcomed by server" /c:"Bringing up level for play took" unreal\DeepField\Saved\Logs\smoke-client-1.log
-```
-
-**What you should see:** two `player joined` lines in the host log (the host's own player, then the
-client) and at least one line from the client log. Then close both windows. For more clients, start
-more with their own `smoke-client-<n>.log`; the host then needs one `player joined` per client, plus one.
-**Treat a green smoke with care for now:** since PR #48, every join goes through
-`ValidateJoinOptions`, which did not exist when this pass condition was chosen. Re-derive the
-condition against the new join path before relying on it (PLAN/NEXT.md).
+A bare `127.0.0.1` join is admitted through the online subsystem's dev-join branch, because a `?listen`
+host is not a hosted session and there is no handshake to check. The smoke says when that happened.
+The full handshake (version, content hash, approval) needs a hosted EOS session, which is WS-11's
+verification.
 
 `deepfield host` and `deepfield join <ip>` do the same with a real window, for playing rather than testing.
 
@@ -240,11 +242,27 @@ changes the ref the ownership check diffs against (default `origin/unreal/main`)
 **What you should see:** `pr-check: OK (WS-NN)`. It stops at the first failing step and says which. A
 filter (`deepfield pr-check DF.Unit.Tower`) runs only those tests, for iterating, and ends
 `pr-check: PARTIAL` rather than `OK`: run it without a filter before opening the PR. It does not run the
-smoke, so add §5.3 if you touched anything networked.
+smoke, so add `deepfield smoke` (§5.3) if you touched anything networked.
 
 In the ownership check, a binary outside your workstream's globs in `PLAN/OWNERSHIP.md` is a violation.
 A text file outside them is a warning: open a PR to the owner, or write an RFC. Landing goes through INT, never the GitHub
 merge button, because the button skips the only step that compiles (CONTRACTS/ci.md, 2026-09-25).
+
+### 5.5 The full pre-merge set
+
+```bat
+unreal\deepfield ci-local
+```
+
+What the nightly lane runs, and what INT runs on a rebased branch before it lands (`Build/ci-local.sh`'s
+job): layering, ownership in the INT view (`-Ws NN` for a workstream's), content schemas, test coverage,
+the `STATUS.md` check, the build, the landing gate, then the smoke. It stops at the first failure and
+prints a summary table either way, ending `ci-local: OK`.
+
+- A stale `STATUS.md` is a `WARN`, not a failure: claims and lease renewals land on `unreal/main`
+  between INT cycles by design. `-Strict` makes it fail.
+- `-Skip smoke` (or `-Skip smoke,plan-status`) skips steps, and the verdict says which. A test filter
+  ends the run `PARTIAL`, as with pr-check. `-Clients` and `-Port` go to the smoke.
 
 ---
 

@@ -30,8 +30,8 @@ the script turned out different, fix it in the same PR.
 - [ ] Runbook §3 checks pass, and §5.1 (`deepfield test`) passes the landing gate. This is the suite's
       first MSVC verdict, since every earlier run was Apple clang on the retired Mac. Record the count.
       It is also the first build of PR #51, which has never been compiled (PLAN/NEXT.md).
-- [ ] Runbook §5.2 (map validator) and §5.3 (listen-host smoke) pass, with the smoke's pass condition
-      re-derived first (runbook §5.3).
+- [ ] Runbook §5.2 (map validator) and §5.3 (`deepfield smoke`) pass. Then `deepfield ci-local` runs
+      the whole pre-merge set end to end, which is also what the runner's nightly will run.
 
 ## 2. First light with a real RHI
 
@@ -84,8 +84,9 @@ produce the same bits everywhere pins its arithmetic with the `DF_DET_FP_*` prag
       self-hosted runner".
 - [ ] Decide **service or interactive** for each lane, and note the choice in `CONTRACTS/ci.md`
       (WS-15 owns it).
-- [ ] The Windows workflow, and the ports of `ci-local.sh` and `int-merge.sh` onto `deepfield.ps1`
-      (`pr-check.sh` already is `deepfield pr-check`), are WS-15 work and the first thing worth doing once this section is green. Until
+- [ ] The Windows workflow (its steps: `unreal\deepfield ci-local`) and the port of `int-merge.sh` onto
+      `deepfield.ps1` (`pr-check`, `smoke` and `ci-local` already are deepfield commands) are WS-15
+      work and the first thing worth doing once this section is green. Until
       they exist, GitHub proves nothing about the Unreal tree beyond the hosted Python checks. Once the
       runner's check is green, requiring it on `unreal/main` through branch protection is the owner's
       call (CONTRACTS/ci.md, 2026-09-25).

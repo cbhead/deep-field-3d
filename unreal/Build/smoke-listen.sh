@@ -1,8 +1,10 @@
 #!/bin/zsh
 # WS-00 smoke (PROGRAMME.md §5.1 DoD, §7 DF.Net.ListenHostPlusClient stand-in until Gauntlet): a
 # listen host on L_Dev_Empty and one or more clients that join it, all headless (-nullrhi). Prints
-# the join lines from every log and exits 0 only if every client reached the host's map and the
-# host saw each of them join.
+# the join lines from every log and exits 0 only if every client was admitted ('Welcomed by server',
+# sent only after ADFGameMode::PreLogin's join validators accept), the host saw each of them join,
+# seated (seat > 0), and the host refused no one ('join refused'). deepfield.ps1's `smoke` is the
+# Windows twin and keeps the same condition.
 #   unreal/Build/smoke-listen.sh                                  # host + 1 client on /Game/DF/Dev/L_Dev_Empty
 #   unreal/Build/smoke-listen.sh -client-count 2                  # host + 2 clients
 #   unreal/Build/smoke-listen.sh /Game/DF/Maps/Foundry/L_Foundry  # another map (or -map <path>)
@@ -23,7 +25,7 @@ while [ $# -gt 0 ]; do
     -client-count|--client-count) CLIENTS="$2"; shift 2 ;;
     -map|--map) MAP="$2"; shift 2 ;;
     -port|--port) PORT="$2"; shift 2 ;;
-    -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
     -*) echo "smoke: unknown option $1" >&2; exit 2 ;;
     *) MAP="$1"; shift ;;
   esac
@@ -56,10 +58,12 @@ done
 # The listen host's own player is the first "player joined"; the clients are the rest.
 NEED=$((CLIENTS + 1))
 joined() { [ "$(grep -c "player joined" "$LOGS/smoke-host.log" 2>/dev/null)" -ge "$NEED" ]; }
-welcomed() { grep -qE "Welcomed by server|Bringing up level for play took" "$LOGS/smoke-client-$1.log" 2>/dev/null; }
+# 'Bringing up level for play took' is not proof: a client that fails to connect loads its default map.
+welcomed() { grep -q "Welcomed by server" "$LOGS/smoke-client-$1.log" 2>/dev/null; }
 all_welcomed() { for c in $(seq 1 "$CLIENTS"); do welcomed "$c" || return 1; done; return 0; }
 for i in $(seq 1 "$JOIN_TIMEOUT"); do
   joined && all_welcomed && break
+  grep -q "join refused" "$LOGS/smoke-host.log" 2>/dev/null && break
   sleep 1
 done
 sleep 5
@@ -71,6 +75,12 @@ for c in $(seq 1 "$CLIENTS"); do
 done
 HOST_JOINS="$(grep -c "player joined" "$LOGS/smoke-host.log" 2>/dev/null || echo 0)"
 FAILED=0
+if grep -q "join refused" "$LOGS/smoke-host.log" 2>/dev/null; then
+  echo "smoke: the host refused a client: $(grep -o 'join refused ([^)]*)' "$LOGS/smoke-host.log" | head -3 | tr '\n' ' ')"; FAILED=1
+fi
+if grep -qE "player joined: .* \(seat 0\)" "$LOGS/smoke-host.log" 2>/dev/null; then
+  echo "smoke: a player joined without a seat (seat 0)"; FAILED=1
+fi
 [ "$HOST_JOINS" -ge "$NEED" ] || { echo "smoke: host saw $HOST_JOINS player(s) join, needed $NEED (host + $CLIENTS client(s))"; FAILED=1; }
 for c in $(seq 1 "$CLIENTS"); do
   welcomed "$c" || { echo "smoke: client $c never reached the host's map"; FAILED=1; }

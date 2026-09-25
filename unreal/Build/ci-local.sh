@@ -4,7 +4,7 @@
 #
 #   unreal/Build/ci-local.sh                         # everything, in order, stop at the first failure
 #   unreal/Build/ci-local.sh --skip smoke            # skip a step (repeatable): layering ownership schema coverage plan-status build tests smoke
-#   unreal/Build/ci-local.sh --filter DF.Unit        # test filter (default DF.Unit+DF.Content)
+#   unreal/Build/ci-local.sh --filter DF.Unit        # test filter (default: the landing gate, DF_GATE_FILTER in test.sh)
 #   unreal/Build/ci-local.sh --client-count 2        # smoke with two clients
 #   unreal/Build/ci-local.sh --ws 04 --base main     # ownership as a workstream against another base (default INT vs origin/unreal/main)
 #   unreal/Build/ci-local.sh --strict                # a stale STATUS.md fails the run instead of warning
@@ -12,6 +12,7 @@
 # Steps: layering-check.py · ownership-check.py · validate-content-json.py · check-test-coverage.py · plan-status.py --check ·
 # Build.sh DeepFieldEditor Mac Development (-WaitMutex: UBT serialises builds machine-wide) ·
 # editor-lock.sh test.sh <filter> · editor-lock.sh smoke-listen.sh (the lock is held for the whole smoke).
+# deepfield.ps1's `ci-local` is the Windows twin (same steps, same WARN rule for plan-status).
 # Prints a summary table on exit, whatever happened. Exit 1 on the first failing step.
 # plan-status is a WARNING by default: claims and lease renewals are pushed straight to unreal/main
 # between INT cycles (PROGRAMME.md §6.2), so the committed STATUS.md is stale most days and
@@ -37,7 +38,7 @@ while [ $# -gt 0 ]; do
     --base) BASE="$2"; shift 2 ;;
     --client-count) CLIENTS="$2"; shift 2 ;;
     --strict) STRICT=1; shift ;;
-    -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,21p' "$0"; exit 0 ;;
     *) echo "ci-local: unknown option $1" >&2; exit 2 ;;
   esac
 done

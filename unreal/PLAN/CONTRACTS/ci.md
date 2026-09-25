@@ -8,7 +8,7 @@
 |---|---|---|---|---|
 | `unreal-checks` | GitHub-hosted `ubuntu-latest` | every PR and every push to `unreal/main` touching `unreal/**`, `tools/**`, `sim/**`, the unreal workflows | `layering-check.py` · `ownership-check.py --ws <from the PR title> --base origin/<base>` · `validate-content-json.py` · `check-test-coverage.py` · `plan-status.py --check` (warning only) · `content-export --diff` (dotnet 8) | merge (except the STATUS.md warning) |
 | GPU box PR *(planned)* | self-hosted `[self-hosted, Windows, X64, deepfield]` | PRs targeting `unreal/main` from this repository | the python checks (INT view) + the `DeepFieldEditor Win64 Development` build | merge |
-| GPU box nightly *(planned)* | same | `cron 0 8 * * *` (03:00 America/Chicago in summer, 02:00 in winter — GitHub cron is UTC) and `workflow_dispatch` (input `ref`, default `unreal/main`) | the INT pre-merge set (PROGRAMME.md §6.8) on `unreal/main`: checks, build, the landing gate (`DF_GATE_FILTER`), listen-host smoke; a stale `STATUS.md` is a warning | the digest's "red tests" line |
+| GPU box nightly *(planned)* | same | `cron 0 8 * * *` (03:00 America/Chicago in summer, 02:00 in winter — GitHub cron is UTC) and `workflow_dispatch` (input `ref`, default `unreal/main`) | `deepfield ci-local`, the INT pre-merge set (PROGRAMME.md §6.8), on `unreal/main`: checks, build, the landing gate (`DF_GATE_FILTER`), listen-host smoke; a stale `STATUS.md` is a warning | the digest's "red tests" line |
 | GPU box render lanes *(planned)* | same, in an interactive session (below) | nightly | Gauntlet, visual (`DF.Vfx.EveryCueDraws`), perf (`DF.Perf.<Map>`), Windows packaging, the Game-target FP check (PROGRAMME.md §7) | the digest |
 
 *Planned* means the workflow and the Windows ports of the `unreal/Build/*.sh` scripts do not exist yet (WS-15). Until they do, `unreal-checks` is the only lane that runs on an Unreal PR, and verification is a by-hand run on the box (`unreal/README.md` §5.4).
@@ -207,8 +207,8 @@ message that never appears **does** fail the test. But:
 ## Every change to `unreal/main` goes through `int-merge` (INT, 2026-09-25)
 *(ADR-0028, the same day: `int-merge.sh` is Mac-only and now has no machine. The rule's substance
 stands unchanged: a branch lands only after a build, the landing gate and the smoke have run on the GPU
-box against the rebased tree — by hand, per `unreal/README.md` §3–§5, until WS-15 ports `int-merge`
-onto `deepfield.ps1`. The runner step below is `windows-bringup.md` §5.)*
+box against the rebased tree — `unreal\deepfield ci-local` in a throwaway worktree holding the rebased
+branch, then the push by hand, until WS-15 ports `int-merge` onto `deepfield.ps1`. The runner step below is `windows-bringup.md` §5.)*
 **The GitHub merge button bypasses the only step that compiles anything.** Three incidents through that
 one door, each worse than the last:
 
