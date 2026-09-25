@@ -1,0 +1,393 @@
+{
+    "generated":  "2026-09-24T23:37:01-04:00",
+    "generator":  "unreal/Build/machine-inventory.ps1",
+    "system":  {
+                   "hostname":  "CHANDLER-ALIEN",
+                   "manufacturer":  "Alienware",
+                   "model":  "Alienware Aurora ACT1250",
+                   "bios":  "1.15.1 (2026-04-16)"
+               },
+    "os":  {
+               "caption":  "Microsoft Windows 11 Home",
+               "display_version":  "25H2",
+               "build":  "26200.9457",
+               "architecture":  "64-bit",
+               "installed":  "2026-09-19",
+               "last_boot":  "2026-09-20 10:22",
+               "latest_hotfix":  "KB5124007 (2026-09-19)",
+               "powershell":  "5.1.26100.9444",
+               "elevated":  false
+           },
+    "cpu":  {
+                "name":  "Intel(R) Core(TM) Ultra 7 265KF",
+                "cores":  20,
+                "logical":  20,
+                "max_mhz":  3900,
+                "virtualization":  "on (a hypervisor is running)"
+            },
+    "memory":  {
+                   "total_gb":  31.7,
+                   "slots":  2,
+                   "modules":  [
+                                   {
+                                       "slot":  "DIMM1",
+                                       "gb":  16,
+                                       "mts":  5600,
+                                       "part":  "80CE000080CE M323R2GA3EB0-CWMOL"
+                                   },
+                                   {
+                                       "slot":  "DIMM2",
+                                       "gb":  16,
+                                       "mts":  5600,
+                                       "part":  "80CE000080CE M323R2GA3EB0-CWMOL"
+                                   }
+                               ],
+                   "pagefile":  [
+                                    "C:\\pagefile.sys 5968 MB"
+                                ]
+               },
+    "gpus":  [
+                 {
+                     "name":  "DisplayLink USB Device",
+                     "wmi_driver":  "9.3.3324.0",
+                     "driver_date":  "2020-04-15",
+                     "resolution":  "1920x1080 @ 60 Hz"
+                 },
+                 {
+                     "name":  "DisplayLink USB Device",
+                     "wmi_driver":  "9.3.3324.0",
+                     "driver_date":  "2020-04-15",
+                     "resolution":  "1920x1080 @ 60 Hz"
+                 },
+                 {
+                     "name":  "DisplayLink USB Device",
+                     "wmi_driver":  "9.3.3324.0",
+                     "driver_date":  "2020-04-15",
+                     "resolution":  null
+                 },
+                 {
+                     "name":  "NVIDIA GeForce RTX 5070",
+                     "wmi_driver":  "32.0.15.8104",
+                     "driver_date":  "2025-08-13",
+                     "resolution":  "1920x1080 @ 60 Hz"
+                 },
+                 {
+                     "name":  "DisplayLink USB Device",
+                     "wmi_driver":  "9.3.3324.0",
+                     "driver_date":  "2020-04-15",
+                     "resolution":  null
+                 }
+             ],
+    "nvidia":  {
+                   "name":  "NVIDIA GeForce RTX 5070",
+                   "driver":  "581.04",
+                   "vram":  "12227 MiB",
+                   "compute_capability":  "12.0",
+                   "pcie":  "Gen5 x16",
+                   "vbios":  "98.05.36.40.30",
+                   "power_limit":  "250.00 W",
+                   "cuda":  "13.0"
+               },
+    "dxdiag":  {
+                   "directx":  "DirectX 12",
+                   "feature_levels":  "12_2,12_1,12_0,11_1,11_0,10_1,10_0,9_3,9_2,9_1,1_0_CORE",
+                   "driver_model":  "WDDM 3.2",
+                   "hybrid_graphics_gpu":  "Discrete",
+                   "dedicated_memory":  "11855 MB",
+                   "shared_memory":  "16233 MB"
+               },
+    "gpu_settings":  {
+                         "hardware_accelerated_scheduling":  "default"
+                     },
+    "disks":  [
+                  {
+                      "name":  "NVMe BG7 KIOXIA 1024GB",
+                      "media":  "SSD",
+                      "bus":  "NVMe",
+                      "size_gb":  953.9,
+                      "health":  "Healthy",
+                      "drives":  "C:"
+                  },
+                  {
+                      "name":  "TOSHIBA EXTERNAL_USB",
+                      "media":  "Unspecified",
+                      "bus":  "USB",
+                      "size_gb":  3726,
+                      "health":  "Healthy",
+                      "drives":  "no volume Windows can mount"
+                  }
+              ],
+    "volumes":  [
+                    {
+                        "drive":  "C:",
+                        "type":  "Fixed",
+                        "label":  "OS",
+                        "fs":  "NTFS",
+                        "size_gb":  923.3,
+                        "free_gb":  181.2
+                    }
+                ],
+    "network":  [
+                    {
+                        "name":  "Wi-Fi",
+                        "adapter":  "Intel(R) Wi-Fi 7 BE200 320MHz",
+                        "link":  "1.2 Gbps"
+                    }
+                ],
+    "power_plan":  "Balanced",
+    "settings":  {
+                     "long_paths":  true,
+                     "developer_mode":  false,
+                     "game_mode":  true,
+                     "defender":  {
+                                      "realtime":  true,
+                                      "antivirus":  true,
+                                      "exclusions":  "unknown (run elevated to read)"
+                                  }
+                 },
+    "tools":  {
+                  "git":  {
+                              "found":  true,
+                              "on_path":  false,
+                              "path":  "C:\\Program Files\\Git\\cmd\\git.exe",
+                              "version":  "git version 2.55.0.windows.5"
+                          },
+                  "git_lfs":  {
+                                  "found":  true,
+                                  "on_path":  false,
+                                  "path":  "C:\\Program Files\\Git\\mingw64\\bin\\git-lfs.exe",
+                                  "version":  "git-lfs/3.7.1 (GitHub; windows amd64; go 1.25.1; git b84b3384)"
+                              },
+                  "gh":  {
+                             "found":  false
+                         },
+                  "python":  {
+                                 "found":  true,
+                                 "on_path":  false,
+                                 "path":  "C:\\Users\\Cbhea\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+                                 "version":  "Python 3.12.10"
+                             },
+                  "dotnet":  {
+                                 "found":  true,
+                                 "on_path":  true,
+                                 "path":  "C:\\Program Files\\dotnet\\dotnet.exe",
+                                 "version":  "runtimes only (no SDK): 8.0.21, 8.0.26, 10.0.11",
+                                 "runtimes":  [
+                                                  "8.0.21",
+                                                  "8.0.26",
+                                                  "10.0.11"
+                                              ],
+                                 "sdks":  [
+
+                                          ]
+                             },
+                  "node":  {
+                               "found":  false
+                           },
+                  "cmake":  {
+                                "found":  false
+                            },
+                  "clang_cl":  {
+                                   "found":  false
+                               },
+                  "blender":  {
+                                  "found":  false
+                              },
+                  "claude":  {
+                                 "found":  false
+                             },
+                  "vscode":  {
+                                 "found":  true,
+                                 "on_path":  false,
+                                 "path":  "C:\\Users\\Cbhea\\AppData\\Local\\Programs\\Microsoft VS Code\\bin\\code.cmd",
+                                 "version":  "1.138.0"
+                             },
+                  "7zip":  {
+                               "found":  false
+                           }
+              },
+    "git":  {
+                "core.longpaths":  null,
+                "core.autocrlf":  "true",
+                "filter.lfs.process":  "git-lfs filter-process",
+                "user.name":  "cbhead",
+                "lfs.fetchexclude (this clone)":  null
+            },
+    "visual_studio":  [
+
+                      ],
+    "windows_sdks":  [
+
+                     ],
+    "epic":  {
+                 "launcher":  false,
+                 "engines":  [
+
+                             ]
+             },
+    "env":  {
+                "UE_ROOT":  {
+
+                            },
+                "UE-LocalDataCachePath":  {
+
+                                          },
+                "UE_LOCAL_DDC":  {
+
+                                 },
+                "EDITOR_LOCK_DIR":  {
+
+                                    }
+            },
+    "clone":  {
+                  "path":  "C:\\Users\\Cbhea\\deep-field-3d",
+                  "path_length":  28,
+                  "branch":  "unreal/main",
+                  "head":  "6365ae1 2026-09-24 Merge branch \u0027unreal/main\u0027 of https://github.com/cbhead/deep-field-3d into unreal/main",
+                  "worktrees":  1,
+                  "ddc_sibling":  false
+              },
+    "runner":  {
+                   "services":  [
+
+                                ],
+                   "folders":  {
+
+                               }
+               },
+    "checks":  [
+                   {
+                       "item":  "Windows",
+                       "need":  "Windows 11, or 10 \u003e= 19041",
+                       "have":  "Microsoft Windows 11 Home build 26200.9457",
+                       "status":  "OK",
+                       "runbook":  "0"
+                   },
+                   {
+                       "item":  "NVIDIA GPU + current driver",
+                       "need":  "current Studio / Game Ready driver",
+                       "have":  "NVIDIA GeForce RTX 5070, driver 581.04, 12227 MiB",
+                       "status":  "OK",
+                       "runbook":  "0"
+                   },
+                   {
+                       "item":  "Free NVMe space",
+                       "need":  "\u003e= 500 GB free on one volume",
+                       "have":  "C: 181.2 GB free of 923.3 GB",
+                       "status":  "FAIL",
+                       "runbook":  "0"
+                   },
+                   {
+                       "item":  "Short clone root",
+                       "need":  "D:\\DF\\deepfield-3d (short path)",
+                       "have":  "C:\\Users\\Cbhea\\deep-field-3d (28 chars)",
+                       "status":  "WARN",
+                       "runbook":  "0, 3"
+                   },
+                   {
+                       "item":  "Long paths enabled",
+                       "need":  "LongPathsEnabled = 1",
+                       "have":  "True",
+                       "status":  "OK",
+                       "runbook":  "0"
+                   },
+                   {
+                       "item":  "Defender exclusions",
+                       "need":  "clone, engine, UnrealEditor/cl/link/... processes",
+                       "have":  "unknown (run elevated to read)",
+                       "status":  "UNKNOWN",
+                       "runbook":  "0"
+                   },
+                   {
+                       "item":  "Unreal Engine 5.8.2",
+                       "need":  "UE 5.8.2 from the launcher (same patch as the Mac)",
+                       "have":  "none installed",
+                       "status":  "FAIL",
+                       "runbook":  "1"
+                   },
+                   {
+                       "item":  "UE_ROOT",
+                       "need":  "set to the 5.8 install",
+                       "have":  "unset",
+                       "status":  "FAIL",
+                       "runbook":  "1"
+                   },
+                   {
+                       "item":  "MSVC toolset",
+                       "need":  "14.44 \u003e= 35211 (VS 2022 17.14) or 14.50 \u003e= 35723",
+                       "have":  "no Visual Studio / MSVC",
+                       "status":  "FAIL",
+                       "runbook":  "2"
+                   },
+                   {
+                       "item":  "Windows SDK",
+                       "need":  "10.0.22621.0 (10.0.19041.0 minimum)",
+                       "have":  "none",
+                       "status":  "FAIL",
+                       "runbook":  "2"
+                   },
+                   {
+                       "item":  ".NET 8 SDK",
+                       "need":  "for tools/content-export, waveplan-golden",
+                       "have":  "no SDK",
+                       "status":  "FAIL",
+                       "runbook":  "2"
+                   },
+                   {
+                       "item":  "Git for Windows",
+                       "need":  "installed, on PATH",
+                       "have":  "git version 2.55.0.windows.5 - NOT on PATH",
+                       "status":  "WARN",
+                       "runbook":  "3"
+                   },
+                   {
+                       "item":  "Git LFS",
+                       "need":  "git lfs install done",
+                       "have":  "git-lfs/3.7.1 (GitHub; windows amd64; go 1.25.1; git b84b3384); filter.lfs.process=git-lfs filter-process",
+                       "status":  "OK",
+                       "runbook":  "3"
+                   },
+                   {
+                       "item":  "core.longpaths",
+                       "need":  "true",
+                       "have":  "-",
+                       "status":  "FAIL",
+                       "runbook":  "3"
+                   },
+                   {
+                       "item":  "core.autocrlf",
+                       "need":  "false",
+                       "have":  "true",
+                       "status":  "FAIL",
+                       "runbook":  "3"
+                   },
+                   {
+                       "item":  "LFS light-clone undone",
+                       "need":  "lfs.fetchexclude = \"\" in this clone",
+                       "have":  "unset (the .lfsconfig Mac excludes apply)",
+                       "status":  "FAIL",
+                       "runbook":  "3"
+                   },
+                   {
+                       "item":  "GitHub CLI",
+                       "need":  "installed, gh auth login",
+                       "have":  "not installed",
+                       "status":  "FAIL",
+                       "runbook":  "3"
+                   },
+                   {
+                       "item":  "Python 3.9+",
+                       "need":  "for the unreal\\Build\\*.py checks",
+                       "have":  "Python 3.12.10",
+                       "status":  "OK",
+                       "runbook":  "5"
+                   },
+                   {
+                       "item":  "Self-hosted runner",
+                       "need":  "deepfield-gpu, labels deepfield,gpu",
+                       "have":  "none",
+                       "status":  "FAIL",
+                       "runbook":  "8"
+                   }
+               ]
+}

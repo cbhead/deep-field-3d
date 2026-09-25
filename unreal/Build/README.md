@@ -42,6 +42,8 @@ The build itself is the engine's script, always with `-WaitMutex` so concurrent 
 
 Nothing above runs on Windows yet: the shell scripts are zsh and Mac-pathed. [windows-bringup.md](windows-bringup.md) is the checklist that takes a bare Windows machine to a building, testing, packaging runner with the raw engine commands; the `.ps1`/`.bat` twins of these scripts and `unreal-win.yml` are WS-15 work that starts once it is green.
 
+The exception is `machine-inventory.ps1`, which runs on Windows and is read-only. It measures the box (hardware, driver, DirectX, disks, toolchain, engine installs, git config, runner) and writes [machines/windows-gpu.md](machines/windows-gpu.md) plus a `.json`. That file includes a readiness table against `windows-bringup.md`. Read it instead of assuming what the box has, and re-run and commit it after any install. See [machines/README.md](machines/README.md) for the Mac and cloud counterparts.
+
 ## Where the results go
 
 `unreal/DeepField/Saved/` is untracked: `Logs/test-*.log`, `Logs/smoke-*.log`, `Logs/ci-build.log`, `Logs/pr-build.log`, `Automation/Reports/test-*/index.json` (+ an `index.html` you can open). CI uploads the same files as the `unreal-mac-logs-<run>` artifact. The lanes and the self-hosted runner are described in `unreal/PLAN/CONTRACTS/ci.md`.
