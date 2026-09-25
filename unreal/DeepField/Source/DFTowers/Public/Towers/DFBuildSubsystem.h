@@ -34,16 +34,27 @@ struct FDFBuildResult
  * - The Forge discount needs the builder's faction (WS-07); callers pass it.
  * - wouldSeal counts the edges that standing barricades close. Operated gates and mutables also close
  *   edges; WS-09's lane state component will report those, and this adds them when it exists.
- * - After a barricade goes up or is sold, the sim refreshes edge state (RefreshEdgeState). That is
- *   WS-09's lane state component, which listens for TowerPlaced / TowerSold.
+ * - After a barricade goes up, is sold or is breached, the sim refreshes edge state (RefreshEdgeState).
+ *   That is WS-09's lane state component, which listens for TowerPlaced / TowerSold / TowerDestroyed.
  */
 UCLASS()
-class DFTOWERS_API UDFBuildSubsystem : public UWorldSubsystem
+class DFTOWERS_API UDFBuildSubsystem : public UTickableWorldSubsystem
 {
 	GENERATED_BODY()
 
 public:
 	static UDFBuildSubsystem* Get(const UObject* WorldContext);
+
+	// End of frame on the host: remove what siege broke this frame (Step.cs SiegeStructures' removal pass).
+	virtual void Tick(float DeltaTime) override;
+	virtual TStatId GetStatId() const override;
+
+	/**
+	 * Remove every tower a siege broke (IDFStructure hp at 0): TowerDestroyed to the team (State
+	 * "breached" for a barricade, which reopens its lane: WS-09's lane state hears it), then the actor
+	 * goes. The Tick calls it; tests call it by hand. Returns how many went.
+	 */
+	int32 RemoveBroken();
 
 	/** Command.PlaceTower: TowerId (a towers.json id) on SocketId, for PlayerId (the seat). */
 	FDFBuildResult PlaceTower(int32 PlayerId, FName TowerId, FName SocketId, bool bBuilderIsForge = false);

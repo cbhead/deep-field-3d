@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Combat/DFStructure.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "GameplayTagContainer.h"
@@ -30,11 +31,15 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FDFOnTowerShot, class ADFTower* /*Tower*/, 
  * statuses through the target's UDFStatusComponent, in Step.cs Damage()'s order: damage first,
  * statuses after.
  *
- * Still to come (the WS-04 file lists them): the build subsystem that places, upgrades and sells
- * through WS-28's player controller; structure damage from sieging enemies; the C9 rig driving the mesh.
+ * A tower is also a structure (IDFStructure): a Ram's siege takes its hp, a hero's melee mends it,
+ * and at 0 hp it is broken: its weapon stops at once and UDFBuildSubsystem removes it at the end of
+ * the frame (DF.Message.TowerDestroyed), so every hit that frame still lands, as Step.cs removes only
+ * after every enemy has swung. A row with StructureHp 0 is indestructible.
+ *
+ * Still to come (the WS-04 file lists them): the C9 rig driving the mesh.
  */
 UCLASS()
-class DFTOWERS_API ADFTower : public AActor
+class DFTOWERS_API ADFTower : public AActor, public IDFStructure
 {
 	GENERATED_BODY()
 
@@ -42,7 +47,19 @@ public:
 	ADFTower();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 	virtual void Tick(float DeltaSeconds) override;
+
+	// ---- IDFStructure ------------------------------------------------------------------------------
+	virtual int32 GetStructureId() const override { return StructureId; }
+	virtual FVector GetStructurePosition() const override { return GetActorLocation(); }
+	virtual float GetStructureHp() const override { return Hp; }
+	virtual float GetStructureMaxHp() const override;
+	virtual void ApplySiegeDamage(float Amount, int32 AttackerId) override;
+	virtual void ApplyRepair(float Amount, int32 PlayerId) override;
+	/** Destructible and at 0 hp: its weapon is silent and it is removed at the end of the frame. */
+	bool IsBroken() const;
 
 	// ---- host setup ------------------------------------------------------------------------------
 	/** Host: become DefId (a towers.json id) on SocketId, built by OwnerSeat for Spent money. False if the def is unknown. */
@@ -60,7 +77,6 @@ public:
 	// ---- read (every machine) ---------------------------------------------------------------------
 	FName GetDefId() const { return DefId; }
 	FName GetSocketId() const { return SocketId; }
-	int32 GetStructureId() const { return StructureId; }
 	int32 GetOwnerSeat() const { return OwnerSeat; }
 	const TArray<int32>& GetPathLevels() const { return PathLevels; }
 	float GetHp() const { return Hp; }
@@ -94,6 +110,11 @@ private:
 	void DealDamage(const FDFTowerRow& Row, AActor* Body, float Amount, const FGameplayTag& DamageType);
 	void Announce(const FGameplayTag& Tag, AActor* Target, const FVector& Impact) const;
 	void SetCurrentTarget(AActor* Target);
+	/** A barricade's intact / damaged / broken, announced when it changes (DF.Message.BarricadeState). */
+	void AnnounceBarricadeState();
+	/** Clients: the replicated hp moved; re-broadcast it locally as DF.Message.StructureDamaged, so a
+	 *  health bar on every machine hears it without a reliable RPC per siege tick. */
+	UFUNCTION() void OnRep_Hp(float OldHp);
 
 	UPROPERTY(VisibleAnywhere, Category = "DF|Tower") TObjectPtr<UDFTargetingComponent> Targeting;
 
@@ -102,7 +123,7 @@ private:
 	UPROPERTY(Replicated) int32 StructureId = 0;
 	UPROPERTY(Replicated) int32 OwnerSeat = 0;
 	UPROPERTY(Replicated) TArray<int32> PathLevels;
-	UPROPERTY(Replicated) float Hp = 0.f;
+	UPROPERTY(ReplicatedUsing = OnRep_Hp) float Hp = 0.f;
 	UPROPERTY(Replicated) FName ActiveConditionId;
 	UPROPERTY(Replicated) TObjectPtr<AActor> CurrentTarget;
 
@@ -115,6 +136,7 @@ private:
 	TWeakObjectPtr<AActor> RampTarget;
 	float DamageDealt = 0.f;
 	int32 Kills = 0;
+	FName LastBarricadeState;
 
 	struct FShotInFlight
 	{

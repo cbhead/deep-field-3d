@@ -1,5 +1,6 @@
 #include "Towers/DFBuildSubsystem.h"
 
+#include "Combat/DFStructure.h"
 #include "Components/ActorComponent.h"
 #include "Content/DFContentSubsystem.h"
 #include "DFBalanceDial.h"
@@ -41,6 +42,55 @@ UDFBuildSubsystem* UDFBuildSubsystem::Get(const UObject* WorldContext)
 {
 	const UWorld* World = WorldContext ? WorldContext->GetWorld() : nullptr;
 	return World ? World->GetSubsystem<UDFBuildSubsystem>() : nullptr;
+}
+
+void UDFBuildSubsystem::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+	const UWorld* World = GetWorld();
+	if (World && World->GetNetMode() != NM_Client)
+	{
+		RemoveBroken();
+	}
+}
+
+TStatId UDFBuildSubsystem::GetStatId() const
+{
+	RETURN_QUICK_DECLARE_CYCLE_STAT(UDFBuildSubsystem, STATGROUP_Tickables);
+}
+
+int32 UDFBuildSubsystem::RemoveBroken()
+{
+	TArray<ADFTower*> Broken;
+	for (ADFTower* Tower : GetTowers())
+	{
+		if (Tower->IsBroken())
+		{
+			Broken.Add(Tower);
+		}
+	}
+	UDFMessageBus* Bus = UDFMessageBus::Get(this);
+	for (ADFTower* Tower : Broken)
+	{
+		const FDFTowerRow* Row = Tower->GetRow();
+		FDFMsg_Structure Message;
+		Message.StructureId = Tower->GetStructureId();
+		Message.PlayerId = Tower->GetOwnerSeat();
+		Message.DefId = Tower->GetDefId();
+		Message.SocketId = Tower->GetSocketId();
+		Message.HpFraction = 0.f;
+		if (Row && Row->Kind == EDFTowerKind::Barricade)
+		{
+			Message.State = TEXT("breached");   // Step.cs RefreshEdgeState("breached"): the lane it shut is open again
+		}
+		Forget(Tower);
+		Tower->Destroy();
+		if (Bus)
+		{
+			Bus->BroadcastTeam(DFTags::Message_TowerDestroyed, Message);
+		}
+	}
+	return Broken.Num();
 }
 
 // ---- lookups ------------------------------------------------------------------------------------
@@ -229,6 +279,11 @@ FDFBuildResult UDFBuildSubsystem::PlaceTower(int32 PlayerId, FName TowerId, FNam
 		return Refuse(Reasons::UnknownTower);
 	}
 	Towers.Add(Tower);
+	// ADFTower::BeginPlay registers it too; a world that has not begun play (a test world) only gets this one.
+	if (UDFStructureRegistry* Structures = UDFStructureRegistry::Get(this))
+	{
+		Structures->Register(Tower);
+	}
 
 	if (UDFMessageBus* Bus = UDFMessageBus::Get(this))
 	{

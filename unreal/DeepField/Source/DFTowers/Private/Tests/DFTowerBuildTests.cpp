@@ -1,3 +1,5 @@
+#include "Combat/DFStructure.h"
+#include "Combat/DFTargetable.h"
 #include "Content/DFContentSubsystem.h"
 #include "DFGameplayTags.h"
 #include "DFTowerTestDummy.h"
@@ -249,6 +251,147 @@ bool FDFTowerBuildNoWalletTest::RunTest(const FString& Parameters)
 	AddExpectedError(TEXT("No team wallet"), EAutomationExpectedErrorFlags::Contains, 0);
 	TestEqual(TEXT("with no purse, nothing is affordable"), F.Build->PlaceTower(1, TEXT("lance"), TEXT("g1")).Reason, DFTowerMath::Reasons::InsufficientFunds);
 	TestEqual(TEXT("and nothing was built"), F.Build->GetTowers().Num(), 0);
+	return true;
+}
+
+// ---- siege and repair (Step.cs SiegeStructures, ApplyPlayerMelee) -------------------------------------
+// The Ram: structureDps 14, structureReach 6 m. Lances have 120 structure hp, the barricade 300.
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFTowerSiegeTest, "DF.Unit.Tower.SiegeBreaksThenRemovesAtFrameEnd", DFTowerBuildTest::Flags)
+bool FDFTowerSiegeTest::RunTest(const FString& Parameters)
+{
+	DFTowerBuildTest::FBuildFixture F;
+	if (!F.Setup(*this))
+	{
+		return false;
+	}
+	F.Wallet->Money = 1000;
+	ADFTower* Ground = F.Build->PlaceTower(1, TEXT("lance"), TEXT("g1")).Tower;      // x 10 m
+	ADFTower* Wall = F.Build->PlaceTower(1, TEXT("lance"), TEXT("w1")).Tower;        // x 15 m
+	ADFTower* Barricade = F.Build->PlaceTower(1, TEXT("barricade"), TEXT("b1")).Tower;  // x 20 m
+	UDFStructureRegistry* Structures = UDFStructureRegistry::Get(F.World.GetWorld());
+	if (!TestNotNull(TEXT("towers"), Ground) || !TestNotNull(TEXT("towers"), Wall) || !TestNotNull(TEXT("towers"), Barricade)
+		|| !TestNotNull(TEXT("structure registry"), Structures))
+	{
+		return false;
+	}
+	const float PadZ = 2.f * ADFSocket::PadHalfHeightCm;
+	TestTrue(TEXT("the nearest in reach: 2 m to the wall lance beats 3 m to the ground one"),
+		Structures->FindSiegeTarget(FVector(1300.f, 0.f, PadZ), 6.f) == Wall);
+	TestNull(TEXT("nothing within 6 m"), Structures->FindSiegeTarget(FVector(10000.f, 0.f, PadZ), 6.f));
+	TestFalse(TEXT("so that enemy is not sieging"), Structures->Siege(FVector(10000.f, 0.f, PadZ), 6.f, 14.f, 1.f / 30.f, 7));
+	TestFalse(TEXT("an enemy with no structure dps never sieges"), Structures->Siege(FVector(2100.f, 0.f, PadZ), 6.f, 0.f, 1.f / 30.f, 7));
+
+	FDFMessageCapture Damaged(F.World.MessageBus(), DFTags::Message_StructureDamaged);
+	FDFMessageCapture Barricades(F.World.MessageBus(), DFTags::Message_BarricadeState);
+	FDFMessageCapture Destroyed(F.World.MessageBus(), DFTags::Message_TowerDestroyed);
+
+	const FVector AtBarricade(2100.f, 0.f, PadZ);   // 1 m from it; the wall lance is exactly 6 m away (d <= reach) but farther
+	TestTrue(TEXT("a Ram at the barricade sieges"), Structures->Siege(AtBarricade, 6.f, 14.f, 1.f / 30.f, 7));
+	TestEqual(TEXT("one frame: 300 - 14/30"), Barricade->GetStructureHp(), 300.f - 14.f / 30.f, 1e-3f);
+	TestEqual(TEXT("the lance is untouched"), Wall->GetStructureHp(), 120.f, 1e-4f);
+	TestEqual(TEXT("StructureDamaged on the host"), Damaged.Num(), 1);
+	if (TestEqual(TEXT("the barricade reports damaged once"), Barricades.Num(), 1))
+	{
+		const FDFMsg_Structure* State = Barricades.LastPayload<FDFMsg_Structure>();
+		TestTrue(TEXT("damaged"), State && State->State == FName(TEXT("damaged")));
+	}
+	Structures->Siege(AtBarricade, 6.f, 14.f, 1.f / 30.f, 7);
+	TestEqual(TEXT("still damaged: no second state message"), Barricades.Num(), 1);
+
+	// Two Rams in one frame, the second swing past zero: both land, as Step.cs removes after every enemy has swung.
+	Structures->Siege(AtBarricade, 6.f, 14.f, 30.f, 7);   // 420 damage
+	TestTrue(TEXT("broken"), Barricade->IsBroken());
+	TestTrue(TEXT("but still the nearest target this frame"), Structures->FindSiegeTarget(AtBarricade, 6.f) == Barricade);
+	TestTrue(TEXT("and the second Ram's swing lands on it"), Structures->Siege(AtBarricade, 6.f, 14.f, 1.f / 30.f, 8));
+	if (TestEqual(TEXT("broken is announced"), Barricades.Num(), 2))
+	{
+		const FDFMsg_Structure* State = Barricades.LastPayload<FDFMsg_Structure>();
+		TestTrue(TEXT("broken"), State && State->State == FName(TEXT("broken")));
+	}
+	const FDFMsg_Damage* Last = Damaged.LastPayload<FDFMsg_Damage>();
+	TestTrue(TEXT("the ring never shows less than empty"), Last && Last->RemainingFraction == 0.f);
+	TestEqual(TEXT("nothing is removed mid-frame"), Destroyed.Num(), 0);
+
+	TestEqual(TEXT("end of frame: one removed"), F.Build->RemoveBroken(), 1);
+	TestNull(TEXT("the pad is free"), F.Build->FindTowerOnSocket(TEXT("b1")));
+	if (TestEqual(TEXT("one TowerDestroyed to the team"), Destroyed.Num(), 1))
+	{
+		const FDFMsg_Structure* Message = Destroyed.LastPayload<FDFMsg_Structure>();
+		TestTrue(TEXT("a barricade is breached (its lane reopens)"), Message && Message->State == FName(TEXT("breached")));
+		TestTrue(TEXT("on its socket"), Message && Message->SocketId == FName(TEXT("b1")));
+	}
+	TestTrue(TEXT("with the barricade gone, the Ram turns on the lance 6 m away"), Structures->FindSiegeTarget(AtBarricade, 6.f) == Wall);
+	TestEqual(TEXT("nothing else was broken"), F.Build->RemoveBroken(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFTowerBrokenSilentTest, "DF.Unit.Tower.BrokenTowerDoesNotFire", DFTowerBuildTest::Flags)
+bool FDFTowerBrokenSilentTest::RunTest(const FString& Parameters)
+{
+	DFTowerBuildTest::FBuildFixture F;
+	if (!F.Setup(*this))
+	{
+		return false;
+	}
+	F.Wallet->Money = 1000;
+	ADFTower* Tower = F.Build->PlaceTower(1, TEXT("lance"), TEXT("g1")).Tower;
+	ADFTowerTestDummy* Enemy = F.World.SpawnActor<ADFTowerTestDummy>(FTransform(FVector(1500.f, 0.f, 0.f)));
+	if (!TestNotNull(TEXT("tower"), Tower) || !TestNotNull(TEXT("enemy"), Enemy))
+	{
+		return false;
+	}
+	Enemy->Id = 1;
+	Enemy->Remaining = 10.f;
+	UDFTargetRegistry::Get(F.World.GetWorld())->Register(Enemy);
+	int32 Fired = 0;
+	Tower->OnFired.AddLambda([&Fired](ADFTower*, AActor*) { ++Fired; });
+
+	Tower->ApplySiegeDamage(1000.f, 7);
+	TestTrue(TEXT("broken"), Tower->IsBroken());
+	Tower->StepTower(1.f / 30.f);
+	TestEqual(TEXT("rubble does not fire, even with a body 5 m away"), Fired, 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFTowerRepairTest, "DF.Unit.Tower.RepairFirstHurtInReach", DFTowerBuildTest::Flags)
+bool FDFTowerRepairTest::RunTest(const FString& Parameters)
+{
+	DFTowerBuildTest::FBuildFixture F;
+	if (!F.Setup(*this))
+	{
+		return false;
+	}
+	F.Wallet->Money = 1000;
+	ADFTower* First = F.Build->PlaceTower(1, TEXT("lance"), TEXT("g1")).Tower;    // x 10 m, built first
+	ADFTower* Second = F.Build->PlaceTower(1, TEXT("lance"), TEXT("w1")).Tower;   // x 15 m
+	UDFStructureRegistry* Structures = UDFStructureRegistry::Get(F.World.GetWorld());
+	if (!TestNotNull(TEXT("towers"), First) || !TestNotNull(TEXT("towers"), Second) || !TestNotNull(TEXT("registry"), Structures))
+	{
+		return false;
+	}
+	const FVector Between(1250.f, 0.f, 2.f * ADFSocket::PadHalfHeightCm);   // 2.5 m from each
+	TestFalse(TEXT("nothing hurt: the swing is not spent on a repair"), Structures->RepairNearby(Between, 3.f, 10.f, 2));
+
+	FDFMessageCapture Repaired(F.World.MessageBus(), DFTags::Message_StructureRepaired);
+	First->ApplySiegeDamage(50.f, 7);
+	Second->ApplySiegeDamage(50.f, 7);
+	TestTrue(TEXT("both hurt and in reach: the first built is mended"), Structures->RepairNearby(Between, 3.f, 10.f, 2));
+	TestEqual(TEXT("70 + 10"), First->GetStructureHp(), 80.f, 1e-4f);
+	TestEqual(TEXT("the other waits"), Second->GetStructureHp(), 70.f, 1e-4f);
+	if (TestEqual(TEXT("StructureRepaired to the team"), Repaired.Num(), 1))
+	{
+		const FDFMsg_Structure* Message = Repaired.LastPayload<FDFMsg_Structure>();
+		TestTrue(TEXT("by seat 2, to 80/120"), Message && Message->PlayerId == 2 && FMath::IsNearlyEqual(Message->HpFraction, 80.f / 120.f, 1e-4f));
+	}
+	Structures->RepairNearby(Between, 3.f, 1000.f, 2);
+	TestEqual(TEXT("capped at the row's 120"), First->GetStructureHp(), 120.f, 1e-4f);
+	TestTrue(TEXT("once whole it is skipped: the next hurt one is mended"), Structures->RepairNearby(Between, 3.f, 10.f, 2));
+	TestEqual(TEXT("70 + 10"), Second->GetStructureHp(), 80.f, 1e-4f);
+	TestFalse(TEXT("out of reach"), Structures->RepairNearby(FVector(10000.f, 0.f, 0.f), 3.f, 10.f, 2));
+
+	Second->ApplySiegeDamage(1000.f, 7);
+	TestNull(TEXT("rubble is not repaired"), Structures->FindRepairTarget(Between, 3.f));
 	return true;
 }
 

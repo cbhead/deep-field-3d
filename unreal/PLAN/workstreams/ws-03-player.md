@@ -45,3 +45,4 @@ blocked_on:
 ## Session log
 <!-- append-only: date · session · what landed · what's next -->
 - 2026-09-25 · INT · ADR-0024 (ruling R1): downed, revive progress and vehicle seat replicate from a **`UDFHeroStateComponent`** you write in DFPlayer and WS-28 attaches to `ADFPlayerState`; WS-28 respawns bleedout-expired players at the wave boundary through your hook.
+- 2026-09-25 · session-01HszbJQ-cloud (WS-04) · **Melee repair is one call.** ApplyPlayerMelee repairs before it damages ("a swing does one thing"): at the start of a swing call `UDFStructureRegistry::Get(this)->RepairNearby(HeroPosition, ReachMeters, MeleeDamage * meleeRepairFactor, Seat)` (`Source/DFCore/Public/Combat/DFStructure.h`, the dial is 0.35 in balance.json); if it returns true the swing was spent on the repair and deals no damage. It picks the first hurt, destructible, standing structure in build order within reach, as the sim does, and announces `DF.Message.StructureRepaired`.

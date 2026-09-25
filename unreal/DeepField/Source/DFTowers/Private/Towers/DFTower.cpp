@@ -2,6 +2,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
+#include "Combat/DFStructure.h"
 #include "Combat/DFTargetable.h"
 #include "Content/DFContentSubsystem.h"
 #include "DFBalanceDial.h"
@@ -34,7 +35,9 @@ namespace
 ADFTower::ADFTower()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	PrimaryActorTick.TickGroup = TG_PrePhysics;
+	// After the enemies (Step.cs: move, siege, THEN fire), so a tower broken this frame does not also
+	// get a shot off, and the targets it picks have already moved.
+	PrimaryActorTick.TickGroup = TG_PostPhysics;
 	bReplicates = true;
 	SetReplicatingMovement(false);   // a tower does not move
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));   // placed on its socket's pad
@@ -70,6 +73,7 @@ bool ADFTower::InitializeTower(FName InDefId, FName InSocketId, int32 InOwnerSea
 	StructureId = GNextStructureId++;
 	PathLevels.Init(0, Row->UpgradePaths.Num());   // purchases per path: a fresh tower is L1 everywhere
 	Hp = Row->StructureHp;
+	LastBarricadeState = TEXT("intact");
 	Cooldown = 0.f;
 	ForceNetUpdate();
 	return true;
@@ -118,6 +122,127 @@ float ADFTower::GetRangeMeters() const
 	return Row ? DFTowerMath::RangeMeters(*Row, DefId, PathLevels, GetActiveCondition()) : 0.f;
 }
 
+void ADFTower::BeginPlay()
+{
+	Super::BeginPlay();
+	if (UDFStructureRegistry* Registry = UDFStructureRegistry::Get(this))
+	{
+		Registry->Register(this);
+	}
+}
+
+void ADFTower::EndPlay(const EEndPlayReason::Type Reason)
+{
+	if (UDFStructureRegistry* Registry = UDFStructureRegistry::Get(this))
+	{
+		Registry->Unregister(this);
+	}
+	Super::EndPlay(Reason);
+}
+
+float ADFTower::GetStructureMaxHp() const
+{
+	const FDFTowerRow* Row = GetRow();
+	return Row ? Row->StructureHp : 0.f;
+}
+
+bool ADFTower::IsBroken() const
+{
+	return GetStructureMaxHp() > 0.f && Hp <= 0.f;
+}
+
+void ADFTower::ApplySiegeDamage(float Amount, int32 AttackerId)
+{
+	const float Max = GetStructureMaxHp();
+	if (Max <= 0.f || Amount <= 0.f)
+	{
+		return;   // indestructible
+	}
+	// Step.cs: `target.Hp -= StructureDps * Dt`, then StructureDamaged with max(0, hp). Hp may go below
+	// zero when several rams hit in one frame; the message and the ring never show less than empty.
+	Hp -= Amount;
+	if (UDFMessageBus* Bus = UDFMessageBus::Get(this))
+	{
+		FDFMsg_Damage Message;
+		Message.TargetId = StructureId;
+		Message.DamageSource = DFTags::Damage_Source_Enemy;
+		Message.Amount = Amount;
+		Message.RemainingFraction = FMath::Max(0.f, Hp) / Max;
+		Message.Location = GetActorLocation();
+		Bus->Broadcast(DFTags::Message_StructureDamaged, Message);   // clients hear it from OnRep_Hp
+	}
+	AnnounceBarricadeState();
+}
+
+void ADFTower::ApplyRepair(float Amount, int32 PlayerId)
+{
+	const float Max = GetStructureMaxHp();
+	if (Max <= 0.f || Amount <= 0.f || Hp >= Max)
+	{
+		return;
+	}
+	Hp = FMath::Min(Max, Hp + Amount);
+	if (UDFMessageBus* Bus = UDFMessageBus::Get(this))
+	{
+		FDFMsg_Structure Message;
+		Message.StructureId = StructureId;
+		Message.PlayerId = PlayerId;
+		Message.DefId = DefId;
+		Message.SocketId = SocketId;
+		Message.HpFraction = Hp / Max;
+		Bus->BroadcastTeam(DFTags::Message_StructureRepaired, Message);
+	}
+	AnnounceBarricadeState();
+}
+
+void ADFTower::AnnounceBarricadeState()
+{
+	const FDFTowerRow* Row = GetRow();
+	const float Max = GetStructureMaxHp();
+	if (!Row || Row->Kind != EDFTowerKind::Barricade || Max <= 0.f)
+	{
+		return;
+	}
+	static const FName Intact(TEXT("intact"));
+	static const FName Damaged(TEXT("damaged"));
+	static const FName Broken(TEXT("broken"));
+	const FName State = Hp <= 0.f ? Broken : (Hp < Max ? Damaged : Intact);
+	if (State == LastBarricadeState)
+	{
+		return;
+	}
+	LastBarricadeState = State;
+	if (UDFMessageBus* Bus = UDFMessageBus::Get(this))
+	{
+		FDFMsg_Structure Message;
+		Message.StructureId = StructureId;
+		Message.DefId = DefId;
+		Message.SocketId = SocketId;
+		Message.HpFraction = FMath::Max(0.f, Hp) / Max;
+		Message.State = State;
+		Bus->BroadcastTeam(DFTags::Message_BarricadeState, Message);
+	}
+}
+
+void ADFTower::OnRep_Hp(float OldHp)
+{
+	const float Max = GetStructureMaxHp();
+	if (Max <= 0.f || Hp >= OldHp)
+	{
+		return;   // a repair arrives as its own team message
+	}
+	if (UDFMessageBus* Bus = UDFMessageBus::Get(this))
+	{
+		FDFMsg_Damage Message;
+		Message.TargetId = StructureId;
+		Message.DamageSource = DFTags::Damage_Source_Enemy;
+		Message.Amount = OldHp - Hp;
+		Message.RemainingFraction = FMath::Max(0.f, Hp) / Max;
+		Message.Location = GetActorLocation();
+		Bus->Broadcast(DFTags::Message_StructureDamaged, Message);
+	}
+}
+
 void ADFTower::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -130,9 +255,9 @@ void ADFTower::Tick(float DeltaSeconds)
 void ADFTower::StepTower(float DeltaSeconds)
 {
 	const FDFTowerRow* Row = GetRow();
-	if (!Row)
+	if (!Row || IsBroken())
 	{
-		return;
+		return;   // rubble does not fire (Step.cs removes a broken tower before FireTowers)
 	}
 	// Step.cs order: the weapon (FireTowers), then every round in flight (StepTowerProjectiles), so a
 	// round fired this step also moves this step.
