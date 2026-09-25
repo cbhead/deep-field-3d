@@ -150,6 +150,7 @@ checks() {
   python3 unreal/Build/layering-check.py || fail layering
   python3 unreal/Build/ownership-check.py --ws "$WS" --base origin/unreal/main || fail ownership
   python3 unreal/Build/validate-content-json.py > /tmp/int-schema.log || { cat /tmp/int-schema.log; fail schema; }
+  python3 unreal/Build/test-gate-check.py > /tmp/int-test-gate.log || { cat /tmp/int-test-gate.log; fail test-gate; }
 }
 verify() {
   checks

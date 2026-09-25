@@ -3,13 +3,13 @@
 # runs, and what INT runs on a rebased branch before merging it to unreal/main.
 #
 #   unreal/Build/ci-local.sh                         # everything, in order, stop at the first failure
-#   unreal/Build/ci-local.sh --skip smoke            # skip a step (repeatable): layering ownership schema plan-status build tests smoke
+#   unreal/Build/ci-local.sh --skip smoke            # skip a step (repeatable): layering ownership schema test-gate plan-status build tests smoke
 #   unreal/Build/ci-local.sh --filter DF.Unit        # test filter (default DF.Unit+DF.Content)
 #   unreal/Build/ci-local.sh --client-count 2        # smoke with two clients
 #   unreal/Build/ci-local.sh --ws 04 --base main     # ownership as a workstream against another base (default INT vs origin/unreal/main)
 #   unreal/Build/ci-local.sh --strict                # a stale STATUS.md fails the run instead of warning
 #
-# Steps: layering-check.py · ownership-check.py · validate-content-json.py · plan-status.py --check ·
+# Steps: layering-check.py · ownership-check.py · validate-content-json.py · test-gate-check.py · plan-status.py --check ·
 # Build.sh DeepFieldEditor Mac Development (-WaitMutex: UBT serialises builds machine-wide) ·
 # editor-lock.sh test.sh <filter> · editor-lock.sh smoke-listen.sh (the lock is held for the whole smoke).
 # Prints a summary table on exit, whatever happened. Exit 1 on the first failing step.
@@ -42,7 +42,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-STEPS=(layering ownership schema plan-status build tests smoke)
+STEPS=(layering ownership schema test-gate plan-status build tests smoke)
 typeset -A RESULT SECONDS_OF
 for s in "${STEPS[@]}"; do RESULT[$s]="not run"; SECONDS_OF[$s]=""; done
 START=$(date +%s)
@@ -92,6 +92,7 @@ build() {
 run layering    python3 "$HERE/layering-check.py"
 run ownership   python3 "$HERE/ownership-check.py" --ws "$WS" --base "$BASE"
 run schema      python3 "$HERE/validate-content-json.py"
+run test-gate   python3 "$HERE/test-gate-check.py"
 if [ $STRICT -eq 1 ]; then run plan-status python3 "$HERE/plan-status.py" --check
 else run --warn plan-status python3 "$HERE/plan-status.py" --check; fi
 run build       build
