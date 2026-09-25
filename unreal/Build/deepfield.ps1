@@ -19,8 +19,12 @@
     join     Join a host: `join 192.168.1.20` (and -Port if the host changed it).
     solution Generate the Visual Studio solution (DeepField.sln) for working on the C++.
 
-  What `setup` makes sure of, in order. Everything is installed with winget except the engine,
-  which only Epic's launcher can install (the script opens it and waits):
+  setup works in two passes. Pass 1 only checks, finding what is already installed wherever it is
+  (off-PATH Git and Python, any Visual Studio, the engine via the launcher's records or a source
+  build, an existing clone anywhere on the machine), prints what is in place and what is missing,
+  and asks before changing anything. Pass 2 installs or fixes only the missing items: with winget,
+  except the engine, which only Epic's launcher can install (the script opens it and waits).
+  What it looks for:
     Windows 10 19041+ / 11, 64-bit       long paths enabled (one UAC prompt)
     Git for Windows + Git LFS            Python 3.9+
     Visual Studio 2022 with the C++ toolset UE 5.8 accepts (MSVC 14.44.35211+), Windows SDK 10.0.22621
@@ -59,6 +63,8 @@ param(
   [switch]$NoBuild,
   # test: run even if the built modules are older than the source (prints what it ignores).
   [switch]$AllowStale,
+  # setup: do not ask before installing what the check found missing.
+  [switch]$Yes,
   # Keep the window open at the end (the .cmd passes this when the script was double-clicked).
   [switch]$Pause
 )
@@ -97,9 +103,11 @@ $VsWorkloads   = @(
 # ---------------------------------------------------------------------------------------------------
 $script:Problems = New-Object System.Collections.ArrayList
 $script:DoctorOnly = ($Command -eq 'doctor')
+$script:Quiet = $false        # the second setup pass prints only what it changes
+$script:OkCount = 0
 
-function Write-Step([string]$Text) { Write-Host ''; Write-Host "== $Text" -ForegroundColor Cyan }
-function Write-Ok([string]$Text)   { Write-Host "   [ OK ] $Text" -ForegroundColor Green }
+function Write-Step([string]$Text) { if (-not $script:Quiet) { Write-Host ''; Write-Host "== $Text" -ForegroundColor Cyan } }
+function Write-Ok([string]$Text)   { $script:OkCount++; if (-not $script:Quiet) { Write-Host "   [ OK ] $Text" -ForegroundColor Green } }
 function Write-Info([string]$Text) { Write-Host "          $Text" }
 function Write-Fix([string]$Text)  { Write-Host "   [FIX ] $Text" -ForegroundColor Yellow }
 function Write-Warn2([string]$Text){ Write-Host "   [WARN] $Text" -ForegroundColor Yellow }
@@ -107,6 +115,13 @@ function Write-Warn2([string]$Text){ Write-Host "   [WARN] $Text" -ForegroundCol
 # A requirement that is not met. In doctor mode it is recorded and the checks go on; otherwise the
 # script stops here with the fix spelled out.
 function Fail([string]$What, [string]$Remedy) {
+  if ($script:DoctorOnly) {
+    # Checking only: a missing item is a finding, not an error.
+    Write-Host "   [MISS] $What" -ForegroundColor Yellow
+    if ($Remedy) { foreach ($line in $Remedy -split "`n") { Write-Host "          $line" -ForegroundColor Yellow } }
+    [void]$script:Problems.Add($What)
+    return
+  }
   Write-Host "   [FAIL] $What" -ForegroundColor Red
   if ($Remedy) { foreach ($line in $Remedy -split "`n") { Write-Host "          $line" -ForegroundColor Red } }
   [void]$script:Problems.Add($What)
@@ -212,9 +227,33 @@ function Assert-Windows {
   else { Fail "could not enable long paths (exit $rc)" "Settings > System > For developers > enable 'Enable long paths', then run this again." }
 }
 
+function Find-GitOffPath {
+  # Git installed but not on PATH (a per-user install, GitHub Desktop's bundled git): use it rather
+  # than installing a second one.
+  $dirs = @(
+    (Join-Path $env:ProgramFiles 'Git\cmd'),
+    (Join-Path ${env:ProgramFiles(x86)} 'Git\cmd'),
+    (Join-Path $env:LOCALAPPDATA 'Programs\Git\cmd'))
+  $desktop = Join-Path $env:LOCALAPPDATA 'GitHubDesktop'
+  if (Test-Path $desktop) {
+    $dirs += @(Get-ChildItem $desktop -Directory -Filter 'app-*' -ErrorAction SilentlyContinue | Sort-Object Name -Descending |
+        ForEach-Object { Join-Path $_.FullName 'resources\app\git\cmd' })
+  }
+  foreach ($d in $dirs) { if ($d -and (Test-Path (Join-Path $d 'git.exe'))) { return $d } }
+  return $null
+}
+
 function Assert-Git {
   Write-Step 'Git and Git LFS'
   $git = Get-Command git -ErrorAction SilentlyContinue
+  if (-not $git) {
+    $off = Find-GitOffPath
+    if ($off) {
+      $env:Path = "$off;$env:Path"
+      $git = Get-Command git -ErrorAction SilentlyContinue
+      if ($git) { Write-Info "Git is installed at $off but not on PATH; using that one" }
+    }
+  }
   if (-not $git) {
     if ($script:DoctorOnly) { Fail 'Git is not installed' 'deepfield setup installs it (winget Git.Git).'; return }
     Install-WithWinget 'Git.Git' 'Git for Windows' | Out-Null
@@ -241,7 +280,13 @@ function Assert-Git {
 function Find-Python {
   # The Microsoft Store puts a python.exe stub on PATH that opens the Store instead of running; the
   # version probe rejects it. The py launcher comes first because python.org installs it by default.
-  foreach ($candidate in @(@('py', '-3'), @('python'), @('python3'))) {
+  $candidates = @(@('py', '-3'), @('python'), @('python3'))
+  # Installed but not on PATH (python.org's per-user default leaves PATH alone).
+  foreach ($pattern in @((Join-Path $env:LOCALAPPDATA 'Programs\Python\Python3*\python.exe'),
+      (Join-Path $env:ProgramFiles 'Python3*\python.exe'), (Join-Path $env:SystemDrive 'Python3*\python.exe'))) {
+    foreach ($f in @(Get-ChildItem $pattern -ErrorAction SilentlyContinue | Sort-Object FullName -Descending)) { $candidates += ,@($f.FullName) }
+  }
+  foreach ($candidate in $candidates) {
     $exe = $candidate[0]; $pre = @($candidate | Select-Object -Skip 1)
     if (-not (Get-Command $exe -ErrorAction SilentlyContinue)) { continue }
     $out = Get-NativeOutput $exe ($pre + @('-c', 'import sys; print("%d.%d.%d" % sys.version_info[:3])'))
@@ -431,10 +476,15 @@ function Find-Engine([string]$Association) {
     $k = Get-ItemProperty -Path (Join-Path $hive $Association) -Name InstalledDirectory -ErrorAction SilentlyContinue
     if ($k) { [void]$candidates.Add($k.InstalledDirectory) }
   }
+  # Engines built from source register themselves here (value name = a GUID, data = the folder).
+  $builds = Get-Item 'HKCU:\Software\Epic Games\Unreal Engine\Builds' -ErrorAction SilentlyContinue
+  if ($builds) { foreach ($n in $builds.GetValueNames()) { [void]$candidates.Add([string]$builds.GetValue($n)) } }
   [void]$candidates.Add((Join-Path $env:ProgramFiles "Epic Games\UE_$Association"))
   foreach ($drive in Get-PSDrive -PSProvider FileSystem -ErrorAction SilentlyContinue) {
     [void]$candidates.Add((Join-Path $drive.Root "Epic Games\UE_$Association"))
     [void]$candidates.Add((Join-Path $drive.Root "Program Files\Epic Games\UE_$Association"))
+    [void]$candidates.Add((Join-Path $drive.Root "UE_$Association"))
+    [void]$candidates.Add((Join-Path $drive.Root "Unreal\UE_$Association"))
   }
   foreach ($c in $candidates) {
     if (-not $c) { continue }
@@ -511,6 +561,56 @@ function Find-RepoFrom([string]$Start) {
   return $null
 }
 
+function Test-IsClone([string]$Root) {
+  return (Test-Path (Join-Path $Root 'unreal\DeepField\DeepField.uproject')) -and (Test-Path (Join-Path $Root '.git'))
+}
+
+function Find-ExistingClones {
+  # Every clone of this repository the machine already has, best guess first. Only if the cheap
+  # places have none does it search the drives (three folders deep, skipping system folders).
+  $found = New-Object System.Collections.ArrayList
+  $add = { param($d) if ($d -and (Test-IsClone $d)) { $r = (Resolve-Path $d).Path; if (-not $found.Contains($r)) { [void]$found.Add($r) } } }
+  if ($Dir) { & $add $Dir }
+  foreach ($start in @($PSScriptRoot, (Get-Location).Path)) { if ($start) { $r = Find-RepoFrom $start; if ($r) { & $add $r } } }
+  $remembered = Join-Path $env:LOCALAPPDATA 'DeepField\repo.txt'
+  if (Test-Path $remembered) { & $add ((Get-Content $remembered -TotalCount 1).Trim()) }
+  $drives = @(Get-PSDrive -PSProvider FileSystem -ErrorAction SilentlyContinue | Where-Object {
+      try { ([IO.DriveInfo]::new($_.Root)).DriveType -eq 'Fixed' } catch { $false } })
+  foreach ($d in $drives) { & $add (Join-Path $d.Root 'DF\deepfield-3d') }
+  foreach ($parent in @('source\repos', 'Documents\GitHub', 'GitHub', 'repos', 'git', 'dev', 'code', 'src', 'projects', 'Projects', 'Desktop', 'Documents', 'Downloads')) {
+    $p = Join-Path $env:USERPROFILE $parent
+    if (Test-Path $p) { foreach ($c in @(Get-ChildItem $p -Directory -ErrorAction SilentlyContinue)) { & $add $c.FullName } }
+  }
+  if ($found.Count -gt 0) { return @($found) }
+
+  if (-not $script:Quiet) { Write-Info 'looking for an existing clone on your drives (a few seconds)...' }
+  $skip = @('Windows', 'Program Files', 'Program Files (x86)', 'ProgramData', '$Recycle.Bin', 'System Volume Information',
+    'AppData', 'node_modules', 'Epic Games', 'Microsoft Visual Studio', 'Windows Kits', 'Recovery', 'PerfLogs')
+  foreach ($d in $drives) {
+    $level = @(Get-Item $d.Root)
+    for ($depth = 1; $depth -le 3; $depth++) {
+      $next = @()
+      foreach ($dir in $level) {
+        foreach ($c in @(Get-ChildItem $dir.FullName -Directory -ErrorAction SilentlyContinue)) {
+          if ($skip -contains $c.Name -or $c.Name.StartsWith('.')) { continue }
+          & $add $c.FullName
+          $next += $c
+        }
+      }
+      $level = $next
+    }
+  }
+  return @($found)
+}
+
+function Save-RepoLocation([string]$Repo) {
+  try {
+    $dir = Join-Path $env:LOCALAPPDATA 'DeepField'
+    New-Item -ItemType Directory -Force -Path $dir | Out-Null
+    Set-Content -Path (Join-Path $dir 'repo.txt') -Value $Repo
+  } catch { Write-Verbose "could not remember the clone location: $($_.Exception.Message)" }
+}
+
 function Get-DefaultCloneDir {
   $d = Get-PSDrive -Name D -PSProvider FileSystem -ErrorAction SilentlyContinue
   if ($d -and (Test-Path 'D:\') -and ([IO.DriveInfo]::new('D').DriveType -eq 'Fixed')) { return 'D:\DF\deepfield-3d' }
@@ -520,12 +620,21 @@ function Get-DefaultCloneDir {
 function Assert-Repo {
   Write-Step 'The repository'
   $repo = $null
-  if ($PSScriptRoot) { $repo = Find-RepoFrom $PSScriptRoot }
+  $clones = @(Find-ExistingClones)
+  if ($clones.Count -gt 0) {
+    $repo = $clones[0]
+    if ($clones.Count -gt 1 -and -not $script:Quiet) {
+      Write-Info "other clones on this machine (pass -Dir to use one of them instead): $((@($clones | Select-Object -Skip 1)) -join '; ')"
+    }
+  }
   if (-not $repo) {
     $target = $Dir; if (-not $target) { $target = Get-DefaultCloneDir }
-    $repo = Find-RepoFrom $target
+    if (Test-Path (Join-Path $target 'unreal\DeepField\DeepField.uproject')) {
+      Fail "$target has the project but no .git folder (a ZIP download?), so it cannot be updated or fetch its LFS files" 'Move or delete that folder, or pass -Dir with another location, and run this again.'
+      return
+    }
     if (-not $repo) {
-      if ($script:DoctorOnly) { Fail "no clone found (this script is not inside one, and $target has none)" 'deepfield setup clones it.'; return }
+      if ($script:DoctorOnly) { Fail "no clone of the repository on this machine" "setup clones it to $target (-Dir picks another folder)."; return }
       $parent = Split-Path $target -Parent
       $free = Get-FreeGB $parent
       if ($null -ne $free -and $free -lt $MinFreeGB) {
@@ -541,6 +650,7 @@ function Assert-Repo {
   }
   $script:Repo = $repo
   $script:Project = Join-Path $repo 'unreal\DeepField\DeepField.uproject'
+  if (-not $script:DoctorOnly) { Save-RepoLocation $repo }
   Write-Ok "clone at $repo"
 
   $branch = Get-NativeOutput 'git' @('-C', $repo, 'rev-parse', '--abbrev-ref', 'HEAD')
@@ -773,7 +883,7 @@ $exitCode = 0
 try {
   Write-Host "Deep Field 3D (Unreal) - $Command" -ForegroundColor Cyan
   $needsFullSetup = @('setup', 'doctor') -contains $Command
-  if ($needsFullSetup) {
+  $allChecks = {
     Assert-Windows
     Assert-Git
     Assert-Python
@@ -781,10 +891,37 @@ try {
     Assert-Repo
     Read-EngineAssociation
     Assert-Engine
+  }
+  if ($needsFullSetup) {
+    # Pass 1, both commands: check everything and change nothing.
+    $script:DoctorOnly = $true
+    Write-Host 'Checking what this machine already has. Nothing is installed or changed during this pass.'
+    & $allChecks
+    $missing = @($script:Problems)
+    if ($Command -eq 'setup') {
+      Write-Host ''
+      Write-Host '== Summary' -ForegroundColor Cyan
+      Write-Host "   already in place: $($script:OkCount)" -ForegroundColor Green
+      if ($missing.Count -eq 0) {
+        Write-Host '   missing: nothing' -ForegroundColor Green
+      } else {
+        Write-Host "   missing or needing a change: $($missing.Count)" -ForegroundColor Yellow
+        foreach ($m in $missing) { Write-Host "     - $m" -ForegroundColor Yellow }
+        Write-Host '   setup installs or changes only these. Everything marked OK is left as it is.'
+        if (-not $Yes) {
+          $answer = Read-Host '   Go ahead? [Y/n]'
+          if ($answer -match '^[nN]') { Write-Host 'Nothing was changed.'; $script:Problems.Clear(); throw [System.OperationCanceledException]::new('declined') }
+        }
+      }
+      # Pass 2: the same checks, now fixing what pass 1 found. Items already OK print nothing.
+      $script:Problems.Clear(); $script:DoctorOnly = $false; $script:Quiet = $true
+      if ($missing.Count -gt 0) { Write-Host ''; Write-Host '== Installing and fixing' -ForegroundColor Cyan }
+      & $allChecks
+      $script:Quiet = $false
+    }
   } else {
     # The other commands check only what they use, quickly, and point at `setup` for anything missing.
-    if ($PSScriptRoot) { $script:Repo = Find-RepoFrom $PSScriptRoot }
-    if (-not $script:Repo -and $Dir) { $script:Repo = Find-RepoFrom $Dir }
+    $script:Repo = @(Find-ExistingClones) | Select-Object -First 1
     if (-not $script:Repo) { Fail 'no clone found' 'Run: deepfield setup' }
     $script:Project = Join-Path $script:Repo 'unreal\DeepField\DeepField.uproject'
     if ($Command -eq 'check') {
@@ -846,9 +983,12 @@ try {
   }
   if ($script:Problems.Count -gt 0 -and $exitCode -eq 0) { $exitCode = 1 }
 } catch [System.OperationCanceledException] {
-  Write-Host ''
-  Write-Host "Stopped: $($_.Exception.Message). Fix that (see above) and run the same command again." -ForegroundColor Red
-  $exitCode = 1
+  if ($_.Exception.Message -eq 'declined') { $exitCode = 0 }
+  else {
+    Write-Host ''
+    Write-Host "Stopped: $($_.Exception.Message). Fix that (see above) and run the same command again." -ForegroundColor Red
+    $exitCode = 1
+  }
 } catch {
   Write-Host ''
   Write-Host "Unexpected error: $($_.Exception.Message)" -ForegroundColor Red
