@@ -133,3 +133,22 @@ demonstrated.** No build or test result from the GPU box has been recorded yet;
   `Determinism/DFDetMath.h`, not `Waves/DFDetMath.h`.
 - **Every open Needs-INT item has been ruled** (`rfcs/needs-int-rulings-2026-09-25.md`, ADRs 0024–0027,
   RFC-0003). Read the ruling before re-raising one.
+
+## Assignment, 2026-09-25: WS-10a Foundry is offered to the cloud session
+**WS-10a (Map redesign: Foundry) has a full assignment brief in its own workstream file** —
+`unreal/PLAN/workstreams/ws-10a-map-foundry.md`, section "Assignment from INT". It is unclaimed; claim
+it there per §6.2 with your own handle.
+
+It is offered to a session with **no engine** on purpose. Terrain is text-authored by ADR-0018, so both
+the authoring and its verification are JSON and Python (`build_heightmap.py` has its own test suite),
+and Foundry is the map G2's vertical slice happens on. The brief carries the landform, the A1 targets,
+every §3.2 number the validator enforces, the four behavioural checks G2 will actually test, and how to
+self-verify without Unreal.
+
+**The constraint that comes with it, and the reason:** deliver JSON, Python and ledger prose — **no C++,
+no editor commands**. Since `fcc1e1d`, the last commit anything compiled, **43 commits and ~9,130 lines
+of C++ have landed on `unreal/main` unverified** (DFUI 18 files, DFPlayer 15, DFEnemies 7, DFCore 1).
+Zero runners are registered, so `unreal-win` reports *skipped* and `unreal-checks` — green — does not
+compile anything. Until a machine with the engine gates the trunk, more unbuilt C++ makes the eventual
+reckoning larger, and `fcc1e1d` is the commit to bisect from when someone finally has a compiler.
+
