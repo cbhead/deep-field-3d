@@ -1,6 +1,6 @@
 # Workstream status
 
-Generated 2026-09-25T01:00:42Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-25T01:15:48Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
 active: 8 · review: 1 · unclaimed: 40
 
@@ -11,7 +11,7 @@ active: 8 · review: 1 · unclaimed: 40
 | WS-02 | Gameplay core (GAS) | P1-P2 | CP | active (lease expired) | session-75b58b1b/agent-ws02 | 2026-09-20T15:16:34Z | — |  | — |
 | WS-03 | Player | P2 | CP | unclaimed | — | — | — | yes | — |
 | WS-04 | Towers & build | P2-P3 | CP | unclaimed | — | — | — | yes | — |
-| WS-05 | Enemies & AI | P2-P3 | CP | active (lease expired) | session-62767025 | 2026-09-22T09:13:37Z | fb2ae91 | yes | — |
+| WS-05 | Enemies & AI | P2-P3 | CP | active (lease expired) | session-62767025 | 2026-09-22T09:40:04Z | fb2ae91 | yes | — |
 | WS-06 | Economy, scrap, gunsmith | P3 |  | unclaimed | — | — | — |  | — |
 | WS-07 | Factions & abilities | P2-P4 | CP | unclaimed | — | — | — |  | — |
 | WS-08 | Vehicles | P3-P4 |  | unclaimed | — | — | — | yes | — |
