@@ -1,7 +1,7 @@
 #include "DFGameplayTags.h"
 #include "Misc/AutomationTest.h"
 #include "Testing/DFTestUtils.h"
-#include "Waves/DFDetRng.h"
+#include "Determinism/DFDetRng.h"
 #include "Waves/DFWaveDirector.h"
 #include "Waves/DFWavePlan.h"
 #include "Waves/DFWaveSchedule.h"

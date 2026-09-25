@@ -4,8 +4,8 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Testing/DFTestUtils.h"
-#include "Waves/DFDetMath.h"
-#include "Waves/DFDetRng.h"
+#include "Determinism/DFDetMath.h"
+#include "Determinism/DFDetRng.h"
 #include "Waves/DFWavePlan.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
