@@ -2,7 +2,7 @@
 
 **Canonical:** `unreal/DeepField/Source/DFCore/Public/Messages/DFMessages.h` (one `USTRUCT FDFMsg_<Name>` per message with the same fields as the `Events.cs` record) and `UDFMessageBus` (`Broadcast(Tag, Payload)`, `Subscribe(Tag, Handler)`). **Owner:** WS-00. **Rule:** A for new messages; R for field changes.
 
-Transport (ADR-0004): the host broadcasts locally then `ADFEventRelay::NetMulticast_Event(FDFEventEnvelope)` for team-wide messages, or `Client_Refused(Tag, Reason)` for refusals to the issuing client only. UI, audio and VFX subscribe to messages and cues; nothing polls.
+Transport (ADR-0004): the host calls `ADFEventRelay::Publish(WorldContext, Tag, Payload)` (DFMatch, WS-28), which broadcasts on the host's bus and then `Multicast_Event(Tag, FInstancedStruct)` (reliable, always relevant) for team-wide messages; each client re-broadcasts on its own bus. Refusals go `ADFPlayerController::Client_Refused(Tag, FDFMsg_Rejected)` to the issuing client only. (Corrected 2026-09-25 when the relay was written: the payload travels as the bus's own `FInstancedStruct`, so there is no separate envelope type.) UI, audio and VFX subscribe to messages and cues; nothing polls.
 
 **Who broadcasts (INT ruling, 2026-09-21).** A system that *produces* a discrete fact builds the payload;
 **DFMatch broadcasts it.** `ADFWaveDirector::DescribeWave` returns the `FDFMsg_Wave` fields (lap, threat =
