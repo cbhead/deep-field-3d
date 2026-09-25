@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Combat/DFTargetable.h"
+#include "Economy/DFEconomySeams.h"
 #include "Components/SceneComponent.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
@@ -35,4 +36,42 @@ public:
 	virtual bool IsTargetStealthy() const override { return bStealth; }
 	virtual bool BlocksTowerSight() const override { return bBlocksSight; }
 	virtual float GetRemainingToCore() const override { return Remaining; }
+};
+
+/** A stand-in for WS-06's economy component in DF.Unit.Tower.Build* tests: a purse the test fills. */
+UCLASS(NotBlueprintable, HideDropdown)
+class UDFTowerTestWallet : public UObject, public IDFTeamWallet
+{
+	GENERATED_BODY()
+
+public:
+	int32 Money = 0;
+	TMap<EDFScrapType, int32> Scrap;
+
+	virtual int32 GetMoney() const override { return Money; }
+	virtual const TMap<EDFScrapType, int32>& GetTeamScrap() const override { return Scrap; }
+	virtual bool TrySpend(int32 InMoney, const FDFScrapBundle* Bundle) override
+	{
+		if (Money < InMoney)
+		{
+			return false;
+		}
+		if (Bundle)
+		{
+			for (const TPair<EDFScrapType, int32>& Part : Bundle->Amounts)
+			{
+				if (Scrap.FindRef(Part.Key) < Part.Value)
+				{
+					return false;
+				}
+			}
+			for (const TPair<EDFScrapType, int32>& Part : Bundle->Amounts)
+			{
+				Scrap.FindOrAdd(Part.Key) -= Part.Value;
+			}
+		}
+		Money -= InMoney;
+		return true;
+	}
+	virtual void AddMoney(int32 InMoney) override { Money += InMoney; }
 };

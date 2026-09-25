@@ -13,8 +13,8 @@
  * belong to another domain (build, buy, revive, ...) arrive with that domain: the RPC is added here and
  * forwards to the domain's host-side code.
  *
- * This first PR carries the match-flow commands: Launch (lobby → intermission, launch seat only) and
- * StartWave (the early call).
+ * Match flow: Launch (lobby → intermission, launch seat only) and StartWave (the early call).
+ * Build (WS-04): PlaceTower, UpgradeTower, SellTower, forwarded to UDFBuildSubsystem.
  */
 UCLASS()
 class DFMATCH_API ADFPlayerController : public APlayerController
@@ -29,6 +29,22 @@ public:
 	/** Command.StartWave: call the next wave now. Ignored outside intermission and in the lobby (as the sim). */
 	UFUNCTION(Server, Reliable)
 	void Server_CallEarly();
+
+	// ---- build (WS-04: the rules are UDFBuildSubsystem's, in DFTowers) --------------------------------
+
+	/** Command.PlaceTower: TowerId (a towers.json id) on SocketId. A refusal comes back as DF.Message.BuildRejected
+	 *  (Subject = the socket, Detail = the tower id); success is DF.Message.TowerPlaced to the whole team. */
+	UFUNCTION(Server, Reliable)
+	void Server_PlaceTower(FName TowerId, FName SocketId);
+
+	/** Command.UpgradeTower: one purchase on PathIndex. A refusal comes back as DF.Message.UpgradeRejected
+	 *  (Subject = the tower's def id, Detail = its structure id); success is DF.Message.TowerUpgraded to the team. */
+	UFUNCTION(Server, Reliable)
+	void Server_UpgradeTower(int32 StructureId, int32 PathIndex);
+
+	/** Command.SellTower. An unknown tower is ignored, as the sim ignores it; success is DF.Message.TowerSold. */
+	UFUNCTION(Server, Reliable)
+	void Server_SellTower(int32 StructureId);
 
 	/** A refusal for this client only: re-broadcast on its bus under Tag (a DF.Message.*Rejected). */
 	UFUNCTION(Client, Reliable)

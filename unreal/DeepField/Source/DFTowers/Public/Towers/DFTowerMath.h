@@ -79,17 +79,17 @@ namespace DFTowerMath
 	/** The refusal vocabulary of DF.Message.BuildRejected / UpgradeRejected (Step.cs spells the same strings). */
 	namespace Reasons
 	{
-		DFTOWERS_API extern const FName None;
-		DFTOWERS_API extern const FName UnknownSocket;      // "unknownSocket"
-		DFTOWERS_API extern const FName UnknownTower;       // "unknownTower"
-		DFTOWERS_API extern const FName WrongSocketTag;     // "wrongSocketTag"
-		DFTOWERS_API extern const FName TrapSocket;         // "trapSocket"
-		DFTOWERS_API extern const FName Occupied;           // "occupied"
-		DFTOWERS_API extern const FName WouldSeal;          // "wouldSeal"
-		DFTOWERS_API extern const FName InsufficientFunds;  // "insufficientFunds"
-		DFTOWERS_API extern const FName InsufficientScrap;  // "insufficientScrap"
-		DFTOWERS_API extern const FName UnknownPath;        // "unknownPath"
-		DFTOWERS_API extern const FName MaxLevel;           // "maxLevel"
+		extern DFTOWERS_API const FName None;
+		extern DFTOWERS_API const FName UnknownSocket;      // "unknownSocket"
+		extern DFTOWERS_API const FName UnknownTower;       // "unknownTower"
+		extern DFTOWERS_API const FName WrongSocketTag;     // "wrongSocketTag"
+		extern DFTOWERS_API const FName TrapSocket;         // "trapSocket"
+		extern DFTOWERS_API const FName Occupied;           // "occupied"
+		extern DFTOWERS_API const FName WouldSeal;          // "wouldSeal"
+		extern DFTOWERS_API const FName InsufficientFunds;  // "insufficientFunds"
+		extern DFTOWERS_API const FName InsufficientScrap;  // "insufficientScrap"
+		extern DFTOWERS_API const FName UnknownPath;        // "unknownPath"
+		extern DFTOWERS_API const FName MaxLevel;           // "maxLevel"
 	}
 
 	/** What a placement costs this player: the row's cost, x forgeBuildDiscount for a Forge builder,
