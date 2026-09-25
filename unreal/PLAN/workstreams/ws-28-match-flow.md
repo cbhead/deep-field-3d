@@ -7,7 +7,7 @@ owner: session-01DTQRZ3-cloud
 claimed_at: 2026-09-25T22:58:32Z
 lease_expires: 2026-09-26T22:58:32Z
 branch: ws/28-match-flow/hero-state
-last_commit: 
+last_commit: ea6a1d4
 editor_heavy: false
 phase: P2-P3
 size: L
@@ -42,15 +42,19 @@ blocked_on:
 <!-- dated list: what, RFC #, dependents notified -->
 - 2026-09-25 · contract-append to DFCore: `Source/DFCore/Public/Match/DFMatchSeams.h` — `IDFMatchLivesSource::GetLives()` (the economy component answers; the match flow reads lives and never writes them) and the ordering it asks of a leak: lives off BEFORE `NotifyEnemyRemoved`. Dependents: WS-06 (implements it), WS-05 (leak ordering).
 - 2026-09-25 · C15 transport made concrete: `ADFEventRelay::Publish(WorldContext, Tag, Payload)` is the one team-wide send; `messages.md` corrected (no separate envelope type). Dependents: every system that produces a discrete fact hands DFMatch a payload (messages.md "who broadcasts").
+- 2026-09-25 · **`ADFPlayerState` hosts `UDFHeroStateComponent`** (ADR-0024, WS-03's component): `GetHeroState()`, `ReviveMatchXp` (5, Step.cs:931); its host events become `PlayerDowned` / `PlayerRevived{PlayerId = reviver, TargetPlayerId = revived}` / `PlayerRespawned`. `ADFMatchState::HostRespawnBledOutHeroes()`, called at the wave boundary before `OnWaveBoundary`. Dependents: WS-12 (the player view model's `bDowned ReviveProgress BleedoutSecondsLeft Seat` can read `GetHeroState()` now), WS-03.
 
 ## Needs INT
 <!-- e.g. "add plugin X to .uproject" -->
+- **`DefaultPawnClass`.** Setting it to `ADFHeroCharacter` is WS-28's to do, but not yet: the hero binds C16's input actions, which do not exist (WS-03's Needs INT), so a match would give every player a pawn that cannot move. Switch it in the same PR that the input assets land in, or right after.
+- **The shells are still unbuilt.** INT's note asks the first claimant to build `DFMatch`, run `DF.Unit.Match` and the smoke, and fix what the compiler finds. This session has no engine, so that is `unreal\deepfield pr-check -Ws 28` plus the smoke on the GPU box; send the failures here.
 
 ## Open questions
 
 ## Session log
 <!-- append-only: date · session · what landed · what's next -->
 - 2026-09-25 · session-01DTQRZ3-cloud · **claim** — cloud session, on the user's ask; the same session holds WS-03. INT's note asks whoever claims first to build the shells, run `DF.Unit.Match` and the smoke, and fix what the compiler finds: this session has no engine, so that first build has to happen on the GPU box (`unreal\deepfield pr-check -Ws 28`), and whatever it finds comes back here. First PR on `ws/28-match-flow/hero-state`: host WS-03's `UDFHeroStateComponent` on `ADFPlayerState`, relay its events as `PlayerDowned`/`PlayerRevived`/`PlayerRespawned`, credit the reviver, respawn bled-out heroes at the wave boundary and move respawned pawns to a player start (ADR-0024; ws-03-player.md Needs INT). Code-only.
+- 2026-09-25 · session-01DTQRZ3-cloud · **session end** — PR on `ws/28-match-flow/hero-state` (`ea6a1d4`): `ADFPlayerState` hosts WS-03's hero state and relays its events (reviver credited); `ADFMatchState::HostRespawnBledOutHeroes` at the boundary; respawned pawns moved to a player start. Tests `DF.Unit.Match.{PlayerStateHostsHeroState,HeroEventsBecomeMessages,BledOutHeroesRespawnAtBoundary}`. **Not built and not run.** Ran: `layering-check` OK, `ownership-check --ws 28` 0 violations, `validate-content-json` OK, `check-test-coverage` 6/6. **Next:** `DefaultPawnClass` once the input assets exist; WS-12's real feed (their file); the Commands.cs RPCs as their domains arrive.
 
 ## From INT (2026-09-25) — why this workstream exists, and its first PR
 Registered by ruling R1 (`rfcs/needs-int-rulings-2026-09-25.md`, ADR-0024). Until now no workstream
