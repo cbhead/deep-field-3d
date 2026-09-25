@@ -5,8 +5,8 @@ title: Player
 state: active
 owner: session-01DTQRZ3-cloud
 claimed_at: 2026-09-25T04:59:33Z
-lease_expires: 2026-09-26T04:59:33Z
-branch: ws/03-player/hero-movement
+lease_expires: 2026-09-26T22:01:42Z
+branch: ws/03-player/hero-state
 last_commit: f1f2147
 editor_heavy: true
 phase: P2
@@ -55,3 +55,4 @@ blocked_on:
 - 2026-09-25 · INT · ADR-0024 (ruling R1): downed, revive progress and vehicle seat replicate from a **`UDFHeroStateComponent`** you write in DFPlayer and WS-28 attaches to `ADFPlayerState`; WS-28 respawns bleedout-expired players at the wave boundary through your hook.
 - 2026-09-25 · session-01DTQRZ3-cloud · **claim** — cloud session, on the user's ask (NEXT.md item 4). Read STATUS.md, NEXT.md, this file and INT's ADR-0024 note above. Plan for PR 1 on `ws/03-player/hero-movement`: `ADFHeroCharacter` + the hero movement component carrying B§1.1's parity numbers (walk 6.5, sprint 10, jump 4.8, crouch 3.0, ADS 3.5) through DFBalance dials, with DF.Unit tests for the 6.5/10/4.8 parity. Code-only, no editor slot. This session has no engine, so PR 1 will say it is unbuilt and can land only through `int-merge.sh` (CONTRACTS/ci.md).
 - 2026-09-25 · session-01DTQRZ3-cloud · **session end** — PR 1 on `ws/03-player/hero-movement` (`f1f2147`): `ADFHeroCharacter` (Godot's capsule, eye height, FOV and pitch clamp; DF_Hero; Enhanced Input slots) on `UDFHeroMovementComponent` (walk 6.5 / sprint 10 / jump 4.8 parity, crouch 3.0, ADS 3.5, sprint and ADS predicted), rules in `DFHeroMove`, tests `DF.Unit.Player.{MoveParity,SpeedRules,ComponentSpeed,PredictedWants,HeroDefaults}`. **Not built and not run**: this cloud session has no engine. What ran: `layering-check` OK, `ownership-check --ws 03` 10 files 0 violations, `validate-content-json` OK, `check-test-coverage` 6/6 gated. Before it lands it needs, on the GPU box (unreal/README.md §5.4): `unreal\deepfield check`, `unreal\deepfield test DF.Unit.Player`, then the full gate. `int-merge.sh` has no machine until its Windows port (ADR-0028), which also corrects this session's claim line: there is no int-merge route today. No editor slot, no LFS locks. **Next:** PR 2 = `UDFHeroStateComponent` (ADR-0024: downed, bleedout 30 s, revive progress 4 s at 2.5 m by one reviver, vehicle seat) as a pure core plus the component, since WS-28 attaches it; then weapons (`UDFWeaponInstance`, B§1.2 server-traced shots).
+- 2026-09-25 · session-01DTQRZ3-cloud · **session start (2)** — lease renewed. PR 1 landed as #56 (merge button, 2026-09-25 21:45 UTC; whether it was built first is not recorded here). Taking PR 2 on `ws/03-player/hero-state`: `UDFHeroStateComponent` (ADR-0024: downed, bleedout, revive, seat) as a pure core plus the component WS-28 hosts on `ADFPlayerState`. Code-only.
