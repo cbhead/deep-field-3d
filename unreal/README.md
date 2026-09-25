@@ -47,8 +47,18 @@ irm https://raw.githubusercontent.com/cbhead/deep-field-3d/unreal/main/unreal/Bu
 **If you already have a clone**, double-click `unreal\deepfield.cmd` in it, or run `unreal\deepfield setup`
 in a terminal.
 
-What `setup` does, in order. Each step checks first and only acts if something is missing, so it is
-safe to run again at any time, and running it again is also how you continue after stopping.
+`setup` never assumes a bare machine. It works in two passes:
+
+1. **Check.** It looks for everything below and changes nothing. That includes things installed
+   somewhere unusual: Git or Python that isn't on PATH (including GitHub Desktop's Git), any Visual
+   Studio 2022/2026 or Build Tools, the engine wherever the launcher put it (or a source build), and
+   an existing clone. For the clone it checks the folder you're in, the last clone it used, `X:\DF\deepfield-3d` on
+   every drive, the usual folders under your user profile, and then searches three folders deep on each
+   drive. It then prints a summary, *already in place: N* and *missing: …*, and asks **Go ahead? [Y/n]**.
+2. **Fix.** Only the items listed as missing are installed or changed. Everything marked OK is left
+   alone. `-Yes` skips the question.
+
+`deepfield doctor` runs pass 1 alone. Running `setup` again is safe, and it is also how you continue after stopping.
 
 | Step | What it checks | What it does if it is missing |
 |---|---|---|
@@ -56,7 +66,7 @@ safe to run again at any time, and running it again is also how you continue aft
 | Git | Git for Windows and Git LFS | Installs them with winget |
 | Python | Python 3.9+ (the Store's fake `python.exe` does not count) | Installs Python 3.12 with winget |
 | Visual Studio | VS 2022 (or 2026) with an MSVC toolset UE 5.8 accepts (14.44.35211+, not a banned one), and a Windows SDK 10.0.19041+ | Installs VS 2022 Community with the C++ game workloads, or updates and modifies the one you have |
-| Repository | A clone (next to the script, or in `D:\DF\deepfield-3d`, else `C:\DF\deepfield-3d`; `-Dir` picks another) | Clones `unreal/main`, turns off line-ending conversion, fetches every LFS file |
+| Repository | An existing clone anywhere on the machine (see pass 1; `-Dir` picks one when there are several) | Clones `unreal/main` to `D:\DF\deepfield-3d` (else `C:\DF\deepfield-3d`, or `-Dir`), turns off line-ending conversion, fetches every LFS file |
 | Unreal Engine | The version `DeepField.uproject` names (5.8), ideally patch 5.8.2 | Installs the Epic Games Launcher and opens it. **This is the one manual step:** sign in, then Unreal Engine > Library > **+** next to *Engine versions* > **5.8.2** > Install. Press Enter in the script's window when it has finished. Sets `UE_ROOT` for you. |
 | Build | - | Builds the editor (10-30 minutes the first time) |
 
