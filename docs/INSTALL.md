@@ -53,7 +53,7 @@ Download pages for everything below:
 5. Clone and verify:
    ```sh
    git clone https://github.com/cbhead/deep-field-3d.git deepfield-3d && cd deepfield-3d
-   make check           # sim build + unit tests + harness gates + game build
+   make check           # sim build, unit tests, harness gates, model validation, game build, asset audit
    ./play               # windowed game (controls in the README)
    ./play --headless -- --solo foundry   # headless match, for smoke-testing
    ```
@@ -109,8 +109,8 @@ shell regardless of PATH; `make run` does the same but needs the PATH line above
 | `sim/Sim.Core` | The pure headless sim — no Godot references, ever |
 | `sim/Sim.Harness` | Gate suite + PlayerBot + match runner (`make gates`) |
 | `sim/Sim.Core.Tests` | xUnit unit tests |
-| `game/` | Godot 4 client (graybox M0) |
+| `game/` | Godot 4 client (frozen; retires at G3 — see the README) |
 
 ## Server hosting
 
-Arrives at M1 (dedicated server export + Tailscale invite links + runbook).
+See [RUNBOOK-match-night.md](RUNBOOK-match-night.md).

@@ -12,14 +12,14 @@ editor_heavy: true
 phase: P1
 size: M
 critical: true
-blocked_on: git-lfs for committing L_Dev_Empty.umap; WS-15 for CI
+blocked_on: WS-15 for CI
 ---
 # WS-00 — Foundation & contracts
 
 ## Scope / DoD
 **Scope.** uproject, modules, native tags, message structs, content subsystem, message bus, collision/input, material parameter names, ledger scaffold, ADRs.
 
-**Definition of done.** Editor opens; Mac Development Editor build; L_Dev_Empty listen host + PIE client; tags compile; CONTRACTS docs written; CI builds.
+**Definition of done.** Editor opens; Development Editor build; L_Dev_Empty listen host + PIE client; tags compile; CONTRACTS docs written; CI builds.
 
 **Spec.** PROGRAMME.md §3, §3.1 (in `unreal/PLAN/PROGRAMME.md`). Size M, phase P1.
 

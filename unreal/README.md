@@ -1,28 +1,28 @@
 # Deep Field 3D on Unreal Engine 5.8 — runbook
 
 This is the Unreal rebuild of Deep Field 3D. It lives on the `unreal/main` branch, beside the frozen
-Godot client (`../game/`) and the C# sim (`../sim/`, which is now the written spec).
+Godot client (`../game/`) and the C# sim (`../sim/`, which is now the written spec). **All engine work
+happens on Windows** (ADR-0028: the Mac is retired, and Windows is the only platform), and on Windows
+one script, `Build/deepfield.ps1`, does the setup and the everyday jobs.
 
-- **On Windows** (a developer, a tester or a player): one script does everything. It checks the
-  machine, installs what is missing, clones the repository, builds, and runs the game. Follow
-  [§0 Windows](#0-windows-one-script) and nothing else on this page.
-- **On the Mac:** [§1](#1-prerequisites) onwards takes you from a bare Mac to a built project with its
-  tests passing, then to playing a map. Do the sections in order; each step says what to run and what
-  you should see. If you see something else, look it up in [Troubleshooting](#8-troubleshooting).
+- **To set up a machine and play, build or test:** [§1](#1-set-up-and-run-one-script), and nothing
+  else, is enough.
+- **For the jobs the script does not do** (the map validator, the network smoke, the pre-PR checks,
+  packaging, the importers): §3–§7, using the engine's own commands.
+- **Commissioning the GPU box** (first light, the first package, the floating-point check, the CI
+  runner) is tracked in [Build/windows-bringup.md](Build/windows-bringup.md). What the box
+  measurably has right now is in [Build/machines/windows-gpu.md](Build/machines/windows-gpu.md).
 
-Registering the CI runner is covered in [PLAN/CONTRACTS/ci.md](PLAN/CONTRACTS/ci.md). The GPU
-workstation's extra checks (Nanite/Lumen, packaging, the floating-point check) are in
-[Build/windows-bringup.md](Build/windows-bringup.md).
-
-> Every command here comes from this repository's own scripts and config (`Build/*.sh`,
-> `Build/deepfield.ps1`, `.lfsconfig`, `DeepField/Config/DefaultEngine.ini`). If a step turns out
-> different on your machine, correct this file in the same change as whatever you had to do.
+> **Status:** the script and this page have only partly been run on Windows. If a step turns out
+> different, correct this file (or the script) in the same change as whatever you had to do. The zsh
+> scripts in `Build/` (`test.sh`, `pr-check.sh`, …) were written for the retired Mac and do not run on
+> Windows; `deepfield.ps1` and the commands below replace them.
 
 ---
 
-## 0. Windows: one script
+## 1. Set up and run: one script
 
-### 0.1 What you need before you start
+### 1.1 What you need before you start
 
 Only these. The script installs everything else.
 
@@ -30,12 +30,12 @@ Only these. The script installs everything else.
 |---|---|
 | Windows 11, or Windows 10 version 2004 or later, 64-bit | Unreal Engine 5.8's minimum |
 | An administrator account (you will approve a few UAC prompts) | Visual Studio, Git and long-path support install machine-wide |
-| **About 250 GB free** (the engine ~60 GB, Visual Studio ~20 GB, the clone, its cache and build output 100+ GB) | The script warns below 150 GB on the drive it clones to |
+| **About 250 GB free** (the engine ~60 GB, Visual Studio ~20 GB, the clone, its cache and build output 100+ GB) | The script warns below 150 GB on the drive it clones to. The GPU box needs more once the art sublevels and packages arrive; its checklist budgets 500 GB. |
 | A free Epic Games account | Unreal Engine is installed through Epic's launcher, which needs a sign-in |
 | A GPU with DirectX 12 and current drivers (NVIDIA, AMD or Intel Arc) | To open the editor or play; building and tests do not need one |
-| Internet, and time: 1-3 hours the first time, mostly downloads | The engine is ~40 GB and Visual Studio ~20 GB |
+| Internet, and time: 1-3 hours the first time, mostly downloads | The engine is ~40 GB to download and Visual Studio ~20 GB |
 
-### 0.2 Run it
+### 1.2 Run it
 
 **On a machine that does not have the repository yet**, open **PowerShell** (Start menu, type
 `PowerShell`, Enter; the ordinary window, not "as administrator") and paste this one line:
@@ -75,7 +75,7 @@ It ends with `setup: done`. From then on, in a terminal in the clone's `unreal\`
 
 | Command | What it does |
 |---|---|
-| `deepfield play` | Builds if needed, then runs the game in a window. `-Map /Game/DF/Maps/Testlane/L_Testlane` plays another map ([§6.2](#62-play-a-map) lists what works today). |
+| `deepfield play` | Builds if needed, then runs the game in a window. `-Map /Game/DF/Maps/Testlane/L_Testlane` plays another map ([§6.2](#62-play-a-map) lists what works today and the match options). |
 | `deepfield host` / `deepfield join <ip>` | Host a game others on your network can join (port 7777), or join one. Allow UnrealEditor through Windows Firewall when asked. |
 | `deepfield editor` | Builds if needed, then opens the Unreal editor. The first open compiles shaders: slow once, fast afterwards. |
 | `deepfield test [filter]` | Builds, then runs the automated tests headless and prints PASS/FAIL per test. No filter = the landing gate from `Build/test.sh`. Example: `deepfield test DF.Unit.Tower`. |
@@ -88,7 +88,7 @@ It ends with `setup: done`. From then on, in a terminal in the clone's `unreal\`
 Logs: the build and test logs are in `unreal\DeepField\Saved\Logs\`, and a transcript of every
 run is at `%LOCALAPPDATA%\DeepField\deepfield-<command>.log`.
 
-### 0.3 If it stops
+### 1.3 If it stops
 
 It stops at the first thing it cannot fix itself and says what to do, in red. Do that, then run the
 same command again; everything done so far is kept.
@@ -104,233 +104,162 @@ same command again; everything done so far is kept.
 | `the clone converts line endings, and there are uncommitted changes` | Commit or stash your changes, then run `deepfield setup` again. |
 | Anything marked `Unexpected error` | A bug in the script. Report it with the transcript it names. |
 
----
+### 1.4 Once per machine, by hand: Defender exclusions
 
----
-
-## 1. Prerequisites
-
-### 1.1 Hardware
-
-| What | Minimum | Why |
-|---|---|---|
-| Mac | Apple Silicon (M1 or later), **8 GB RAM** | The project's floor. If it runs here it runs anywhere (ADR-0016). More RAM makes everything faster and test verdicts more reliable ([Troubleshooting](#8-troubleshooting)). |
-| External SSD | NVMe, APFS-formatted, **≥ 150 GB free** | The clone, the Derived Data Cache (DDC) and the build output do not fit on a small internal disk (ADR-0016/0021). The defaults below assume the SSD is mounted at `/Volumes/Toshiba`; if yours has another name, set the variables in [§2.4](#24-environment-variables). |
-| Network | Needed for the clone | Git LFS downloads the binary assets during the clone (about 1–2 GB today). |
-
-### 1.2 Software
-
-Install everything in this table before starting. The last column is how to check that it is installed.
-
-| Tool | Version | How to install | Check |
-|---|---|---|---|
-| macOS | 26.4 or later (the version the project is developed on) | Software Update | `sw_vers -productVersion` |
-| Xcode | 26.6 (full Xcode, not only the Command Line Tools) | [Mac App Store](https://apps.apple.com/app/xcode/id497799835) (older versions: [developer.apple.com/download/all](https://developer.apple.com/download/all/?q=xcode)), then run `sudo xcodebuild -license accept` once | `xcodebuild -version` |
-| Epic Games Launcher | current | [store.epicgames.com/download](https://store.epicgames.com/download) (see also [unrealengine.com/download](https://www.unrealengine.com/download)) | — |
-| **Unreal Engine** | **5.8.2** exactly | Launcher → Unreal Engine → Library → **+** → 5.8.2. Keep the default location `/Users/Shared/Epic Games/UE_5.8`. | `ls "/Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor-Cmd"` |
-| Homebrew | current | [brew.sh](https://brew.sh) | `brew --version` |
-| Git | 2.40+ | `brew install git` (or Xcode's); [git-scm.com/downloads/mac](https://git-scm.com/downloads/mac) | `git --version` |
-| **Git LFS** | 3.x | `brew install git-lfs` ([git-lfs.com](https://git-lfs.com)), then **`git lfs install`** once | `git lfs version` |
-| Python | 3.9+ (the system `python3` is fine; no packages needed) | built in; otherwise [python.org/downloads/macos](https://www.python.org/downloads/macos/) | `python3 --version` |
-| zsh | the macOS default shell | built in | `zsh --version` |
-| .NET SDK 8 | *optional*; only for `tools/content-export --diff` | `brew install --cask dotnet-sdk`, or [dotnet.microsoft.com/download/dotnet/8.0](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) | `dotnet --version` |
+The script does not change antivirus settings. Real-time scanning of the DDC and Intermediate writes is
+the largest avoidable build cost on Windows. In Windows Security → Virus & threat protection →
+Exclusions, add the clone's parent folder (for example `D:\DF\`), the engine folder (`%UE_ROOT%`), and
+the processes `UnrealEditor.exe`, `UnrealEditor-Cmd.exe`, `ShaderCompileWorker.exe`,
+`UnrealBuildTool.exe`, `cl.exe` and `link.exe`.
 
 **Why exactly 5.8.2:** a different engine patch version re-saves every asset it opens. On a shared LFS
-repository that shows up as a wall of binary changes nobody meant to make.
-
-### 1.3 Accounts and access
-
-- A GitHub account with read access to `cbhead/deep-field-3d`, plus write access if you will push.
-  HTTPS with a credential helper, or SSH, both work.
-- An [Epic Games account](https://www.epicgames.com/id/register), for the Launcher.
-- **Not needed yet:** EOS/Epic developer portal credentials. Online play runs on the Null services
-  and the IP net driver until the EOS product exists (`PLAN/rfcs/needs-int-eos-config.md`).
+repository that shows up as a wall of binary changes nobody meant to make. The script accepts any 5.8
+the `.uproject` names but warns when the patch is not 2.
 
 ---
 
-## 2. One-time setup
+## 2. Commands by hand
 
-### 2.1 Lay out the SSD
+§3–§7 run the engine directly, from **Command Prompt** (`cmd.exe`) in the repository root. cmd passes
+engine arguments such as `-ExecCmds="…; Quit"` through verbatim; PowerShell's quoting rules differ.
+`setup` sets `UE_ROOT`. Set these two shorthands in each new terminal:
 
-The project config expects this layout. The DDC path in `DefaultEngine.ini` is
-`%GAMEDIR%../../../DDC`, which resolves to a `DDC` folder beside the clone.
-
-```
-/Volumes/Toshiba/Deepfield-Unreal/
-├── deepfield-3d/     ← the clone (the Unreal working copy)
-├── DDC/              ← Derived Data Cache, shared by every checkout on this machine
-└── .editor-lock/     ← created and removed by Build/editor-lock.sh; never make it by hand
+```bat
+set UE=%UE_ROOT%\Engine\Binaries\Win64\UnrealEditor-Cmd.exe
+set PROJ=%CD%\unreal\DeepField\DeepField.uproject
 ```
 
-```bash
-mkdir -p /Volumes/Toshiba/Deepfield-Unreal/DDC
-```
-
-### 2.2 Clone the `unreal/main` branch with LFS
-
-```bash
-cd /Volumes/Toshiba/Deepfield-Unreal
-git lfs install                                   # once per machine; harmless to repeat
-git clone --branch unreal/main https://github.com/cbhead/deep-field-3d.git deepfield-3d
-cd deepfield-3d
-```
-
-**What you should see:** the clone finishes with a `Filtering content` line from LFS. The repo-root
-`.lfsconfig` deliberately **skips** Megascans and the art/lighting sublevels on the Mac, because those
-are GPU-box work, so a clone without them is correct.
-
-**Check it:** these files should be real assets, not LFS pointer files:
-
-```bash
-git lfs ls-files | head        # lists .uasset/.umap files, each with a '*' (downloaded)
-ls -lh unreal/DeepField/Content/DF/Dev/L_Dev_Empty.umap   # tens of KB or more, not ~130 bytes
-```
-
-### 2.3 Accept the Xcode licence and point at the full Xcode
-
-```bash
-sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
-sudo xcodebuild -license accept
-```
-
-### 2.4 Environment variables
-
-Every script works with no variables set **if** you used the default paths above. If any path is
-different, add these to `~/.zshrc` (with your own paths) and open a new terminal:
-
-```bash
-export UE_ROOT="/Users/Shared/Epic Games/UE_5.8"                         # the engine install
-export DEVELOPER_DIR="/Applications/Xcode.app/Contents/Developer"       # full Xcode
-export UE_LOCAL_DDC="/Volumes/Toshiba/Deepfield-Unreal/DDC"             # the DDC folder from §2.1
-export EDITOR_LOCK_DIR="/Volumes/Toshiba/Deepfield-Unreal/.editor-lock" # one editor at a time
-```
-
-All the commands below are run **from the repository root** (`deepfield-3d/`).
+The DDC needs no configuration: `Config/DefaultEngine.ini` puts it at `%GAMEDIR%../../../DDC`, a `DDC`
+folder beside the clone, shared by the clone and every worktree. The `UE-LocalDataCachePath`
+environment variable overrides it if a machine needs another location.
 
 ---
 
 ## 3. Check the tree (seconds, no engine)
 
-These are the Python checks CI runs. They need no engine, so run them first. They will catch a bad
-clone before you spend minutes building.
-
-```bash
-python3 unreal/Build/layering-check.py           # → layering: OK
-python3 unreal/Build/validate-content-json.py    # → one "ok <table>.json (N rows)" line per table
-python3 unreal/Build/check-test-coverage.py      # → test coverage: 6 suite(s) registered, 6 gated, 0 ungated
-python3 unreal/Build/plan-status.py --check      # → plan-status: OK (…)
-```
-
-All four should exit 0. A `plan-status` failure is only a stale ledger and does not stop you from building.
+`deepfield check` runs the layering, content-schema and test-coverage checks. The ledger check it
+leaves out is `python unreal\Build\plan-status.py --check` (expect `plan-status: OK (…)`). A
+`plan-status` failure only means the ledger is stale; it does not stop you from building.
 
 ---
 
 ## 4. Build
 
-The first build takes a long time: roughly 10–40 minutes on an M1, depending on what else the machine
-is doing. Later builds are incremental.
+`deepfield build` builds `DeepFieldEditor Win64 Development` and ends with `[ OK ] build succeeded`.
+On a failure it prints the compiler errors in red, and the whole output is in
+`unreal\DeepField\Saved\Logs\build-editor.log`. Underneath, it runs the engine's own script:
 
-```bash
-"${UE_ROOT:-/Users/Shared/Epic Games/UE_5.8}/Engine/Build/BatchFiles/Mac/Build.sh" \
-  DeepFieldEditor Mac Development \
-  -Project="$PWD/unreal/DeepField/DeepField.uproject" \
-  -WaitMutex -NoHotReload
-```
-
-**What you should see:** the build ends with `Result: Succeeded`. Everything above that line is
-compiler output. If it fails, the first line containing ` error ` is the one to read:
-
-```bash
-# the same build, showing only errors and the result
-".../Build.sh" DeepFieldEditor Mac Development -Project="$PWD/unreal/DeepField/DeepField.uproject" \
-  -WaitMutex -NoHotReload 2>&1 | grep -E " error |Result:"
+```bat
+"%UE_ROOT%\Engine\Build\BatchFiles\Build.bat" DeepFieldEditor Win64 Development -Project="%PROJ%" -WaitMutex -NoHotReload
 ```
 
 `-WaitMutex` makes a second build (another session's, or CI's) queue behind this one instead of
-fighting it for memory.
+fighting it. Both targets use `BuildSettingsVersion.V7` (ADR-0020). If UBT complains about build
+settings, the engine on the machine is not 5.8.
 
 ---
 
 ## 5. Test
 
+`deepfield test` keeps the three rules `Build/test.sh` enforced. If you ever run the engine's
+automation yourself, keep them by hand:
+
+1. **Never test a binary older than its source.** `deepfield test` builds first and refuses to test
+   modules older than the code (`-AllowStale` overrides it, loudly). A green run on a stale binary looks
+   exactly like a real pass (CONTRACTS/ci.md, "A green run on a stale binary").
+2. **The verdict is the JSON report, never the editor's exit code.** The editor exits 0 whatever the
+   tests did.
+3. **The landing gate is `DF_GATE_FILTER` in `Build/test.sh`**, the one definition every landing
+   inherits. `deepfield test` with no filter reads it from there. An automation filter is a
+   case-insensitive **substring** match, so plain `DF` also runs about 130 engine tests. Always spell the
+   roots out.
+
 ### 5.1 The landing gate (the full automated test set)
 
-```bash
-unreal/Build/editor-lock.sh unreal/Build/test.sh
+```bat
+unreal\deepfield test
 ```
 
-- With no argument, this runs the whole landing gate (`DF_GATE_FILTER` in `Build/test.sh`: `DF.Unit`,
-  `DF.Content`, `DF.Online`, `DF.Editor`, `DF.UI`, `DF.Func`). It is headless (`-nullrhi`) and takes a
-  few minutes.
-- **What you should see:** one `PASS <test path>` line per test, then `tests: OK — N passed (<log>)`. A failing
-  test prints `FAIL <test path>` followed by its error lines, then `tests: FAILED — X of N`.
-  **Exit code:** 0 means everything passed, 1 means a test failed or nothing matched, 2 means the editor
-  did not finish.
-- To run one area, pass a filter; `+` joins several:
-  `unreal/Build/editor-lock.sh unreal/Build/test.sh DF.Unit.Match`.
-- **Always go through `editor-lock.sh`.** It makes sure only one editor process runs on the machine
-  at a time (an 8 GB Mac cannot hold two), and it points the editor at the shared DDC.
-- `test.sh` **refuses to run** if any source file is newer than the built modules. Build again; do
-  not bypass it. A green run on a stale binary looks exactly like a real pass.
-- Logs: `unreal/DeepField/Saved/Logs/test-<filter>.log`. Report:
-  `unreal/DeepField/Saved/Automation/Reports/test-<filter>/index.html`.
+It builds, then runs the gate headless (`-nullrhi`, a few minutes). **What you should see:** one `PASS
+<test path>` line per test, then `[ OK ] N passed`. A failing test prints `FAIL <test path>` with its
+error lines, then `X of N tests failed`. To run one area, pass a filter: `unreal\deepfield test
+DF.Unit.Match` (`+` joins several). Log: `unreal\DeepField\Saved\Logs\test-<filter>.log`. Readable
+report: `unreal\DeepField\Saved\Automation\Reports\test-<filter>\index.html`.
 
 ### 5.2 The map validator
 
-```bash
-UE="${UE_ROOT:-/Users/Shared/Epic Games/UE_5.8}/Engine/Binaries/Mac/UnrealEditor-Cmd"
-unreal/Build/editor-lock.sh "$UE" "$PWD/unreal/DeepField/DeepField.uproject" \
-  -run=DFMapValidate -all -nullrhi -unattended -nop4 -nosplash -NoSound
+```bat
+"%UE%" "%PROJ%" -run=DFMapValidate -all -nullrhi -unattended -nop4 -nosplash -NoSound
 ```
 
 **What you should see:** one `DFMapValidate <map>: N pass, 0 fail, …` line per map, and exit code 0.
-Failures that are listed in `unreal/map-validation-baseline.tsv` show as warnings, not errors.
+Failures listed in `unreal/map-validation-baseline.tsv` show as warnings, not errors.
 
-### 5.3 The network smoke test (a listen host and a client)
+### 5.3 The network smoke test (a listen host and a headless client)
 
-```bash
-unreal/Build/editor-lock.sh unreal/Build/smoke-listen.sh
+This is what `Build/smoke-listen.sh` did. Start the host in its own window:
+
+```bat
+start "df-host" "%UE%" "%PROJ%" /Game/DF/Dev/L_Dev_Empty?listen -port=7788 -game -nullrhi -unattended -nop4 -nosplash -NoSound -log -abslog="%CD%\unreal\DeepField\Saved\Logs\smoke-host.log"
 ```
 
-**What you should see:** `smoke: OK (host + 1 client(s) on /Game/DF/Dev/L_Dev_Empty)`. Add
-`-client-count 2` to test two clients. Logs: `Saved/Logs/smoke-host.log` and `smoke-client-*.log`.
+Once the host's log shows its map is up (about 30 s), start a client:
 
-### 5.4 Everything at once (what CI's nightly runs)
-
-```bash
-unreal/Build/ci-local.sh          # checks → build → the gate → smoke; prints a summary table
+```bat
+start "df-client-1" "%UE%" "%PROJ%" 127.0.0.1:7788 -game -nullrhi -unattended -nop4 -nosplash -NoSound -log -abslog="%CD%\unreal\DeepField\Saved\Logs\smoke-client-1.log"
 ```
 
-It takes about 15–25 minutes when the machine is idle, and stops at the first failing step.
+After another 30 s or so, check both logs:
+
+```bat
+findstr /c:"player joined" unreal\DeepField\Saved\Logs\smoke-host.log
+findstr /c:"Welcomed by server" /c:"Bringing up level for play took" unreal\DeepField\Saved\Logs\smoke-client-1.log
+```
+
+**What you should see:** two `player joined` lines in the host log (the host's own player, then the
+client) and at least one line from the client log. Then close both windows. For more clients, start
+more with their own `smoke-client-<n>.log`; the host then needs one `player joined` per client, plus one.
+**Treat a green smoke with care for now:** since PR #48, every join goes through
+`ValidateJoinOptions`, which did not exist when this pass condition was chosen. Re-derive the
+condition against the new join path before relying on it (PLAN/NEXT.md).
+
+`deepfield host` and `deepfield join <ip>` do the same with a real window, for playing rather than testing.
+
+### 5.4 Before you open a PR
+
+This is the job `Build/pr-check.sh` did, run against the full landing gate rather than that script's
+`DF.Unit+DF.Content` default, since the gate is what your branch will be landed on: `deepfield check`,
+then your workstream's ownership check, then `deepfield test`. Add §5.3 if you touched anything networked.
+
+```bat
+python unreal\Build\ownership-check.py --ws <NN> --base origin/unreal/main
+```
+
+A binary outside your workstream's globs in `PLAN/OWNERSHIP.md` is a violation. A text file outside
+them is a warning: open a PR to the owner, or write an RFC. Landing goes through INT, never the GitHub
+merge button, because the button skips the only step that compiles (CONTRACTS/ci.md, 2026-09-25).
 
 ---
 
-## 6. Open the editor and play
+## 6. Open the editor, play, package
 
 ### 6.1 Open the editor
 
-```bash
-open -a "${UE_ROOT:-/Users/Shared/Epic Games/UE_5.8}/Engine/Binaries/Mac/UnrealEditor.app" \
-  --args "$PWD/unreal/DeepField/DeepField.uproject"
-```
-
-The first open compiles shaders into the DDC, which is slow once and fast afterwards. The editor
-starts on `/Game/DF/Dev/L_Dev_Empty`, an empty test level.
+`unreal\deepfield editor` builds if needed, then opens the editor. The first open compiles shaders into
+the DDC, which is slow once and fast afterwards. The editor starts on `/Game/DF/Dev/L_Dev_Empty`, an
+empty test level.
 
 ### 6.2 Play a map
 
 - **In the editor:** Content Browser → `Content/DF/Maps/<Map>/L_<Map>` (for example `L_Foundry`, or
   `L_Testlane` for the smallest one), open it, then press **Play**.
-- **Standalone, from a terminal**, with match options on the URL:
-
-  ```bash
-  UE="${UE_ROOT:-/Users/Shared/Epic Games/UE_5.8}/Engine/Binaries/Mac/UnrealEditor-Cmd"
-  "$UE" "$PWD/unreal/DeepField/DeepField.uproject" "/Game/DF/Maps/Testlane/L_Testlane?listen" -game -log
-  ```
+- **From a terminal:** `unreal\deepfield play -Map /Game/DF/Maps/Testlane/L_Testlane`. Match options
+  go on the map URL, for example `-Map "/Game/DF/Maps/Testlane/L_Testlane?endless?seed=7"`.
+  `deepfield host` adds `?listen` itself.
 
   | URL option | Effect |
   |---|---|
-  | `?listen` | host a listen server (other machines join with `open <host-ip>`) |
+  | `?listen` | host a listen server (other machines join with `open <host-ip>`, or `deepfield join <host-ip>`) |
   | `?endless` | endless mode: the waves never stop, and only the core ends the run |
   | `?lobby` | wait in a lobby until the lowest seat sends Launch |
   | `?intermission=<s>` | intermission length (default: the `intermissionSeconds` balance dial, 8 s) |
@@ -341,19 +270,33 @@ starts on `/Game/DF/Dev/L_Dev_Empty`, an empty test level.
   yet. The match flow starts waves on the director, but **enemies are not spawned yet** (WS-05's
   `ADFEnemy` has not landed), so a wave never clears. `PLAN/NEXT.md` has the current state.
 
+### 6.3 Package a Windows build
+
+```bat
+"%UE_ROOT%\Engine\Build\BatchFiles\RunUAT.bat" BuildCookRun -project="%PROJ%" ^
+    -platform=Win64 -clientconfig=Development -build -cook -stage -pak -archive ^
+    -archivedirectory="%CD%\..\packages\dev" -nop4 -utf8output -unattended
+```
+
+The package lands in a `packages\dev` folder beside the clone. Run `packages\dev\Windows\DeepField.exe`
+from there. It should reach `L_Dev_Empty` (or whatever `GameDefaultMap` is by then). A cook that fails
+on a `Placeholder=true` asset is the registry audit doing its job (WS-01), not a packaging problem.
+
 ---
 
 ## 7. Everyday tasks
 
-| Task | Command (from the repo root) |
+| Task | Command (from the repo root, with `UE` and `PROJ` set per §2) |
 |---|---|
-| Re-import content after editing `unreal/content/json/*.json` | `python3 unreal/Build/validate-content-json.py`, then `unreal/Build/editor-lock.sh "$UE" "$PWD/unreal/DeepField/DeepField.uproject" -run=DFContentImport -nullrhi -unattended -nop4 -nosplash -NoSound`. Commit the JSON together with the regenerated `DT_*.uasset` files. Details: [content/README.md](content/README.md). |
-| Re-import a level after editing `unreal/content/levels/*.level.json` | `… -run=DFLevelImport -map=<id> [-legacy] -nullrhi -unattended -nop4 -nosplash -NoSound`. Take the LFS lock first (`git lfs lock <path to the .umap>`). |
-| Regenerate terrain after editing `unreal/content/terrain/*.terrain.json` | `python3 tools/ue-bridge/terrain/build_heightmap.py <map>`, then `… -run=DFEditor.DFTerrainImport -map=<map> …` (the `DFEditor.` prefix is required) |
-| Check a workstream branch before opening a PR | `unreal/Build/pr-check.sh --ws <NN>` (see [Build/README.md](Build/README.md)) |
+| Start a parallel session | `git worktree add ..\wt-ws-NN -b ws/NN-<slug>/<topic> origin/unreal/main`: a worktree beside the clone, sharing its DDC. Reset `PROJ` inside it. |
+| Work on the C++ in Visual Studio or Rider | `unreal\deepfield solution` generates `DeepField.sln` |
+| Re-import content after editing `unreal/content/json/*.json` | `python unreal\Build\validate-content-json.py`, then `"%UE%" "%PROJ%" -run=DFContentImport -nullrhi -unattended -nop4 -nosplash -NoSound`. Commit the JSON together with the regenerated `DT_*.uasset` files. Details: [content/README.md](content/README.md). |
+| Re-import a level after editing its `.level.json` (`unreal/content/levels/<id>.level.json`, or today's Godot-era briefs in `levels/legacy/`, which `-legacy` selects) | Take the LFS lock first (`git lfs lock <path to the .umap>`), then `"%UE%" "%PROJ%" -run=DFLevelImport -map=<id> [-legacy] -nullrhi -unattended -nop4 -nosplash -NoSound`. |
+| Regenerate terrain after editing `unreal/content/terrain/*.terrain.json` | `python tools\ue-bridge\terrain\build_heightmap.py <map>`, then `"%UE%" "%PROJ%" -run=DFEditor.DFTerrainImport -map=<map> -nullrhi -unattended -nop4 -nosplash -NoSound`. The `DFEditor.` prefix is required. |
 | Lock or unlock a binary asset you will edit | `git lfs lock <path>` / `git lfs unlock <path>`. Every `.uasset`/`.umap` is checked out read-only until you lock it (ADR-0010). |
+| Record what this machine has, after installing anything | `powershell -ExecutionPolicy Bypass -File unreal\Build\machine-inventory.ps1`, then commit `Build/machines/<name>.md` and `.json` ([Build/machines/README.md](Build/machines/README.md)) |
 
-Before claiming any work: read [PLAN/README.md](PLAN/README.md) (how sessions claim work and stay
+Before claiming any work, read [PLAN/README.md](PLAN/README.md) (how sessions claim work and stay
 aware of each other), `PLAN/STATUS.md` (who owns what) and `PLAN/NEXT.md` (what is actually finished
 and what to pick up).
 
@@ -361,22 +304,24 @@ and what to pick up).
 
 ## 8. Troubleshooting
 
+Setup problems are in [§1.3](#13-if-it-stops); `deepfield doctor` re-checks everything without
+changing anything.
+
 | Symptom | Cause | Fix |
 |---|---|---|
-| `tests: no editor at …/UnrealEditor-Cmd (set UE_ROOT)` | The engine is not at the default path | Set `UE_ROOT` ([§2.4](#24-environment-variables)) |
-| `xcrun: error` / the build cannot find a compiler | Only the Command Line Tools are selected, or the Xcode licence is not accepted | [§2.3](#23-accept-the-xcode-licence-and-point-at-the-full-xcode) |
-| Assets fail to load; `.uasset` files are ~130 bytes | LFS pointers were checked out instead of the files | `git lfs install && git lfs pull` |
-| `tests: REFUSING — <file> is newer than …` | The binary is older than the source | Build ([§4](#4-build)). Do **not** set `DF_TEST_ALLOW_STALE=1` to get past it. |
-| `editor-lock: waiting for pid …` for a long time | Another session or CI holds the editor | Wait (up to 30 min). A lock whose process is gone is reclaimed automatically after 60 s. |
-| `editor-lock: timed out` (exit 75) | The editor was busy for the whole timeout | Re-run it later |
-| A test fails once, with a thread-lock assertion or a segfault | The Mac is out of memory, which makes verdicts wrong | Check `vm_stat` and close other apps. **One red is unproven: re-run once and say that you re-ran. Two reds are a real defect** (CONTRACTS/ci.md). |
-| Files or commits vanish after an odd failure | The external SSD unmounted | Re-mount it, then compare `git log` with `git log origin/<branch>` before assuming anything |
+| `The system cannot find the path specified` for `%UE%` or `Build.bat` | `UE_ROOT` is not set in this terminal | Open a new terminal after `setup`, or `setx UE_ROOT "<engine folder>"` |
+| UBT complains about build settings | The engine is not 5.8 | Install 5.8.2 exactly |
+| Errors about paths longer than 260 characters | The clone is too deep | Keep the clone at a short root (`D:\DF\deepfield-3d`, the script's default) |
+| Builds and the first editor open are very slow | Defender is scanning the DDC and Intermediate writes | [§1.4](#14-once-per-machine-by-hand-defender-exclusions) |
+| `... is newer than the built modules` from `deepfield test` | The build before the tests failed, so the binary is stale | Fix the build; never pass `-AllowStale` to get past it |
+| A test fails once, with an assertion or a crash unrelated to the change | Unproven | **Re-run once and say that you re-ran. Two reds are a real defect** (CONTRACTS/ci.md). |
 | `Cannot remove … as it is read only` when saving an asset | LFS checks lockable assets out read-only | `git lfs lock <path>`. The importer commandlets clear the flag on exactly the files they write. |
 | `-run=DFTerrainImport … could not find the class` | That commandlet's module loads late | Use `-run=DFEditor.DFTerrainImport` |
-| Hundreds of engine tests run instead of ours | An automation filter is a case-insensitive **substring**, so `DF` matches engine test names | Spell out the roots (`DF.Unit+DF.Content`), or use `test.sh` with no argument |
+| Hundreds of engine tests run instead of ours | An automation filter is a case-insensitive **substring**, so `DF` matches engine test names | Spell out the roots, as in [§5](#5-test) |
+| The DDC fills `%LOCALAPPDATA%\UnrealEngine\Common\DerivedDataCache` instead of a `DDC` folder beside the clone | `UE-LocalDataCachePath` points elsewhere, or the project is not at `<clone>\unreal\DeepField` | See [§2](#2-commands-by-hand) |
 
 Still stuck: the per-script details are in [Build/README.md](Build/README.md), and the hazards known
-to every session are at the end of [PLAN/NEXT.md](PLAN/NEXT.md).
+to every session are in [PLAN/NEXT.md](PLAN/NEXT.md).
 
 ---
 
@@ -387,9 +332,9 @@ to every session are at the end of [PLAN/NEXT.md](PLAN/NEXT.md).
 - `PLAN/` — the ledger: status, ownership, decisions (ADRs), contracts, workstreams, RFCs, digests, NEXT.md.
 - `content/` — the text source of truth for content numbers (`json/`), level files (`levels/`),
   terrain specs (`terrain/`) and their schemas.
-- `Build/` — every script CI runs, each runnable by hand ([Build/README.md](Build/README.md)); the
-  Windows bring-up checklist.
+- `deepfield.cmd` and `Build/deepfield.ps1` — the Windows script. `Build/` also holds the CI checks
+  ([Build/README.md](Build/README.md)), the GPU-box commissioning checklist and the machine inventories.
 - `DeepField/` — the Unreal project (`DeepField.uproject`, `Config/`, `Source/` with 15 modules, `Content/`).
 - `.gitattributes` (here) and `../.lfsconfig` (repo root) — the Git LFS rules for binaries (ADR-0010).
-- `../tools/ue-bridge/` — the art and terrain tooling. `../tools/content-export/` — the one-time
-  content bootstrap from the C# sim.
+- `../tools/ue-bridge/` — the terrain tooling today, and the art converter as WS-30 builds it.
+  `../tools/content-export/` — the one-time content bootstrap from the C# sim.

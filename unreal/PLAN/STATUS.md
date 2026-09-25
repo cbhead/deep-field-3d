@@ -1,15 +1,15 @@
 # Workstream status
 
-Generated 2026-09-25T02:46:40Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-25T05:30:10Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
-active: 3 · paused: 6 · review: 1 · unclaimed: 40
+active: 4 · paused: 6 · review: 1 · unclaimed: 39
 
 | WS | Title | Phase | CP | State | Owner | Lease expires | Last commit | Editor-heavy | Blocked on |
 |---|---|---|---|---|---|---|---|---|---|
-| WS-00 | Foundation & contracts | P1 | CP | review | — | — | ff379ca | yes | git-lfs for committing L_Dev_Empty.umap; WS-15 for CI |
+| WS-00 | Foundation & contracts | P1 | CP | review | — | — | ff379ca | yes | WS-15 for CI |
 | WS-01 | Content pipeline | P1 | CP | paused | — | — | d8168ba |  | — |
 | WS-02 | Gameplay core (GAS) | P1-P2 | CP | paused | — | — | — |  | — |
-| WS-03 | Player | P2 | CP | unclaimed | — | — | — | yes | — |
+| WS-03 | Player | P2 | CP | active | session-01DTQRZ3-cloud | 2026-09-26T04:59:33Z | — | yes | — |
 | WS-04 | Towers & build | P2-P3 | CP | active | session-01HszbJQ-cloud | 2026-09-26T02:29:31Z | — | yes | — |
 | WS-05 | Enemies & AI | P2-P3 | CP | active | session-62767025 | 2026-09-26T01:16:48Z | fb2ae91 | yes | — |
 | WS-06 | Economy, scrap, gunsmith | P3 |  | unclaimed | — | — | — |  | — |

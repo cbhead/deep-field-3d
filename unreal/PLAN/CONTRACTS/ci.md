@@ -1,51 +1,49 @@
-# CI — lanes, the self-hosted Mac runner, and what runs where
+# CI — lanes, the self-hosted runner, and what runs where
 
-**Canonical:** `.github/workflows/unreal-checks.yml`, `.github/workflows/unreal-mac.yml`, `unreal/Build/*` (every workflow step is a script a developer runs by hand; nothing is CI-only). **Owner:** WS-15. **Rule:** A (a new check or lane is a PR; changing what an existing lane blocks on is INT's call). The Godot lane `.github/workflows/ci.yml` is untouched and retires with `game/` at G3.
+**Canonical:** `.github/workflows/unreal-checks.yml`, `unreal/Build/*` (every workflow step is a script a developer runs by hand; nothing is CI-only). **Owner:** WS-15. **Rule:** A (a new check or lane is a PR; changing what an existing lane blocks on is INT's call). The Godot lane `.github/workflows/ci.yml` is untouched and retires with `game/` at G3. `.github/workflows/unreal-mac.yml` was the retired Mac's lane: it never ran (no runner was ever registered), and WS-15 replaces it with a Windows lane on the GPU box (ADR-0028).
 
 ## Lanes
 
 | Lane | Runner | Trigger | Runs | Blocks |
 |---|---|---|---|---|
-| `unreal-checks` | GitHub-hosted `ubuntu-latest` | every PR and every push to `unreal/main` touching `unreal/**`, `tools/**`, `sim/**`, the unreal workflows | `layering-check.py` · `ownership-check.py --ws <from the PR title> --base origin/<base>` · `validate-content-json.py` · `plan-status.py --check` (warning only) · `content-export --diff` (dotnet 8) | merge (except the STATUS.md warning) |
-| `unreal-mac` PR | self-hosted Mac `[self-hosted, macOS, ARM64, deepfield]` | PRs targeting `unreal/main` from this repository | the python checks (INT view) + `Build.sh DeepFieldEditor Mac Development -WaitMutex` | merge |
-| `unreal-mac` nightly | same Mac | `cron 0 8 * * *` (03:00 America/Chicago in summer, 02:00 in winter — GitHub cron is UTC) and `workflow_dispatch` (input `ref`, default `unreal/main`) | `unreal/Build/ci-local.sh` on `unreal/main`: the INT pre-merge set (PROGRAMME.md §6.8) — checks, build, `DF.Unit+DF.Content`, listen-host smoke; a stale `STATUS.md` is a warning | the digest's "red tests" line |
-| GPU box | — | — | Gauntlet, visual, perf, Windows packaging (PROGRAMME.md §7) | not yet: no box (ADR-0016) |
+| `unreal-checks` | GitHub-hosted `ubuntu-latest` | every PR and every push to `unreal/main` touching `unreal/**`, `tools/**`, `sim/**`, the unreal workflows | `layering-check.py` · `ownership-check.py --ws <from the PR title> --base origin/<base>` · `validate-content-json.py` · `check-test-coverage.py` · `plan-status.py --check` (warning only) · `content-export --diff` (dotnet 8) | merge (except the STATUS.md warning) |
+| GPU box PR *(planned)* | self-hosted `[self-hosted, Windows, X64, deepfield]` | PRs targeting `unreal/main` from this repository | the python checks (INT view) + the `DeepFieldEditor Win64 Development` build | merge |
+| GPU box nightly *(planned)* | same | `cron 0 8 * * *` (03:00 America/Chicago in summer, 02:00 in winter — GitHub cron is UTC) and `workflow_dispatch` (input `ref`, default `unreal/main`) | the INT pre-merge set (PROGRAMME.md §6.8) on `unreal/main`: checks, build, the landing gate (`DF_GATE_FILTER`), listen-host smoke; a stale `STATUS.md` is a warning | the digest's "red tests" line |
+| GPU box render lanes *(planned)* | same, in an interactive session (below) | nightly | Gauntlet, visual (`DF.Vfx.EveryCueDraws`), perf (`DF.Perf.<Map>`), Windows packaging, the Game-target FP check (PROGRAMME.md §7) | the digest |
 
-A PR's own test filter runs on the author's Mac (`unreal/Build/pr-check.sh`), not on the PR lane: the machine is shared with the agent sessions and a full test run per push would starve them. The nightly runs every `DF.Unit` and `DF.Content` test; `DF.Net`/`DF.Func` join it as workstreams land them (INT widens `--filter` in `ci-local.sh`).
+*Planned* means the workflow and the Windows ports of the `unreal/Build/*.sh` scripts do not exist yet (WS-15). Until they do, `unreal-checks` is the only lane that runs on an Unreal PR, and verification is a by-hand run on the box (`unreal/README.md` §5.4).
 
-A `STATUS.md` that no longer matches the workstream frontmatter is a **warning** on the nightly (`ci-local.sh` prints the diff and `plan-status  WARN` in its table, and still exits 0): claims and lease renewals are pushed straight to `unreal/main` between INT cycles by design (PROGRAMME.md §6.2), and `int-merge.sh` regenerates the ledger at every landing, so a red nightly for that drift would hide the red that matters. INT makes it blocking by setting the repository variable `CI_LOCAL_ARGS` to `--strict` (any other `ci-local.sh` option works there too, e.g. `--skip smoke`). `UE_ROOT`, `UE_LOCAL_DDC`, `EDITOR_LOCK_DIR` are repository variables too, with the ADR-0021 paths as defaults.
+The PR lane builds but runs no tests: the box is shared with the agent sessions, and a full test run per push would starve them. A PR's own tests run on the box by hand before the PR opens. The nightly runs the whole landing gate, the one filter every landing inherits (`DF_GATE_FILTER` in `unreal/Build/test.sh`, enforced by `check-test-coverage.py`).
 
-## The dev Mac as the self-hosted runner
+A `STATUS.md` that no longer matches the workstream frontmatter is a **warning** on the nightly, not a failure: claims and lease renewals are pushed straight to `unreal/main` between INT cycles by design (PROGRAMME.md §6.2), and every landing regenerates the ledger, so a red nightly for that drift would hide the red that matters. INT makes it blocking with `--strict`, passed through the repository variable `CI_LOCAL_ARGS`.
 
-The Mac M1 8 GB is the only machine that has the engine (ADR-0016), so it is the runner. It is registered **once, as a service, and is used by the nightly and by same-repository PRs only** — it is a development machine first, and the agent sessions share it.
+## The GPU box as the self-hosted runner
 
-0. **Where the workflow files must live.** GitHub fires `schedule` only for workflow files on the repository's *default* branch — `main`, the Godot game — and lists a workflow under *Actions → Run workflow* only if it exists there; `unreal/main` is not the default until G3 merges it. So INT lands `.github/workflows/unreal-mac.yml` and `unreal-checks.yml` on `main` as well (a `[WS-15]` PR to `main` carrying only those two files, byte-identical to `unreal/main`'s; repeat when they change). The nightly then checks out `unreal/main` explicitly (the `ref:` on its checkout step), and a dispatch takes `ref` as an input (default `unreal/main`) whatever branch the *Run workflow* dropdown shows. The `pull_request` and `push` triggers read the workflow file from the branch itself, so those lanes work from `unreal/main` alone.
-1. **Register** (GitHub → repository *Settings → Actions → Runners → New self-hosted runner → macOS / ARM64*; the page shows a one-time token). Install on the external SSD so the workspace, DDC and Intermediate never touch the 16 GB internal disk:
-   ```bash
-   mkdir -p /Volumes/Toshiba/actions-runner && cd /Volumes/Toshiba/actions-runner
-   # <version>: the latest at https://github.com/actions/runner/releases
-   curl -o actions-runner-osx-arm64.tar.gz -L https://github.com/actions/runner/releases/latest/download/actions-runner-osx-arm64-<version>.tar.gz
-   tar xzf actions-runner-osx-arm64.tar.gz
-   ./config.sh --url https://github.com/<owner>/deepfield-3d --token <token> \
-       --name deepfield-mac --labels deepfield --work _work --unattended
-   ./svc.sh install && ./svc.sh start        # launchd service: survives logout and reboots
+The box is registered **once, at repository level, and is used by the nightly and by same-repository PRs only**. It is a development machine too, and the agent sessions share it.
+
+0. **Where the workflow files must live.** GitHub fires `schedule` only for workflow files on the repository's *default* branch — `main`, the Godot game — and lists a workflow under *Actions → Run workflow* only if it exists there; `unreal/main` is not the default until G3 merges it. So INT lands the Unreal workflow files on `main` as well (a `[WS-15]` PR to `main` carrying only those files, byte-identical to `unreal/main`'s; repeat when they change, and remove `unreal-mac.yml` from both branches). The nightly then checks out `unreal/main` explicitly (the `ref:` on its checkout step), and a dispatch takes `ref` as an input (default `unreal/main`) whatever branch the *Run workflow* dropdown shows. The `pull_request` and `push` triggers read the workflow file from the branch itself, so those lanes work from `unreal/main` alone.
+1. **Register.** GitHub → repository *Settings → Actions → Runners → New self-hosted runner → Windows / x64* (the page shows the download command and a one-time token; the zips are also on [actions/runner releases](https://github.com/actions/runner/releases)). Unpack to a short path such as `C:\actions-runner`, then:
+   ```bat
+   config.cmd --url https://github.com/cbhead/deep-field-3d --token <token> ^
+       --name deepfield-gpu --labels deepfield --work _work --unattended
    ```
-   `macOS` and `ARM64` are added by the runner automatically; **`deepfield`** is the label the workflow keys on, so no other repository's workflow can land on this machine by accident. Use the repository runner registration, not an organisation one.
-2. **Environment.** The workflow reads `UE_ROOT` (default `/Users/Shared/Epic Games/UE_5.8`), `DEVELOPER_DIR` (`/Applications/Xcode.app/Contents/Developer`), `UE_LOCAL_DDC` (`/Volumes/Toshiba/Deepfield-Unreal/DDC`) and `EDITOR_LOCK_DIR` (`/Volumes/Toshiba/Deepfield-Unreal/.editor-lock`). Override any of them as a repository *variable* of the same name; nothing needs to be set in the runner's `.env`. The runner user must be able to read the engine, run Xcode's toolchain (`sudo xcodebuild -license accept` once) and write to the SSD.
-3. **LFS credentials.** `actions/checkout@v4` with `lfs: true` fetches LFS objects with the job's `GITHUB_TOKEN` over HTTPS — no stored credential on the machine. The runner needs `git-lfs` on its `PATH` (`brew install git-lfs`, [git-lfs.com](https://git-lfs.com); the launchd service inherits `/opt/homebrew/bin` only if `./svc.sh` was installed from a shell that had it — check with a `workflow_dispatch` run, the first step prints `git lfs ls-files`). Push never happens from CI, so no write credential exists on the runner.
-4. **Never PRs from forks.** The job carries `if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository`, and the repository setting *Actions → General → Fork pull request workflows from outside collaborators* must stay at "Require approval for all outside collaborators". A fork PR could edit `unreal/Build/*.sh`, which the job executes as the runner user on the dev machine.
-5. **Sharing the machine.** The runner is a peer of the agent sessions: builds wait on UBT's mutex (`-WaitMutex`), editor processes wait on `editor-lock.sh` (up to 30 min), and the workflow's `concurrency` group keeps CI itself to one job at a time. A nightly takes ~15–25 min when the machine is idle; queued behind a batch it may wait the full lock timeout and fail with exit 75 (editor-lock timed out) — rerun it. Cooks and packaging (later) take both editor slots (PROGRAMME.md §6.7) and will be nightly-only for that reason.
-6. **Workspace hygiene.** The runner keeps one checkout under `/Volumes/Toshiba/actions-runner/_work/deepfield-3d/deepfield-3d` with its own `Intermediate/` and `Binaries/` (so a CI build never dirties the SSD working copy or an agent worktree); the DDC is shared. Logs and the automation JSON report are uploaded as the `unreal-mac-logs-<run>` artifact (14 days).
-7. **Stopping it.** `./svc.sh stop` pauses the runner (queued jobs wait); `./svc.sh uninstall` then `./config.sh remove --token <token>` deregisters it.
+   `self-hosted`, `Windows` and `X64` are added by the runner automatically; **`deepfield`** is the label the workflows key on, so no other repository's workflow can land on this machine by accident. Use the repository registration, not an organisation one.
+2. **Service or interactive — decide per lane, and record the choice here.** A Windows service (`config.cmd --runasservice`) runs in session 0 with no desktop. That is fine for builds, cooks, packaging and `-nullrhi` tests. It is *not* a sound home for the render lanes — `DF.Vfx.EveryCueDraws`, `DF.Perf.<Map>`, Gauntlet with a real RHI — which want a logged-in desktop session on the GPU. For those, run the runner interactively (`run.cmd` from a scheduled task "at log on" of an auto-logon build account).
+3. **Environment.** Set the repository *variable* `UE_ROOT` to the engine path (e.g. `C:\Program Files\Epic Games\UE_5.8`); the retired Mac lane's defaults for it are dead, so the Windows lane takes the name over. In the runner's `.env` file (`C:\actions-runner\.env`) set `UE-LocalDataCachePath` to the `DDC` folder beside the working clone (for example `D:\DF\DDC`): the runner's checkout sits elsewhere, so without it `DefaultEngine.ini`'s `%GAMEDIR%../../../DDC` would give CI a DDC of its own instead of sharing the box's.
+4. **Git on the runner account.** The runner may run as a different Windows account from the developer, so the developer's `--global` git settings do not reach it. Set them system-wide from an administrator prompt: `git config --system core.longpaths true` and `git config --system core.autocrlf false` (Git for Windows' installer defaults to `autocrlf=true`, and a CRLF checkout changes the content hash, PROGRAMME.md B§5 rule 9). `actions/checkout@v4` with `lfs: true` fetches LFS objects with the job's `GITHUB_TOKEN` over HTTPS — no stored credential on the machine; `git-lfs` ships with Git for Windows. Push never happens from CI, so no write credential exists on the runner.
+5. **Never PRs from forks.** Every job carries `if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository`, and the repository setting *Actions → General → Fork pull request workflows from outside collaborators* must stay at "Require approval for all outside collaborators". A fork PR could edit `unreal/Build/*`, which the job executes as the runner account on the dev machine.
+6. **Sharing the machine.** The runner is a peer of the agent sessions: builds wait on UBT's mutex (`-WaitMutex`), and the workflow's `concurrency` group keeps CI itself to one job at a time. Cooks and packaging are nightly-only.
+7. **Workspace hygiene.** The runner keeps one checkout under `C:\actions-runner\_work` with its own `Intermediate\` and `Binaries\`, so a CI build never dirties the working clone or an agent worktree; the DDC is shared (step 3). Logs and the automation JSON report are uploaded as a workflow artifact (14 days).
+8. **Stopping it.** Stop the service (or close `run.cmd`) to pause the runner; queued jobs wait. `config.cmd remove --token <token>` deregisters it.
 
 ## Test naming and where tests live
 
-`DF.<Layer>.<Area>.<Name>` — `DF.Unit.*` (logic, `-nullrhi`), `DF.Content.*` (round-trip, bindings, tag coverage), `DF.Asset.*`, `DF.Func.*`, `DF.Net.*`, `DF.Vfx.*`, `DF.Audio.*`, `DF.Map.*`, `DF.Perf.*` — see PROGRAMME.md §7. Tests are `IMPLEMENT_SIMPLE_AUTOMATION_TEST` (or the complex/latent forms) in the owning module's `Private/Tests/`, under `#if WITH_AUTOMATION_TESTS`; flags `EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter` for logic that runs anywhere, `EAutomationTestFlags::EditorContext | ...ProductFilter` for editor-only ones. The shared helpers (`FDFTestWorld`, `FDFMessageCapture`, `Tick`) are `Source/DFCore/Public/Testing/DFTestUtils.h` (contract-append, WS-15). `DFTests` holds the cross-module and harness tests; `DF.Dev.*` names are reserved for deliberately failing/diagnostic tests and never ship.
+`DF.<Layer>.<Area>.<Name>` — `DF.Unit.*` (logic, `-nullrhi`), `DF.Content.*` (round-trip, bindings, tag coverage), `DF.Online.*`, `DF.Editor.*`, `DF.UI.*`, `DF.Asset.*`, `DF.Func.*`, `DF.Net.*`, `DF.Vfx.*`, `DF.Audio.*`, `DF.Map.*`, `DF.Perf.*` — see PROGRAMME.md §7. `check-test-coverage.py --list` shows which roots have tests today; `DF.Net` has none yet (the listen-host smoke stands in for `DF.Net.ListenHostPlusClient`). Tests are `IMPLEMENT_SIMPLE_AUTOMATION_TEST` (or the complex/latent forms) in the owning module's `Private/Tests/`, under `#if WITH_AUTOMATION_TESTS`; flags `EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter` for logic that runs anywhere, `EAutomationTestFlags::EditorContext | ...ProductFilter` for editor-only ones. The shared helpers (`FDFTestWorld`, `FDFMessageCapture`, `Tick`) are `Source/DFCore/Public/Testing/DFTestUtils.h` (contract-append, WS-15). `DFTests` holds the cross-module and harness tests; `DF.Dev.*` names are reserved for deliberately failing/diagnostic tests and never ship.
 
 `unreal/Build/test.sh <filter>` runs `UnrealEditor-Cmd -nullrhi -ExecCmds="Automation RunTests <filter>; Quit" -ReportExportPath=...` and takes its verdict from the controller's JSON report: any test not `Success`, or a filter that matched nothing, is exit 1; an editor that never produced a report is exit 2. Filters join with `+`.
 
 ## GPU-box lane: checks added by INT (2026-09-19)
-- **Floating-point pinning on Game targets.** `BuildSettingsVersion.V7` builds Editor targets FP-precise but leaves Game/Client/Server at Default (`/fp:fast` on MSVC). Any code that must be bit-identical across hosts (`DFEnemies/Waves`: `FDFWavePlan`, `DFDetMath`, `DFDetRng`) pins precision by pragma; the Windows lane runs `DF.Unit.WavePlan*` on a **Game** target build, not only the Editor target, and fails the lane if the golden vectors drift. Also confirm `-ffp-contract` (clang) / `/fp:contract` (MSVC) do not fuse multiply-adds in those files.
+- **Floating-point pinning on Game targets.** `BuildSettingsVersion.V7` builds Editor targets FP-precise but leaves Game/Client/Server at Default (`/fp:fast` on MSVC). Any code that must be bit-identical across hosts pins precision by pragma (the `DF_DET_FP_*` macros in `DFCore/Public/Determinism/` — `DFDetMath.h`, `DFDetRng.h`, moved there from `DFEnemies/Waves` by ruling R2 — used by `FDFWavePlan`, `FDFLaneWalker` and `DFTowerMath`); the Windows lane runs `DF.Unit.WavePlan*` on a **Game** target build, not only the Editor target, and fails the lane if the golden vectors drift. Also confirm `-ffp-contract` (clang) / `/fp:contract` (MSVC) do not fuse multiply-adds in those files.
 
 ## Which lanes run on an Unreal pull request (INT, 2026-09-21)
 | Workflow | Runs when | Covers |
@@ -55,7 +53,10 @@ The Mac M1 8 GB is the only machine that has the engine (ADR-0016), so it is the
 | `ci` (Godot + sim) | `game/**`, `sim/**`, `docs/**`, the art-contract scripts, its own file | the frozen client and sim; **path-filtered on 2026-09-21** |
 
 An Unreal-only PR therefore runs `unreal-checks` and nothing else, and its verification comes from
-`int-merge` on the Mac (build + `DF.Unit`+`DF.Content` + listen smoke) rather than from GitHub. That is
+`int-merge` on the Mac (build + `DF.Unit`+`DF.Content` + listen smoke) rather than from GitHub.
+*(2026-09-25, ADR-0028: the Mac is retired, so `unreal-mac` will never run and `int-merge` has no
+machine until its Windows port. Verification is a by-hand run on the GPU box; the current lanes are
+at the top of this file.)* That is
 the honest position until a runner exists: **GitHub currently proves almost nothing about the Unreal
 tree**, and no one should read a green PR as more than "the ledger and the schemas are consistent".
 
@@ -66,6 +67,8 @@ is not worth a session; the lanes still run in full whenever `game/`, `sim/` or 
 which is the only time they can tell anyone anything.
 
 ## A red run on the Mac is unproven, not failed (INT, 2026-09-21)
+*(2026-09-25: measured on the 8 GB Mac, now retired (ADR-0028). The rule below stands until INT has
+verdicts from the GPU box to judge it by.)*
 The Mac has produced a test failure caused by memory exhaustion rather than by the code: the editor
 asserted in `pthread_rwlock_init` (error 16) during world cleanup with 0.1 GB free and 5.9 GB of 7 GB
 swap in use, then hung until the timeout, on code that had passed 37/37 twelve minutes earlier. So:
@@ -127,6 +130,7 @@ and every other check in this programme assumes that link without testing it. Th
 lesson: **when a check reports on an artefact, something must prove the artefact came from the input.**
 
 ## What a landing actually runs, and what it has never run (INT, 2026-09-21)
+*(Resolved 2026-09-24: every suite is now in the gate — see the next section.)*
 Counting registrations on `unreal/main` by their `IMPLEMENT_*_TEST` macro rather than by what anyone
 assumed:
 
@@ -181,7 +185,7 @@ window zones that cannot mean anything under `-nullrhi` with no real window.
    `DF_GATE_FILTER` for that reason.
 2. **A filter that omits a suite is indistinguishable from a suite that does not exist**, which is why
    this went unnoticed for weeks. So the gate is now defined **once**, as `DF_GATE_FILTER` in
-   `test.sh` — `int-merge`, `ci-local` and `pr-check` pass no filter and inherit it — and
+   `test.sh` — `int-merge` and `ci-local` pass no filter and inherit it (correction, 2026-09-25: `pr-check.sh` does not; its default is still `DF.Unit+DF.Content`) — and
    `check-test-coverage.py` fails a landing when a registered `DF.*` root is outside the gate without a
    recorded reason. Its `EXCLUDED` table holds `DF.Perf` and `DF.Soak` with the reason each cannot run
    in a landing. **An exclusion with a reason is a decision; an omission is an accident**, and the
@@ -202,6 +206,10 @@ message that never appears **does** fail the test. But:
   what it reads like. Asserting absence needs your own log sink.
 
 ## Every change to `unreal/main` goes through `int-merge` (INT, 2026-09-25)
+*(ADR-0028, the same day: `int-merge.sh` is Mac-only and now has no machine. The rule's substance
+stands unchanged: a branch lands only after a build, the landing gate and the smoke have run on the GPU
+box against the rebased tree — by hand, per `unreal/README.md` §3–§5, until WS-15 ports `int-merge`
+onto `deepfield.ps1`. The runner step below is `windows-bringup.md` §5.)*
 **The GitHub merge button bypasses the only step that compiles anything.** Three incidents through that
 one door, each worse than the last:
 
@@ -221,7 +229,7 @@ It refuses at the build step, which is exactly where #48 needed refusing — 765
 trunk. A PR that cannot be landed from a machine with the engine installed is not ready to land.
 
 **Recommended to the human, sequenced, because the order matters:** register the self-hosted runner
-(`windows-bringup.md` §8), *then* require that check on `unreal/main` via branch protection. Requiring a
+(`windows-bringup.md` §5), *then* require that check on `unreal/main` via branch protection. Requiring a
 check that has no runner blocks everything; there are currently **zero runners registered**, so today
 the rule above is the only thing standing between an unbuilt PR and the trunk. Enabling protection is a
 change to how every session and every human works, so it is the repository owner's call, not INT's.

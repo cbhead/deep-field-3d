@@ -1,6 +1,6 @@
 # C5 — Status channels and reactions
 
-**Canonical:** `unreal/DeepField/Source/DFGameplay/Public/Status/UDFStatusComponent.h`, `UDFReactionResolver.h`, and `Content/DF/Gameplay/GE/GE_Status_<id>`. **Owner:** WS-02. **Rule:** R. Semantics are those of `sim/Sim.Core/Content/Statuses.cs` and `Step.cs:1070-1140`, reproduced by `DF.Unit.Status.*`.
+**Canonical:** `unreal/DeepField/Source/DFGameplay/Public/Status/DFStatusComponent.h`, `DFReactionResolver.h`, and `Content/DF/Gameplay/GE/GE_Status_<id>`. **Owner:** WS-02. **Rule:** R. Semantics are those of `sim/Sim.Core/Content/Statuses.cs` and `Step.cs:1070-1140`, reproduced by `DF.Unit.Status.*`.
 
 - 8 channels: Movement, Thermal, Toxin, Defense, Vulnerability, Control, Tether, Detection (`DF.Status.Channel.*`). Each status is one `GE_Status_<id>` granting `DF.Status.<Id>` and its channel tag, duration from the row.
 - `UDFStatusComponent::Apply(StatusTag, SourceActor, MagnitudeOverride = -1)`: one active status per channel; **same id refreshes duration; different id → strongest magnitude wins, the weaker is dropped; never stacks.** Magnitude per channel: Movement `1 − SpeedFactor`; Thermal/Toxin dps; Vulnerability `factor − 1`; Defense `−ArmorDelta`; Control duration; Tether pull speed; Detection 1.

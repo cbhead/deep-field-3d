@@ -4,7 +4,7 @@ CODEOWNERS-style. A PR titled `[WS-NN]` may add or modify **binary** files only 
 
 | Glob | Owner |
 |---|---|
-| `unreal/PLAN/**` | INT (workstream sessions may edit only their own `workstreams/ws-NN-*.md`, `EDITOR-SLOTS.md`, and append to `DECISIONS.md` / add `rfcs/`) |
+| `unreal/PLAN/**` | INT (workstream sessions may edit only their own `workstreams/ws-NN-*.md`, and append to `DECISIONS.md` / add `rfcs/`) |
 | `unreal/DeepField/DeepField.uproject`, `unreal/DeepField/Config/Default*.ini`, `unreal/DeepField/Source/*.Target.cs`, `.gitattributes`, `.lfsconfig` | INT |
 | `unreal/DeepField/Config/Tags/DF_<ws>.ini` | the named workstream (append-only) |
 | `unreal/DeepField/Source/DFCore/**`, `unreal/DeepField/Content/DF/Core/**` | WS-00 (contract-append PRs from anyone; changes by RFC) |

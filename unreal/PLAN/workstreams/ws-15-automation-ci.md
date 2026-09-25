@@ -17,9 +17,9 @@ blocked_on:
 # WS-15 — Automation, CI, packaging, store
 
 ## Scope / DoD
-**Scope.** Test base classes, Gauntlet controllers, unreal/Build scripts (layering, ownership, LFS lock audit, plan-status), GitHub Actions (self-hosted Mac nightly; GPU-box lanes later), packaging Mac/Win, EGS BuildPatchTool, crash reporting.
+**Scope.** Test base classes, Gauntlet controllers, unreal/Build scripts (layering, ownership, LFS lock audit, plan-status), GitHub Actions (self-hosted GPU-box nightly and render lanes; Windows ports of the unreal/Build zsh scripts, ADR-0028), Windows packaging, EGS BuildPatchTool, crash reporting.
 
-**Definition of done.** Nightly build + all DF.* on Mac; packaged builds to the EGS dev sandbox.
+**Definition of done.** Nightly build + all DF.* on the GPU box; packaged Windows builds to the EGS dev sandbox.
 
 **Spec.** §7 (in `unreal/PLAN/PROGRAMME.md`). Size M, phase P1+.
 
@@ -40,14 +40,14 @@ blocked_on:
 <!-- e.g. "add plugin X to .uproject" -->
 - Land `PLAN/CONTRACTS/ci.md` and the `CONTRACTS/README.md` row (contract-appends into INT-owned `PLAN/**`).
 - Accept `Source/DFCore/Public/Testing/DFTestUtils.h` as a contract-append into WS-00's DFCore (header-only).
-- Copy `.github/workflows/unreal-mac.yml` and `unreal-checks.yml` to `main` (the default branch): GitHub fires `schedule` / lists `workflow_dispatch` only from there (ci.md §0). Repeat when they change.
-- Human: register the dev Mac as the self-hosted runner (ci.md steps 1–7); optional repository variables `UE_ROOT`, `UE_LOCAL_DDC`, `EDITOR_LOCK_DIR`, `CI_LOCAL_ARGS`.
+- Copy the Unreal workflow files (`unreal-checks.yml`, and the Windows lane once it exists) to `main` (the default branch), and remove the retired `unreal-mac.yml` from both branches: GitHub fires `schedule` / lists `workflow_dispatch` only from there (ci.md §0). Repeat when they change.
+- Human: register the GPU box as the self-hosted runner (ci.md, "The GPU box as the self-hosted runner"); repository variables `UE_ROOT` and optionally `CI_LOCAL_ARGS`; `UE-LocalDataCachePath` in the runner's `.env`.
 - Regenerate `STATUS.md` at landing (`int-merge.sh` does): `ci-local.sh` reports it stale (WARN) on today's `unreal/main` (WS-12 claim, WS-01 renewal).
 - `unreal-checks.yml` runs `dotnet run --project tools/content-export -- --diff` on ubuntu (dotnet 8): WS-01's exporter and the `sim/` tree must build there; drift on `unreal/main` makes that lane red until WS-01 re-exports (ADR-0005 intent).
 
 ## Open questions
 - Should a stale `STATUS.md` make the nightly red? `ci-local.sh` warns by default (claims and lease renewals land on `unreal/main` between INT cycles by design, §6.2); INT flips it with `CI_LOCAL_ARGS=--strict`.
-- The `unreal-mac` PR lane builds but runs no tests (the Mac is shared with the agent sessions; a PR's own filter runs on the author's Mac via `pr-check.sh`). Revisit when the GPU box exists.
+- The GPU-box PR lane (planned) builds but runs no tests: the box is shared with the agent sessions, and a PR's own tests run there by hand (`unreal/README.md` §5.4). Revisit once the lane exists and its cost is measured.
 - UBT's `-WaitMutex` queue: seven agents' builds queued behind one full build today (a no-change incremental took 1892 s wall). Worth a protocol note — stagger builds, or a queued build lock like `editor-lock.sh`.
 
 ## Session log

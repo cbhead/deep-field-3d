@@ -30,13 +30,13 @@ Date 2026-09-17 · Accepted · Driver's transform + velocity replicated and clam
 Date 2026-09-17 · Accepted · `DFGameplayTags.h/.cpp` for every contract tag; `Config/Tags/DF_<ws>.ini` append-only per workstream.
 
 ## ADR-0010 Git LFS with single-owner directories and locks
-Date 2026-09-17 · Accepted · LFS for `*.uasset *.umap *.ubulk *.uexp *.fbx *.glb *.png *.tga *.exr *.wav *.psd`; one owner directory per binary (`OWNERSHIP.md`, CI-enforced); `git lfs lock` on `.umap` and shared assets; `.lfsconfig fetchexclude` for Megascans and `L_*_Art*` so Mac sessions clone light; Megascans restored from Fab (`restore_fab.py`), never from LFS; 25 GB cap on tracked art.
+Date 2026-09-17 · Accepted; amended by ADR-0028 (the Mac light clone has no machine) · LFS for `*.uasset *.umap *.ubulk *.uexp *.fbx *.glb *.png *.tga *.exr *.wav *.psd`; one owner directory per binary (`OWNERSHIP.md`, CI-enforced); `git lfs lock` on `.umap` and shared assets; `.lfsconfig fetchexclude` for Megascans and `L_*_Art*` so Mac sessions clone light; Megascans restored from Fab (`restore_fab.py`), never from LFS; 25 GB cap on tracked art.
 
 ## ADR-0011 Content root and naming
 Date 2026-09-17 · Accepted · `unreal/DeepField/Content/DF/`; prefixes `SM_ SK_ SKEL_ PHYS_ ABP_ AS_ AM_ CR_ M_ MI_ MF_ MPC_ T_ NS_ NE_ BP_ DT_ DA_ WBP_ ST_ MS_ SC_ ATT_ L_ DL_ PCG_ GC_ RT_` (regex in `CONTRACTS/naming.md`).
 
 ## ADR-0012 Rendering stack
-Date 2026-09-17 · Accepted · Nanite for every static mesh and for landscape; skeletal LOD chains until the GPU-box gate decides Nanite skinning; VSM everywhere (cascaded SM on Mac Low); software Lumen floor, hardware Lumen on Windows High; Sky Atmosphere + Volumetric Clouds replace skybox domes; Substrate off; Niagara Fluids P2.
+Date 2026-09-17 · Accepted; amended by ADR-0028 (no Mac tiers) · Nanite for every static mesh and for landscape; skeletal LOD chains until the GPU-box gate decides Nanite skinning; VSM everywhere (cascaded SM on Mac Low); software Lumen floor, hardware Lumen on Windows High; Sky Atmosphere + Volumetric Clouds replace skybox domes; Substrate off; Niagara Fluids P2.
 
 ## ADR-0013 Claude Design → Unreal lane
 Date 2026-09-17 · Accepted · three.js export → glTF (+`extras.bone/socket/family/smooth`, `variants`) → headless Blender `tools/ue-bridge/blender/convert.py` (cm, Z-up, +X, sockets, rigid weights to family armature, auto-UV, AO/curvature/ID bakes, texture dedupe) → FBX + loose textures → Interchange pipelines via `tools/ue-bridge/ue/import_drop.py`.
@@ -48,7 +48,7 @@ Date 2026-09-17 · Accepted · MetaSounds; CC0/open-source libraries and generat
 Date 2026-09-17 · Accepted · 6 sectors (foundry, switchyard, spire, toaster redesigned + Sluice + Crown); full proposed roster (PROGRAMME.md B§4); Versus post-launch; Level 1 invite-only with L2/L3 seams (`IDFSessionBackend`, `IDFProgressionProvider`, `DF.Team.*`).
 
 ## ADR-0016 Machine plan
-Date 2026-09-17 · Accepted · Mac M1 8 GB only until a Windows GPU workstation exists; external NVMe SSD is a P0 blocker; art sublevels fetch-excluded on the Mac; render/perf/Windows lanes recorded as unverified in the ledger until the box exists; two editor-heavy slots (Section 6.7).
+Date 2026-09-17 · Superseded by ADR-0023 and ADR-0028 · Mac M1 8 GB only until a Windows GPU workstation exists; external NVMe SSD is a P0 blocker; art sublevels fetch-excluded on the Mac; render/perf/Windows lanes recorded as unverified in the ledger until the box exists; two editor-heavy slots (Section 6.7).
 
 ## ADR-0017 Tint/palette is a parameter contract
 Date 2026-09-17 · Accepted · `DA_Palette` from `docs/palette.json`; `UDFTintComponent` writes Custom Primitive Data / MID params by the fixed names in `CONTRACTS/palette.md`; no colour literals in code.
@@ -63,13 +63,13 @@ Date 2026-09-19 · Accepted · The UE 5.8.2 launcher build ships neither `Gamepl
 Date 2026-09-19 · Accepted · Targets must use `BuildSettingsVersion.V7` (the installed engine's build environment refuses V5 overrides); native gameplay tags are defined by expanding `UE_DEFINE_GAMEPLAY_TAG` by hand in `DFGameplayTags.cpp` because the macro's static-assert forbids X-macro lists in `.inl` files; generated module log categories are `LogDF<Module>` (the engine already owns `LogAudio` etc.).
 
 ## ADR-0021 Working copies: the SSD clone is the Unreal working copy
-Date 2026-09-19 · Accepted · `/Volumes/Toshiba/Deepfield-Unreal/deepfield-3d` (a clone of `unreal/main`, APFS, 3.6 TB) is where every editor-heavy session works; DDC at `/Volumes/Toshiba/Deepfield-Unreal/DDC` (`DefaultEngine.ini` points at `%GAMEDIR%../../../DDC`). Worktrees for parallel sessions are created from this clone on the SSD (`git worktree add /Volumes/Toshiba/Deepfield-Unreal/wt-ws-NN ws/NN-slug/topic`). The internal-disk checkout stays for text-only work. Supplements ADR-0016.
+Date 2026-09-19 · Superseded by ADR-0028 · `/Volumes/Toshiba/Deepfield-Unreal/deepfield-3d` (a clone of `unreal/main`, APFS, 3.6 TB) is where every editor-heavy session works; DDC at `/Volumes/Toshiba/Deepfield-Unreal/DDC` (`DefaultEngine.ini` points at `%GAMEDIR%../../../DDC`). Worktrees for parallel sessions are created from this clone on the SSD (`git worktree add /Volumes/Toshiba/Deepfield-Unreal/wt-ws-NN ws/NN-slug/topic`). The internal-disk checkout stays for text-only work. Supplements ADR-0016.
 
 ## ADR-0022 OSSv2 spike verdict: keep OnlineServicesEOS behind UDFOnlineSubsystem
 Date 2026-09-19 · Accepted 2026-09-19 by INT (landed with ws/11-online/ossv2-spike, 9a450a6; the EOS block in rfcs/needs-int-eos-config.md is applied when the portal product exists) · Context: ADR-0003 gated the online layer on a spike proving OSSv2 on the 5.8.2 launcher build. Verified on the Mac: the launcher build ships `OnlineServicesEOS` (Auth: Auto/ExchangeCode/Developer/PersistentAuth/AccountPortal, Presence, Social), `OnlineServicesEOSGS` (Lobbies with schema-filtered search, invite/kick/attributes/join-policy, TitleFile, PlayerSanctions), `SocketSubsystemEOS` (`NetDriverEOS`, `RelayControl=ForceRelays`, `[EOS:<puid>]` connect strings, Ip passthrough for non-EOS URLs) and EOS SDK 1.19.1 for Mac and Win64; `UDFOnlineSubsystem` builds against `UE::Online` and `DF.Online.NullLogin`/`NullSession` prove login → lobby → join code → approval → handshake headless on the Null services. Decision: OSSv2 is the provider behind the facade; Null is the test provider; switching to EOS is config only (`unreal/PLAN/rfcs/needs-int-eos-config.md`); lobby search keys live on the hard-coded `LobbyBase` schema (only a base schema may be `Searchable`). Consequences: no OSSv1 code; the two-machine relay test is the remaining gate and runs when the portal product exists; a relay failure would be absorbed inside `IDFSessionBackend` and the lobby plumbing, never above C13/C14. Links: `workstreams/ws-11-online.md` "Spike verdict", `CONTRACTS/online.md`.
 
 ## ADR-0023 The GPU workstation exists; the Mac keeps the 8 GB floor
-Date 2026-09-24 · Accepted · Supersedes the "Mac-only initially" half of ADR-0016. The Windows GPU
+Date 2026-09-24 · Accepted; its Mac half superseded by ADR-0028 · Supersedes the "Mac-only initially" half of ADR-0016. The Windows GPU
 workstation is in hand. The split: **the Mac** runs every gameplay C++ workstream, logic tests under
 `-nullrhi`, the content pipeline, graybox levels and Mac packaging, and remains the 8 GB memory floor
 (if it runs there it runs anywhere); **the GPU box** runs what the Mac has never been able to prove —
@@ -91,3 +91,37 @@ Date 2026-09-25 · Accepted by INT (ruling R4, decided on player experience) · 
 
 ## ADR-0027 A generated artefact is verified by the data it was generated from, never by its bytes
 Date 2026-09-25 · Accepted by INT (ruling R6) · Context: WS-30's DoD asked for the Foundry Landscape to regenerate "byte-identically", and WS-09 found that re-saving an unchanged `L_Foundry_Gameplay` is not byte-stable (while `DA_LaneGraph_Foundry` is). Package bytes carry per-save GUIDs the generators do not control, so byte-equality tests the engine's serializer, not our input. PROGRAMME.md §5.4 already reads "the Landscape data deterministically (package GUIDs excepted)"; the registry and the WS-30 file had paraphrased it as "byte-identically". Decision: every generator's determinism check compares the data the binary was generated from — for terrain the heightmap samples, landscape GUID, bounds and probe samples; for a gameplay level the actor set by stable id with each actor's transform and properties; for a DataAsset its properties. This is ci.md's "something must prove the artefact came from the input", with a data fingerprint as the proof. Consequences: WS-30's data-identity result meets its DoD; reimport-in-place (a byte-stable `.umap`) stays a worthwhile follow-up and becomes required only for a CI job that re-imports on every run and must leave the tree clean; WS-09's re-save item becomes "diff the actor set, not the bytes".
+
+## ADR-0028 The Mac is retired; the Windows GPU workstation is the only engine machine and Windows the only platform
+Date 2026-09-25 · Accepted (project owner) · Supersedes ADR-0016, ADR-0021 and the Mac half of ADR-0023;
+amends ADR-0010 and ADR-0012. Context: ADR-0016 made the M1 Mac the only engine machine, ADR-0021 put
+the working copy on its external SSD, and ADR-0023 split the work between the Mac and the newly arrived
+GPU box. The owner has retired the Mac as a development machine and dropped macOS as a shipping
+platform. Decision: **the Windows GPU workstation runs everything** — every workstream, build, test,
+import, cook and package, and the self-hosted CI runner. **Windows is the only target platform.**
+Consequences:
+- The 8 GB memory floor, the two editor-heavy slots (PROGRAMME.md §6.7, `EDITOR-SLOTS.md`), the
+  machine-wide editor lock and the `/Volumes/Toshiba` working-copy paths no longer bind anyone.
+  `editor_heavy` stays in workstream frontmatter as information and gates nothing.
+- ADR-0012 loses its Mac tiers: device profiles are `Windows_High` and `Windows_Medium` only; VSM
+  everywhere, software Lumen on Medium, hardware Lumen on High. Appendix C§8's Mac column is gone.
+- ADR-0010's `fetchexclude` light clone existed for the Mac. No machine needs it; until `.lfsconfig`
+  drops it, a clone overrides it with `git config lfs.fetchexclude ""`.
+- G2's "a packaged Mac build runs it" becomes a packaged Windows build; G4b's budgets are Windows only.
+- The zsh scripts in `unreal/Build/` (`test.sh`, `pr-check.sh`, `int-merge.sh`, `ci-local.sh`,
+  `editor-lock.sh`, `smoke-listen.sh`) are Mac-pathed and now run nowhere. Their rules still hold —
+  the landing gate is `DF_GATE_FILTER`, a verdict comes from the JSON report, never test a binary
+  older than its source. On Windows `unreal/Build/deepfield.ps1` (`deepfield build|test|check|…`)
+  already keeps `test.sh`'s rules; the rest are followed by hand per `unreal/README.md` until WS-15
+  ports them onto that script. The Python checks are unaffected.
+- `.github/workflows/unreal-mac.yml` never ran (no runner was registered) and has no machine; WS-15
+  replaces it with a Windows lane on the box's runner.
+- Follow-ups outside the docs (INT/WS-15): remove `Mac` from `TargetPlatforms` in `DeepField.uproject`;
+  drop the `fetchexclude` from `.lfsconfig` (and `deepfield.ps1`'s `-LightClone`); retire
+  `unreal-mac.yml` (here and on `main`); port `pr-check`/`ci-local`/`int-merge` onto `deepfield.ps1`;
+  retarget the Mac wording in `check-test-coverage.py`'s `EXCLUDED` reasons and in
+  `machine-inventory.ps1`'s readiness labels (which then regenerates `machines/windows-gpu.md`).
+- ADR-0023's last sentence stands: the render, perf and Windows lanes stay unverified until the box
+  has produced a result. History (digests, session logs, earlier ADRs, RFCs) is left as written; where
+  it says "the Mac", it records what happened then.
+Links: ADR-0016, ADR-0021, ADR-0023, `unreal/README.md`, `unreal/Build/windows-bringup.md`, `CONTRACTS/ci.md`.

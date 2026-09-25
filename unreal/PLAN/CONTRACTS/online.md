@@ -1,6 +1,6 @@
 # C14 — Online API (ADR-0003)
 
-**Canonical:** `unreal/DeepField/Source/DFOnline/Public/UDFOnlineSubsystem.h`, `IDFSessionBackend.h`. **Owner:** WS-11. **Rule:** R.
+**Canonical:** `unreal/DeepField/Source/DFOnline/Public/DFOnlineSubsystem.h`, `IDFSessionBackend.h`. **Owner:** WS-11. **Rule:** R.
 
 ```cpp
 UCLASS() class UDFOnlineSubsystem : public UGameInstanceSubsystem {

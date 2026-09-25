@@ -1,14 +1,15 @@
 # Reload — forward manifest for Claude Design
 
-**Status:** open asks, written 2026-09-10 against `main`.
+**Status:** answered by the 2026-09-11 drop (`docs/ASSET-DELIVERY.md`) except **Ask D** —
+`poisonStream` and `cryoSprayer` are still unmodelled. Written 2026-09-10 against `main`.
 **Audience:** Claude Design. This is a request list; nothing in the delivered
 art has been altered.
 **Scope note:** **no backend work is planned or needed.** The sim already has
 the whole ammo and reload system. What is missing is the art a reload is made
 of, and this document names it.
 **Read first:** [docs/MAP-AUTHORING.md](MAP-AUTHORING.md) for how these
-documents work; [FORWARD-MANIFEST-switchyard.md](FORWARD-MANIFEST-switchyard.md)
-is the other one.
+documents work; the other manifests are listed in the
+[README](../README.md#for-claude-design--read-this-first).
 
 ---
 
