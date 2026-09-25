@@ -156,8 +156,12 @@ verify() {
   checks
   step "build"
   yield_to_agent_builds
-  "$UE_ROOT/Engine/Build/BatchFiles/Mac/Build.sh" DeepFieldEditor Mac Development -Project="$WT/unreal/DeepField/DeepField.uproject" -WaitMutex -NoHotReload 2>&1 | grep -E " error |Result:|Total time" | tee /tmp/int-build.log
-  grep -q "Result: Succeeded" /tmp/int-build.log || fail build
+  "$UE_ROOT/Engine/Build/BatchFiles/Mac/Build.sh" DeepFieldEditor Mac Development -Project="$WT/unreal/DeepField/DeepField.uproject" -WaitMutex -NoHotReload 2>&1 | grep -E "error:|error generated|Error:|Fatal|Result:|Total time" | tee /tmp/int-build.log
+  if ! grep -q "Result: Succeeded" /tmp/int-build.log; then
+    echo "--- the diagnostics, in full (a failure that hides its cause costs a whole build to re-read):"
+    grep -E "error:|error generated|Fatal" /tmp/int-build.log | head -20
+    fail build
+  fi
   step "tests"
   unreal/Build/editor-lock.sh unreal/Build/test.sh || fail tests   # no filter: test.sh owns the gate list
   if [ "$SMOKE" = 1 ]; then
