@@ -7,7 +7,7 @@ owner: session-01DTQRZ3-cloud
 claimed_at: 2026-09-25T04:59:33Z
 lease_expires: 2026-09-26T04:59:33Z
 branch: ws/03-player/hero-movement
-last_commit: 
+last_commit: f1f2147
 editor_heavy: true
 phase: P2
 size: L
@@ -36,13 +36,22 @@ blocked_on:
 
 ## Interfaces I changed
 <!-- dated list: what, RFC #, dependents notified -->
+- 2026-09-25 · **`ADFHeroCharacter` first implementation** (PR 1, no RFC: the interface had no code yet). `UDFHeroMovementComponent` (sprint and ADS as predicted wants in saved-move custom flags 0 and 1; `IsSprinting`, `GetHeroSpeeds`), `DFHeroMove::*` rules, `DFHeroCollision::Profile()`. Dependents: WS-28 (the pawn class, see Needs INT), WS-12 (a hero view model binds here later).
 
 ## Needs INT
 <!-- e.g. "add plugin X to .uproject" -->
+- **C16 input assets.** `IA_Move IA_Look IA_Jump IA_Sprint IA_Crouch IA_Aim` and `IMC_DF_Default` do not exist yet (`Content/DF/Core/Input`, INT-owned). `ADFHeroCharacter` exposes them as Blueprint slots and binds nothing until they are assigned. For Godot parity, IA_Look's mouse scale is 0.0022 rad per pixel (0.126° per pixel, `Player.cs` BaseMouseSensitivity) with Y negated; Sprint, Crouch and Aim are held.
+- **The pawn class.** `ADFGameMode` (WS-28, unclaimed) sets no `DefaultPawnClass`, so nothing spawns a hero yet. Setting it to `ADFHeroCharacter` (or its Blueprint) needs `DFPlayer` in `DFMatch.Build.cs` (layer 4 → 3, legal; Build.cs lists are INT's).
+- **Hero collision profile name.** `DFHeroCollision::Profile()` belongs beside `DFCollision::GrayboxProfile()` once DFCollision moves to DFCore by contract-append.
 
 ## Open questions
+- **Acceleration (for the user).** Godot writes velocity directly: instant start, stop and turn, full air control. PR 1 approximates that (20000 cm/s² acceleration and braking, AirControl 1). If the Unreal hero should have weight instead, that is a design call, and it is one constant.
+- **Sprint direction.** Godot sprints in any direction while Shift is held; PR 1 keeps that. Many shooters sprint forward only.
+- **Crouch.** Held, as coded; B§1.1 does not say hold or toggle, and does not give a crouched height (the CMC default half-height of 40 cm is in use, about 0.8 m).
+- **Crouched ADS.** B§1.1 gives crouch 3.0 and ADS 3.5 but not both at once; PR 1 takes the slower.
 
 ## Session log
 <!-- append-only: date · session · what landed · what's next -->
 - 2026-09-25 · INT · ADR-0024 (ruling R1): downed, revive progress and vehicle seat replicate from a **`UDFHeroStateComponent`** you write in DFPlayer and WS-28 attaches to `ADFPlayerState`; WS-28 respawns bleedout-expired players at the wave boundary through your hook.
 - 2026-09-25 · session-01DTQRZ3-cloud · **claim** — cloud session, on the user's ask (NEXT.md item 4). Read STATUS.md, NEXT.md, this file and INT's ADR-0024 note above. Plan for PR 1 on `ws/03-player/hero-movement`: `ADFHeroCharacter` + the hero movement component carrying B§1.1's parity numbers (walk 6.5, sprint 10, jump 4.8, crouch 3.0, ADS 3.5) through DFBalance dials, with DF.Unit tests for the 6.5/10/4.8 parity. Code-only, no editor slot. This session has no engine, so PR 1 will say it is unbuilt and can land only through `int-merge.sh` (CONTRACTS/ci.md).
+- 2026-09-25 · session-01DTQRZ3-cloud · **session end** — PR 1 on `ws/03-player/hero-movement` (`f1f2147`): `ADFHeroCharacter` (Godot's capsule, eye height, FOV and pitch clamp; DF_Hero; Enhanced Input slots) on `UDFHeroMovementComponent` (walk 6.5 / sprint 10 / jump 4.8 parity, crouch 3.0, ADS 3.5, sprint and ADS predicted), rules in `DFHeroMove`, tests `DF.Unit.Player.{MoveParity,SpeedRules,ComponentSpeed,PredictedWants,HeroDefaults}`. **Not built and not run**: this cloud session has no engine. What ran: `layering-check` OK, `ownership-check --ws 03` 10 files 0 violations, `validate-content-json` OK, `check-test-coverage` 6/6 gated. Before it lands it needs, on the GPU box (unreal/README.md §5.4): `unreal\deepfield check`, `unreal\deepfield test DF.Unit.Player`, then the full gate. `int-merge.sh` has no machine until its Windows port (ADR-0028), which also corrects this session's claim line: there is no int-merge route today. No editor slot, no LFS locks. **Next:** PR 2 = `UDFHeroStateComponent` (ADR-0024: downed, bleedout 30 s, revive progress 4 s at 2.5 m by one reviver, vehicle seat) as a pure core plus the component, since WS-28 attaches it; then weapons (`UDFWeaponInstance`, B§1.2 server-traced shots).
