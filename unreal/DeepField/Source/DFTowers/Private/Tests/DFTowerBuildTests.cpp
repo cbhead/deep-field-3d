@@ -314,6 +314,7 @@ bool FDFTowerSiegeTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("the ring never shows less than empty"), Last && Last->RemainingFraction == 0.f);
 	TestEqual(TEXT("nothing is removed mid-frame"), Destroyed.Num(), 0);
 
+	TestEqual(TEXT("rubble cannot be sold for a refund before it is removed"), F.Build->SellTower(1, Barricade->GetStructureId()).Reason, DFTowerMath::Reasons::UnknownTower);
 	TestEqual(TEXT("end of frame: one removed"), F.Build->RemoveBroken(), 1);
 	TestNull(TEXT("the pad is free"), F.Build->FindTowerOnSocket(TEXT("b1")));
 	if (TestEqual(TEXT("one TowerDestroyed to the team"), Destroyed.Num(), 1))

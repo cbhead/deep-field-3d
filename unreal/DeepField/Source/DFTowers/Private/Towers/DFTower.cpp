@@ -78,6 +78,7 @@ void ADFTower::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetime
 	DOREPLIFETIME(ADFTower, PathLevels);
 	DOREPLIFETIME(ADFTower, Hp);
 	DOREPLIFETIME(ADFTower, ActiveConditionId);
+	DOREPLIFETIME(ADFTower, Heat);
 	DOREPLIFETIME(ADFTower, CurrentTarget);
 }
 
@@ -390,6 +391,7 @@ void ADFTower::StepWeapon(const FDFTowerRow& Row, float DeltaSeconds)
 			// Lost the target: the charge bleeds off rather than persisting, or a beam would be free burst on the next one.
 			RampTarget.Reset();
 			RampSeconds = 0.f;
+			Heat = 0;
 			return;
 		}
 		if (RampTarget.Get() != Target)
@@ -400,8 +402,12 @@ void ADFTower::StepWeapon(const FDFTowerRow& Row, float DeltaSeconds)
 			Announce(DFTags::Message_BeamHeld, Target, Target->GetActorLocation());
 		}
 		RampSeconds += DeltaSeconds;
+		const float RampCap = DFBalance::Dial(this, TEXT("beamRampCap"), 3.f);
 		const float Ramp = DFTowerMath::BeamRamp(Row, PathLevels, RampSeconds,
-			DFBalance::Dial(this, TEXT("beamRampPerSecond"), 0.6f), DFBalance::Dial(this, TEXT("beamRampCap"), 3.f));
+			DFBalance::Dial(this, TEXT("beamRampPerSecond"), 0.6f), RampCap);
+		// The cap the ramp is heading for, with the "peak" path, so full heat means "at the cap".
+		const float Cap = RampCap * DFTowerMath::PathFactor(Row, PathLevels, TEXT("peak"));   // BeamRamp's cap
+		Heat = Cap > 1.f ? static_cast<uint8>(FMath::Clamp((Ramp - 1.f) / (Cap - 1.f), 0.f, 1.f) * 255.f + 0.5f) : 0;
 		DealDamage(Row, Target, DFTowerMath::EffectiveDamage(Row, PathLevels) * Ramp * DeltaSeconds, DFTags::Damage_Type_Thermal);
 		return;
 	}

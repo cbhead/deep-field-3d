@@ -85,6 +85,9 @@ public:
 	int32 GetOwnerSeat() const { return OwnerSeat; }
 	const TArray<int32>& GetPathLevels() const { return PathLevels; }
 	float GetHp() const { return Hp; }
+	/** Beam towers: the ramp as 0..255 of the way from 1x to its cap (rig.md's replicated Heat), for the
+	 *  beam's look on every machine. 0 for everything else. */
+	uint8 GetHeat() const { return Heat; }
 	AActor* GetCurrentTarget() const { return CurrentTarget; }
 	/** The row, from the content tables (null before InitializeTower on the host / before replication on a client). */
 	const FDFTowerRow* GetRow() const;
@@ -138,6 +141,7 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_PathLevels) TArray<int32> PathLevels;
 	UPROPERTY(ReplicatedUsing = OnRep_Hp) float Hp = 0.f;
 	UPROPERTY(Replicated) FName ActiveConditionId;
+	UPROPERTY(Replicated) uint8 Heat = 0;
 	UPROPERTY(Replicated) TObjectPtr<AActor> CurrentTarget;
 
 	// Host-only weapon state (Tower.cs fields).

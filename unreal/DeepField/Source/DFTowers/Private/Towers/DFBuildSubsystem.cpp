@@ -496,10 +496,10 @@ FDFBuildResult UDFBuildSubsystem::UpgradeTower(int32 PlayerId, int32 StructureId
 {
 	using namespace DFTowerMath;
 	ADFTower* Tower = FindTower(StructureId);
-	const FDFTowerRow* Row = Tower ? Tower->GetRow() : nullptr;
+	const FDFTowerRow* Row = (Tower && !Tower->IsBroken()) ? Tower->GetRow() : nullptr;
 	if (!Row)
 	{
-		return Refuse(Reasons::UnknownTower);
+		return Refuse(Reasons::UnknownTower);   // rubble awaiting removal is not a tower (Step.cs removes it the same tick)
 	}
 	IDFTeamWallet* Wallet = FindWallet();
 	static const TMap<EDFScrapType, int32> NoScrap;
@@ -536,9 +536,9 @@ FDFBuildResult UDFBuildSubsystem::SellTower(int32 PlayerId, int32 StructureId)
 {
 	using namespace DFTowerMath;
 	ADFTower* Tower = FindTower(StructureId);
-	if (!Tower)
+	if (!Tower || Tower->IsBroken())
 	{
-		return Refuse(Reasons::UnknownTower);   // the sim ignores it; nothing is broadcast
+		return Refuse(Reasons::UnknownTower);   // the sim ignores it (rubble included: it is gone by then); nothing is broadcast
 	}
 	const int32 Refund = SellRefund(Tower->GetSpent(), FMath::RoundToInt(DFBalance::Dial(this, TEXT("sellRefundPercent"), 70.f)));
 	if (IDFTeamWallet* Wallet = FindWallet())
