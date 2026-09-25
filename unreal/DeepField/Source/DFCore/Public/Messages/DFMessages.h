@@ -19,6 +19,9 @@ struct DFCORE_API FDFMsg_Player
 	UPROPERTY(BlueprintReadOnly) FName Name;
 	UPROPERTY(BlueprintReadOnly) FGameplayTag Faction;
 	UPROPERTY(BlueprintReadOnly) FVector Location = FVector::ZeroVector;
+	// C15 append (INT ruling R3, 2026-09-25): the player's online id as FDFOnlineId::ToString() spells it,
+	// so the UI can approve / kick from the message alone. Empty where no online identity applies.
+	UPROPERTY(BlueprintReadOnly) FString OnlineId;
 };
 
 USTRUCT(BlueprintType)

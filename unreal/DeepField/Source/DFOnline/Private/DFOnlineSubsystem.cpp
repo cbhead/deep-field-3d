@@ -607,6 +607,7 @@ void UDFOnlineSubsystem::ApproveJoin(const FDFOnlineId& Requester, bool bApprove
 
 	FDFMsg_Player Msg;
 	Msg.Name = FName(*Requester.ToString());
+	Msg.OnlineId = Requester.ToString();
 	BroadcastMessage(DFTags::Message_JoinApproved, Msg);
 	OnSessionChanged.Broadcast(Session);
 }
@@ -725,6 +726,7 @@ void UDFOnlineSubsystem::Kick(const FDFOnlineId& Member, bool bBanForSession)
 	PublishApprovedList();
 	FDFMsg_Player Msg;
 	Msg.Name = FName(*Member.ToString());
+	Msg.OnlineId = Member.ToString();
 	BroadcastMessage(DFTags::Message_Kicked, Msg);
 	OnSessionChanged.Broadcast(Session);
 }
@@ -896,6 +898,7 @@ void UDFOnlineSubsystem::HandleLobbyMemberJoined(const FLobbyMemberJoined& Event
 		Request.RequestedAt = Now();
 		FDFMsg_Player Msg;
 		Msg.Name = FName(*Request.DisplayName);
+		Msg.OnlineId = Member.ToString();
 		BroadcastMessage(DFTags::Message_JoinRequest, Msg);
 		OnJoinRequest.Broadcast(Member, Request.DisplayName);
 	}
@@ -918,6 +921,7 @@ void UDFOnlineSubsystem::HandleLobbyMemberLeft(const FLobbyMemberLeft& Event)
 		{
 			FDFMsg_Player Msg;
 			Msg.Name = FName(*Identity.Id.ToString());
+			Msg.OnlineId = Identity.Id.ToString();
 			BroadcastMessage(DFTags::Message_Kicked, Msg);
 		}
 		SetConnectionState(EDFConnectionState::LoggedIn);
@@ -955,6 +959,7 @@ void UDFOnlineSubsystem::HandleLobbyLeaderChanged(const FLobbyLeaderChanged& Eve
 		Approved.Add(Identity.Id);
 		FDFMsg_Player Msg;
 		Msg.Name = FName(*Identity.Id.ToString());
+		Msg.OnlineId = Identity.Id.ToString();
 		BroadcastMessage(DFTags::Message_HostMigrationOffered, Msg);
 	}
 	OnSessionChanged.Broadcast(Session);
@@ -977,6 +982,7 @@ void UDFOnlineSubsystem::HandleLobbyAttributesChanged(const FLobbyAttributesChan
 	{
 		FDFMsg_Player Msg;
 		Msg.Name = FName(*Identity.Id.ToString());
+		Msg.OnlineId = Identity.Id.ToString();
 		BroadcastMessage(DFTags::Message_JoinApproved, Msg);
 	}
 	OnSessionChanged.Broadcast(Session);
