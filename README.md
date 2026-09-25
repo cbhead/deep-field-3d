@@ -3,6 +3,8 @@
 > **Working on the Unreal rebuild (branch `unreal/main`)?** Everything below this box is the Godot
 > game. The step-by-step runbook for the Unreal project (prerequisites, setup, build, test, play)
 > is **[unreal/README.md](unreal/README.md)**.
+> **On Windows** it is one script: run `unreal\deepfield.cmd` (or the one-line bootstrap in that
+> runbook's §0 on a machine with nothing on it yet).
 
 First-person co-op tower defense (1–4 players, self-hosted over Tailscale).
 The 3D rebuild of [deep-field-td](https://github.com/cbhead/deep-field-td):
