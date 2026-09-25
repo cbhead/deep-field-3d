@@ -61,6 +61,9 @@ jobs:
       - name: Content JSON against the schemas
         run: python3 unreal/Build/validate-content-json.py
 
+      - name: Every registered DF suite is in the landing gate or excluded with a reason
+        run: python3 unreal/Build/check-test-coverage.py
+
       # Warning-only on PRs: workstream branches legitimately carry frontmatter changes (lease
       # renewals, last_commit) that INT regenerates STATUS.md from at merge time (PROGRAMME.md §6.8).
       - name: STATUS.md matches the workstream frontmatter

@@ -10,9 +10,12 @@ Every gameplay number lives here as JSON (ADR-0005). The Unreal DataTables under
 json/<table>.json        one file per table: towers, traps, enemies, statuses, reactions, factions, weapons,
                          melee, meleeAttachments, attachments, ammo, conditions, vehicles, maps, balance,
                          waves_<map> (one per map)
-schema/<table>.schema.json   JSON Schema per table (waves.schema.json covers every waves_<map>)
+schema/<table>.schema.json   JSON Schema per table (waves.schema.json covers every waves_<map>;
+                         terrain.schema.json is WS-30's, for terrain/)
 content-ids.json         every table's ids in row order (what DF.Content.TagCoverage / RoundTrip check)
-levels/legacy/           the Godot-era level briefs (input to WS-09/WS-10x, not imported by this pipeline)
+levels/legacy/           the Godot-era level briefs (input to WS-09/WS-10x; -run=DFLevelImport -legacy)
+levels/reports/          map-validator reports
+terrain/<map>.terrain.json   text-authored terrain specs (WS-30; build_heightmap.py → -run=DFEditor.DFTerrainImport)
 ```
 
 ## Editing JSON
@@ -28,7 +31,7 @@ levels/legacy/           the Godot-era level briefs (input to WS-09/WS-10x, not 
 - Optional fields (everything the schema does not list under `required`) may be omitted and take the
   struct default. Anything the struct does not have is an **error**: the importer refuses the table and
   names the key, so a typo can never become a silent default.
-- Validate before committing: `python3 unreal/Build/validate-content-json.py`.
+- Validate before committing: `python unreal\Build\validate-content-json.py`.
 - Row ownership is per table (`unreal/PLAN/OWNERSHIP.md`): towers/traps → WS-04, enemies/waves → WS-05,
   weapons/melee/attachments/ammo/balance → WS-06, statuses/reactions → WS-02, factions → WS-07,
   maps/conditions/vehicles → WS-09. The format and the row structs are WS-01's.
@@ -36,15 +39,13 @@ levels/legacy/           the Godot-era level briefs (input to WS-09/WS-10x, not 
 
 ## Running the importer
 
-One editor process per machine (PROGRAMME.md §6.7), so always go through the lock helper:
+From the repository root, with `UE` and `PROJ` set as in the runbook (`unreal/README.md` §2):
 
-```bash
-UE="/Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor-Cmd"
-unreal/Build/editor-lock.sh "$UE" "$PWD/unreal/DeepField/DeepField.uproject" \
-  -run=DFContentImport -nullrhi -unattended -nop4 -nosplash -NoSound        # every table
-  ... -run=DFContentImport -tables=towers,enemies                            # some tables
-  ... -run=DFContentImport -json=/path/to/other/json                         # another source directory
+```bat
+"%UE%" "%PROJ%" -run=DFContentImport -nullrhi -unattended -nop4 -nosplash -NoSound
 ```
+
+Add `-tables=towers,enemies` to import only some tables, or `-json=<dir>` to read another source directory.
 
 Each table prints one line (`towers  8 rows -> /Game/DF/Data/Tables/DT_Towers (updated)`); the exit
 code is 1 if any table failed, and the log names the table, row and key. Rows are replaced wholesale in
@@ -55,7 +56,7 @@ the JSON change; an unchanged table saves byte-identically, so a re-run on uncha
 
 ## What the tests guarantee
 
-Run them with `unreal/Build/editor-lock.sh unreal/Build/test.sh DF.Content+DF.Unit.Content`.
+Run them as in the runbook (`unreal/README.md` §5.1) with `FILTER=DF.Content+DF.Unit.Content`, after a build.
 
 | Test | Guarantee |
 |---|---|

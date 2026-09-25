@@ -17,7 +17,7 @@ blocked_on:
 # WS-44 — Performance & scalability
 
 ## Scope / DoD
-**Scope.** Device profiles, budgets per map, PSO caching, Insights reports, 8 GB memory pass, TSR settings, reduce-flash.
+**Scope.** Device profiles, budgets per map, PSO caching, Insights reports, TSR settings, reduce-flash.
 
 **Definition of done.** Every map within budget on both tiers; DF.Perf.<Map> green. Blocked on the GPU box.
 

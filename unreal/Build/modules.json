@@ -267,7 +267,9 @@
         "EditorFramework",
         "AssetTools",
         "ContentBrowser",
-        "Projects"
+        "Projects",
+        "ImageWrapper",
+        "PhysicsCore"
       ]
     },
     "DFTests": {

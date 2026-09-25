@@ -1,6 +1,6 @@
 # C8 — Palette and tint material contract
 
-**Canonical:** `Content/DF/Core/DA_Palette` (imported from `docs/palette.json` by `tools/ue-bridge/ue/import_tokens.py`), the master materials under `Content/DF/Materials/Master/`, the three MPCs under `Content/DF/Core/`, and `unreal/DeepField/Source/DFGameplay/Public/Tint/UDFTintComponent.h`. **Owner:** WS-00 defines the names; WS-31 implements the materials. **Rule:** R. Colour semantics are `docs/PALETTE.md` (ADR-0017): gameplay code never contains a colour literal — it asks `DA_Palette`.
+**Canonical:** `Content/DF/Core/DA_Palette` (imported from `docs/palette.json` by `tools/ue-bridge/ue/import_tokens.py`), the master materials under `Content/DF/Materials/Master/`, the three MPCs under `Content/DF/Core/`, and `unreal/DeepField/Source/DFGameplay/Public/Tint/DFTintComponent.h`, with `Tint/DFTintLayout.h` as the permanent Custom Primitive Data index layout the component writes and the masters read (append-only: a new parameter takes the next free index, nothing is renumbered; ruling R11, 2026-09-25). **Owner:** WS-00 defines the names; WS-31 implements the materials. **Rule:** R. Colour semantics are `docs/PALETTE.md` (ADR-0017): gameplay code never contains a colour literal — it asks `DA_Palette`.
 
 ## Master materials
 | Master | Used by | Instance parameters gameplay may set (by name) |

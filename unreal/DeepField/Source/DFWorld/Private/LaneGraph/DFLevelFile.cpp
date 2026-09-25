@@ -315,6 +315,13 @@ bool FDFLevelFile::Load(const FString& Path, FDFLevelFile& Out, FString& OutErro
 		}
 		FDFLevelNodeName Name;
 		Name.Id = FName(*(*Obj)->GetStringField(TEXT("id")));
+		// A node id becomes the first half of a warp gate's "<node>@<edge>" key, and
+		// ADFWarpGate::SplitStableId splits at the first '@' — so a node id may not carry one.
+		if (Name.Id.ToString().Contains(TEXT("@"), ESearchCase::CaseSensitive))
+		{
+			OutError = FString::Printf(TEXT("laneNodeNames '%s': a node id may not contain '@' (warp gate keys are \"<node>@<edge>\")"), *Name.Id.ToString());
+			return false;
+		}
 		if (!ReadVec3((*Obj)->TryGetField(TEXT("at")), Name.At))
 		{
 			OutError = FString::Printf(TEXT("laneNodeNames '%s': at is missing or not [x,y,z]"), *Name.Id.ToString());

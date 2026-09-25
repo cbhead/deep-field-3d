@@ -1,13 +1,13 @@
 # Ownership: path glob → workstream
 
-CODEOWNERS-style. A PR titled `[WS-NN]` may add or modify **binary** files only under WS-NN's globs unless INT applies the `cross-owner-ok` label. Text files outside your globs go through the owner (PR to them) or an RFC for contracts. `unreal/Build/ownership-check.py` enforces this in CI. First match wins; later rows are more specific.
+CODEOWNERS-style. A PR titled `[WS-NN]` may add or modify **binary** files only under WS-NN's globs unless INT applies the `cross-owner-ok` label. Text files outside your globs go through the owner (PR to them) or an RFC for contracts. `unreal/Build/ownership-check.py` enforces this in CI. A file belongs to **every** workstream whose row matches it (that is what the checker does: any matching row admits the workstream); an overlap between rows is deliberate shared ownership and the row that overlaps says why. (Ruling R7, 2026-09-25 — this line used to say "first match wins", which no tool applied.)
 
 | Glob | Owner |
 |---|---|
-| `unreal/PLAN/**` | INT (workstream sessions may edit only their own `workstreams/ws-NN-*.md`, `EDITOR-SLOTS.md`, and append to `DECISIONS.md` / add `rfcs/`) |
+| `unreal/PLAN/**` | INT (workstream sessions may edit only their own `workstreams/ws-NN-*.md`, and append to `DECISIONS.md` / add `rfcs/`) |
 | `unreal/DeepField/DeepField.uproject`, `unreal/DeepField/Config/Default*.ini`, `unreal/DeepField/Source/*.Target.cs`, `.gitattributes`, `.lfsconfig` | INT |
 | `unreal/DeepField/Config/Tags/DF_<ws>.ini` | the named workstream (append-only) |
-| `unreal/DeepField/Source/DFCore/**`, `unreal/DeepField/Source/DFMatch/**`, `unreal/DeepField/Content/DF/Core/**` | WS-00 (contract-append PRs from anyone; changes by RFC) |
+| `unreal/DeepField/Source/DFCore/**`, `unreal/DeepField/Content/DF/Core/**` | WS-00 (contract-append PRs from anyone; changes by RFC) |
 | `tools/content-export/**`, `unreal/content/schema/**` (except `terrain.schema.json`), `unreal/DeepField/Source/DFContentPipeline/**`, `unreal/DeepField/Content/DF/Data/Tables/**`, `unreal/DeepField/Source/DFCore/Public/Content/DFContentRows.h`, `unreal/content/README.md` | WS-01 |
 | `unreal/content/json/towers.json`, `traps.json` | WS-04 |
 | `tools/waveplan-golden/**`, `unreal/content/json/enemies.json`, `elites.json`, `boss.json`, `waves_*.json` | WS-05 (WS-17 elites, WS-19 boss, WS-27 waves by delegation) |
@@ -23,14 +23,17 @@ CODEOWNERS-style. A PR titled `[WS-NN]` may add or modify **binary** files only 
 | `unreal/DeepField/Source/DFTowers/**`, `Content/DF/Towers/**` (bindings), `Content/DF/Data/Defs/Towers/**` | WS-04 |
 | `unreal/DeepField/Source/DFEnemies/**`, `Content/DF/Enemies/**` (bindings), `Content/DF/Data/Defs/Enemies/**` | WS-05 |
 | `unreal/DeepField/Source/DFVehicles/**`, `Content/DF/Vehicles/**` (bindings) | WS-08 |
-| `unreal/DeepField/Source/DFWorld/**`, `Content/DF/World/**` (bindings), `Content/DF/Data/Defs/{Maps,LaneGraphs,Conditions}/**`, `Content/DF/Maps/*/L_*_Gameplay*`, `tools/ue-bridge/terrain/**` | WS-09 |
+| `unreal/DeepField/Source/DFWorld/**`, `Content/DF/World/**` (bindings), `Content/DF/Data/Defs/{Maps,LaneGraphs,Conditions}/**`, `Content/DF/Maps/*/L_*_Gameplay*` | WS-09 (the terrain lane's tools are WS-30's — ruling R7; WS-09 changes them by PR to WS-30) |
+| `unreal/DeepField/Source/DFEditor/**/DFLevelImport*`, `unreal/DeepField/Source/DFEditor/**/DFMapValidate*` | WS-09 (the level importer and `DF.Map.Validate` commandlets; the rest of DFEditor has no owner yet — add a row with the first file) |
 | `unreal/DeepField/Content/DF/Maps/<Map>/L_<Map>.umap` | WS-09 (legacy import) until the map's WS-10a…f is claimed, then that workstream — INT swaps this row at claim time |
 | `unreal/DeepField/Content/DF/Core/PhysicalMaterials/**` | WS-09 (physical materials per §5.2; a terrain-lane physmat a landscape layer needs is a PR to WS-09 — new files only, never a rewrite) |
+| `unreal/DeepField/Source/DFMatch/**`, `Content/DF/Match/**` | WS-28 (ADR-0024: the state actors host domain-owned components; a domain attaches its component by a one-line PR to DFMatch) |
 | `unreal/DeepField/Source/DFOnline/**`, `Content/DF/Online/**` | WS-11 |
 | `unreal/DeepField/Source/DFUI/**`, `Content/DF/UI/**` (except `Icons/`, `Styles/`, `Textures/`, `Studio/` → WS-45) | WS-12 |
 | `unreal/DeepField/Source/DFAudio/**`, `Content/DF/Audio/**`, `Content/DF/Maps/*/L_*_Audio*` | WS-13 |
 | `unreal/DeepField/Source/DFVfx/**`, `Content/DF/VFX/**` | WS-14 |
 | `unreal/DeepField/Plugins/DFAutomation/**`, `Source/DFTests/**`, `unreal/Build/**`, `.github/workflows/unreal-*.yml`, `Content/DF/Dev/**` | WS-15 |
+| `unreal/DeepField/Content/DF/Dev/L_Test_Status*` | WS-02 (its DoD level, built by `Source/DFGameplay/Dev/make-l-test-status.py`; ruling R8 — a workstream's DoD level under `Content/DF/Dev/` gets a row like this one) |
 | `tools/ue-bridge/blender/**`, `tools/ue-bridge/ue/**`, `docs/design/models/**` (extras only), `Content/DF/Env/Kits/**`, `unreal/validation-baseline.tsv` | WS-30 |
 | `unreal/DeepField/Content/DF/Materials/**`, `Content/DF/Textures/Shared/**`, `Content/DF/Core/DA_Palette*` | WS-31 |
 | `unreal/DeepField/Content/DF/Characters/_Shared/**`, `Content/DF/Enemies/_Shared/**`, `tools/ue-bridge/blender/templates/**` | WS-32 |

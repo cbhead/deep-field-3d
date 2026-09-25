@@ -4,6 +4,7 @@
 #include "DFJoinCode.h"
 #include "DFOnlineTypes.h"
 #include "GameplayTagContainer.h"
+#include "Online/DFJoinSeams.h"
 #include "Online/OnlineAsyncOpHandle.h"
 #include "Online/OnlineServices.h"
 #include "Subsystems/GameInstanceSubsystem.h"
@@ -43,7 +44,7 @@ namespace UE::Online
 //   host   ADFGameMode::PreLogin   -> ValidateJoinOptions: versionMismatch | contentMismatch | notInvited | banned
 // Invited friends (InviteFriend) are approved when the invite is sent.
 UCLASS()
-class DFONLINE_API UDFOnlineSubsystem : public UGameInstanceSubsystem
+class DFONLINE_API UDFOnlineSubsystem : public UGameInstanceSubsystem, public IDFJoinValidator
 {
 	GENERATED_BODY()
 
@@ -104,6 +105,8 @@ public:
 	 *  DF.Message.JoinRejected reason: versionMismatch | contentMismatch | notInvited | banned. */
 	UFUNCTION(BlueprintCallable, Category = "DF|Online")
 	bool ValidateJoinOptions(const FString& Options, FString& OutError);
+	/** IDFJoinValidator (C14 seam, DFCore): ADFGameMode::PreLogin asks this; forwards to ValidateJoinOptions. */
+	virtual bool ValidateJoin(const FString& Options, FString& OutReason) override { return ValidateJoinOptions(Options, OutReason); }
 
 	// ---- backend -------------------------------------------------------------------------------
 	void SetSessionBackend(TSharedPtr<IDFSessionBackend> InBackend);

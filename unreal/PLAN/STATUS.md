@@ -1,16 +1,16 @@
 # Workstream status
 
-Generated 2026-09-25T01:16:48Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-25T05:30:10Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
-active: 1 · paused: 7 · review: 1 · unclaimed: 40
+active: 4 · paused: 6 · review: 1 · unclaimed: 39
 
 | WS | Title | Phase | CP | State | Owner | Lease expires | Last commit | Editor-heavy | Blocked on |
 |---|---|---|---|---|---|---|---|---|---|
-| WS-00 | Foundation & contracts | P1 | CP | review | — | — | ff379ca | yes | git-lfs for committing L_Dev_Empty.umap; WS-15 for CI |
+| WS-00 | Foundation & contracts | P1 | CP | review | — | — | ff379ca | yes | WS-15 for CI |
 | WS-01 | Content pipeline | P1 | CP | paused | — | — | d8168ba |  | — |
 | WS-02 | Gameplay core (GAS) | P1-P2 | CP | paused | — | — | — |  | — |
-| WS-03 | Player | P2 | CP | unclaimed | — | — | — | yes | — |
-| WS-04 | Towers & build | P2-P3 | CP | unclaimed | — | — | — | yes | — |
+| WS-03 | Player | P2 | CP | active | session-01DTQRZ3-cloud | 2026-09-26T04:59:33Z | — | yes | — |
+| WS-04 | Towers & build | P2-P3 | CP | active | session-01HszbJQ-cloud | 2026-09-26T02:29:31Z | — | yes | — |
 | WS-05 | Enemies & AI | P2-P3 | CP | active | session-62767025 | 2026-09-26T01:16:48Z | fb2ae91 | yes | — |
 | WS-06 | Economy, scrap, gunsmith | P3 |  | unclaimed | — | — | — |  | — |
 | WS-07 | Factions & abilities | P2-P4 | CP | unclaimed | — | — | — |  | — |
@@ -23,7 +23,7 @@ active: 1 · paused: 7 · review: 1 · unclaimed: 40
 | WS-10e | Map design: Sluice (new) | P4 |  | unclaimed | — | — | — | yes | — |
 | WS-10f | Map design: Crown (new) | P4 |  | unclaimed | — | — | — | yes | — |
 | WS-11 | Online, lobby, profile (EOS) | P1-P3 | CP | paused | — | — | ba05fc5 |  | — |
-| WS-12 | UI (Common UI + MVVM) | P2-P5 | CP | paused | — | — | 278e262 | yes | — |
+| WS-12 | UI (Common UI + MVVM) | P2-P5 | CP | active | session-fae2d0c5 | 2026-09-26T02:11:40Z | 278e262 | yes | — |
 | WS-13 | Audio (MetaSounds) | P2-P5 |  | unclaimed | — | — | — | yes | — |
 | WS-14 | VFX (Niagara) | P2-P5 |  | unclaimed | — | — | — | yes | — |
 | WS-15 | Automation, CI, packaging, store | P1+ |  | paused | — | — | bd9d16a |  | — |
@@ -39,6 +39,7 @@ active: 1 · paused: 7 · review: 1 · unclaimed: 40
 | WS-25 | Physics layer | P4 |  | unclaimed | — | — | — | yes | — |
 | WS-26 | Co-op verbs & security rules | P4 |  | unclaimed | — | — | — |  | — |
 | WS-27 | Waves, tiers, endless, balance | P4 (last) |  | unclaimed | — | — | — |  | — |
+| WS-28 | Match flow (DFMatch) | P2-P3 | CP | unclaimed | — | — | — |  | — |
 | WS-30 | Art pipeline (Claude Design → Unreal, terrain lane, validators) | P1+ |  | paused | — | — | 76f3662 | yes | — |
 | WS-31 | Materials & palette | P1+ |  | unclaimed | — | — | — | yes | — |
 | WS-32 | Skeletons & animation contract | P2+ |  | unclaimed | — | — | — | yes | — |

@@ -6,7 +6,7 @@ Deep Field 3D is a 1–4 player co-op FPS tower defense on Godot 4.7 + C# (v0.12
 
 The C# sim (`sim/Sim.Core`) stops running in the game. Its content tables are exported once as the starting numbers; its rules are the written spec. The harness is out of scope.
 
-This plan is the single hand-off document for **many Claude Code desktop sessions working simultaneously, one git worktree each, on this Mac**. Section 6 is the coordination protocol that keeps them aware of each other; Section 5 is the workstream registry they claim from; Appendices B–C carry the specs each workstream implements.
+This plan is the single hand-off document for **many Claude Code sessions working simultaneously, one git worktree each, on the Windows GPU workstation** (ADR-0028; the programme started on an M1 Mac, now retired). Section 6 is the coordination protocol that keeps them aware of each other; Section 5 is the workstream registry they claim from; Appendices B–C carry the specs each workstream implements.
 
 ### 1.1 Decisions already made by the user
 | Topic | Decision |
@@ -14,27 +14,28 @@ This plan is the single hand-off document for **many Claude Code desktop session
 | Engine / architecture | UE 5.8, native (GAS, CMC, StateTree, Common UI, Niagara, MetaSounds); no C# at runtime; harness not a concern |
 | Store / online / audience | EGS + EOS; Level 1 invite-only listen server over EOS P2P relay; L2/L3 designed for, not built |
 | Art | Megascans/Fab for environments, props, surfaces; Claude Design (three.js generator, pushed harder) for hero pieces; **keep the palette semantics and design language, raise fidelity** |
-| Platforms | Windows + macOS (Apple Silicon) |
-| Machines | This Mac (M1, 8 GB RAM, 16 GB free) only, initially; a Windows GPU workstation later |
+| Platforms | Windows (macOS dropped 2026-09-25, ADR-0028) |
+| Machines | The Windows GPU workstation (ADR-0028). The M1 Mac the programme started on is retired. |
 | Horizon | No date — scope drives the date |
 | Binary assets | Git LFS on GitHub |
-| Sessions | Claude Code desktop sessions on this Mac, one worktree each |
+| Sessions | Claude Code sessions on the GPU workstation, one worktree each |
 | Terrain | **Real variable terrain on every map** — hills, valleys, real heights; flat only where it makes sense; enemies and vehicles terrain-aware; **maps change drastically (full layout redesigns)** — see ADR-0018 and Section 3.2 |
 | Launch scope | **6 sectors** (foundry, switchyard, spire, toaster redesigned on terrain + Sluice + Crown new); **full proposed roster** (9 towers + barricade, 16 enemies, 5 elites, 1 boss, 11 ranged, 6 melee, 5 traps, 5 conditions, 3 difficulty tiers); **Versus post-launch**; **audio open-source/CC0 + generated only** |
 
-### 1.2 Hard constraints (verified on this machine)
+### 1.2 Hard constraints
+The programme was planned against an M1 Mac (8 GB RAM, ~16 GB free disk, no GPU); ADR-0016 recorded that and ADR-0028 retired it. The engine machine is now the Windows GPU workstation — setup is `unreal\deepfield.cmd setup` (`unreal/README.md`), what it measurably has is `unreal/Build/machines/windows-gpu.md`, and commissioning is `unreal/Build/windows-bringup.md`.
+
 | Constraint | Consequence |
 |---|---|
-| Apple M1, **8 GB RAM, ~16 GB free disk**, macOS 26.4, Xcode 26.6 | UE editor runs but with no headroom; no engine source build; Megascans-scale content will not fit. **External NVMe SSD is a P0 blocker.** Editor-heavy work must be serialised across sessions (Section 6.7). |
-| **UE 5.8.2 launcher build installed** (`/Users/Shared/Epic Games/UE_5.8`, 43 GB, `InstalledBuild.txt`) with `OnlineServicesEOS`, `OnlineSubsystemEOS`, `EOSShared`, `SocketSubsystemEOS`, `CommonUI`, `GameplayAbilities`, `GameplayStateTree`, `ChaosVehicles` present | Editor + Mac packaging works today. **No dedicated-server target** (source build only) — fine for L1; the L2 seam is an interface. |
-| `git-lfs` not installed; Windows target with no Windows machine | `brew install git-lfs` in P0. Windows packaging, Nanite/Lumen/VSM verification and perf budgets are **blocked until the GPU box exists**; everything else is not (Section 4.4). |
-| Node 22, Python 3.13, Blender installed (MCP tools available) | The Claude-Design→Unreal converter lane runs headless Blender on this Mac. |
+| **UE 5.8.2 launcher build** (`EngineAssociation: "5.8"`) with `OnlineServicesEOS`, `OnlineSubsystemEOS`, `EOSShared`, `SocketSubsystemEOS`, `CommonUI`, `GameplayAbilities`, `GameplayStateTree`, `ChaosVehicles` present | **No dedicated-server target** (source build only) — fine for L1; the L2 seam is an interface. Every machine stays on exactly 5.8.2. |
+| The render, perf and Windows lanes have never produced a result | They stay "unverified" in the ledger until the box has measured them (ADR-0023). |
+| The Claude-Design→Unreal converter lane (WS-30) runs headless Blender | Blender is installed on the box when that lane is built. |
 | Existing `docs/design/` three.js sources + `tools/design-export.sh`; memory note `design-drops-arrive-as-project-zips` | The generator and its export page are extended, not replaced. |
-| Prior 2D plans in `~/.claude/plans/deep-field-*.md` | Overclock station, Versus, Sluice/Crown/Braid/Fork/Delta boards are reused as design input. |
+| Prior 2D plans in `~/.claude/plans/deep-field-*.md` (on the retired Mac; not in the repo) | Overclock station, Versus, Sluice/Crown/Braid/Fork/Delta boards are reused as design input. |
 
 ---
 
-## 2. Architecture decisions (become ADR-0001…0017 in `unreal/PLAN/DECISIONS.md` on day one)
+## 2. Architecture decisions (became ADR-0001…0018 in `unreal/PLAN/DECISIONS.md`; later ADRs live only there)
 
 | ADR | Decision | Why |
 |---|---|---|
@@ -47,15 +48,15 @@ This plan is the single hand-off document for **many Claude Code desktop session
 | 0007 | **Tower rig = static-mesh component chain** `Foot → Yaw → Pitch → Muzzle` with mesh sockets; stage modules are static meshes attached to `S_Stage_<path>` sockets; aim by C++ `UDFTowerRigComponent` under manifest limits; Nanite throughout. **Skeletal + Control Rig reserved for enemies, boss, heroes, FP arms, weapons, vehicles, animated traps/traversal** | Removes 220 skinned modules and the Nanite-skeletal risk from the critical path; keeps the design's rig contract |
 | 0008 | **Vehicles: Chaos Wheeled, driver-client-authoritative transform with server speed clamp** (`TopSpeed×1.15`); seats and ram damage server-owned; non-drivers interpolate; off the critical path. Chaos suspension/grades are required by ADR-0018 (the scalar `VehicleHandling.cs` model cannot climb a hill); the only fallback is a simplified Chaos setup, not a port | PvE co-op makes driver authority acceptable at L1; L3 seam reserved |
 | 0009 | **Native C++ GameplayTags** for contract tags; per-workstream `Config/Tags/DF_<ws>.ini` for local tags | Removes `DefaultGameplayTags.ini` as a merge hotspot |
-| 0010 | **Git LFS**; one owner directory per binary asset; `git lfs lock` on `.umap` and shared `.uasset`; `.lfsconfig fetchexclude` so Mac sessions clone light; Megascans restored from Fab, never from LFS | `.uasset` cannot be merged |
+| 0010 | **Git LFS**; one owner directory per binary asset; `git lfs lock` on `.umap` and shared `.uasset`; Megascans restored from Fab, never from LFS (the Mac's `fetchexclude` light clone is retired, ADR-0028) | `.uasset` cannot be merged |
 | 0011 | Content root **`unreal/DeepField/Content/DF/`**; asset prefixes `SM_ SK_ SKEL_ PHYS_ ABP_ AS_ AM_ CR_ M_ MI_ MF_ MPC_ T_ NS_ NE_ BP_ DT_ DA_ WBP_ ST_ MS_ SC_ ATT_ L_ DL_ PCG_ GC_ RT_` (regex-enforced) | One naming contract |
-| 0012 | **Nanite for every static mesh; skeletal LOD chains until the GPU-box gate decides Nanite skinning**; VSM everywhere (cascaded SM on Mac Low); software Lumen floor, hardware Lumen Windows High; Sky Atmosphere + Volumetric Clouds replace skybox domes; Substrate off; Niagara Fluids P2 | The engine features the brief asks for, at a floor the Mac can still run |
+| 0012 | **Nanite for every static mesh; skeletal LOD chains until the GPU-box gate decides Nanite skinning**; VSM everywhere; software Lumen on Windows Medium, hardware Lumen on Windows High (Mac tiers dropped, ADR-0028); Sky Atmosphere + Volumetric Clouds replace skybox domes; Substrate off; Niagara Fluids P2 | The engine features the brief asks for, with a Medium tier for weaker GPUs |
 | 0013 | **Claude Design → Unreal lane**: three.js export → glTF (+`extras.bone/socket/family`) → headless Blender (`tools/ue-bridge/blender/convert.py`: cm, Z-up, +X, sockets, rigid weights to family armature, auto-UV, AO/curvature/ID bakes) → FBX + loose textures → Interchange pipelines via `tools/ue-bridge/ue/import_drop.py` | Keeps the generator; adds what Unreal needs |
 | 0014 | **Audio: MetaSounds; sources are CC0/open-source libraries and generated audio only; music composed as procedural MetaSound stems or CC0 stems; every source logged in `Content/DF/Audio/LICENSES.md`** | User decision |
 | 0015 | **Launch scope** per §1.1; Versus post-launch (seams: `IDFSessionBackend`, team tags `DF.Team.*`) | User decision |
-| 0016 | **Machine plan**: Mac-only until the GPU box; art sublevels fetch-excluded on the Mac; render/perf/Windows lanes marked "unverified" in the ledger until then | Constraint |
+| 0016 | **Machine plan**: Mac-only until the GPU box — superseded by ADR-0023 and ADR-0028 (the GPU box is the only engine machine) | Constraint |
 | 0017 | **Tint/palette is a parameter contract**: `DA_Palette` from `docs/palette.json`; `UDFTintComponent` writes Custom Primitive Data / MID params by fixed names; no colour literals in code | Keeps `docs/PALETTE.md` semantics through the redesign |
-| 0018 | **Real terrain everywhere.** Every map (existing and new) is a **Landscape with genuine relief** — hills, valleys, ridges, cuts, embankments, terraces — flat only where a place would be flat (a yard, a road bed, a floor plate). **Enemies, towers, vehicles, projectiles, scrap, VFX and validation are all terrain-aware.** The flat-world assumptions of the Godot build (flat slab, polyline surfaces, sight only through registered blockers) are retired. Terrain is **text-authored**: a `terrain.json` feature spec per map (contours, ridgelines, cut/fill volumes, road beds, plateaus) → `tools/ue-bridge/terrain/build_heightmap.py` → 16-bit heightmap + layer masks → imported by `build_level.py`; hand sculpting is a polish pass on top, never the source. **Every map is a redesign**: the existing `level.json` is the brief for routes/lessons/socket counts, not the output — routes, sockets and traversal are re-laid on the new terrain and re-validated | The user's brief; text-authored terrain keeps map work mergeable across sessions and reproducible on the Mac; hand-sculpted heightmaps cannot be diffed |
+| 0018 | **Real terrain everywhere.** Every map (existing and new) is a **Landscape with genuine relief** — hills, valleys, ridges, cuts, embankments, terraces — flat only where a place would be flat (a yard, a road bed, a floor plate). **Enemies, towers, vehicles, projectiles, scrap, VFX and validation are all terrain-aware.** The flat-world assumptions of the Godot build (flat slab, polyline surfaces, sight only through registered blockers) are retired. Terrain is **text-authored**: a `terrain.json` feature spec per map (contours, ridgelines, cut/fill volumes, road beds, plateaus) → `tools/ue-bridge/terrain/build_heightmap.py` → 16-bit heightmap + layer masks → imported by `build_level.py`; hand sculpting is a polish pass on top, never the source. **Every map is a redesign**: the existing `level.json` is the brief for routes/lessons/socket counts, not the output — routes, sockets and traversal are re-laid on the new terrain and re-validated | The user's brief; text-authored terrain keeps map work mergeable across sessions and reproducible; hand-sculpted heightmaps cannot be diffed |
 
 ---
 
@@ -77,13 +78,13 @@ deepfield-3d/
     DeepField/
       DeepField.uproject
       Config/  DefaultEngine.ini DefaultGame.ini DefaultInput.ini DefaultDeviceProfiles.ini  Tags/DF_<ws>.ini
-      Source/  DFCore DFGameplay DFPlayer DFTowers DFEnemies DFWorld DFVehicles DFMatch DFUI DFOnline DFAudio DFVfx DFEditor DFTests
-      Plugins/ DFContentPipeline (editor commandlets)  DFAutomation (Gauntlet controllers)
+      Source/  DFCore DFGameplay DFPlayer DFTowers DFEnemies DFWorld DFVehicles DFMatch DFUI DFOnline DFAudio DFVfx DFEditor DFTests DFContentPipeline (editor commandlets)
+      Plugins/ DFAutomation (Gauntlet controllers; not created yet)
       Content/DF/  Core Data/{Tables,Defs} Gameplay Heroes Enemies Towers Weapons Vehicles World Maps/<Map> Env/{Kits,Megascans} Materials Textures VFX Audio UI Dev
 ```
 
 **Module layering** (a `.Build.cs` may only depend downward; CI fails an upward edge):
-`DFCore` (tags, content rows, message structs, content subsystem, message bus, palette, interfaces) → `DFGameplay` (GAS: attribute sets, ASC, abilities base, status channels, reactions, economy, gunsmith) → `DFPlayer` / `DFTowers` / `DFEnemies` / `DFWorld` / `DFVehicles` → `DFMatch` (GameMode/GameState/PlayerState/EventRelay/campaign) → `DFUI` / `DFOnline` / `DFAudio` / `DFVfx`; `DFEditor`, `DFTests` on top.
+`DFCore` (tags, content rows, message structs, content subsystem, message bus, palette, interfaces) → `DFGameplay` (GAS: attribute sets, ASC, abilities base, status channels, reactions, economy, gunsmith) → `DFWorld` (lanes, sockets, terrain) → `DFPlayer` / `DFTowers` / `DFEnemies` / `DFVehicles` → `DFMatch` (GameMode/GameState/PlayerState/EventRelay/campaign) → `DFUI` / `DFOnline` / `DFAudio` / `DFVfx`; `DFEditor`, `DFTests`, `DFContentPipeline` on top. `unreal/Build/modules.json` is the enforced table.
 
 **C++ vs Blueprint vs data**: all rules, replication, ability logic, AI tasks, view models and validators in C++; Data Assets bind ids to binaries (+ rig limits); DataTables only written by the JSON importer; Blueprints only as default-setting leaf subclasses, ABPs, UMG layouts (logic in view models), Niagara/MetaSound graphs. A BP event graph with >~10 logic nodes is rejected in review.
 
@@ -135,10 +136,10 @@ Each has an owner, a canonical file, and a change rule: **A** append-only (no RF
 |---|---|---|
 | **P0 Procurement & setup** (human + one session, days 1–3) | External NVMe SSD (≥1 TB) holding project + DDC + Intermediate; `brew install git-lfs`; GitHub LFS data pack; EOS Developer Portal product with Dev/Stage/Live sandboxes + client policies (game client policy never gets trusted-server rights); EGS publisher onboarding + Epic Account Services brand review started; `unreal/main` branch; `unreal/PLAN/` ledger scaffold with this plan's ADRs and CONTRACTS docs; workstream files created; GPU box ordered (not required to arrive) | **G0**: `unreal/main` exists with `PLAN/`, LFS on, ≥150 GB free at the project path, every WS file present and unclaimed |
 | **P1 Contracts freeze** (week 1) | WS-00, WS-01, WS-15 skeleton, WS-12 view-model shells, WS-02 attribute/status headers, WS-09 lane asset type, WS-30 pipeline skeleton, WS-31 material parameter stubs, OSSv2 spike (WS-11) | **G1**: C1–C16 in repo with owners; `DF.Content.RoundTrip` green; Mac CI builds `Development Editor`; listen host + 1 PIE client on `L_Dev_Empty`; OSSv2 spike verdict recorded as ADR |
-| **P2 Vertical slice** (weeks 2–5) | **Foundry redesigned on real terrain** (text-authored heightmap, terraces and a cut, graybox kit on top), Lance + Nova, Drifter + Skiff on the terrain navmesh/AGL lane, Ember Ignition Wave, hitscan rifle + reload, build wheel/upgrade/HUD/lobby/connection screens, EOS login → invite-only lobby → friend joins over relay → kick, join-in-progress, autosave-resume, minimal cues, net tests, `DF.Map.Validate` with LOS coverage | **G2**: at 150 ms emulated latency fire/reload/build/ability feel instant (`DF.Net.Feel`: predicted cue ≤1 frame, server confirm ≤400 ms); no authority branching in UI; a packaged Mac build runs it; a real second machine joined over EOS relay at least once; **terrain proof** (Section 3.2 last bullet) passes |
-| **P3 Parity** (weeks 6–14) | All 8 towers + barricade, 11 enemies, 6 weapons, 4 melee, gunsmith, 5 factions, 3 traps, fog/night mechanics, vehicles on terrain, all 17 screens, profile; **Switchyard/Spire/Toaster redesigned on terrain** (graybox kit, validated); probe suite ported; Windows package once the GPU box exists | **G3**: every ported probe green (logic on Mac); `docs/gate-baseline.tsv` wave counts/hp scales reproduced by `DF.Unit.WavePlanBaseline` (counts and scales only — route lengths are new); 4 solo matches to victory in automation; 2-player EOS session on each map; **Godot retired** (`game/` deleted, `unreal/main` → `main`) |
+| **P2 Vertical slice** (weeks 2–5) | **Foundry redesigned on real terrain** (text-authored heightmap, terraces and a cut, graybox kit on top), Lance + Nova, Drifter + Skiff on the terrain navmesh/AGL lane, Ember Ignition Wave, hitscan rifle + reload, build wheel/upgrade/HUD/lobby/connection screens, EOS login → invite-only lobby → friend joins over relay → kick, join-in-progress, autosave-resume, minimal cues, net tests, `DF.Map.Validate` with LOS coverage | **G2**: at 150 ms emulated latency fire/reload/build/ability feel instant (`DF.Net.Feel`: predicted cue ≤1 frame, server confirm ≤400 ms); no authority branching in UI; a packaged Windows build runs it; a real second machine joined over EOS relay at least once; **terrain proof** (Section 3.2 last bullet) passes |
+| **P3 Parity** (weeks 6–14) | All 8 towers + barricade, 11 enemies, 6 weapons, 4 melee, gunsmith, 5 factions, 3 traps, fog/night mechanics, vehicles on terrain, all 17 screens, profile; **Switchyard/Spire/Toaster redesigned on terrain** (graybox kit, validated); probe suite ported; Windows package | **G3**: every ported probe green; `docs/gate-baseline.tsv` wave counts/hp scales reproduced by `DF.Unit.WavePlanBaseline` (counts and scales only — route lengths are new); 4 solo matches to victory in automation; 2-player EOS session on each map; **Godot retired** (`game/` deleted, `unreal/main` → `main`) |
 | **P4 Expansion** (parallel lane A) | Gameplay new content and systems: Overclock + grid, elites, weak points, boss, 5 enemies, 5 guns + 2 melee + breakpoints + chargeCells, Tether/implosion + 2 traps, heatwave/coldsnap mechanics, mutables, physics layer, resonance combos, co-op verbs, ownership/spend rules, difficulty tiers, Sluice + Crown gameplay layers, 74 authored waves | **G4a**: every Appendix B item at P0/P1 priority implemented with its functional test; `DF.Map.Validate` green on 6 maps incl. mutable state combinations |
-| **P5 Art uplift** (parallel lane B, starts the day the pipeline cooks one of each kind) | Pipeline + materials + skeleton families; every model redone per Appendix C; 6 environments at target; ~110 Niagara systems; conditions rendered; audio vocabulary + music; UI art + 112 icons; perf pass on the GPU box | **G4b**: registry audit shows zero placeholders; every map hits its Windows High / Mac Low budget on the GPU box / Mac; `DF.Vfx.EveryCueDraws` and `DF.Audio.EveryCueHasSound` green |
+| **P5 Art uplift** (parallel lane B, starts the day the pipeline cooks one of each kind) | Pipeline + materials + skeleton families; every model redone per Appendix C; 6 environments at target; ~110 Niagara systems; conditions rendered; audio vocabulary + music; UI art + 112 icons; perf pass on the GPU box | **G4b**: registry audit shows zero placeholders; every map hits its Windows High / Medium budget on the GPU box; `DF.Vfx.EveryCueDraws` and `DF.Audio.EveryCueHasSound` green |
 | **P6 Balance, hardening, launch** | Gauntlet mid-band bot sweep per map/tier; 2 h 4-player endless soak; crash reporting; EGS cert; store page; day-0 patch path | **G5**: EGS submission accepted; 0 P0 bugs; `DF.Soak.Endless4P` green |
 
 ### 4.2 Dependency DAG
@@ -171,6 +172,10 @@ graph TD
   WS10a --> G2
   WS11 --> G2
   WS12 --> G2
+  WS02 --> WS28[WS-28 Match flow]
+  WS05 --> WS28
+  WS28 --> WS12
+  WS28 --> G2
   G2 --> WS10b[WS-10b/c/d maps]
   G2 --> WS06
   G2 --> WS08
@@ -191,14 +196,13 @@ graph TD
   WS44 --> G4
   G4 --> P6[P6 balance/hardening/launch]
 ```
-Critical path to G2: P0 → WS-00 → WS-01 → WS-02 → (WS-03 ∥ WS-04 ∥ WS-05) → G2, with WS-09→WS-10a and WS-11 in parallel from week 1. Longest chain is WS-02 → WS-05; claim WS-05 the moment C4/C5 headers land.
+Critical path to G2: P0 → WS-00 → WS-01 → WS-02 → (WS-03 ∥ WS-04 ∥ WS-05) → WS-28 (match flow, ADR-0024; added 2026-09-25) → G2, with WS-09→WS-10a and WS-11 in parallel from week 1. Longest chain is WS-02 → WS-05; claim WS-05 the moment C4/C5 headers land.
 
 ### 4.3 Parallelism per phase
-P1: 5–7 sessions (00 first, then 01, 15, 12, 11-spike, 30, 31). P2: 10–12 (02, 03, 04, 05, 07, 09, 10a, 11, 12, 14, 13, 30/31 continuing) + INT. P3: up to 16 + INT. P4/P5: gameplay lane (up to 10) and art lane (up to 10) concurrently + INT; **editor-heavy sessions capped at 2 concurrently on the Mac** (Section 6.7).
+P1: 5–7 sessions (00 first, then 01, 15, 12, 11-spike, 30, 31). P2: 10–12 (02, 03, 04, 05, 07, 09, 10a, 11, 12, 14, 13, 30/31 continuing) + INT. P3: up to 16 + INT. P4/P5: gameplay lane (up to 10) and art lane (up to 10) concurrently + INT.
 
-### 4.4 What the Mac can and cannot do
-Not blocked: every C++ workstream; logic/net tests with `-nullrhi`; two-client PIE with `NetEmulation`; content pipeline; UI at Low scalability; MetaSounds; Niagara authoring at low counts; graybox levels with existing GLB kits; Mac packaging; Blender converter; Metal shader compile; the 8 GB memory pass (if it runs here it runs anywhere).
-Blocked until the GPU box: Nanite/Lumen/VSM look and perf verification; Megascans-heavy `L_<Map>_Art` (fetch-excluded on the Mac); Windows packaging + EOS overlay on Windows; perf budgets; soak; Nanite-skeletal gate; shared DDC. Art sublevels are separate files so gameplay sessions never load them.
+### 4.4 What the GPU box must still prove
+Everything runs on the Windows GPU workstation (ADR-0028): every C++ workstream, logic and net tests under `-nullrhi`, the content pipeline, levels, art, packaging, CI. Until the box has produced a result, the lanes no machine has yet run stay marked "unverified" in the ledger: Nanite/Lumen/VSM look and perf, the Megascans-heavy `L_<Map>_Art` sublevels, Windows packaging + the EOS overlay, perf budgets, the soak, the Nanite-skeletal gate (commissioning: `unreal/Build/windows-bringup.md`). Art sublevels stay separate files so gameplay sessions never load them.
 
 ---
 
@@ -209,9 +213,9 @@ Legend: **CP** critical path; sizes S ≤1 wk, M 1–3, L 3–6, XL >6 (one sess
 ### 5.1 Foundation
 | WS | Purpose | Owns | Needs | DoD | Size / phase |
 |---|---|---|---|---|---|
-| **WS-00 Foundation & contracts** (CP) | uproject, modules, native tags, message structs, content subsystem, message bus, collision/input, material param names, ledger scaffold, ADRs | `unreal/DeepField/{.uproject,Config/*,Source/DFCore,Source/DFMatch skeleton}`, `unreal/PLAN/**` (until INT), `Content/DF/Core` | — | Editor opens; Mac build; `L_Dev_Empty` listen host + PIE client; tags compile; CONTRACTS docs written; CI builds | M / P1 |
+| **WS-00 Foundation & contracts** (CP) | uproject, modules, native tags, message structs, content subsystem, message bus, collision/input, material param names, ledger scaffold, ADRs | `unreal/DeepField/{.uproject,Config/*,Source/DFCore,Source/DFMatch skeleton (handed to WS-28, ADR-0024)}`, `unreal/PLAN/**` (until INT), `Content/DF/Core` | — | Editor opens; editor build; `L_Dev_Empty` listen host + PIE client; tags compile; CONTRACTS docs written; CI builds | M / P1 |
 | **WS-01 Content pipeline** (CP) | `tools/content-export`, JSON schemas, `DFContentPipeline` commandlet (JSON→DT), `DT_ContentRegistry`, `DF.Content.RoundTrip/Bindings/TagCoverage`, palette + tokens import | `tools/content-export/**`, `unreal/content/**`, `Plugins/DFContentPipeline/**`, `Content/DF/Data/Tables/**`, `DFContentRows.h` | WS-00 | Every table exported, imported, round-trips; registry audit fails on any id without a row/binding or any `Placeholder=true` asset in a cook | M / P1 |
-| **WS-15 Automation, CI, packaging, store** | Test base classes, Gauntlet controllers, `unreal/Build/*.py` (layering, ownership, LFS lock audit, plan-status), GitHub Actions (self-hosted Mac nightly; GPU-box lanes later), packaging Mac/Win, EGS BuildPatchTool, crash reporting | `Plugins/DFAutomation/**`, `Source/DFTests/**`, `unreal/Build/**`, `.github/workflows/unreal-*.yml`, `Content/DF/Dev/**` | WS-00 | Nightly build + all `DF.*` on Mac; packaged Mac (and later Windows) builds to the EGS dev sandbox | M / P1→ |
+| **WS-15 Automation, CI, packaging, store** | Test base classes, Gauntlet controllers, `unreal/Build/*.py` (layering, ownership, LFS lock audit, plan-status), GitHub Actions (self-hosted GPU-box nightly and render lanes; Windows ports of the `unreal/Build` scripts), Windows packaging, EGS BuildPatchTool, crash reporting | `Plugins/DFAutomation/**`, `Source/DFTests/**`, `unreal/Build/**`, `.github/workflows/unreal-*.yml`, `Content/DF/Dev/**` | WS-00 | Nightly build + all `DF.*` on the GPU box; packaged Windows builds to the EGS dev sandbox | M / P1→ |
 | **INT Integration** (role) | Merges, owns shared files, pre-merge checklist, ledger regeneration, digest, "Needs INT" requests | `unreal/PLAN/**`, `Config/Default*.ini`, `.uproject`, module lists, `.gitattributes`, `.lfsconfig`, `OWNERSHIP.md` | — | Section 6.8 checklist run each cycle | ongoing |
 
 ### 5.2 Gameplay core (parity)
@@ -230,6 +234,7 @@ Legend: **CP** critical path; sizes S ≤1 wk, M 1–3, L 3–6, XL >6 (one sess
 | **WS-12 UI (Common UI + MVVM)** (CP for HUD/wheel/lobby/connection) | 17 screens + teleport picker + world markers + coverage decal driver + boss bar + elite strip + ping UI + early-call vote + tiers; `M_UI_Chamfer`, styles from `DA_UITokens`, `BP_ModelWell` render-target studio (`L_UIStudio`), icons registry, magenta-chip missing-icon fallback | `Source/DFUI/**`, `Content/DF/UI/**` | WS-00, WS-01 | Every screen reachable in `L_Test_UI` with a fake view model; no net branching (CI grep); settings persisted | XL / P2–P5 |
 | **WS-13 Audio (MetaSounds)** | Cue→MetaSound map, `MS_Music_Director` (Quartz, states, per-map stems, threat-driven layers), hue-coded tower timbres, faction/reaction stingers, enemy vocabularies, weather beds, occlusion/reverb, UI; **CC0/generated sources only, logged in `LICENSES.md`** | `Source/DFAudio/**`, `Content/DF/Audio/**`, `L_<Map>_Audio` | WS-00, WS-14 timing | `DF.Audio.EveryCueHasSound`; reload beats align with montage notifies | XL / P2–P5 |
 | **WS-14 VFX (Niagara)** | ~110 systems on ~12 emitter templates (C10, Appendix C§5), `DT_VFX` variants, held-effect registry, decal pool (256 cap), `PPM_RevealPulse/HeatShimmer/Downed`, reduce-flash | `Source/DFVfx/**`, `Content/DF/VFX/**` | WS-02 cues, C8 | `DF.Vfx.EveryCueDraws`; corrode/cryofield/revealpulse/teleport-burst/implosion exist | XL / P2–P5 |
+| **WS-28 Match flow (DFMatch)** (CP; added 2026-09-25, ADR-0024) | `ADFGameMode` (from WS-00's skeleton), `ADFMatchState` + `ADFPlayerState` as hosts of domain-owned state components (economy WS-06, lane/mutable states WS-09, faction/level WS-07, loadout WS-06, hero state WS-03), `ADFPlayerController` Server RPC surface (1:1 with `Commands.cs`), `ADFEventRelay`, the phase machine (port of `Step.cs` `UpdateWaves` + `CheckEndState`: lobby Launch gate, intermission + early call, `BeginWave` on the director, `Wave*` messages, lives-first Victory/Defeat), endless toggle, campaign/sector chain, the host match record | `Source/DFMatch/**`, `Content/DF/Match/**` | WS-02, WS-05 director | `DF.Unit.Match.*` reproduce the Step.cs phase order (incl. `LastLeakIsDefeat`); WS-12 reads real replicated state on listen host + 1 client; `DF.Match.Solo.Testlane` to victory | L / P2–P3 |
 
 ### 5.3 Gameplay expansion (P4; each is an RFC-backed PR into the owning core WS, or a new module where noted)
 | WS | Item (Appendix B ref) | Lands in | Needs | Size |
@@ -264,7 +269,7 @@ Legend: **CP** critical path; sizes S ≤1 wk, M 1–3, L 3–6, XL >6 (one sess
 | **WS-41 Sluice environment** | dam recipe: crest road, spillway basin, valley walls the coil climbs; Water Body River + floodgate/crusher/lock hero pieces, freezing water material, heatwave/coldsnap presets | `…/Sluice/**` | WS-10e, WS-24 | as above | XL |
 | **WS-42 Crown environment** | hill-fort recipe: the hill itself (four climbing approaches, a crest plateau), curtain walls as `GC_Wall`, citadel core plinth, causeway boss route, storm preset | `…/Crown/**` | WS-10f, WS-19, WS-24 | as above | XL |
 | **WS-43 Traversal, destructibles, props art** | traversal set (8 small rigs + statics), `GC_Wall/Barrel/Container` + 6 destructible props, pickups ×5 with glints, warp gate + membrane, core, spawn portal | `Content/DF/World/**` meshes | WS-30/31 | validator green | M |
-| **WS-44 Performance & scalability** | Device profiles `Windows_High/Medium`, `Mac_Low/Medium`; budgets per Appendix C§8; PSO caching; Insights reports; 8 GB memory pass; TSR settings; reduce-flash | `Config/DefaultDeviceProfiles.ini` (via INT), `unreal/Build/perf/**` | GPU box, WS-37..42 | Every map within budget on both tiers; `DF.Perf.<Map>` green | L |
+| **WS-44 Performance & scalability** | Device profiles `Windows_High/Medium`; budgets per Appendix C§8; PSO caching; Insights reports; TSR settings; reduce-flash | `Config/DefaultDeviceProfiles.ini` (via INT), `unreal/Build/perf/**` | GPU box, WS-37..42 | Every map within budget on both tiers; `DF.Perf.<Map>` green | L |
 | **WS-45 UI art & icons** | 112 icons (`T_Icon_*` 512 px white-on-alpha from the SVG pipeline), Slate styles, `M_UI_Chamfer/Hazard/ModelWell`, brand 3D title scene `L_MainMenu`, loading screens, EGS key art | `Content/DF/UI/{Icons,Styles,Textures,Studio}` | WS-12 | No magenta chips in the registry audit | M |
 
 ---
@@ -286,7 +291,7 @@ Workstream file template:
 ---
 ws: 04 · slug: towers · state: unclaimed|claimed|active|blocked|review|done|paused
 owner: <session handle>  · claimed_at: ISO · lease_expires: ISO (+24 h) · branch: ws/04-towers/<topic> · last_commit: <sha>
-editor_heavy: false      # true = opens the UE editor for real work (Section 6.7 cap)
+editor_heavy: false      # true = opens the UE editor for real work (information only since ADR-0028)
 ---
 ## Scope / DoD                 (copied from Section 5 + Appendix refs)
 ## Contracts I consume         (C2, C4, C5, C6, C9)
@@ -296,14 +301,14 @@ editor_heavy: false      # true = opens the UE editor for real work (Section 6.7
 ```
 
 ### 6.2 Claiming
-1. A session claims by editing **only its** `workstreams/ws-NN.md` (owner + lease + branch) and pushing that one-file commit **directly to `unreal/main`** (`git pull --rebase` then push; if rejected, re-read — someone else may have claimed). This is the only direct push allowed.
+1. A session claims by editing **only its** `workstreams/ws-NN.md` (owner + lease + branch) and pushing that one-file commit **directly to `unreal/main`** (`git pull --rebase` then push; if rejected, re-read — someone else may have claimed; the commands are in `PLAN/README.md`). Ledger commits like this — claims, lease renewals, INT's own ledger updates — are the only direct pushes allowed.
 2. Leases are 24 h, renewed at every session start; INT may reassign an expired lease after logging it.
 3. INT may split a WS into sub-files (`ws-10a`, `ws-10b` …); a session claims one sub-file.
 4. `STATUS.md` is regenerated, never hand-edited — the hottest conflict removed.
 
 ### 6.3 Branches and worktrees
 - Integration branch `unreal/main` (from `main`); merged into `main` and `game/` deleted at G3.
-- Branch `ws/<NN>-<slug>/<topic>`; worktree `.claude/worktrees/ws-<NN>-<topic>`; PRs to `unreal/main`, squash-merged by INT; ≤1 day of work per PR; title `[WS-NN] …`; body lists contracts touched and tests run.
+- Branch `ws/<NN>-<slug>/<topic>`; worktree `..\wt-ws-NN` beside the clone (`unreal/README.md` §7); PRs to `unreal/main`, squash-merged by INT; ≤1 day of work per PR; title `[WS-NN] …`; body lists contracts touched and tests run.
 - Rebase at session start, before opening a PR, and whenever the digest lists an interface change in a consumed contract. Never rewrite `unreal/main`. Never bare `git stash`.
 
 ### 6.4 Shared-file rules
@@ -312,51 +317,49 @@ editor_heavy: false      # true = opens the UE editor for real work (Section 6.7
 | `.uproject`, `Config/Default*.ini`, `*.Target.cs`, other modules' `Build.cs` lists, `.gitattributes`, `.lfsconfig` | INT-owned; request via "Needs INT: …" line in your WS file |
 | `Config/Tags/DF_<ws>.ini` | own WS, append-only |
 | `Source/DFCore/**` (tags, rows, messages) | additions via `contract-append` PRs; changes via RFC |
-| `unreal/content/json/*.json` | text source of truth; owner = the WS whose table it is (towers→WS-04, enemies/elites/boss/waves→WS-05/17/19/27, weapons/melee/ammo→WS-06/21, statuses/reactions→WS-02/22, factions→WS-07, maps/lanegraphs/conditions→WS-09, balance→WS-27); schema-validated in CI |
+| `unreal/content/json/*.json` | text source of truth; owner = the WS whose table it is (towers→WS-04, enemies/elites/boss/waves→WS-05/17/19/27, weapons/melee/ammo/balance→WS-06/21 (WS-27 balance by delegation), statuses/reactions→WS-02/22, factions→WS-07, maps/lanegraphs/conditions→WS-09; `OWNERSHIP.md` is canonical); schema-validated in CI |
 | `Content/DF/Data/Tables/*.uasset` | written only by the import commandlet |
 | `L_<Map>*.umap` and anything under `Content/DF/Core`, `Content/DF/Data` | LFS-locked while editing |
 | `PLAN/DECISIONS.md` | append-only |
 
 ### 6.5 Session start / end checklists
-Start: (1) `git fetch && git rebase origin/unreal/main`; (2) read `STATUS.md`, your WS file, digests since your last log line; (3) `git log origin/unreal/main --since=<last_commit date> --name-only | grep -E "Source/DFCore|CONTRACTS|rfcs|content/schema"` — any hit in a contract you consume → read the RFC first; (4) renew lease, log "session start"; (5) if touching `.umap`/shared `.uasset`: `git lfs lock`; if locked by another, don't; (6) if `editor_heavy`, check the editor-slot rule (6.7).
-End: (1) run your WS test filter + `unreal/Build/layering-check.py` + `ownership-check.py`; (2) update WS file (`last_commit`, interfaces changed, open questions, next); (3) open/refresh PR; (4) release LFS locks not carried into the next session; (5) log "session end".
+Start: (1) `git fetch && git rebase origin/unreal/main`; (2) read `STATUS.md`, `NEXT.md`, your WS file, digests since your last log line; (3) `git log origin/unreal/main --since=<last_commit date> --name-only | grep -E "Source/DFCore|CONTRACTS|rfcs|content/schema"` — any hit in a contract you consume → read the RFC first; (4) renew lease, log "session start"; (5) before editing any `.umap`/`.uasset`: `git lfs lock` (all are `lockable`, so they are read-only until locked); if locked by another, don't.
+End: (1) run the pre-PR set — layering, ownership, schemas, build and the landing gate (`unreal/Build/pr-check.sh`; on Windows `unreal/README.md` §5.4); (2) update WS file (`last_commit`, interfaces changed, open questions, next); (3) open/refresh PR; (4) release LFS locks not carried into the next session; (5) log "session end".
 
 ### 6.6 Contract change (RFC) procedure
 1. Write `PLAN/rfcs/NNNN-<slug>.md`: contract id, motivation, exact diff, dependents (from `OWNERSHIP.md` + grep), migration, test impact; state `Proposed`. 2. Add "Interfaces I changed: RFC NNNN (proposed)" to your WS file. 3. INT reviews within one cycle, may ask dependents to object via their "Open questions"; `Accepted`/`Rejected`. 4. Land in one PR that also updates `CONTRACTS/<doc>.md`; state `Landed` + sha. 5. INT lists it in the digest and adds "Needs rebase: RFC NNNN" to each dependent WS file; dependents clear it after rebasing.
 Appends (new own-ini tag, new message, optional row field with default, new cue mapping, new view-model field) skip the RFC with the `contract-append` label.
 
-### 6.7 Editor-heavy work on an 8 GB Mac
-- `editor_heavy: true` workstreams (levels, materials, Niagara, MetaSounds, animation, imports) may run **at most 2 concurrently**; a session takes a slot by adding its handle to `PLAN/EDITOR-SLOTS.md` (2 lines; push directly like a claim) and releases it at session end. Cooks and packaging take **both** slots.
-- Code-only sessions (`editor_heavy: false`) run tests with `-nullrhi` and never open the editor UI.
-- Megascans and `L_<Map>_Art` are `lfs.fetchexclude`d on the Mac; those workstreams are GPU-box work and stay `blocked: GPU box` in the ledger until it exists (art-lane sessions can still build kits, materials at 2 K, Niagara, audio, UI on the Mac).
+### 6.7 Editor-heavy work
+The 8 GB Mac's two-slot cap and `EDITOR-SLOTS.md` retired with the Mac (ADR-0028). `editor_heavy` stays in the frontmatter as information. Code-only sessions (`editor_heavy: false`) still run tests with `-nullrhi` and never open the editor UI; cooks and packaging run nightly, because the box is shared with the agent sessions.
 
 ### 6.8 Integration (INT) cycle — daily, or every ~6 PRs
-1. For each open `[WS-NN]` PR: ownership check, layering check, LFS lock audit, schema validation, `DF.Content.RoundTrip`, Mac `Development Editor` build, the WS's declared tests, `DF.Net.ListenHostPlusClient` (nullrhi, 150 ms). 2. Merge in dependency order (`contract-append` first). 3. Regenerate `STATUS.md`; write the digest (merged PRs, interface changes, expired leases, red tests, open RFCs, unverified render lanes, editor-slot usage). 4. Apply "Needs INT" requests. 5. Trigger the GPU-box nightly if it exists. 6. Weekly tag `unreal-v0.<n>` and package a Mac build for the human.
+1. For each open `[WS-NN]` PR: ownership check, layering check, LFS lock audit, schema validation, the `Win64 Development Editor` build, the landing gate (`DF_GATE_FILTER` in `unreal/Build/test.sh`), the listen-host smoke (`DF.Net.ListenHostPlusClient` once it is written). 2. Merge in dependency order (`contract-append` first). 3. Regenerate `STATUS.md`; write the digest (merged PRs, interface changes, expired leases, red tests, open RFCs, unverified render lanes). 4. Apply "Needs INT" requests. 5. Check the GPU-box nightly. 6. Weekly tag `unreal-v0.<n>` and package a Windows build for the human.
 
 ### 6.9 Binary assets
-Git LFS for `*.uasset *.umap *.ubulk *.uexp *.fbx *.glb *.png *.tga *.exr *.wav *.psd`; one owner directory per asset (`OWNERSHIP.md`, CI-enforced); `git lfs lock` for `.umap` and shared assets; External Actors on; sublevel per owner; thin Blueprints; DataTables from JSON; never rename/move outside your directory (`FixupRedirects` before PR); on a binary collision the owner's version wins. Megascans never in git (`restore_fab.py`); 2 K textures in-repo, 4 K only for the 8 body layers + landscape layers; LFS cap 25 GB.
+Git LFS for `*.uasset *.umap *.ubulk *.uexp *.fbx *.glb *.png *.tga *.exr *.wav *.psd`; one owner directory per asset (`OWNERSHIP.md`, CI-enforced); `git lfs lock` before editing any `.umap`/`.uasset` (`unreal/.gitattributes` makes them all `lockable`); External Actors on; sublevel per owner; thin Blueprints; DataTables from JSON; never rename/move outside your directory (`FixupRedirects` before PR); on a binary collision the owner's version wins. Megascans never in git (`restore_fab.py`); 2 K textures in-repo, 4 K only for the 8 body layers + landscape layers; LFS cap 25 GB.
 
-### 6.10 Session bootstrap prompt (paste into a new session)
-> You are working on Deep Field 3D's Unreal rebuild. Read `/Users/chandlerhead/.claude/plans/let-s-create-a-fully-peaceful-rose.md` (Sections 3, 5, 6 and the Appendix your workstream cites), then `unreal/PLAN/STATUS.md`, `unreal/PLAN/DECISIONS.md`, `unreal/PLAN/CONTRACTS/` for the contracts you consume, and the latest `unreal/PLAN/digests/`. Claim workstream **WS-NN** per Section 6.2 (or continue it if you own it), run the session-start checklist (6.5), take an editor slot if `editor_heavy` (6.7), then work toward its DoD in PRs of ≤1 day each to `unreal/main`. Never edit another workstream's paths; propose contract changes as RFCs (6.6). End with the session-end checklist.
+### 6.10 Session bootstrap prompt
+The prompt to paste into a new session is kept in one place only, `unreal/PLAN/README.md` ("Session bootstrap prompt"), so that copies cannot drift.
 
 ---
 
 ## 7. Verification model
 | Layer | Mechanism | Runs on |
 |---|---|---|
-| Unit `DF.Unit.*` | status magnitude/strongest-wins, reaction closure, damage formulas, `WavePlanBaseline` vs `docs/gate-baseline.tsv`, lane derivation vs `level.json`, upgrade ladder, economy, tint contract, elite/boss tables | Mac `-nullrhi` |
-| Content audits | `DF.Content.RoundTrip/Bindings/TagCoverage`, `DF.Asset.Naming/TowerRigSockets/StageCumulative`, registry placeholder audit (fails a cook), `DF.Vfx.EveryCueDraws` (`-RenderOffscreen`), `DF.Audio.EveryCueHasSound`, `DF.Map.Validate` (6 maps, mutable combinations) | Mac |
-| Functional `DF.Func.*` (ports of the 14 Godot probe lanes + terrain) | Tower.Aim/AirTracking/Rounds/LosBlockedByTerrain/IndirectOverRidge, Enemy.Siege/<archetype>/SlopeSpeed/FlyerAgl, Vehicle.ClimbsRatedGrade/AutoRights, Map.Containment/CoverageReport, Traversal.EveryClimbLands/TeleportNetwork, Vehicle.ReachesClaimedSpeed, Weapon.ReloadBeats, UI.Armory, Vfx.BeamRamp, Boss.PhaseTransitions, Elite.<mod>, Mutable.<kind>, Match.Solo.<Map> (scripted auto-builder to victory) | Mac (logic), GPU box (visual) |
-| Net `DF.Net.*` | ListenHostPlusClient, Feel (predicted cue ≤1 frame, confirm ≤400 ms @150 ms/1 % loss), JoinLeaveRejoin, VersionHandshake, Authority (a modified client cannot spend/teleport/rate-hack), ResumeUnderNewHost | Mac PIE |
-| Gauntlet | cook, package, host + client processes with `-NetEmulation`, scripted match to wave 3; mid-band balance bot per map/tier; `DF.Soak.Endless4P` 2 h | GPU box (Mac for Mac packages) |
-| Perf | `DF.Perf.<Map>` CSV against Appendix C§8 budgets; 8 GB memory pass on the Mac | GPU box / Mac |
-Run: `unreal/Build/test.sh <filter>` wraps `UnrealEditor-Cmd DeepField.uproject -nullrhi -unattended -nop4 -ExecCmds="Automation RunTests <filter>; Quit"`. Before a PR: own filter + `DF.Content` + `DF.Net.ListenHostPlusClient`. INT runs the full Mac suite; the GPU box runs Gauntlet, visual, perf, Windows packaging nightly.
+| Unit `DF.Unit.*` | status magnitude/strongest-wins, reaction closure, damage formulas, `WavePlanBaseline` vs `docs/gate-baseline.tsv`, lane derivation vs `level.json`, upgrade ladder, economy, tint contract, elite/boss tables | GPU box `-nullrhi` |
+| Content audits | `DF.Content.RoundTrip/Bindings/TagCoverage`, `DF.Asset.Naming/TowerRigSockets/StageCumulative`, registry placeholder audit (fails a cook), `DF.Vfx.EveryCueDraws` (`-RenderOffscreen`), `DF.Audio.EveryCueHasSound`, `DF.Map.Validate` (6 maps, mutable combinations) | GPU box |
+| Functional `DF.Func.*` (ports of the 14 Godot probe lanes + terrain) | Tower.Aim/AirTracking/Rounds/LosBlockedByTerrain/IndirectOverRidge, Enemy.Siege/<archetype>/SlopeSpeed/FlyerAgl, Vehicle.ClimbsRatedGrade/AutoRights, Map.Containment/CoverageReport, Traversal.EveryClimbLands/TeleportNetwork, Vehicle.ReachesClaimedSpeed, Weapon.ReloadBeats, UI.Armory, Vfx.BeamRamp, Boss.PhaseTransitions, Elite.<mod>, Mutable.<kind>, Match.Solo.<Map> (scripted auto-builder to victory) | GPU box (logic under `-nullrhi`, visual with a real RHI) |
+| Net `DF.Net.*` | ListenHostPlusClient, Feel (predicted cue ≤1 frame, confirm ≤400 ms @150 ms/1 % loss), JoinLeaveRejoin, VersionHandshake, Authority (a modified client cannot spend/teleport/rate-hack), ResumeUnderNewHost | GPU box PIE |
+| Gauntlet | cook, package, host + client processes with `-NetEmulation`, scripted match to wave 3; mid-band balance bot per map/tier; `DF.Soak.Endless4P` 2 h | GPU box |
+| Perf | `DF.Perf.<Map>` CSV against Appendix C§8 budgets | GPU box |
+Run: `UnrealEditor-Cmd DeepField.uproject -nullrhi -unattended -nop4 -ExecCmds="Automation RunTests <filter>; Quit" -ReportExportPath=…`, verdict from the JSON report (`unreal/README.md` §5; `unreal/Build/test.sh` is its Mac-era wrapper, awaiting a Windows port). Before a PR: the landing gate plus the listen-host smoke if the change is networked (`unreal/README.md` §5.4). INT runs the landing gate at every landing; the GPU box runs Gauntlet, visual, perf and Windows packaging nightly.
 
 ## 8. Risks
 | # | Risk | Mitigation |
 |---|---|---|
-| R1 | 8 GB Mac cannot sustain many editor sessions | Editor-slot cap (6.7); code-only sessions use `-nullrhi`; art sublevels fetch-excluded |
-| R2 | 16 GB free disk | P0 hard blocker: external NVMe; project, DDC, Intermediate on it (expect 60–120 GB) |
+| R1 | *(retired with the Mac, ADR-0028: the 8 GB editor-session limit)* | — |
+| R2 | *(retired with the Mac, ADR-0028: 16 GB free disk)* | — |
 | R3 | OSSv2 P2P relay on the launcher build | 2-day spike in P1; facade absorbs OSSv1 fallback |
 | R4 | Vehicles on a listen server | ADR-0008; off the critical path; CMC-mode fallback retained |
 | R5 | Nanite/Lumen never verified until the GPU box | Lanes marked unverified; art authored to spec; G4b requires the box |
@@ -370,9 +373,9 @@ Run: `unreal/Build/test.sh <filter>` wraps `UnrealEditor-Cmd DeepField.uproject 
 | R13 | One human, many sessions | INT is a daily ~20-minute role; digest keeps it bounded |
 | R14 | Terrain makes coverage unprovable by inspection | Trace-based validator with a dead-ground report is a P1 deliverable of WS-09; no map layout is accepted without it; text-authored terrain makes every iteration reproducible |
 | R15 | Six full map redesigns are the longest pole | Foundry's redesign is the vertical slice (the tools get built once); each later map reuses `terrain.json` + validator + PCG patterns; two maps can be laid out concurrently by two sessions since level/terrain files are text |
-| R16 | Nanite landscape / Landscape editing on an 8 GB Mac | Terrain is generated, not sculpted, on the Mac; sculpt polish and Nanite-landscape verification happen on the GPU box |
+| R16 | *(retired with the Mac, ADR-0028: Landscape editing on 8 GB. Terrain stays text-authored for mergeability, ADR-0018.)* | — |
 
-## 9. First actions (P0, in order)
+## 9. First actions (P0, in order — done; kept as the record of how the programme started)
 1. Human: buy/attach the NVMe SSD; move the UE project location + DDC there; `brew install git-lfs`; GitHub LFS data pack; EOS portal product + sandboxes + client policies; EGS onboarding; order the GPU box.
 2. Session A (WS-00): create `unreal/main`; scaffold `unreal/PLAN/` (STATUS generator, OWNERSHIP, DECISIONS with ADR-0001…0017, CONTRACTS docs C1–C16 transcribed from Section 3.1, EDITOR-SLOTS, 46 workstream files from Section 5 with Scope/DoD filled, the bootstrap prompt); create the uproject, modules, native tags, message structs, collision/input; `L_Dev_Empty` listen host + PIE client.
 3. Sessions B–F once WS-00's first commit lands: WS-01, WS-15, WS-12 shells, WS-11 spike, WS-30 skeleton, WS-31 stubs.
@@ -381,7 +384,7 @@ Run: `unreal/Build/test.sh <filter>` wraps `UnrealEditor-Cmd DeepField.uproject 
 ---
 
 ## Appendix A — Inventory of what exists today (read before designing)
-All paths relative to repo root `/Users/chandlerhead/dev/deepfield-3d/.claude/worktrees/untracked-files-git-merge-72c706`.
+All paths relative to the repository root.
 
 ### A1. Sim content (the rules to port — `sim/Sim.Core/Content/*.cs`)
 **Towers** (`Towers.cs`; schema `ContentTypes.cs:106-123`): 8 + barricade. Shared 9-step cost ladder `{40,54,73,98,132,178,240,324,438}` (~×1.35/level), L1→L10; generic paths damage ×1.10, range ×1.12, rate ×1.10 per level; **scrap breakpoints at L4/L7/L10** paid from the team pool; path ids match stage-module filenames `tower_<id>_<path>_s1..s10`.
@@ -484,7 +487,7 @@ Launch: 9 towers + barricade; 5 traps; 16 enemies; 5 elites (+Dire); 1 boss; 5 f
 
 ### C§1 Visual target per map
 **Terrain first (ADR-0018).** Every map is a Landscape with real relief; the "static slab kit" idea is retired. Each map's landform concept (below) is authored as `terrain.json` by WS-10x and dressed by the environment WS; hero kits sit *on* the landform (terraces, embankments, plazas cut into slopes) rather than defining it. Relief is a gameplay reading: high ground is coverage, low ground is where fog pools and enemies are hidden, a climb is a kill zone, a ridge road is a vehicle route.
-Shared: **the world is desaturated steel-and-obsidian; gameplay is the colour** (environment albedo in the obsidian/steel ramps + one warm material family per map; saturated hue reserved for tower energy, weak points #E9614C, statuses, faction accents, scrap; the environment may reflect them via Lumen, never own them). Every map: core = cyan #22D3EE pool, spawn portal = crimson #FF2E4A, armory = gold #F0C83A. Scale cues are real construction (4 m module rhythm, 30 cm rungs, 1:6 turnouts). Stack: Nanite everything static; Lumen GI+reflections (software floor, hardware Windows High); VSM (cascaded on Mac Low); Sky Atmosphere + Volumetric Clouds (no domes); Exponential Height Fog + volumetric per map; Local Fog Volumes for tunnels/cut/barn; Substrate off; Niagara Fluids P2.
+Shared: **the world is desaturated steel-and-obsidian; gameplay is the colour** (environment albedo in the obsidian/steel ramps + one warm material family per map; saturated hue reserved for tower energy, weak points #E9614C, statuses, faction accents, scrap; the environment may reflect them via Lumen, never own them). Every map: core = cyan #22D3EE pool, spawn portal = crimson #FF2E4A, armory = gold #F0C83A. Scale cues are real construction (4 m module rhythm, 30 cm rungs, 1:6 turnouts). Stack: Nanite everything static; Lumen GI+reflections (software floor, hardware Windows High); VSM; Sky Atmosphere + Volumetric Clouds (no domes); Exponential Height Fog + volumetric per map; Local Fog Volumes for tunnels/cut/barn; Substrate off; Niagara Fluids P2.
 - **Foundry — "the works at shift change"**: 40 min after sunset (sun 6° below, Rayleigh toward #E8862B, high Mie); light *is* the crucible (#FF7A1A), lava seams, three flood rigs (#FFE2A8 5600 K); oxidised plate, scorched concrete, cast iron, wet slag with Lumen reflections; I-beam gantry 6 m, 4 m deck bays, rails 1.1 m, vent tunnel 3 m bore lamp every 8 m; hazard #D8A13A chevrons + concrete #7A7F88 pillars so towers belong; fog 0.03 with height falloff (yard in haze, deck clear — *why the deck exists*); `NS_Weather_Embers_Foundry` sparse from the crucible only; steam vents. **Landform**: a works cut into a hillside — three slag terraces stepping ~8 m each from the spawn gate down to the core basin, the deck as a real overlook on the middle terrace, the vent tunnel bored through the spur between terraces, slag heaps and a cinder ridge as the belt; fog pools in the basin.
 - **Switchyard — "overcast freight yard, the rain has just stopped"**: 14:00, clouds coverage 0.85, soft key ~8000 lux 6800 K; `Wetness` 0.6 everywhere (the Lumen-reflections map from a flat sky); creosote sleepers, granite ballast, containers in steel-blue #2B3A5C / oxide #6B3F2A / bleached #9AA6B7, galvanised catwalk, brick retaining wall; 1435 mm track on its own spline, 5.5 m clearance, signal gantries 7 m; turnout/headwall/overbridge/portal as Claude Design hero structures; barricade #F0C83A and gates b1/b2 the only warm things at grade; catwalk hazard stripes; decal puddles; PCG weed tufts between tracks; W9 night sodium yard lights #FFB27A 2200 K, flashlight cones in rain haze. **Landform**: a rail cutting through a valley — the yard on the valley floor, the freight cut a true 7 m cut with retaining walls, embankments carrying the running line, the overbridge crossing the cut with real height, the switchback route climbing the valley side; wet ground drains to the low yard.
 - **Spire — "an office tower at 3 a.m., the city lit below"**: moon 0.3 lux 4200 K; interior troffers #ECF0F7 4000 K on a 6 m grid (Lumen emissive + a few real spots near sockets); glass curtain wall so interior glow *is* the exterior read; city backdrop ring (Nanite low-detail towers with emissive windows + horizon glow); terrazzo lobby, carpet tile, drywall, anodised mullions, roof gravel; 10 m floor-to-floor sold as double-height atrium with mezzanine bands; elevator gold signage, teleport pads chill-cyan #4FC0E8, roof core visible from every floor; Lumen is the map (HW Lumen mirror reflections on Windows High); VSM local-light stress map (budget §8); fog 0.005 except the atrium Local Fog Volume; the four broken west ladders replaced by an authored second stair. **Landform**: the tower stands on a plaza cut into a slope — the street route enters at grade on the high side, the service street is sunken ~6 m on the low side with an underground lobby approach, the surrounding city rises behind on the hill so the backdrop ring has height; the vertical map keeps its "two ways up" lesson and gains "two ways in".
@@ -536,20 +539,20 @@ Lane: `docs/design/models/*.js` → export page → glTF + drop-manifest (`extra
 Megascans/Fab: Fab plugin into `/Game/Megascans/` (Nanite on, 2 K at import, 4 K only for body/landscape layers, never 8 K, never edited — instanced); pull list ~250 (foundry rusted sheet/grating/slag/scorched concrete/cast iron/pipes/valves/cable trays/barrels; switchyard ballast/sleepers/rail kit/containers ×3/pallets/brick/puddled asphalt/signal parts/weeds; spire terrazzo/carpet tile/drywall/ceiling tile/glass mullions/HVAC/roof gravel/office set/city backdrop kit; toaster trees oak/maple/pine/apple, grass/lawn/pasture/stubble, dirt track, gravel, wood + wire fence, hay, propane, wreck, grain bin, fuel tank, stock tank, furniture, reeds, dock timber; shared decals cracks/leaks/tyre/scorch, rocks); licence record per asset; third-party Fab items in `LICENSES.md`; **not in git** — `restore_fab.py` from asset IDs; LFS cap 25 GB for tracked art.
 Validation `validate_content.py` (editor commandlet, CI): naming + folder-by-prefix; required sockets per category; Nanite flag policy / skeleton family / LOD count; material slots ∈ vocabulary and every MI parented to a listed master; pivot (bounds min Z ±1 cm; VM grip at origin); texture size/POT/compression/sRGB; stage cumulativeness + `S01` empty; physics asset for every SK enemy/hero/vehicle; anim-set completeness from `DT_AnimContract`; Niagara user params per `DT_VFX`; ratchet `unreal/validation-baseline.tsv`. Registry (`DT_ContentRegistry`: id → soft refs mesh/ABP/MI set/icon/NS/sounds/rig DA; runtime resolves only via the Asset Manager; `audit_registry.py` fails CI on a missing row, null ref, or `Placeholder=true`; packaging runs it first; in-editor Content Audit tab).
 
-### C§8 Performance budgets (Windows floor RTX 3060 @1080p 60 fps TSR 67 %; M1 8 GB @1080p 30 fps TSR 50 % Low; M2 Pro+ 60 fps Medium)
-| Per frame, 4 players, wave 10 | Windows High | Windows Medium | Mac Low (M1) |
-|---|---|---|---|
-| Nanite | 3.0 ms, ~6 M visible tris | 2.5 ms | 4.0 ms |
-| Non-Nanite draws | ≤2,500 | ≤2,000 | ≤1,200 |
-| Skinning (120 enemies) | ≤1.5 ms | 1.2 ms | 1.5 ms (LOD2 default) |
-| VSM | 3.0 ms, ≤12 local shadow lights (Spire 20) | 2.0 ms, 8 | cascaded 2, 1.5 ms, 4 local |
-| Lumen | HW GI+refl 5.0 ms / SW 4.0 ms | SW 3.0 ms | off: DFAO + SSGI + skylight 1.2 ms |
-| Volumetric fog | 1.2 ms (8 px/128) | 0.8 ms | 0.5 ms or off |
-| Niagara | 1.5 ms, ≤400 systems, ≤300 k particles | 1.0 ms | 0.8 ms sprite-only weather |
-| Post | 1.8 ms | 1.4 ms | 2.5 ms |
-| **Total GPU** | ≈15.5 ms | ≈12 ms | ≈28 ms |
-| Texture pool | 2,500 MB | 1,800 MB | 900 MB (process ≤3.5 GB) |
-| Unique textures (foundry/switchyard/spire/toaster) | 900/900/1,100/1,400 MB | mips −1 | 450/450/550/700 MB (mips −2) |
-| Nanite source tris per map | 40/45/60/120 M | | |
-| Decals live | 256 | 192 | 96 |
-Device profiles `Windows_High/Medium`, `Mac_Low/Medium` in `DefaultDeviceProfiles.ini`; scalability groups exposed in pause + TSR %; "Reduce flashes" clamps `LightningFlash` and additive Niagara. Mac verifies: pipeline correctness, Metal shaders, Mac tiers, the 8 GB memory pass, UI, audio, Nanite-on-Metal functional. GPU box verifies: Nanite-skeletal gate, HW Lumen, VSM local-light budgets (Spire), Windows packaging/PSO caching, Insights profiling, Chaos vehicles at 4 players, shared DDC.
+### C§8 Performance budgets (Windows floor RTX 3060 @1080p 60 fps TSR 67 %)
+| Per frame, 4 players, wave 10 | Windows High | Windows Medium |
+|---|---|---|
+| Nanite | 3.0 ms, ~6 M visible tris | 2.5 ms |
+| Non-Nanite draws | ≤2,500 | ≤2,000 |
+| Skinning (120 enemies) | ≤1.5 ms | 1.2 ms |
+| VSM | 3.0 ms, ≤12 local shadow lights (Spire 20) | 2.0 ms, 8 |
+| Lumen | HW GI+refl 5.0 ms / SW 4.0 ms | SW 3.0 ms |
+| Volumetric fog | 1.2 ms (8 px/128) | 0.8 ms |
+| Niagara | 1.5 ms, ≤400 systems, ≤300 k particles | 1.0 ms |
+| Post | 1.8 ms | 1.4 ms |
+| **Total GPU** | ≈15.5 ms | ≈12 ms |
+| Texture pool | 2,500 MB | 1,800 MB |
+| Unique textures (foundry/switchyard/spire/toaster) | 900/900/1,100/1,400 MB | mips −1 |
+| Nanite source tris per map | 40/45/60/120 M | |
+| Decals live | 256 | 192 |
+Device profiles `Windows_High/Medium` in `DefaultDeviceProfiles.ini`; scalability groups exposed in pause + TSR %; "Reduce flashes" clamps `LightningFlash` and additive Niagara. The GPU box verifies all of it: pipeline correctness, UI, audio, the Nanite-skeletal gate, HW Lumen, VSM local-light budgets (Spire), Windows packaging/PSO caching, Insights profiling, Chaos vehicles at 4 players. (The Mac Low column and the Mac's verification duties were dropped with the platform, ADR-0028.)

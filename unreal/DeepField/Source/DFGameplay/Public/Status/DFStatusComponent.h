@@ -90,6 +90,13 @@ public:
 	 *  EndTimeServer is a server timestamp, so it is subtracted from the shared server clock
 	 *  (AGameStateBase::GetServerWorldTimeSeconds), never from the local world time. */
 	UFUNCTION(BlueprintPure, Category = "DF|Status") float TimeRemaining(EDFStatusChannel Channel) const;
+	/** TimeRemaining when this machine knows the server clock; false when it does not yet — a client
+	 *  in the moment before its AGameStateBase replicates, where the local clock is unrelated to the
+	 *  server's (C5 append, ruling R13). A view that gets false shows the status icon WITHOUT its
+	 *  countdown: never a zero and never a full ring. An inactive channel is known (true, 0). */
+	UFUNCTION(BlueprintPure, Category = "DF|Status") bool TryGetTimeRemaining(EDFStatusChannel Channel, float& OutSeconds) const;
+	/** The rule TryGetTimeRemaining applies: only a client without a game state lacks the server clock. */
+	static bool IsServerClockKnown(bool bHasGameState, ENetMode NetMode) { return bHasGameState || NetMode != NM_Client; }
 	UFUNCTION(BlueprintPure, Category = "DF|Status") bool IsControlled() const;
 	UFUNCTION(BlueprintPure, Category = "DF|Status") float GetCcResist() const { return Resolver.CcResist; }
 

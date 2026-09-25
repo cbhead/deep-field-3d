@@ -32,6 +32,7 @@ DF.Socket.{Ground,Wall,Trap,Barricade}
 DF.Mutable.{Floodgate,Crusher,Wall,Cache,Nest,Barrel,Container}
 DF.Team.{Defenders,Invaders}
 DF.Tier.{Standard,Hardened,Assault}
+DF.Vehicle.{Buggy,Dagator,Grnmchn,Vehickle}           # vehicles.json ids (append 2026-09-25, ruling R10)
 DF.Damage.Type.{Kinetic,Thermal,Toxin,Shock,Splash,Siege,Contact,Leak,Ram,Fall}
 DF.Damage.Source.{Tower,Hero,Melee,Trap,Reaction,Enemy,Vehicle,Mutable}
 DF.Player.State.{Downed,Bleeding,Seated,Climbing,Ziplining,Launched,Lifting,Reloading,Sprinting,Crouching,Aiming,Sliding,Mantling,Building,Teleporting,Carrying,Dragging,InNest}

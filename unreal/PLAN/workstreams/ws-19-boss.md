@@ -2,11 +2,11 @@
 ws: 19
 slug: boss
 title: Boss Frame01
-state: unclaimed
-owner: 
-claimed_at: 
-lease_expires: 
-branch: 
+state: claimed
+owner: session-01EeMqPt-cloud
+claimed_at: 2026-09-25T14:34:44Z
+lease_expires: 2026-09-26T14:34:44Z
+branch: ws/19-boss/core
 last_commit: 
 editor_heavy: true
 phase: P4
