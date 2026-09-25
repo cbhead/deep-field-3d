@@ -155,7 +155,15 @@ bool FDFUIScreensTags::RunTest(const FString&)
 {
 	const FDFUITags& Tags = FDFUITags::Get();
 	TestEqual(TEXT("four layers"), Tags.Layers().Num(), 4);
-	TestEqual(TEXT("the 17 screens of the Godot client + the teleport picker"), Tags.Screens().Num(), 18);
+	// The Godot client's 17 screens + the teleport picker, split by whether they are exclusive on a
+	// layer (screens) or drawn together over the world (parts).
+	TestEqual(TEXT("13 screens"), Tags.Screens().Num(), 13);
+	TestEqual(TEXT("5 HUD parts"), Tags.Parts().Num(), 5);
+	for (const FGameplayTag& Part : Tags.Parts())
+	{
+		TestTrue(FString::Printf(TEXT("part tag resolves: %s"), *Part.ToString()), Part.IsValid());
+		TestFalse(FString::Printf(TEXT("a part is not on a layer: %s"), *Part.ToString()), Tags.LayerOf(Part).IsValid());
+	}
 	for (const FGameplayTag& Layer : Tags.Layers())
 	{
 		TestTrue(TEXT("layer tag resolves (is it in Config/Tags/DF_UI.ini?)"), Layer.IsValid());
@@ -165,6 +173,13 @@ bool FDFUIScreensTags::RunTest(const FString&)
 		TestTrue(FString::Printf(TEXT("screen tag resolves and has a layer: %s"), *Screen.ToString()), Screen.IsValid() && Tags.Layers().Contains(Tags.LayerOf(Screen)));
 	}
 	TestTrue(TEXT("the HUD is play chrome, the connection modal is on top"), Tags.LayerOf(Tags.Screen_Hud) == Tags.Layer_Game && Tags.LayerOf(Tags.Screen_Connection) == Tags.Layer_Modal);
+
+	// A layer displays one widget at a time, so two screens on a layer are mutually exclusive by
+	// construction. Layer.Game must show the HUD *and* the crosshair *and* the prompts at once, so
+	// it may hold exactly one screen - the HUD layout - and the rest are its parts. Putting the
+	// chrome back on the layer would hide the HUD behind the crosshair, which is what this catches.
+	TestEqual(TEXT("Layer.Game holds exactly one screen (the HUD; the chrome is parts inside it)"), Tags.ScreenCountOn(Tags.Layer_Game), 1);
+	TestTrue(TEXT("the other layers hold mutually exclusive screens"), Tags.ScreenCountOn(Tags.Layer_GameMenu) == 5 && Tags.ScreenCountOn(Tags.Layer_Menu) == 6 && Tags.ScreenCountOn(Tags.Layer_Modal) == 1);
 	TestFalse(TEXT("a layer is not a screen"), Tags.LayerOf(Tags.Layer_Menu).IsValid());
 
 	// The ini and the code list the same tags: a tag only in the ini is dead, one only in code is invalid at runtime.
@@ -219,6 +234,29 @@ bool FDFUIScreensLayout::RunTest(const FString&)
 	TestNull(TEXT("nothing is open"), Layout->FindOpenScreen(Tags.Screen_Hud));
 	AddExpectedError(TEXT("has no DF.UI.Screen tag"), EAutomationExpectedErrorFlags::Contains, 1);
 	TestNull(TEXT("a screen class with no tag is refused"), Layout->PushScreen(UDFUITestScreen::StaticClass()));
+
+	// FindOpenScreen must return the displayed instance, never one buried under it: the widget list
+	// grows upwards, so a forward search would hand back the oldest. AddWidgetInstance is the real
+	// API and only touches the list when there is no Slate tree, so the order here is the true one.
+	auto MakeScreen = [&](const FGameplayTag& Tag)
+	{
+		UDFUITestScreen* Made = NewObject<UDFUITestScreen>(Layout);
+		Made->Configure(Tag, EDFScreenInputMode::Menu);
+		return Made;
+	};
+	UDFUITestScreen* Buried = MakeScreen(Tags.Screen_Connection);
+	UDFUITestScreen* Displayed = MakeScreen(Tags.Screen_Connection);
+	Other->AddWidgetInstance(*Buried);
+	Other->AddWidgetInstance(*Displayed);
+	TestTrue(TEXT("the list grows upwards"), Other->GetWidgetList().Num() == 2 && Other->GetWidgetList().Last() == Displayed);
+	TestTrue(TEXT("FindOpenScreen returns the topmost instance, not the buried one"), Layout->FindOpenScreen(Tags.Screen_Connection) == Displayed);
+	TestNull(TEXT("a screen that is not open is not found"), Layout->FindOpenScreen(Tags.Screen_Lobby));
+
+	// Pushing a screen that is already open would bury the live one under a copy nobody can see.
+	AddExpectedMessagePlain(TEXT("is already open on"), ELogVerbosity::Warning, EAutomationExpectedMessageFlags::Contains, 1);
+	UDFUITestScreen::FScopedScreenTag Connection(Tags.Screen_Connection);
+	TestTrue(TEXT("a duplicate push returns the open screen instead of stacking a copy"), Layout->PushScreen(UDFUITestScreen::StaticClass()) == Displayed);
+	TestEqual(TEXT("and adds nothing"), Other->GetWidgetList().Num(), 2);
 
 	// A screen's tag fixes its layer; its input mode is its CommonUI input config.
 	UDFUITestScreen* Screen = NewObject<UDFUITestScreen>();

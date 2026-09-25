@@ -29,6 +29,22 @@ FDFUITags::FDFUITags()
 	ScreenLayers.Add(Screen_##Name, Layer_##Layer);
 #include "Screens/DFUIScreenList.inl"
 #undef DF_UI_SCREEN
+
+#define DF_UI_PART(Name, Str) \
+	Part_##Name = Request(TEXT(Str)); \
+	AllParts.Add(Part_##Name);
+#include "Screens/DFUIPartList.inl"
+#undef DF_UI_PART
+}
+
+int32 FDFUITags::ScreenCountOn(const FGameplayTag& Layer) const
+{
+	int32 Count = 0;
+	for (const TPair<FGameplayTag, FGameplayTag>& Pair : ScreenLayers)
+	{
+		Count += Pair.Value == Layer ? 1 : 0;
+	}
+	return Count;
 }
 
 TArray<FString> FDFUITags::DeclaredNames()
@@ -37,5 +53,8 @@ TArray<FString> FDFUITags::DeclaredNames()
 #define DF_UI_SCREEN(Name, Str, Layer) Names.Add(TEXT(Str));
 #include "Screens/DFUIScreenList.inl"
 #undef DF_UI_SCREEN
+#define DF_UI_PART(Name, Str) Names.Add(TEXT(Str));
+#include "Screens/DFUIPartList.inl"
+#undef DF_UI_PART
 	return Names;
 }

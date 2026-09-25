@@ -15,4 +15,21 @@ public:
 		ScreenTag = InScreenTag;
 		InputMode = InInputMode;
 	}
+
+	/** UDFUILayout::PushScreen reads the class default object, so a test that pushes this *class*
+	 *  has to say which screen the class is. Scoped, because a CDO outlives the test. */
+	struct FScopedScreenTag
+	{
+		explicit FScopedScreenTag(const FGameplayTag& Tag)
+			: Previous(GetMutableDefault<UDFUITestScreen>()->ScreenTag)
+		{
+			GetMutableDefault<UDFUITestScreen>()->ScreenTag = Tag;
+		}
+		~FScopedScreenTag() { GetMutableDefault<UDFUITestScreen>()->ScreenTag = Previous; }
+		FScopedScreenTag(const FScopedScreenTag&) = delete;
+		FScopedScreenTag& operator=(const FScopedScreenTag&) = delete;
+
+	private:
+		FGameplayTag Previous;
+	};
 };

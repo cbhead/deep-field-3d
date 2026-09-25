@@ -32,21 +32,37 @@ Resolve it in a `WBP_` from the Global Viewmodel Collection by the name **`DFMat
   A token redefined with a different value, an unknown or circular `var()`, or a malformed
   colour / easing is an error naming the token.
 
-## 3. Screens — where a widget lives (`Public/Screens/`, `Config/Tags/DF_UI.ini`)
-Four layers, bottom to top, one `UCommonActivatableWidgetStack` each in `WBP_Layout` (a `UDFUILayout`):
+## 3. Screens and parts — where a widget lives (`Public/Screens/`, `Config/Tags/DF_UI.ini`)
+
+A **layer** is one `UCommonActivatableWidgetContainerBase`, and such a container displays exactly one
+of its widgets at a time — *"Only the widget at the top of the stack is displayed and activated. All
+others are deactivated."* So **two screens on the same layer are a claim that they are mutually
+exclusive.** Four layers, bottom to top, one stack each in `WBP_Layout` (a `UDFUILayout`):
 
 | Layer | Holds | Input |
 |---|---|---|
-| `DF.UI.Layer.Game` | HUD, crosshairs, overheads, prompts, revive, endless | none (`Default`) |
+| `DF.UI.Layer.Game` | the HUD layout, alone | none (`Default`) |
 | `DF.UI.Layer.GameMenu` | wheel, upgrade, armory, blueprints, teleport picker | `Game` / `GameAndMenu` — play continues |
 | `DF.UI.Layer.Menu` | lobby, sector, intermission, end of match, pause, how-to | `Menu` |
 | `DF.UI.Layer.Modal` | connection | `Menu` |
 
+The always-on play chrome — crosshairs, overheads, prompts, the revive column, the endless strip —
+is drawn **at the same time** as the HUD and as each other, so it cannot be screens sharing
+`Layer.Game`: the first push would hide the HUD behind the crosshair. It is **parts**
+(`DFUIPartList.inl`, `DF.UI.Part.*`): plain `UDFUIPart` widgets that are children of `WBP_HudLayout`
+and are shown and hidden by it, never pushed to a layer. `DF.UI.Screens.LayersAndInput` asserts
+`Layer.Game` holds exactly one screen, so putting the chrome back on the layer fails a test.
+
 - A screen is a `WBP_<Screen>` deriving **`UDFActivatableScreen`**; set its `ScreenTag`
   (`DF.UI.Screen.*`) and `InputMode` in class defaults. The tag fixes the layer
   (`DFUIScreenList.inl`), so callers say `Layout->PushScreen(Class)` and never pick one.
-- Adding a screen: one line in `DFUIScreenList.inl` **and** one in `Config/Tags/DF_UI.ini`
-  (`DF.UI.Screens.TagsResolve` compares the two).
+  `PushScreen` refuses a screen that is already open and returns the live instance rather than
+  burying it under an invisible copy; `FindOpenScreen` returns the displayed instance, never a
+  buried one.
+- A part is a `WBP_Part_<Name>` deriving **`UDFUIPart`** with its `PartTag` set. It has no
+  activation, no input config and no focus — it reads the view model and draws.
+- Adding either: one line in `DFUIScreenList.inl` / `DFUIPartList.inl` **and** one in
+  `Config/Tags/DF_UI.ini` (`DF.UI.Screens.TagsResolve` compares the two, both directions).
 - `WBP_Layout` registers its stacks with `RegisterLayer(Tag, Stack)` on construct; `HasAllLayers()`
   is what `L_Test_UI` asserts first.
 

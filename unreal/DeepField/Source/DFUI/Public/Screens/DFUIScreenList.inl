@@ -1,13 +1,18 @@
 // Screens and the layer each one lives on. Mirrors Config/Tags/DF_UI.ini (DF.UI.Screens.TagsResolve
 // checks both directions). Append-only.
 //
+// A layer is one UCommonActivatableWidgetContainerBase, and such a container shows exactly ONE of
+// its widgets at a time ("Only the widget at the top of the stack is displayed and activated. All
+// others are deactivated." - CommonActivatableWidgetContainer.h). So two screens on the same layer
+// are a statement that they are mutually exclusive: opening one hides the other.
+//
+// That is why the always-on play chrome is NOT here. Crosshairs, overheads, prompts, the revive
+// column and the endless strip are visible *at the same time* as the HUD, so they are parts inside
+// the HUD layout (DFUIPartList.inl), not screens sharing Layer.Game. Layer.Game holds the HUD and
+// nothing else, and DF.UI.Screens.LayersAndInput fails if that stops being true.
+//
 //   DF_UI_SCREEN(CppName, "DF.UI.Screen.<Name>", Layer)
 DF_UI_SCREEN(Hud,            "DF.UI.Screen.Hud",            Game)
-DF_UI_SCREEN(Crosshairs,     "DF.UI.Screen.Crosshairs",     Game)
-DF_UI_SCREEN(Overheads,      "DF.UI.Screen.Overheads",      Game)
-DF_UI_SCREEN(Prompts,        "DF.UI.Screen.Prompts",        Game)
-DF_UI_SCREEN(Revive,         "DF.UI.Screen.Revive",         Game)
-DF_UI_SCREEN(Endless,        "DF.UI.Screen.Endless",        Game)
 DF_UI_SCREEN(Wheel,          "DF.UI.Screen.Wheel",          GameMenu)
 DF_UI_SCREEN(Upgrade,        "DF.UI.Screen.Upgrade",        GameMenu)
 DF_UI_SCREEN(Armory,         "DF.UI.Screen.Armory",         GameMenu)

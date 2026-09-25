@@ -29,7 +29,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "DF|UI")
 	bool HasAllLayers() const;
 
-	/** Pushes a screen onto the layer its ScreenTag belongs to. */
+	/** Pushes a screen onto the layer its ScreenTag belongs to. A layer shows one widget at a time,
+	 *  so pushing a screen that is already open would bury the live one under an identical copy:
+	 *  that is refused, and the open instance is returned instead. */
 	UFUNCTION(BlueprintCallable, Category = "DF|UI")
 	UDFActivatableScreen* PushScreen(TSubclassOf<UDFActivatableScreen> ScreenClass);
 
@@ -44,7 +46,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DF|UI")
 	void ClearLayer(UPARAM(meta = (Categories = "DF.UI.Layer")) FGameplayTag LayerTag);
 
-	/** The open instance of a screen, by its DF.UI.Screen.* tag; null if it is not open. */
+	/** The open instance of a screen, by its DF.UI.Screen.* tag; null if it is not open. If several
+	 *  are somehow stacked, the topmost (the displayed one) is returned, never a buried one. */
 	UFUNCTION(BlueprintPure, Category = "DF|UI")
 	UDFActivatableScreen* FindOpenScreen(UPARAM(meta = (Categories = "DF.UI.Screen")) FGameplayTag ScreenTag) const;
 

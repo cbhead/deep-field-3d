@@ -48,6 +48,11 @@ UDFActivatableScreen* UDFUILayout::PushScreen(TSubclassOf<UDFActivatableScreen> 
 		UE_LOG(LogDFUILayout, Error, TEXT("%s: %s has no DF.UI.Screen tag, so no layer"), *GetName(), *GetNameSafe(ScreenClass));
 		return nullptr;
 	}
+	if (UDFActivatableScreen* Open = FindOpenScreen(Defaults->GetScreenTag()))
+	{
+		UE_LOG(LogDFUILayout, Warning, TEXT("%s: %s is already open on '%s'; returning it rather than stacking a copy"), *GetName(), *Defaults->GetScreenTag().ToString(), *LayerTag.ToString());
+		return Open;
+	}
 	return Cast<UDFActivatableScreen>(PushToLayer(LayerTag, ScreenClass));
 }
 
@@ -94,9 +99,11 @@ UDFActivatableScreen* UDFUILayout::FindOpenScreen(FGameplayTag ScreenTag) const
 	{
 		return nullptr;
 	}
-	for (UCommonActivatableWidget* Widget : Layer->GetWidgetList())
+	// The list grows upwards - the last entry is the displayed one - so search from the top down.
+	const TArray<UCommonActivatableWidget*>& Widgets = Layer->GetWidgetList();
+	for (int32 i = Widgets.Num() - 1; i >= 0; --i)
 	{
-		UDFActivatableScreen* Screen = Cast<UDFActivatableScreen>(Widget);
+		UDFActivatableScreen* Screen = Cast<UDFActivatableScreen>(Widgets[i]);
 		if (Screen && Screen->GetScreenTag() == ScreenTag)
 		{
 			return Screen;
