@@ -27,7 +27,7 @@
   What it looks for:
     Windows 10 19041+ / 11, 64-bit       long paths enabled (one UAC prompt)
     Git for Windows + Git LFS            Python 3.9+
-    Visual Studio 2022 with the C++ toolset UE 5.8 accepts (MSVC 14.44.35211+), Windows SDK 10.0.22621
+    Visual Studio 2022 with an MSVC toolset the engine's Windows_SDK.json accepts, a Windows SDK
     Epic Games Launcher + Unreal Engine 5.8 (the version DeepField.uproject names)
     the repository cloned with LFS, CRLF conversion off, and the art files the Mac skips
 
@@ -84,8 +84,7 @@ $MinPython     = [version]'3.9'
 $MinWinBuild   = 19041
 $WinSdkWanted  = '10.0.22621.0'
 $WinSdkMinimum = [version]'10.0.19041.0'
-# From the engine's Engine\Config\Windows\Windows_SDK.json (5.8.2): preferred 14.44.35211+ (VS 2022
-# 17.14) or 14.50.35723+ (VS 2026); banned 14.39-14.43, 14.44 < 35211, 14.50 < 35723; minimum 14.38.33130.
+# Which MSVC toolsets are accepted is read from the installed engine (Get-MsvcRules), not written here.
 $VsRequired    = @('Microsoft.VisualStudio.Component.VC.Tools.x86.x64')   # the SDK is checked on disk
 $VsFreshAdd    = @(   # a new Visual Studio 2022 install: what Epic's own setup guide lists
   'Microsoft.VisualStudio.Component.VC.Tools.x86.x64',
@@ -104,6 +103,9 @@ $VsWorkloads   = @(
 $script:Problems = New-Object System.Collections.ArrayList
 $script:DoctorOnly = ($Command -eq 'doctor')
 $script:Quiet = $false        # the second setup pass prints only what it changes
+# Everything the checks fill in, declared up front (strict mode refuses reads of unset variables).
+$script:Repo = $null; $script:Project = $null; $script:Engine = $null; $script:EngineAssociation = '5.8'
+$script:Python = $null; $script:PythonProbes = @(); $script:MsvcRules = $null
 $script:OkCount = 0
 
 function Write-Step([string]$Text) { if (-not $script:Quiet) { Write-Host ''; Write-Host "== $Text" -ForegroundColor Cyan } }
@@ -343,16 +345,69 @@ function Get-VsInstances {
   return @($json | ConvertFrom-Json)
 }
 
+function ConvertTo-MsvcVersion([string]$Text, [bool]$High) {
+  # "14.44.35211" -> 14.44.35211; "14.44" -> 14.44.0 (low end) or 14.44.99999 (high end).
+  $parts = @($Text.Trim() -split '\.')
+  if ($parts.Count -lt 2) { return $null }
+  $build = 0; if ($High) { $build = 99999 }
+  if ($parts.Count -ge 3) { $build = [int]$parts[2] }
+  try { return [version]("{0}.{1}.{2}" -f [int]$parts[0], [int]$parts[1], $build) } catch { return $null }
+}
+
+function ConvertTo-MsvcRanges($Values) {
+  $out = @()
+  foreach ($t in @($Values)) {
+    if ($t -isnot [string]) { continue }
+    $ends = @($t -split '-')
+    $lo = ConvertTo-MsvcVersion $ends[0] $false
+    $hi = ConvertTo-MsvcVersion $ends[-1] $true
+    if ($lo -and $hi) { $out += [pscustomobject]@{ Lo = $lo; Hi = $hi; Text = $t } }
+  }
+  return $out
+}
+
+function Get-MsvcRules {
+  # The engine's own compiler rules (Engine\Config\Windows\Windows_SDK.json) once the engine is
+  # installed; UBT applies exactly these. Before that, only the ranges known to be refused, so a
+  # machine is never sent to reinstall Visual Studio over a guess.
+  $root = $null; if ($script:Engine) { $root = $script:Engine.Root }
+  if ($script:MsvcRules -and $script:MsvcRules.Root -eq $root) { return $script:MsvcRules }
+  $rules = [pscustomobject]@{
+    Root = $root; Source = 'built-in minimum (the exact rules are read from the engine once it is installed)'
+    Min = [version]'14.38.33130'; Banned = @(ConvertTo-MsvcRanges @('14.39-14.43')); Preferred = @()
+  }
+  if ($root) {
+    $file = Join-Path $root 'Engine\Config\Windows\Windows_SDK.json'
+    if (Test-Path $file) {
+      try {
+        $text = (Get-Content $file -Raw) -replace '(?m)^\s*//.*$', ''
+        $j = $text | ConvertFrom-Json
+        $banned = @(); $preferred = @(); $min = $null
+        foreach ($prop in $j.PSObject.Properties) {
+          $n = $prop.Name
+          if ($n -match 'Clang|Intel|Sdk|Windows') { continue }
+          if ($n -notmatch 'VisualCpp|Msvc|VCTools|Toolchain|Compiler') { continue }
+          if ($n -match 'Banned') { $banned += @(ConvertTo-MsvcRanges $prop.Value) }
+          elseif ($n -match 'Preferred') { $preferred += @(ConvertTo-MsvcRanges $prop.Value) }
+          elseif ($n -match 'Minimum' -and $prop.Value -is [string]) { $min = ConvertTo-MsvcVersion $prop.Value $false }
+        }
+        if ($min -or $banned.Count -or $preferred.Count) {
+          $rules = [pscustomobject]@{ Root = $root; Source = $file; Min = $min; Banned = $banned; Preferred = $preferred }
+        }
+      } catch { Write-Verbose "could not read ${file}: $($_.Exception.Message)" }
+    }
+  }
+  $script:MsvcRules = $rules
+  return $rules
+}
+
 function Test-MsvcAccepted([version]$v) {
-  # Returns 'preferred', 'allowed' or 'banned' per the engine's Windows_SDK.json.
-  if ($v.Major -ne 14) { return 'banned' }
-  if ($v.Minor -eq 44) { if ($v.Build -ge 35211) { return 'preferred' } else { return 'banned' } }
-  if ($v.Minor -eq 50) { if ($v.Build -ge 35723) { return 'preferred' } else { return 'banned' } }
-  if ($v.Minor -gt 50) { return 'preferred' }
-  if ($v.Minor -ge 45 -and $v.Minor -lt 50) { return 'preferred' }
-  if ($v.Minor -ge 39 -and $v.Minor -le 43) { return 'banned' }
-  if ($v.Minor -eq 38 -and $v.Build -ge 33130) { return 'allowed' }
-  return 'banned'
+  # 'preferred', 'allowed' (UBT warns and builds) or 'banned' (UBT refuses), per Get-MsvcRules.
+  $rules = Get-MsvcRules
+  if ($rules.Min -and $v -lt $rules.Min) { return 'banned' }
+  foreach ($r in $rules.Banned) { if ($v -ge $r.Lo -and $v -le $r.Hi) { return 'banned' } }
+  foreach ($r in $rules.Preferred) { if ($v -ge $r.Lo -and $v -le $r.Hi) { return 'preferred' } }
+  return 'allowed'
 }
 
 function Get-VsToolsets([string]$InstallPath) {
@@ -377,6 +432,12 @@ function Get-WindowsSdks {
     if ([version]::TryParse($d.Name, [ref]$v) -and (Test-Path (Join-Path $d.FullName 'um\windows.h'))) { $out += $v }
   }
   return $out
+}
+
+function Format-Toolsets($Vs) {
+  $t = @($Vs.Toolsets | Sort-Object Version -Descending | ForEach-Object { "$($_.Version) $($_.Verdict)" })
+  if ($t.Count -eq 0) { return 'none (no VC\Tools\MSVC\<version>\bin\Hostx64\x64\cl.exe)' }
+  return ($t -join ', ')
 }
 
 function Get-VsVerdict {
@@ -423,7 +484,7 @@ function Assert-VisualStudio {
   if ($missing.Count -gt 0 -or $needUpdate) {
     $why = @()
     if ($missing.Count -gt 0) { $why += "missing components: $($missing -join ', ')" }
-    if ($needUpdate) { $why += "no MSVC toolset UE 5.8 accepts (found: $((@($vs.Toolsets | ForEach-Object { $_.Version.ToString() }) -join ', ')), need 14.44.35211+)" }
+    if ($needUpdate) { $why += "no MSVC toolset the engine accepts (found: $(Format-Toolsets $vs))" }
     if ($script:DoctorOnly) { Fail "$($vs.Name): $($why -join '; ')" 'deepfield setup updates and modifies it.'; return }
     $installer = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\setup.exe'
     $path = $vs.Instance.installationPath
@@ -441,13 +502,20 @@ function Assert-VisualStudio {
     Write-Info "Visual Studio Installer exit code $($p.ExitCode) (3010 means a restart is needed later)"
     $vs = Get-VsVerdict
     if (-not $vs -or $vs.Good.Count -eq 0) {
-      Fail 'Visual Studio still has no MSVC toolset UE 5.8 accepts' "Open the Visual Studio Installer, update Visual Studio 2022 to 17.14 or later, and under Individual components tick`n'MSVC v143 - VS 2022 C++ x64/x86 build tools (Latest)' and 'Windows 11 SDK (10.0.22621.0)'. Then run this again."
+      $rules = Get-MsvcRules
+      Write-Info "Visual Studio found: $(if ($vs) { "$($vs.Name) at $($vs.Instance.installationPath)" } else { 'none' })"
+      Write-Info "MSVC toolsets in it: $(if ($vs) { Format-Toolsets $vs } else { '-' })"
+      Write-Info "rules applied: $($rules.Source)"
+      if ($rules.Min) { Write-Info "  minimum $($rules.Min)" }
+      foreach ($r in $rules.Banned) { Write-Info "  refused $($r.Text)" }
+      foreach ($r in $rules.Preferred) { Write-Info "  preferred $($r.Text)" }
+      Fail 'Visual Studio still has no MSVC toolset the engine accepts' "Open the Visual Studio Installer > Modify > Individual components, tick an 'MSVC ... x64/x86 build tools' entry whose version is in the`npreferred list above (or at least not refused), and 'Windows 11 SDK (10.0.22621.0)'. Then run this again.`nPlease also send the lines above to whoever maintains this script."
       return
     }
   }
   Write-Ok "$($vs.Name) at $($vs.Instance.installationPath)"
   $top = $vs.Good[0]
-  Write-Ok "MSVC $($top.Version) ($($top.Verdict))"
+  Write-Ok "MSVC $($top.Version) ($($top.Verdict); rules: $(if ($script:Engine) { 'the engine''s Windows_SDK.json' } else { 'built-in minimum until the engine is installed' }))"
   $banned = @($vs.Toolsets | Where-Object { $_.Verdict -eq 'banned' })
   if ($banned.Count -gt 0) { Write-Info "also present, ignored by UBT: $((@($banned | ForEach-Object { $_.Version.ToString() }) -join ', '))" }
 
@@ -485,7 +553,7 @@ function Find-Engine([string]$Association) {
     } catch { }
   }
   foreach ($hive in @('HKLM:\SOFTWARE\EpicGames\Unreal Engine', 'HKLM:\SOFTWARE\WOW6432Node\EpicGames\Unreal Engine')) {
-    $k = Get-ItemProperty -Path (Join-Path $hive $Association) -Name InstalledDirectory -ErrorAction SilentlyContinue
+    $k = Get-ItemProperty -Path "$hive\$Association" -Name InstalledDirectory -ErrorAction SilentlyContinue
     if ($k) { [void]$candidates.Add($k.InstalledDirectory) }
   }
   # Engines built from source register themselves here (value name = a GUID, data = the folder).
@@ -899,10 +967,10 @@ try {
     Assert-Windows
     Assert-Git
     Assert-Python
-    Assert-VisualStudio
     Assert-Repo
     Read-EngineAssociation
     Assert-Engine
+    Assert-VisualStudio   # after the engine: its Windows_SDK.json says which compilers it accepts
   }
   if ($needsFullSetup) {
     # Pass 1, both commands: check everything and change nothing.
