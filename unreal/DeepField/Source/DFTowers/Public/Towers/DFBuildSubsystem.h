@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Messages/DFMessageBus.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "DFBuildSubsystem.generated.h"
 
@@ -50,6 +51,19 @@ public:
 	// End of frame on the host: remove what siege broke this frame (Step.cs SiegeStructures' removal pass).
 	virtual void Tick(float DeltaTime) override;
 	virtual TStatId GetStatId() const override;
+	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
+	virtual void Deinitialize() override;
+
+	/**
+	 * The condition this wave is fought in (a conditions.json id, NAME_None for clear weather): every
+	 * standing tower gets it now, and every tower built before the next wave starts gets it when placed
+	 * (Step.cs reads Conditions.ForWave on every step, so a tower built mid-wave is in the weather too).
+	 * Set from DF.Message.WaveStarted on the host; tests and dev tools call it directly.
+	 */
+	void SetWaveCondition(FName ConditionId);
+	FName GetWaveCondition() const { return WaveConditionId; }
+	/** DF.Condition.Coldsnap -> "coldsnap": the content id a condition tag names (ids are lower camelCase). */
+	static FName ConditionIdFromTag(const FGameplayTag& ConditionTag);
 
 	/**
 	 * Remove every tower a siege broke (IDFStructure hp at 0): TowerDestroyed to the team (State
@@ -93,5 +107,7 @@ private:
 	TArray<TWeakObjectPtr<ADFTower>> Towers;
 	TArray<TWeakObjectPtr<ADFTrap>> Traps;
 	TWeakObjectPtr<UObject> WalletOverride;
+	FName WaveConditionId;
+	FDFMessageHandle WaveStartedHandle;
 	mutable bool bWarnedNoWallet = false;
 };

@@ -1,6 +1,6 @@
 # Workstream status
 
-Generated 2026-09-25T04:48:09Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-25T04:52:36Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
 active: 3 · paused: 6 · review: 1 · unclaimed: 40
 

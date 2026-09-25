@@ -537,4 +537,42 @@ bool FDFTowerTrapKnockbackTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFTowerWaveConditionTest, "DF.Unit.Tower.WaveConditionReachesEveryTower", DFTowerBuildTest::Flags)
+bool FDFTowerWaveConditionTest::RunTest(const FString& Parameters)
+{
+	// Step.cs reads Conditions.ForWave every step: the weather is the wave's, for every tower standing
+	// and every tower built during it. The match flow's WaveStarted carries it (DF.Condition.<Id>).
+	DFTowerBuildTest::FBuildFixture F;
+	if (!F.Setup(*this))
+	{
+		return false;
+	}
+	TestEqual(TEXT("DF.Condition.Fog names fog"), UDFBuildSubsystem::ConditionIdFromTag(DFTags::Condition_Fog), FName(TEXT("fog")));
+	TestEqual(TEXT("DF.Condition.Night names night"), UDFBuildSubsystem::ConditionIdFromTag(DFTags::Condition_Night), FName(TEXT("night")));
+	TestTrue(TEXT("no tag: clear weather"), UDFBuildSubsystem::ConditionIdFromTag(FGameplayTag()).IsNone());
+
+	F.Wallet->Money = 1000;
+	ADFTower* Before = F.Build->PlaceTower(1, TEXT("lance"), TEXT("g1")).Tower;
+	if (!TestNotNull(TEXT("lance"), Before))
+	{
+		return false;
+	}
+	TestEqual(TEXT("clear weather: 12 m"), Before->GetRangeMeters(), 12.f, 1e-4f);
+
+	FDFMsg_Wave Foggy;
+	Foggy.WaveIndex = 3;
+	Foggy.Condition = DFTags::Condition_Fog;
+	F.World.MessageBus()->Broadcast(DFTags::Message_WaveStarted, Foggy);
+	TestEqual(TEXT("the wave starts in fog: the standing lance sees 8.4 m"), Before->GetRangeMeters(), 8.4f, 1e-4f);
+	ADFTower* During = F.Build->PlaceTower(1, TEXT("lance"), TEXT("w1")).Tower;
+	TestTrue(TEXT("a lance built mid-wave is in the fog too"), During && FMath::IsNearlyEqual(During->GetRangeMeters(), 8.4f, 1e-4f));
+
+	FDFMsg_Wave Clear;
+	Clear.WaveIndex = 4;
+	F.World.MessageBus()->Broadcast(DFTags::Message_WaveStarted, Clear);
+	TestEqual(TEXT("the next wave is clear"), Before->GetRangeMeters(), 12.f, 1e-4f);
+	TestTrue(TEXT("for every tower"), During && FMath::IsNearlyEqual(During->GetRangeMeters(), 12.f, 1e-4f));
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

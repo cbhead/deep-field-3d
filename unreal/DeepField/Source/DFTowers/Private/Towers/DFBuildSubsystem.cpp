@@ -95,6 +95,78 @@ int32 UDFBuildSubsystem::RemoveBroken()
 	return Broken.Num();
 }
 
+void UDFBuildSubsystem::OnWorldBeginPlay(UWorld& InWorld)
+{
+	Super::OnWorldBeginPlay(InWorld);
+	if (InWorld.GetNetMode() == NM_Client)
+	{
+		return;   // clients get the condition through each tower's replicated ActiveConditionId
+	}
+	if (UDFMessageBus* Bus = UDFMessageBus::Get(this))
+	{
+		TWeakObjectPtr<UDFBuildSubsystem> WeakThis(this);
+		WaveStartedHandle = Bus->Subscribe<FDFMsg_Wave>(DFTags::Message_WaveStarted,
+			[WeakThis](const FGameplayTag&, const FDFMsg_Wave& Wave)
+			{
+				if (UDFBuildSubsystem* Self = WeakThis.Get())
+				{
+					Self->SetWaveCondition(ConditionIdFromTag(Wave.Condition));
+				}
+			});
+	}
+}
+
+void UDFBuildSubsystem::Deinitialize()
+{
+	if (WaveStartedHandle.IsValid())
+	{
+		if (UDFMessageBus* Bus = UDFMessageBus::Get(this))
+		{
+			Bus->Unsubscribe(WaveStartedHandle);
+		}
+		WaveStartedHandle = FDFMessageHandle();
+	}
+	Super::Deinitialize();
+}
+
+FName UDFBuildSubsystem::ConditionIdFromTag(const FGameplayTag& ConditionTag)
+{
+	if (!ConditionTag.IsValid())
+	{
+		return NAME_None;
+	}
+	FString Leaf = ConditionTag.GetTagName().ToString();
+	int32 Dot = INDEX_NONE;
+	if (Leaf.FindLastChar(TEXT('.'), Dot))
+	{
+		Leaf.RightChopInline(Dot + 1);
+	}
+	if (Leaf.IsEmpty())
+	{
+		return NAME_None;
+	}
+	Leaf[0] = FChar::ToLower(Leaf[0]);
+	return FName(*Leaf);
+}
+
+void UDFBuildSubsystem::SetWaveCondition(FName ConditionId)
+{
+	if (!ConditionId.IsNone())
+	{
+		const UDFContentSubsystem* Content = UDFContentSubsystem::Get(this);
+		if (Content && !Content->Condition(ConditionId))
+		{
+			UE_LOG(LogDFBuild, Warning, TEXT("Wave condition '%s' has no conditions.json row; towers fight in clear weather."), *ConditionId.ToString());
+			ConditionId = NAME_None;
+		}
+	}
+	WaveConditionId = ConditionId;
+	for (ADFTower* Tower : GetTowers())
+	{
+		Tower->SetActiveCondition(WaveConditionId);
+	}
+}
+
 int32 UDFBuildSubsystem::RemoveSpentTraps()
 {
 	TArray<ADFTrap*> Spent;
@@ -336,6 +408,7 @@ FDFBuildResult UDFBuildSubsystem::PlaceTower(int32 PlayerId, FName TowerId, FNam
 		return Refuse(Reasons::UnknownTower);
 	}
 	Towers.Add(Tower);
+	Tower->SetActiveCondition(WaveConditionId);   // built mid-wave: in this wave's weather from its first shot
 	// ADFTower::BeginPlay registers it too; a world that has not begun play (a test world) only gets this one.
 	if (UDFStructureRegistry* Structures = UDFStructureRegistry::Get(this))
 	{
