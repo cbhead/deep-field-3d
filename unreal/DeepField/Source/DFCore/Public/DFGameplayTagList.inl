@@ -280,3 +280,10 @@ DF_TAG(Audio_State_Defeat, "DF.Audio.State.Defeat")
 // Message roots (leaf message tags are declared in Messages/DFMessageList.inl)
 DF_TAG(Message, "DF.Message")
 DF_TAG(Cue, "GameplayCue.DF")
+
+// Vehicles (C1 append, INT ruling R10, 2026-09-25): one leaf per vehicles.json id through ForContentId's
+// PascalCase rule, so C12's UDFVehicleViewModel::DefTag resolves and DF.Content.TagCoverage checks the table.
+DF_TAG(Vehicle_Buggy, "DF.Vehicle.Buggy")
+DF_TAG(Vehicle_Dagator, "DF.Vehicle.Dagator")
+DF_TAG(Vehicle_Grnmchn, "DF.Vehicle.Grnmchn")
+DF_TAG(Vehicle_Vehickle, "DF.Vehicle.Vehickle")
