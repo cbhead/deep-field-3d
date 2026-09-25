@@ -6,7 +6,8 @@
 > **On Windows** it is one script: run `unreal\deepfield.cmd` (or the one-line bootstrap in that
 > runbook's §0 on a machine with nothing on it yet).
 
-First-person co-op tower defense (1–4 players, self-hosted over Tailscale).
+First-person co-op tower defense (1–4 players, self-hosted over
+[Tailscale](https://tailscale.com/download)).
 The 3D rebuild of [deep-field-td](https://github.com/cbhead/deep-field-td):
 Bloons-depth counters and machine-swept balance, Sanctum-style build-and-shoot.
 
@@ -64,6 +65,13 @@ graybox rather than an error.
 `./play` is self-contained (absolute paths to dotnet + Godot) and works from any
 shell; on Windows, `.\play.cmd` takes the same flags. `make run` does the same
 if your PATH is set up — see [docs/INSTALL.md](docs/INSTALL.md).
+
+Prerequisites (versions and install commands in [docs/INSTALL.md](docs/INSTALL.md)):
+[.NET 8 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) ·
+[Godot 4.7.2 mono (C#)](https://github.com/godotengine/godot/releases/tag/4.7.2-stable) ·
+[Node.js 22+](https://nodejs.org/en/download) (only for `make design-export`) ·
+[Tailscale](https://tailscale.com/download) (to host or join a match).
+The Unreal build's list is in [unreal/README.md](unreal/README.md#12-software).
 
 **Host** opens a party: the lobby stays up with a seats row while friends join
 and pick factions, and the match starts on **Launch**. **Endless** is a toggle

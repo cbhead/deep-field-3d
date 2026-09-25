@@ -21,8 +21,10 @@ DDC. It is *not* a replacement for the Mac: the Mac stays the macOS build/packag
 
 ## 0. Before you start
 
-- [ ] Windows 11 (or Windows 10 ≥ 19041 — the engine's `MinSoftwareVersion`), fully updated.
-- [ ] Current NVIDIA driver (Studio or Game Ready), installed clean. Hardware Lumen and the perf
+- [ ] Windows 11 (or Windows 10 ≥ 19041 — the engine's `MinSoftwareVersion`), fully updated
+      ([Windows 11 download](https://www.microsoft.com/software-download/windows11)).
+- [ ] Current NVIDIA driver (Studio or Game Ready), installed clean
+      ([NVIDIA drivers](https://www.nvidia.com/en-us/drivers/)). Hardware Lumen and the perf
       budgets are measured against it; write the driver version into your first session log.
 - [ ] An NVMe volume with **≥ 500 GB free** for the clone, DDC, Intermediate and packages (the
       Mac's SSD budget was 60–120 GB *without* the art sublevels and Megascans; the box gets both).
@@ -41,7 +43,8 @@ DDC. It is *not* a replacement for the Mac: the Mac stays the macOS build/packag
 No source build is needed at Level 1 (ADR-0003: listen server over EOS relay; the dedicated-server
 target is the only thing a launcher build lacks, and that is the L2 seam).
 
-- [ ] Install the Epic Games Launcher, sign in with the account that owns the project's EGS/EOS
+- [ ] Install the [Epic Games Launcher](https://store.epicgames.com/download) (see also
+      [unrealengine.com/download](https://www.unrealengine.com/download)), sign in with the account that owns the project's EGS/EOS
       organisation, install **Unreal Engine 5.8.2** — the same patch version as the Mac
       (`/Users/Shared/Epic Games/UE_5.8`, `EngineAssociation: "5.8"`). A different patch version
       re-saves assets on open; do not let that happen on a shared LFS repo.
@@ -63,6 +66,13 @@ box; it is authoritative if it differs):
 | Windows SDK | **10.0.22621.0** preferred, 10.0.19041.0 minimum |
 | Clang (optional, `clang-cl`) | 18.1.8 minimum, 20.1.x preferred |
 
+Downloads:
+[Visual Studio 2022 fixed-version installers (17.14)](https://learn.microsoft.com/en-us/visualstudio/releases/2022/release-history) ·
+[Visual Studio 2022 Community](https://visualstudio.microsoft.com/vs/older-downloads/) ·
+[Windows SDK archive (10.0.22621)](https://developer.microsoft.com/en-us/windows/downloads/sdk-archive/) ·
+[LLVM / clang-cl releases](https://github.com/llvm/llvm-project/releases) ·
+[.NET 8 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0).
+
 - [ ] Install **Visual Studio 2022 17.14** (Community is fine) with the workloads the engine
       suggests: *Desktop development with C++*, *Game development with C++*, *.NET desktop
       development*; and the individual components *MSVC v143 x64/x86 build tools (14.44, 17.14)*,
@@ -72,11 +82,13 @@ box; it is authoritative if it differs):
       picks a preferred version when one is present and refuses a banned one.
 - [ ] Do not install a separate .NET SDK for UBT: the engine bundles its own
       (`Engine/Binaries/ThirdParty/DotNet`). `tools/content-export` and `tools/waveplan-golden`
-      want **.NET 8 SDK** — install that one if you will run `content-export --diff` on the box.
+      want the **[.NET 8 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)** — install that one if you will run `content-export --diff` on the box.
 
 ## 3. Git, LFS and the clone
 
-- [ ] Install Git for Windows (includes Git LFS) and the GitHub CLI; `git lfs install`; `gh auth login`.
+- [ ] Install [Git for Windows](https://git-scm.com/downloads/win) (includes
+      [Git LFS](https://git-lfs.com)) and the [GitHub CLI](https://cli.github.com);
+      `git lfs install`; `gh auth login`.
 - [ ] Before cloning:
       ```bat
       git config --global core.longpaths true
@@ -104,7 +116,7 @@ box; it is authoritative if it differs):
       stays correct later.
 - [ ] LFS locks work the same as on the Mac (`git lfs lock <file>` before editing any `.umap` or
       shared `.uasset`, PROGRAMME.md §6.4); `locksverify = true` is already in `.lfsconfig`.
-- [ ] Megascans never come from git (ADR-0010): they are restored from Fab by
+- [ ] Megascans never come from git (ADR-0010): they are restored from [Fab](https://www.fab.com) by
       `tools/ue-bridge/ue/restore_fab.py` (WS-30) once that exists. Until then there is nothing to restore.
 - [ ] Parallel sessions on the box use worktrees next to the clone, exactly like the Mac
       (`git worktree add D:\DF\wt-ws-NN -b ws/NN-<slug>/<topic> origin/unreal/main`). The box has the
@@ -132,7 +144,7 @@ is platform-independent. Raise it as a "Needs INT" when the box is building; do 
 The `.sh` scripts in this directory are zsh and Mac-pathed; they do not run on Windows yet. The
 python checks do. Until WS-15 ports the wrappers, run the engine tools directly:
 
-- [ ] Python checks (Python 3.9+, no packages):
+- [ ] Python checks ([Python 3.9+](https://www.python.org/downloads/windows/), no packages):
       ```bat
       python unreal\Build\layering-check.py
       python unreal\Build\validate-content-json.py
@@ -213,7 +225,9 @@ unchanged — repository-level registration, a custom label so no other reposito
 machine, never PRs from forks — with one Windows-specific decision.
 
 - [ ] GitHub → repository *Settings → Actions → Runners → New self-hosted runner → Windows / x64*;
-      unpack to `D:\actions-runner`, then:
+      the page gives the download command (the zips are also on
+      [actions/runner releases](https://github.com/actions/runner/releases)); unpack to
+      `D:\actions-runner`, then:
       ```bat
       config.cmd --url https://github.com/cbhead/deep-field-3d --token <token> ^
           --name deepfield-gpu --labels deepfield,gpu --work _work --unattended

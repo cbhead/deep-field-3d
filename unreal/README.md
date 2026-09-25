@@ -115,15 +115,15 @@ Install everything in this table before starting. The last column is how to chec
 | Tool | Version | How to install | Check |
 |---|---|---|---|
 | macOS | 26.4 or later (the version the project is developed on) | Software Update | `sw_vers -productVersion` |
-| Xcode | 26.6 (full Xcode, not only the Command Line Tools) | App Store, then run `sudo xcodebuild -license accept` once | `xcodebuild -version` |
-| Epic Games Launcher | current | epicgames.com | — |
+| Xcode | 26.6 (full Xcode, not only the Command Line Tools) | [Mac App Store](https://apps.apple.com/app/xcode/id497799835) (older versions: [developer.apple.com/download/all](https://developer.apple.com/download/all/?q=xcode)), then run `sudo xcodebuild -license accept` once | `xcodebuild -version` |
+| Epic Games Launcher | current | [store.epicgames.com/download](https://store.epicgames.com/download) (see also [unrealengine.com/download](https://www.unrealengine.com/download)) | — |
 | **Unreal Engine** | **5.8.2** exactly | Launcher → Unreal Engine → Library → **+** → 5.8.2. Keep the default location `/Users/Shared/Epic Games/UE_5.8`. | `ls "/Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor-Cmd"` |
-| Homebrew | current | brew.sh | `brew --version` |
-| Git | 2.40+ | `brew install git` (or Xcode's) | `git --version` |
-| **Git LFS** | 3.x | `brew install git-lfs`, then **`git lfs install`** once | `git lfs version` |
-| Python | 3.9+ (the system `python3` is fine; no packages needed) | built in | `python3 --version` |
+| Homebrew | current | [brew.sh](https://brew.sh) | `brew --version` |
+| Git | 2.40+ | `brew install git` (or Xcode's); [git-scm.com/downloads/mac](https://git-scm.com/downloads/mac) | `git --version` |
+| **Git LFS** | 3.x | `brew install git-lfs` ([git-lfs.com](https://git-lfs.com)), then **`git lfs install`** once | `git lfs version` |
+| Python | 3.9+ (the system `python3` is fine; no packages needed) | built in; otherwise [python.org/downloads/macos](https://www.python.org/downloads/macos/) | `python3 --version` |
 | zsh | the macOS default shell | built in | `zsh --version` |
-| .NET SDK 8 | *optional*; only for `tools/content-export --diff` | `brew install --cask dotnet-sdk` | `dotnet --version` |
+| .NET SDK 8 | *optional*; only for `tools/content-export --diff` | `brew install --cask dotnet-sdk`, or [dotnet.microsoft.com/download/dotnet/8.0](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) | `dotnet --version` |
 
 **Why exactly 5.8.2:** a different engine patch version re-saves every asset it opens. On a shared LFS
 repository that shows up as a wall of binary changes nobody meant to make.
@@ -132,7 +132,7 @@ repository that shows up as a wall of binary changes nobody meant to make.
 
 - A GitHub account with read access to `cbhead/deep-field-3d`, plus write access if you will push.
   HTTPS with a credential helper, or SSH, both work.
-- An Epic Games account, for the Launcher.
+- An [Epic Games account](https://www.epicgames.com/id/register), for the Launcher.
 - **Not needed yet:** EOS/Epic developer portal credentials. Online play runs on the Null services
   and the IP net driver until the EOS product exists (`PLAN/rfcs/needs-int-eos-config.md`).
 

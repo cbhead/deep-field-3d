@@ -9,6 +9,8 @@ The `.inl` carries its own copy of the sim's wave tables, so the golden tests ke
 `unreal/content/json/waves_*.json` is rebalanced — they test the algorithm, not today's numbers.
 `DF.Unit.WavePlanBaseline` is the test that reads live content.
 
+Needs the [.NET 8 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0).
+
     dotnet run --project tools/waveplan-golden -- unreal/DeepField/Source/DFEnemies/Private/Tests/DFWavePlanGolden.inl
 
 Regenerate only if `sim/Sim.Core` changes (it should not: it is frozen) or the hash recipe does.

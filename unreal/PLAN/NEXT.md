@@ -110,3 +110,41 @@ Written after the above and merged on top of it. If the branch has landed:
 - **Every open Needs-INT item has been ruled** (`rfcs/needs-int-rulings-2026-09-25.md`, ADRs 0024–0027,
   RFC-0003). None of that branch's C++ has been compiled: build, then `test.sh DF.Unit+DF.Content`,
   `DF.Online`, and the smoke, before trusting any of it.
+
+## Addendum, 2026-09-25 late: `unreal/main` broke, and what is still unknown
+
+**What happened.** PR #48 was merged through the GitHub UI while INT was verifying it on the Mac. Its
+own description said none of its C++ had been compiled. The build then failed:
+`DFMatch/Private/DFGameMode.cpp:98` called `UGameInstance::GetSubsystemArray<T>()`, which **does not
+exist in UE 5.8** — the engine has `GetSubsystemArrayCopy<T>()` (`GameInstance.h:463`;
+`SubsystemCollection.h:79` deprecates the old internal helper in favour of it). Fixed in `fcc1e1d`,
+verified against the installed engine's headers. It is the ADR-0020 class of defect exactly: code
+written against an API the installed build does not have, which no Python check can see and only a
+compiler on the right engine version catches.
+
+**What is still unknown, and is the first thing to establish on either machine.** PR #51
+(`[WS-04] tower logic core`) merged onto the broken trunk an hour later, **also labelled unbuilt**, and
+has never been compiled by anything. `fcc1e1d` fixes the one error that was found; whether
+`unreal/main` compiles *now* has not been demonstrated. The verifying build was interrupted. So:
+
+```
+unreal/Build/int-merge.sh <any branch> --ws INT --dry-run     # or, for the trunk itself:
+"$UE_ROOT/Engine/Build/BatchFiles/Mac/Build.sh" DeepFieldEditor Mac Development \
+  -Project=<worktree>/unreal/DeepField/DeepField.uproject -WaitMutex -NoHotReload
+```
+Then `editor-lock.sh test.sh` with **no filter** (that runs the whole gate) and `smoke-listen.sh`.
+Do not assume green. Two unbuilt PRs landed; one error is fixed; the rest is unmeasured.
+
+**One thing that now proves less than it did.** #48 makes `PreLogin` run `ValidateJoinOptions` and
+`GlobalDefaultGameMode` spawn `ADFMatchState`/`ADFPlayerState`/`ADFPlayerController` on **every** map,
+including `L_Dev_Empty`, which has no lane graph. `smoke-listen.sh` decides success by counting
+`player joined` to ≥2 (it was ≥1 until the host was found counting itself). That count now sits behind
+a validator that did not exist when the threshold was chosen, so **re-derive the smoke's success
+condition against the new join path before trusting a green smoke.** WS-05's spawn work sits on the far
+side of that seam.
+
+**And the rule that came out of it** is in `CONTRACTS/ci.md`: every change to `unreal/main` lands
+through `int-merge`, never the merge button, because the merge button skips the only step that
+compiles. Branch protection would enforce it — recommended to the repository owner, sequenced after the
+runner exists, since requiring a check with no runner blocks everything.
+

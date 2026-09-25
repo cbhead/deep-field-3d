@@ -23,6 +23,7 @@ The Mac M1 8 GB is the only machine that has the engine (ADR-0016), so it is the
 1. **Register** (GitHub → repository *Settings → Actions → Runners → New self-hosted runner → macOS / ARM64*; the page shows a one-time token). Install on the external SSD so the workspace, DDC and Intermediate never touch the 16 GB internal disk:
    ```bash
    mkdir -p /Volumes/Toshiba/actions-runner && cd /Volumes/Toshiba/actions-runner
+   # <version>: the latest at https://github.com/actions/runner/releases
    curl -o actions-runner-osx-arm64.tar.gz -L https://github.com/actions/runner/releases/latest/download/actions-runner-osx-arm64-<version>.tar.gz
    tar xzf actions-runner-osx-arm64.tar.gz
    ./config.sh --url https://github.com/<owner>/deepfield-3d --token <token> \
@@ -31,7 +32,7 @@ The Mac M1 8 GB is the only machine that has the engine (ADR-0016), so it is the
    ```
    `macOS` and `ARM64` are added by the runner automatically; **`deepfield`** is the label the workflow keys on, so no other repository's workflow can land on this machine by accident. Use the repository runner registration, not an organisation one.
 2. **Environment.** The workflow reads `UE_ROOT` (default `/Users/Shared/Epic Games/UE_5.8`), `DEVELOPER_DIR` (`/Applications/Xcode.app/Contents/Developer`), `UE_LOCAL_DDC` (`/Volumes/Toshiba/Deepfield-Unreal/DDC`) and `EDITOR_LOCK_DIR` (`/Volumes/Toshiba/Deepfield-Unreal/.editor-lock`). Override any of them as a repository *variable* of the same name; nothing needs to be set in the runner's `.env`. The runner user must be able to read the engine, run Xcode's toolchain (`sudo xcodebuild -license accept` once) and write to the SSD.
-3. **LFS credentials.** `actions/checkout@v4` with `lfs: true` fetches LFS objects with the job's `GITHUB_TOKEN` over HTTPS — no stored credential on the machine. The runner needs `git-lfs` on its `PATH` (`brew install git-lfs`; the launchd service inherits `/opt/homebrew/bin` only if `./svc.sh` was installed from a shell that had it — check with a `workflow_dispatch` run, the first step prints `git lfs ls-files`). Push never happens from CI, so no write credential exists on the runner.
+3. **LFS credentials.** `actions/checkout@v4` with `lfs: true` fetches LFS objects with the job's `GITHUB_TOKEN` over HTTPS — no stored credential on the machine. The runner needs `git-lfs` on its `PATH` (`brew install git-lfs`, [git-lfs.com](https://git-lfs.com); the launchd service inherits `/opt/homebrew/bin` only if `./svc.sh` was installed from a shell that had it — check with a `workflow_dispatch` run, the first step prints `git lfs ls-files`). Push never happens from CI, so no write credential exists on the runner.
 4. **Never PRs from forks.** The job carries `if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository`, and the repository setting *Actions → General → Fork pull request workflows from outside collaborators* must stay at "Require approval for all outside collaborators". A fork PR could edit `unreal/Build/*.sh`, which the job executes as the runner user on the dev machine.
 5. **Sharing the machine.** The runner is a peer of the agent sessions: builds wait on UBT's mutex (`-WaitMutex`), editor processes wait on `editor-lock.sh` (up to 30 min), and the workflow's `concurrency` group keeps CI itself to one job at a time. A nightly takes ~15–25 min when the machine is idle; queued behind a batch it may wait the full lock timeout and fail with exit 75 (editor-lock timed out) — rerun it. Cooks and packaging (later) take both editor slots (PROGRAMME.md §6.7) and will be nightly-only for that reason.
 6. **Workspace hygiene.** The runner keeps one checkout under `/Volumes/Toshiba/actions-runner/_work/deepfield-3d/deepfield-3d` with its own `Intermediate/` and `Binaries/` (so a CI build never dirties the SSD working copy or an agent worktree); the DDC is shared. Logs and the automation JSON report are uploaded as the `unreal-mac-logs-<run>` artifact (14 days).
@@ -199,4 +200,29 @@ message that never appears **does** fail the test. But:
 - **there is no "must not occur".** `Occurrences = 0` means *at least once* (`:1840-1848` fails when the
   actual count is 0), so the natural way to write "the wrong diagnosis is gone" asserts the opposite of
   what it reads like. Asserting absence needs your own log sink.
+
+## Every change to `unreal/main` goes through `int-merge` (INT, 2026-09-25)
+**The GitHub merge button bypasses the only step that compiles anything.** Three incidents through that
+one door, each worse than the last:
+
+| PR | what the route cost |
+|---|---|
+| #40 | merged via the UI, so it skipped build, tests and smoke entirely. Known-compiling only because every later landing happened to include it. |
+| #41 | stacked on #40's branch and merged into it **one minute after** #40 had already merged that branch to main, so ~1400 lines never reached the trunk and sat lost for a day (recovered as #44). |
+| #48 | said **in its own description** that none of its C++ was compiled and asked for a Mac build before landing. Merged via the UI. `unreal/main` did not build for the next hour. |
+| #51 | merged via the UI, also labelled unbuilt, onto the still-broken trunk. |
+
+#48's Python checks were all green — layering, ownership, schemas, `check-test-coverage` — because none
+of them need a compiler. That is not a careless author; it is the same shape as every other verification
+failure in this project, one level further out: **the check ran and told you nothing.**
+
+So the rule: **land with `unreal/Build/int-merge.sh <branch> --ws NN`, never with the merge button.**
+It refuses at the build step, which is exactly where #48 needed refusing — 765 s in, with nothing on the
+trunk. A PR that cannot be landed from a machine with the engine installed is not ready to land.
+
+**Recommended to the human, sequenced, because the order matters:** register the self-hosted runner
+(`windows-bringup.md` §8), *then* require that check on `unreal/main` via branch protection. Requiring a
+check that has no runner blocks everything; there are currently **zero runners registered**, so today
+the rule above is the only thing standing between an unbuilt PR and the trunk. Enabling protection is a
+change to how every session and every human works, so it is the repository owner's call, not INT's.
 
