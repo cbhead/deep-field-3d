@@ -7,7 +7,7 @@
 #include "DFPlayerController.generated.h"
 
 /**
- * The Server RPC surface (WS-28, ADR-0023; PROGRAMME.md §3.3): every mutation a player asks for is a
+ * The Server RPC surface (WS-28, ADR-0024; PROGRAMME.md §3.3): every mutation a player asks for is a
  * Server RPC here, one per `Commands.cs` command, and every refusal goes back to the issuing client
  * only as `Client_Refused` → a `DF.Message.*Rejected` on that client's bus. Commands whose rules
  * belong to another domain (build, buy, revive, ...) arrive with that domain: the RPC is added here and

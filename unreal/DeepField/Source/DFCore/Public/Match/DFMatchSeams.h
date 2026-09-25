@@ -4,7 +4,7 @@
 #include "UObject/Interface.h"
 #include "DFMatchSeams.generated.h"
 
-// Seams the match flow reads through (contract-append, WS-28 / ADR-0023). ADFMatchState (DFMatch,
+// Seams the match flow reads through (contract-append, WS-28 / ADR-0024). ADFMatchState (DFMatch,
 // layer 4) hosts state components that the owning domains write in their own, lower modules; the
 // phase machine needs a few of their answers and must not name their classes. The component answers
 // through an interface declared here, in the layer every domain can see.

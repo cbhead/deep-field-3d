@@ -300,7 +300,7 @@ void ADFMatchState::ApplyStep(EDFMatchStep Step)
 
 TOptional<int32> ADFMatchState::ReadLives() const
 {
-	// WS-06's economy component answers (ADR-0023); until it exists, lives are unknown and never defeat.
+	// WS-06's economy component answers (ADR-0024); until it exists, lives are unknown and never defeat.
 	for (UActorComponent* Component : GetComponents())
 	{
 		if (const IDFMatchLivesSource* Source = Cast<IDFMatchLivesSource>(Component))

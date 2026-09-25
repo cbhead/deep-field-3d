@@ -16,7 +16,7 @@ enum class EDFMatchStep : uint8
 
 /**
  * The match phase, as a pure function of commands, time and lives — a port of Step.cs `UpdateWaves`
- * (Step.cs:940) + `CheckEndState` (Step.cs:1977) + `ApplyLaunch` / `StartWave` (WS-28, ADR-0023).
+ * (Step.cs:940) + `CheckEndState` (Step.cs:1977) + `ApplyLaunch` / `StartWave` (WS-28, ADR-0024).
  * No UObject, no world: ADFMatchState owns one on the host and applies the steps it returns, and the
  * DF.Unit.Match tests drive it directly.
  *

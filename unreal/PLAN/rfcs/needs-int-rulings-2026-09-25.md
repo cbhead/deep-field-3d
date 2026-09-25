@@ -7,12 +7,12 @@ build and `DF.Unit+DF.Content+DF.Online` run after landing is its verification.
 
 | # | Outcome | Applied in |
 |---|---|---|
-| R1 | Accepted | ADR-0023; `registry.json` + `workstreams/ws-28-match-flow.md`; `OWNERSHIP.md`; PROGRAMME.md §4.2, §5.1, §5.2; INT notes in ws-00/03/05/06/07/09/12 |
+| R1 | Accepted | ADR-0024; `registry.json` + `workstreams/ws-28-match-flow.md`; `OWNERSHIP.md`; PROGRAMME.md §4.2, §5.1, §5.2; INT notes in ws-00/03/05/06/07/09/12 |
 | R2 | Accepted | `Source/DFCore/Public/Determinism/` (moved, DFEnemies includes updated); `CONTRACTS/README.md` |
 | R3 | Accepted | `Source/DFCore/Public/Online/DFJoinSeams.h`; `ADFGameMode::PreLogin`; `UDFOnlineSubsystem : IDFJoinValidator`; `FDFMsg_Player.OnlineId`; `online.md`, `messages.md` |
-| R4 | Accepted, **amended** (player experience) | ADR-0025: explicit "Share code", advertised only while live, host's friends admitted without a prompt, non-modal admit toast; WS-11 / WS-12 implement |
-| R5 | Accepted | ADR-0024 (ADR-0006 status line points to it) |
-| R6 | Accepted | ADR-0026; WS-30's DoD restored to §5.4's wording in `registry.json` and its file |
+| R4 | Accepted, **amended** (player experience) | ADR-0026: explicit "Share code", advertised only while live, host's friends admitted without a prompt, non-modal admit toast; WS-11 / WS-12 implement |
+| R5 | Accepted | ADR-0025 (ADR-0006 status line points to it) |
+| R6 | Accepted | ADR-0027; WS-30's DoD restored to §5.4's wording in `registry.json` and its file |
 | R7 | Accepted | `OWNERSHIP.md` header + WS-09 row |
 | R8 | Accepted | `OWNERSHIP.md` row |
 | R9 | Accepted | `rfcs/0003-closable-by-and-levers.md`; `lanegraph.md` |
@@ -25,7 +25,7 @@ build and `DF.Unit+DF.Content+DF.Online` run after landing is its verification.
 Original draft note: each ruling below was a recommendation to accept, amend, or reject one at a time. The "On acceptance" lines list the exact edits; INT (or the
 workstream named) makes them in the usual way. Evidence comes from `origin/unreal/main` at `d9798bf`
 and the open `ws/*` branches. Where a ruling proposes an ADR, INT numbers it at acceptance; the next
-free number is ADR-0023.
+free number is ADR-0024.
 
 The order is by what each ruling unblocks: R1 unblocks the most.
 
@@ -151,10 +151,10 @@ product, and install the GPU box.
   `| unreal/DeepField/Source/DFMatch/**, Content/DF/Match/** | WS-28 |`.
 - `PROGRAMME.md` §4.2: `WS02 --> WS28`, `WS05 --> WS28`, `WS28 --> G2`, `WS28 --> WS12` (real
   feed). §5.2 gets the WS-28 row.
-- `DECISIONS.md`, ADR-0023 *Match state is a host of components; DFMatch owns the phase*:
+- `DECISIONS.md`, ADR-0024 *Match state is a host of components; DFMatch owns the phase*:
   context and decision as items 2–3 above. Consequence: a domain adds a replicated match field by
   writing a component in its own module and asking WS-28 to attach it (a one-line PR).
-- Reply in WS-05's and WS-12's open questions and in WS-11's Needs INT (strike the item, cite ADR-0023).
+- Reply in WS-05's and WS-12's open questions and in WS-11's Needs INT (strike the item, cite ADR-0024).
 
 ---
 
@@ -197,7 +197,7 @@ item 5). Strike the three Needs-INT items.
 
 ---
 
-## R4 — Join codes advertise the lobby only while a code is live *(decided on player experience: see ADR-0025, which amends this text)*
+## R4 — Join codes advertise the lobby only while a code is live *(decided on player experience: see ADR-0026, which amends this text)*
 
 **Asked by WS-11.** EOS `INVITEONLY` lobbies can't be found by search, so a join code alone
 can't reach one.
@@ -215,7 +215,7 @@ since EOS resolves the host through `[EOS:<puid>]` only after a join.
 **On acceptance:** WS-11 wires `ModifyLobbyJoinPolicy` and adds a `DF.Online.JoinCodePolicyReverts`
 test on Null. The real proof is step (5) of WS-11's credential checklist.
 
-**As decided (ADR-0025).** Option A, shaped for players:
+**As decided (ADR-0026).** Option A, shaped for players:
 - the rotator is always live today, so the host now **shares** a code on purpose (a "Share code" panel
   in the lobby and pause menu), and the lobby is advertised only while that shared code is live;
 - the host's **friends** arriving by code are admitted without a prompt;

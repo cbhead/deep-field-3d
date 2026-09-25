@@ -7,7 +7,7 @@
 DECLARE_MULTICAST_DELEGATE_OneParam(FDFOnPlayerStateChanged, class ADFPlayerState* /*PlayerState*/);
 
 /**
- * One seat in the match (WS-28, ADR-0023). WS-28's own fields are the seat and the match stats (the
+ * One seat in the match (WS-28, ADR-0024). WS-28's own fields are the seat and the match stats (the
  * host match record WS-11 persists). Every other per-player field arrives as a component its domain
  * writes and attaches here: faction and level (WS-07), personal scrap and builds (WS-06), downed,
  * revive and vehicle seat (WS-03).

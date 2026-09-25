@@ -41,4 +41,4 @@ blocked_on:
 
 ## Session log
 <!-- append-only: date · session · what landed · what's next -->
-- 2026-09-25 · INT · Unblocked by today's rulings: `FDFDetMath::PowInt` is in DFCore (`Determinism/DFDetMath.h`, R2), so the level curve (`CooldownFactor = PowInt(0.94, L-1)`, `RadiusFactor`, `MagnitudeFactor`, `LevelForXp`) can be ported bit for bit into DFGameplay/Factions and replace WS-11's placeholder `UDFLocalProgressionProvider::LevelForXp`. Faction and level replicate from a **`UDFFactionStateComponent`** you write and WS-28 attaches to `ADFPlayerState` (ADR-0023).
+- 2026-09-25 · INT · Unblocked by today's rulings: `FDFDetMath::PowInt` is in DFCore (`Determinism/DFDetMath.h`, R2), so the level curve (`CooldownFactor = PowInt(0.94, L-1)`, `RadiusFactor`, `MagnitudeFactor`, `LevelForXp`) can be ported bit for bit into DFGameplay/Factions and replace WS-11's placeholder `UDFLocalProgressionProvider::LevelForXp`. Faction and level replicate from a **`UDFFactionStateComponent`** you write and WS-28 attaches to `ADFPlayerState` (ADR-0024).

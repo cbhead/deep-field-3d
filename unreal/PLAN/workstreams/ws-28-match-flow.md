@@ -17,11 +17,11 @@ blocked_on:
 # WS-28 — Match flow (DFMatch)
 
 ## Scope / DoD
-**Scope.** Owns Source/DFMatch: ADFGameMode (from WS-00's skeleton), ADFMatchState + ADFPlayerState as hosts of domain-owned state components (ADR-0023), ADFPlayerController Server RPC surface (one RPC per Commands.cs command; every refusal a DF.Message.*Rejected to the issuer only), ADFEventRelay, the phase machine (lobby Launch gate, intermission timer + early call, BeginWave on the director, WaveStarted/WaveCleared messages, lives-first Victory/Defeat), endless toggle, campaign/sector chain, the host match record WS-11 persists.
+**Scope.** Owns Source/DFMatch: ADFGameMode (from WS-00's skeleton), ADFMatchState + ADFPlayerState as hosts of domain-owned state components (ADR-0024), ADFPlayerController Server RPC surface (one RPC per Commands.cs command; every refusal a DF.Message.*Rejected to the issuer only), ADFEventRelay, the phase machine (lobby Launch gate, intermission timer + early call, BeginWave on the director, WaveStarted/WaveCleared messages, lives-first Victory/Defeat), endless toggle, campaign/sector chain, the host match record WS-11 persists.
 
 **Definition of done.** DF.Unit.Match.* reproduce Step.cs phase order incl. LastLeakIsDefeat, lobby gate, early call and endless rollover; WS-12's view models read the real replicated state (no fake feed) on a listen host + 1 client; DF.Match.Solo.Testlane runs to victory in automation.
 
-**Spec.** §3 (DFMatch), §3.3, ADR-0023, A1 economy/waves (Step.cs UpdateWaves + CheckEndState), B§1.11 (in `unreal/PLAN/PROGRAMME.md`). Size L, phase P2-P3.
+**Spec.** §3 (DFMatch), §3.3, ADR-0024, A1 economy/waves (Step.cs UpdateWaves + CheckEndState), B§1.11 (in `unreal/PLAN/PROGRAMME.md`). Size L, phase P2-P3.
 
 ## Contracts I consume
 - C4
@@ -52,7 +52,7 @@ blocked_on:
 <!-- append-only: date · session · what landed · what's next -->
 
 ## From INT (2026-09-25) — why this workstream exists, and its first PR
-Registered by ruling R1 (`rfcs/needs-int-rulings-2026-09-25.md`, ADR-0023). Until now no workstream
+Registered by ruling R1 (`rfcs/needs-int-rulings-2026-09-25.md`, ADR-0024). Until now no workstream
 owned DFMatch beyond WS-00's skeleton (`ADFGameMode`, 44 lines), so three workstreams were waiting on it:
 WS-12's real view-model feed (`ADFMatchState`/`ADFPlayerState`), WS-05's `DF.Message.Wave*` (the
 director hands the payload out through `DescribeWave` and waits for the phase owner to send it), and

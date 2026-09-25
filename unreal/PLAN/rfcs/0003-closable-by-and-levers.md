@@ -26,4 +26,4 @@ not an append, so it is recorded here.
 
 ## Dependents
 WS-04 (barricade gating reads `WouldSeal`, unchanged), WS-24 (mutables close edges through `Mutable`),
-WS-09's lane state component (ADR-0023) replicates `State` per edge, unchanged. No code change.
+WS-09's lane state component (ADR-0024) replicates `State` per edge, unchanged. No code change.

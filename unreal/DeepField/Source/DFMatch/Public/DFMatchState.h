@@ -31,13 +31,13 @@ struct DFMATCH_API FDFMatchSettings
 };
 
 /**
- * The match (WS-28, ADR-0023). On the host it owns the phase machine (FDFMatchPhaseMachine, a port of
+ * The match (WS-28, ADR-0024). On the host it owns the phase machine (FDFMatchPhaseMachine, a port of
  * Step.cs), drives ADFWaveDirector (WS-05), and sends the Wave* / MatchLaunched / Victory / Defeat
  * messages through ADFEventRelay; everywhere it replicates what the HUD shows.
  *
  * WS-28's own replicated fields: phase, wave index, total waves, lobby, endless, threat, lap, enemies
  * remaining and when the intermission clock runs out. Every other match-wide field is a component its
- * domain writes and attaches here (ADR-0023): money, lives, team scrap and bounty (WS-06), lane and
+ * domain writes and attaches here (ADR-0024): money, lives, team scrap and bounty (WS-06), lane and
  * mutable edge states (WS-09). Lives are read through IDFMatchLivesSource (DFCore) and never written.
  */
 UCLASS()

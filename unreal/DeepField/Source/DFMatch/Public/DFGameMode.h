@@ -5,7 +5,7 @@
 #include "GameFramework/GameModeBase.h"
 #include "DFGameMode.generated.h"
 
-// Server-only match rules (ADR-0004). WS-28 (ADR-0023) since 2026-09-25, from WS-00's skeleton.
+// Server-only match rules (ADR-0004). WS-28 (ADR-0024) since 2026-09-25, from WS-00's skeleton.
 // It picks the match classes (ADFMatchState, ADFPlayerState, ADFPlayerController), reads the match
 // settings from the travel URL, seats players, and runs the C14 join seams at PreLogin.
 //
