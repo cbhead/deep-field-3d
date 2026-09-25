@@ -334,6 +334,61 @@ struct DFCORE_API FDFWaveGroupRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) bool bBoss = false;
 };
 
+/** A boss phase's one attack (B§2.4: Sweep, Slam, Stomp). IntervalSeconds 0 = the phase has none. */
+USTRUCT(BlueprintType)
+struct DFCORE_API FDFBossAttackRow
+{
+	GENERATED_BODY()
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) FName Id;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) float IntervalSeconds = 0.f;                       // landing to landing
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) float Radius = 0.f;                                // metres
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) float Damage = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) float KnockbackMeters = 0.f;                       // before ÷ Mass
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) float StaggerSeconds = 0.f;                        // heroes (B§1.6)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) float TelegraphSeconds = 0.f;                      // warning before it lands
+};
+
+/** A boss phase's brood vent (B§2.4 P2: 4 motes every 15 s, at most 12 alive). Count 0 = none. */
+USTRUCT(BlueprintType)
+struct DFCORE_API FDFBossSpawnRow
+{
+	GENERATED_BODY()
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) FName EnemyId;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) int32 Count = 0;                                   // per vent
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) int32 MaxAlive = 0;                                // this boss's brood, not the wave
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) float IntervalSeconds = 0.f;
+};
+
+/** What the boss does to structures this phase: FDFEnemyRow's StructureDps / StructureReach, per phase. */
+USTRUCT(BlueprintType)
+struct DFCORE_API FDFBossSiegeRow
+{
+	GENERATED_BODY()
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) float Dps = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) float Reach = 0.f;                                 // metres
+};
+
+/** One row per boss phase (table `boss`, WS-19), in order from full hp down. HpFrom/HpTo are fractions
+ *  of the body's max hp; phases are contiguous, the first starts at 1 and the last ends at 0. */
+USTRUCT(BlueprintType)
+struct DFCORE_API FDFBossPhaseRow : public FTableRowBase
+{
+	GENERATED_BODY()
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) float HpFrom = 1.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) float HpTo = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) float FrontArcDeg = 0.f;                           // full arc, as FrontArmorArcDegrees
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) float FrontArcFactor = 1.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) float FlatArmor = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) float SpeedFactor = 1.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) FDFBossAttackRow Attack;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) FDFBossSpawnRow Spawns;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) FDFBossSiegeRow Siege;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) float WeakPointFactor = 1.f;                       // an exposed vent
+	/** The armour plates are on in this phase. Entering a phase without them sheds every plate still on (B§2.4 P2,
+	 *  "plates drop"); once off they stay off. Not in the contract's field list — a C2 append with a no-plates default. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) bool bPlatesHeld = false;
+};
+
 /** Every dial in Balance.cs (52 today) plus the Unreal-era knobs, one row named "default".
  *  Kept as a name->float map so a new dial in the JSON is not a schema change; typed accessors
  *  live on UDFContentSubsystem (Balance(FName) with a checked default). */

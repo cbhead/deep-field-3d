@@ -1,8 +1,8 @@
 # Workstream status
 
-Generated 2026-09-25T05:30:10Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-25T14:58:43Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
-active: 4 · paused: 6 · review: 1 · unclaimed: 39
+active: 5 · paused: 6 · review: 1 · unclaimed: 38
 
 | WS | Title | Phase | CP | State | Owner | Lease expires | Last commit | Editor-heavy | Blocked on |
 |---|---|---|---|---|---|---|---|---|---|
@@ -30,7 +30,7 @@ active: 4 · paused: 6 · review: 1 · unclaimed: 39
 | WS-16 | Overclock tower + grid | P4 |  | unclaimed | — | — | — |  | — |
 | WS-17 | Elite modifiers | P4 |  | unclaimed | — | — | — |  | — |
 | WS-18 | Weak points + Specter passive | P4 |  | unclaimed | — | — | — |  | — |
-| WS-19 | Boss Frame01 | P4 |  | unclaimed | — | — | — | yes | — |
+| WS-19 | Boss Frame01 | P4 |  | active | session-01EeMqPt-cloud | 2026-09-26T14:34:44Z | — | yes | — |
 | WS-20 | New enemies ×5 | P4 |  | unclaimed | — | — | — |  | — |
 | WS-21 | New weapons, melee, mastery, chargeCells | P4 |  | unclaimed | — | — | — |  | — |
 | WS-22 | Tether channel, new statuses, new traps | P4 |  | unclaimed | — | — | — |  | — |
