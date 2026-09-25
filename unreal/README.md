@@ -65,9 +65,9 @@ in a terminal.
 | Windows | 64-bit, build 19041+; long paths enabled | Enables long paths (one UAC prompt) |
 | Git | Git for Windows and Git LFS | Installs them with winget |
 | Python | Python 3.9+ (the Store's fake `python.exe` does not count) | Installs Python 3.12 with winget |
-| Visual Studio | VS 2022 (or 2026) with an MSVC toolset UE 5.8 accepts (14.44.35211+, not a banned one), and a Windows SDK 10.0.19041+ | Installs VS 2022 Community with the C++ game workloads, or updates and modifies the one you have |
 | Repository | An existing clone anywhere on the machine (see pass 1; `-Dir` picks one when there are several) | Clones `unreal/main` to `D:\DF\deepfield-3d` (else `C:\DF\deepfield-3d`, or `-Dir`), turns off line-ending conversion, fetches every LFS file |
 | Unreal Engine | The version `DeepField.uproject` names (5.8), ideally patch 5.8.2 | Installs the Epic Games Launcher and opens it. **This is the one manual step:** sign in, then Unreal Engine > Library > **+** next to *Engine versions* > **5.8.2** > Install. Press Enter in the script's window when it has finished. Sets `UE_ROOT` for you. |
+| Visual Studio | VS 2022 (or 2026, or Build Tools) with an MSVC toolset the installed engine accepts (read from its `Engine\Config\Windows\Windows_SDK.json`; checked after the engine for that reason), and a Windows SDK 10.0.19041+ | Installs VS 2022 Community with the C++ game workloads, or updates and modifies the one you have. If it still has no accepted toolset, it prints the toolsets found and the engine's rules |
 | Build | - | Builds the editor (10-30 minutes the first time) |
 
 It ends with `setup: done`. From then on, in a terminal in the clone's `unreal\` folder (in PowerShell, type
