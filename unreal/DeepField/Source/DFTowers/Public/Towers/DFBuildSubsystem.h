@@ -6,6 +6,8 @@
 
 class ADFSocket;
 class ADFTower;
+class ADFTrap;
+struct FDFTrapRow;
 class IDFTeamWallet;
 
 /** What a build command came to. Reason is DFTowerMath::Reasons::None when it went ahead. */
@@ -14,6 +16,8 @@ struct FDFBuildResult
 	FName Reason;
 	/** The tower placed, upgraded or (until the end of the frame) sold. */
 	ADFTower* Tower = nullptr;
+	/** A trap id placed: the trap. */
+	ADFTrap* Trap = nullptr;
 	/** Sell only: the money returned. */
 	int32 Refund = 0;
 
@@ -29,8 +33,6 @@ struct FDFBuildResult
  * it belongs to the issuer only, and the controller sends it back (Client_Refused).
  *
  * Known gaps, each owned elsewhere:
- * - Traps (the sim routes a trap def to ApplyPlaceTrap) arrive with ADFTrap; until then a trap id is
- *   refused as unknownTower, with a warning in the log.
  * - The Forge discount needs the builder's faction (WS-07); callers pass it.
  * - wouldSeal counts the edges that standing barricades close. Operated gates and mutables also close
  *   edges; WS-09's lane state component will report those, and this adds them when it exists.
@@ -55,8 +57,12 @@ public:
 	 * goes. The Tick calls it; tests call it by hand. Returns how many went.
 	 */
 	int32 RemoveBroken();
+	/** Remove every trap whose last charge is spent and whose rearm has run out (the sim's
+	 *  `w.Traps.RemoveAll`), with TowerDestroyed (State "spent") so the pad reads free. */
+	int32 RemoveSpentTraps();
 
-	/** Command.PlaceTower: TowerId (a towers.json id) on SocketId, for PlayerId (the seat). */
+	/** Command.PlaceTower: TowerId (a towers.json or traps.json id) on SocketId, for PlayerId (the seat).
+	 *  A trap id takes Step.cs ApplyPlaceTrap's path: a Trap socket, unoccupied, money, then its scrap. */
 	FDFBuildResult PlaceTower(int32 PlayerId, FName TowerId, FName SocketId, bool bBuilderIsForge = false);
 	/** Command.UpgradeTower: one purchase on PathIndex of the tower with StructureId. */
 	FDFBuildResult UpgradeTower(int32 PlayerId, int32 StructureId, int32 PathIndex);
@@ -66,6 +72,9 @@ public:
 
 	ADFTower* FindTower(int32 StructureId) const;
 	ADFTower* FindTowerOnSocket(FName SocketId) const;
+	ADFTrap* FindTrapOnSocket(FName SocketId) const;
+	/** Every live trap, in build order. */
+	TArray<ADFTrap*> GetTraps() const;
 	/** Every standing tower, in build order. */
 	TArray<ADFTower*> GetTowers() const;
 
@@ -79,8 +88,10 @@ private:
 	/** Would a barricade on Socket seal a spawn from the core, given the barricades already standing? */
 	bool WouldSealWithBarricadeOn(const ADFSocket& Socket) const;
 	void Forget(ADFTower* Tower);
+	FDFBuildResult PlaceTrap(int32 PlayerId, FName TrapId, const FDFTrapRow& Row, ADFSocket& Socket);
 
 	TArray<TWeakObjectPtr<ADFTower>> Towers;
+	TArray<TWeakObjectPtr<ADFTrap>> Traps;
 	TWeakObjectPtr<UObject> WalletOverride;
 	mutable bool bWarnedNoWallet = false;
 };

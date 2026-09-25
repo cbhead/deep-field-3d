@@ -19,6 +19,7 @@
 #include "Rig/DFTowerDefinition.h"
 #include "Rig/DFTowerRigComponent.h"
 #include "Towers/DFTargetingComponent.h"
+#include "Towers/DFTowerDamage.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DFTower)
 
@@ -80,6 +81,11 @@ void ADFTower::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetime
 	DOREPLIFETIME(ADFTower, CurrentTarget);
 }
 
+int32 ADFTower::AllocateStructureId()
+{
+	return GNextStructureId++;
+}
+
 bool ADFTower::InitializeTower(FName InDefId, FName InSocketId, int32 InOwnerSeat, int32 InSpent)
 {
 	DefId = InDefId;
@@ -93,7 +99,7 @@ bool ADFTower::InitializeTower(FName InDefId, FName InSocketId, int32 InOwnerSea
 	SocketId = InSocketId;
 	OwnerSeat = InOwnerSeat;
 	Spent = InSpent;
-	StructureId = GNextStructureId++;
+	StructureId = AllocateStructureId();
 	PathLevels.Init(0, Row->UpgradePaths.Num());   // purchases per path: a fresh tower is L1 everywhere
 	Hp = Row->StructureHp;
 	LastBarricadeState = TEXT("intact");
@@ -558,32 +564,13 @@ void ADFTower::DealDamage(const FDFTowerRow& Row, AActor* Target, float Amount, 
 	{
 		return;
 	}
-	if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target, /*LookForComponent*/ true); ASC && Amount > 0.f)
-	{
-		FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
-		Context.AddInstigator(this, this);
-		UDFDamageContext* Damage = UDFDamageContext::Make(this, DamageType, DFTags::Damage_Source_Tower);
-		Damage->SetSourceLocation(GetActorLocation());
-		Damage->AttachTo(Context);
-		FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(UDFGE_Damage::StaticClass(), 1.f, Context);
-		if (Spec.IsValid())
-		{
-			Spec.Data->SetSetByCallerMagnitude(DFTags::SetByCaller_Damage, Amount);
-			ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data);
-		}
-	}
+	DFTowerDamage::ApplyDamage(this, Target, Amount, DamageType, DFTags::Damage_Source_Tower);
 	DamageDealt += Amount;
 
 	// Step.cs Damage(): statuses after the damage. The sim flags death only after its Applies loop,
 	// so a lethal hit still applies them; WS-05's IsTargetDead must likewise not turn true mid-hit
 	// for this to match (it reads the death the health set reports, which happens in the same frame).
-	if (UDFStatusComponent* Status = Target->FindComponentByClass<UDFStatusComponent>())
-	{
-		for (const FName& StatusId : Row.Applies)
-		{
-			Status->ApplyById(StatusId, this);
-		}
-	}
+	DFTowerDamage::ApplyStatuses(this, Target, Row.Applies);
 	if (Body->IsTargetDead())
 	{
 		++Kills;

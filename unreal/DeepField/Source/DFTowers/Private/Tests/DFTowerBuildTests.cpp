@@ -10,6 +10,7 @@
 #include "Towers/DFBuildSubsystem.h"
 #include "Towers/DFTower.h"
 #include "Towers/DFTowerMath.h"
+#include "Towers/DFTrap.h"
 #include "World/DFSocket.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -392,6 +393,147 @@ bool FDFTowerRepairTest::RunTest(const FString& Parameters)
 
 	Second->ApplySiegeDamage(1000.f, 7);
 	TestNull(TEXT("rubble is not repaired"), Structures->FindRepairTarget(Between, 3.f));
+	return true;
+}
+
+// ---- traps (Step.cs ApplyPlaceTrap, TriggerTraps) ---------------------------------------------------
+// traps.json: spike 45 + 3 Alloy, radius 1.8 m, 3 charges, rearm 6 s, 18 damage, applies shred;
+// launcher 55 + 2 Alloy + 1 Plating, radius 1.8 m, 2 charges, rearm 8 s, knockback 8 m.
+
+namespace DFTowerBuildTest
+{
+	ADFTowerTestDummy* Body(FBuildFixture& F, int32 Id, const FVector& At, EDFEnemyLayer Layer = EDFEnemyLayer::Ground)
+	{
+		ADFTowerTestDummy* Dummy = F.World.SpawnActor<ADFTowerTestDummy>(FTransform(At));
+		if (Dummy)
+		{
+			Dummy->Id = Id;
+			Dummy->Layer = Layer;
+			UDFTargetRegistry::Get(F.World.GetWorld())->Register(Dummy);
+		}
+		return Dummy;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFTowerTrapPlaceTest, "DF.Unit.Tower.TrapPlaceInSimOrder", DFTowerBuildTest::Flags)
+bool FDFTowerTrapPlaceTest::RunTest(const FString& Parameters)
+{
+	using namespace DFTowerMath;
+	DFTowerBuildTest::FBuildFixture F;
+	if (!F.Setup(*this))
+	{
+		return false;
+	}
+	FDFMessageCapture Placed(F.World.MessageBus(), DFTags::Message_TowerPlaced);
+	F.Wallet->Money = 1000;
+	TestEqual(TEXT("a trap on a ground pad"), F.Build->PlaceTower(1, TEXT("spike"), TEXT("g1")).Reason, Reasons::WrongSocketTag);
+	F.Wallet->Money = 40;
+	TestEqual(TEXT("40 does not buy a 45 spike"), F.Build->PlaceTower(1, TEXT("spike"), TEXT("t1")).Reason, Reasons::InsufficientFunds);
+	F.Wallet->Money = 100;
+	TestEqual(TEXT("money but no Alloy"), F.Build->PlaceTower(1, TEXT("spike"), TEXT("t1")).Reason, Reasons::InsufficientScrap);
+	TestEqual(TEXT("refusals cost nothing"), F.Wallet->Money, 100);
+
+	F.Wallet->Scrap.Add(EDFScrapType::Alloy, 5);
+	const FDFBuildResult Built = F.Build->PlaceTower(3, TEXT("spike"), TEXT("t1"));
+	if (!TestTrue(TEXT("placed"), Built.Succeeded()) || !TestNotNull(TEXT("the trap"), Built.Trap))
+	{
+		return false;
+	}
+	TestNull(TEXT("it is not a tower"), Built.Tower);
+	TestEqual(TEXT("45 taken"), F.Wallet->Money, 55);
+	TestEqual(TEXT("3 Alloy taken"), F.Wallet->Scrap.FindRef(EDFScrapType::Alloy), 2);
+	TestEqual(TEXT("three charges"), Built.Trap->GetChargesLeft(), 3);
+	TestTrue(TEXT("armed"), Built.Trap->IsArmed());
+	TestEqual(TEXT("on the pad top"), Built.Trap->GetActorLocation(), FVector(2500.f, 0.f, 2.f * ADFSocket::PadHalfHeightCm));
+	TestTrue(TEXT("found by socket"), F.Build->FindTrapOnSocket(TEXT("t1")) == Built.Trap);
+	TestEqual(TEXT("TowerPlaced to the team"), Placed.Num(), 1);
+	TestEqual(TEXT("a second trap on the pad"), F.Build->PlaceTower(1, TEXT("tar"), TEXT("t1")).Reason, Reasons::Occupied);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFTowerTrapTriggerTest, "DF.Unit.Tower.TrapTriggersRearmsAndIsSpent", DFTowerBuildTest::Flags)
+bool FDFTowerTrapTriggerTest::RunTest(const FString& Parameters)
+{
+	using namespace DFTowerBuildTest;
+	FBuildFixture F;
+	if (!F.Setup(*this))
+	{
+		return false;
+	}
+	F.Wallet->Money = 100;
+	F.Wallet->Scrap.Add(EDFScrapType::Alloy, 3);
+	ADFTrap* Trap = F.Build->PlaceTower(1, TEXT("spike"), TEXT("t1")).Trap;   // at (25 m, 0, pad top)
+	if (!TestNotNull(TEXT("spike"), Trap))
+	{
+		return false;
+	}
+	const float Z = 2.f * ADFSocket::PadHalfHeightCm;
+	FDFMessageCapture Triggered(F.World.MessageBus(), DFTags::Message_TrapTriggered);
+	FDFMessageCapture Rearmed(F.World.MessageBus(), DFTags::Message_TrapRearmed);
+	FDFMessageCapture Removed(F.World.MessageBus(), DFTags::Message_TowerDestroyed);
+
+	Body(F, 1, FVector(2900.f, 0.f, Z));                               // 4 m: outside 1.8 m
+	Body(F, 2, FVector(2550.f, 0.f, Z), EDFEnemyLayer::Air);           // a flyer overhead: not Ground
+	ADFTowerTestDummy* Mole = Body(F, 3, FVector(2520.f, 0.f, Z));
+	Mole->bBurrowed = true;                                             // underground
+	TestFalse(TEXT("nothing it may hit is in range"), Trap->StepTrap(1.f / 30.f));
+	TestEqual(TEXT("so no charge spent"), Trap->GetChargesLeft(), 3);
+
+	Body(F, 4, FVector(2600.f, 0.f, Z));                               // 1 m: inside
+	TestTrue(TEXT("a surfaced ground body 1 m away sets it off"), Trap->StepTrap(1.f / 30.f));
+	TestEqual(TEXT("one charge spent"), Trap->GetChargesLeft(), 2);
+	TestFalse(TEXT("rearming"), Trap->IsArmed());
+	TestEqual(TEXT("TrapTriggered to the team"), Triggered.Num(), 1);
+
+	TestFalse(TEXT("5.9 s later: still rearming"), Trap->StepTrap(5.9f));
+	TestFalse(TEXT("the step the rearm runs out does not fire (Step.cs)"), Trap->StepTrap(0.2f));
+	TestEqual(TEXT("TrapRearmed once"), Rearmed.Num(), 1);
+	TestTrue(TEXT("armed again"), Trap->IsArmed());
+	TestTrue(TEXT("the next step fires"), Trap->StepTrap(1.f / 30.f));
+
+	Trap->StepTrap(6.1f);
+	TestTrue(TEXT("the last charge"), Trap->StepTrap(1.f / 30.f));
+	TestEqual(TEXT("none left"), Trap->GetChargesLeft(), 0);
+	const FDFMsg_Structure* Last = Triggered.LastPayload<FDFMsg_Structure>();
+	TestTrue(TEXT("the last trigger says spent"), Last && Last->State == FName(TEXT("spent")));
+	TestFalse(TEXT("not removed while its rearm runs (the sim removes at charges 0 AND rearm 0)"), Trap->IsSpent());
+	TestEqual(TEXT("nothing to remove yet"), F.Build->RemoveSpentTraps(), 0);
+
+	Trap->StepTrap(8.f);
+	TestTrue(TEXT("spent"), Trap->IsSpent());
+	TestEqual(TEXT("no rearm message with no charges"), Rearmed.Num(), 2);
+	TestEqual(TEXT("removed at the end of the frame"), F.Build->RemoveSpentTraps(), 1);
+	TestNull(TEXT("the pad is free"), F.Build->FindTrapOnSocket(TEXT("t1")));
+	const FDFMsg_Structure* Gone = Removed.LastPayload<FDFMsg_Structure>();
+	TestTrue(TEXT("TowerDestroyed, State spent"), Gone && Gone->State == FName(TEXT("spent")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFTowerTrapKnockbackTest, "DF.Unit.Tower.TrapKnockbackByMass", DFTowerBuildTest::Flags)
+bool FDFTowerTrapKnockbackTest::RunTest(const FString& Parameters)
+{
+	using namespace DFTowerBuildTest;
+	FBuildFixture F;
+	if (!F.Setup(*this))
+	{
+		return false;
+	}
+	F.Wallet->Money = 100;
+	F.Wallet->Scrap.Add(EDFScrapType::Alloy, 2);
+	F.Wallet->Scrap.Add(EDFScrapType::Plating, 1);
+	ADFTrap* Launcher = F.Build->PlaceTower(1, TEXT("launcher"), TEXT("t1")).Trap;
+	if (!TestNotNull(TEXT("launcher"), Launcher))
+	{
+		return false;
+	}
+	const float Z = 2.f * ADFSocket::PadHalfHeightCm;
+	ADFTowerTestDummy* Heavy = Body(F, 1, FVector(2600.f, 0.f, Z));
+	ADFTowerTestDummy* Light = Body(F, 2, FVector(2400.f, 0.f, Z));
+	Heavy->Mass = 2.f;
+	Light->Mass = 0.1f;
+	TestTrue(TEXT("fired"), Launcher->StepTrap(1.f / 30.f));
+	TestEqual(TEXT("8 m / mass 2 = 4 m"), Heavy->KnockedBackMeters, 4.f, 1e-4f);
+	TestEqual(TEXT("mass is floored at 0.25: 8 / 0.25 = 32 m"), Light->KnockedBackMeters, 32.f, 1e-4f);
 	return true;
 }
 

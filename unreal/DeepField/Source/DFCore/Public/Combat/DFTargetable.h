@@ -44,6 +44,13 @@ public:
 	/** UDFLaneGraphAsset::RemainingToCore along its itinerary: an OPAQUE sort key, compare only
 	 *  (TNumericLimits<float>::Max() when stranded; small when sieging). INT 2026-09-21, ws-04. */
 	virtual float GetRemainingToCore() const = 0;
+
+	// Appended 2026-09-25 (WS-04, traps). Defaults, so an implementer that has no lane to be pushed
+	// along (a test dummy, a future non-walking target) needs nothing.
+	/** The row's Mass. A knockback is divided by max(Mass, 0.25) (Step.cs TriggerTraps). */
+	virtual float GetKnockbackMass() const { return 1.f; }
+	/** Host: push the body Meters back along the lane it came down (WS-05: UDFLaneWalker::KnockBack). */
+	virtual void ApplyKnockback(float Meters) {}
 };
 
 /**

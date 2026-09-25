@@ -36,6 +36,11 @@ public:
 	virtual bool IsTargetStealthy() const override { return bStealth; }
 	virtual bool BlocksTowerSight() const override { return bBlocksSight; }
 	virtual float GetRemainingToCore() const override { return Remaining; }
+
+	float Mass = 1.f;
+	float KnockedBackMeters = 0.f;
+	virtual float GetKnockbackMass() const override { return Mass; }
+	virtual void ApplyKnockback(float Meters) override { KnockedBackMeters += Meters; }
 };
 
 /** A stand-in for WS-06's economy component in DF.Unit.Tower.Build* tests: a purse the test fills. */

@@ -15,6 +15,7 @@
 #include "Messages/DFMessages.h"
 #include "Towers/DFTower.h"
 #include "Towers/DFTowerMath.h"
+#include "Towers/DFTrap.h"
 #include "World/DFLaneGate.h"
 #include "World/DFSocket.h"
 
@@ -51,6 +52,7 @@ void UDFBuildSubsystem::Tick(float DeltaTime)
 	if (World && World->GetNetMode() != NM_Client)
 	{
 		RemoveBroken();
+		RemoveSpentTraps();
 	}
 }
 
@@ -91,6 +93,62 @@ int32 UDFBuildSubsystem::RemoveBroken()
 		}
 	}
 	return Broken.Num();
+}
+
+int32 UDFBuildSubsystem::RemoveSpentTraps()
+{
+	TArray<ADFTrap*> Spent;
+	for (ADFTrap* Trap : GetTraps())
+	{
+		if (Trap->IsSpent())
+		{
+			Spent.Add(Trap);
+		}
+	}
+	UDFMessageBus* Bus = UDFMessageBus::Get(this);
+	for (ADFTrap* Trap : Spent)
+	{
+		FDFMsg_Structure Message;
+		Message.StructureId = Trap->GetStructureId();
+		Message.PlayerId = Trap->GetOwnerSeat();
+		Message.DefId = Trap->GetDefId();
+		Message.SocketId = Trap->GetSocketId();
+		Message.HpFraction = 0.f;
+		Message.State = TEXT("spent");
+		Traps.RemoveAll([Trap](const TWeakObjectPtr<ADFTrap>& Weak) { return !Weak.IsValid() || Weak.Get() == Trap; });
+		Trap->Destroy();
+		if (Bus)
+		{
+			Bus->BroadcastTeam(DFTags::Message_TowerDestroyed, Message);
+		}
+	}
+	return Spent.Num();
+}
+
+ADFTrap* UDFBuildSubsystem::FindTrapOnSocket(FName SocketId) const
+{
+	for (const TWeakObjectPtr<ADFTrap>& Weak : Traps)
+	{
+		ADFTrap* Trap = Weak.Get();
+		if (IsValid(Trap) && Trap->GetSocketId() == SocketId)
+		{
+			return Trap;
+		}
+	}
+	return nullptr;
+}
+
+TArray<ADFTrap*> UDFBuildSubsystem::GetTraps() const
+{
+	TArray<ADFTrap*> Out;
+	for (const TWeakObjectPtr<ADFTrap>& Weak : Traps)
+	{
+		if (ADFTrap* Trap = Weak.Get(); IsValid(Trap))
+		{
+			Out.Add(Trap);
+		}
+	}
+	return Out;
 }
 
 // ---- lookups ------------------------------------------------------------------------------------
@@ -234,10 +292,9 @@ FDFBuildResult UDFBuildSubsystem::PlaceTower(int32 PlayerId, FName TowerId, FNam
 		return Refuse(Reasons::UnknownSocket);
 	}
 	const UDFContentSubsystem* Content = UDFContentSubsystem::Get(this);
-	if (Content && Content->Trap(TowerId))
+	if (const FDFTrapRow* TrapRow = Content ? Content->Trap(TowerId) : nullptr)
 	{
-		UE_LOG(LogDFBuild, Warning, TEXT("'%s' is a trap; traps are placed by ADFTrap, which has not landed yet."), *TowerId.ToString());
-		return Refuse(Reasons::UnknownTower);
+		return PlaceTrap(PlayerId, TowerId, *TrapRow, *Socket);   // Step.cs: trap defs route to ApplyPlaceTrap
 	}
 	const FDFTowerRow* Row = Content ? Content->Tower(TowerId) : nullptr;
 	if (!Row)
@@ -296,6 +353,69 @@ FDFBuildResult UDFBuildSubsystem::PlaceTower(int32 PlayerId, FName TowerId, FNam
 	}
 	FDFBuildResult Result;
 	Result.Tower = Tower;
+	return Result;
+}
+
+FDFBuildResult UDFBuildSubsystem::PlaceTrap(int32 PlayerId, FName TrapId, const FDFTrapRow& Row, ADFSocket& Socket)
+{
+	using namespace DFTowerMath;
+	// Step.cs ApplyPlaceTrap, in order: a Trap socket, not occupied, money, scrap. No Forge discount.
+	if (Socket.Tag != EDFSocketTag::Trap)
+	{
+		return Refuse(Reasons::WrongSocketTag);
+	}
+	if (FindTrapOnSocket(Socket.SocketId))
+	{
+		return Refuse(Reasons::Occupied);
+	}
+	IDFTeamWallet* Wallet = FindWallet();
+	if (!Wallet || Wallet->GetMoney() < Row.Cost)
+	{
+		return Refuse(Reasons::InsufficientFunds);
+	}
+	for (const TPair<EDFScrapType, int32>& Part : Row.ScrapCost.Amounts)
+	{
+		if (Wallet->GetTeamScrap().FindRef(Part.Key) < Part.Value)
+		{
+			return Refuse(Reasons::InsufficientScrap);
+		}
+	}
+	if (!Wallet->TrySpend(Row.Cost, &Row.ScrapCost))
+	{
+		return Refuse(Reasons::InsufficientFunds);
+	}
+
+	UWorld* World = GetWorld();
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	const FTransform At(FRotator(0.f, Socket.GetActorRotation().Yaw, 0.f), Socket.GetPadTop());
+	ADFTrap* Trap = World ? World->SpawnActor<ADFTrap>(ADFTrap::StaticClass(), At, Params) : nullptr;
+	if (!Trap || !Trap->InitializeTrap(TrapId, Socket.SocketId, PlayerId))
+	{
+		// Nothing was built: the money goes back. (Scrap too: the sim never gets here, so this is a guard, not a rule.)
+		Wallet->AddMoney(Row.Cost);
+		if (Trap)
+		{
+			Trap->Destroy();
+		}
+		UE_LOG(LogDFBuild, Error, TEXT("Could not spawn trap '%s' on '%s'; the money went back (scrap spent: %d lines)."),
+			*TrapId.ToString(), *Socket.SocketId.ToString(), Row.ScrapCost.Amounts.Num());
+		return Refuse(Reasons::UnknownTower);
+	}
+	Traps.Add(Trap);
+
+	if (UDFMessageBus* Bus = UDFMessageBus::Get(this))
+	{
+		FDFMsg_Structure Message;
+		Message.StructureId = Trap->GetStructureId();
+		Message.PlayerId = PlayerId;
+		Message.DefId = TrapId;
+		Message.SocketId = Socket.SocketId;
+		Message.State = TEXT("armed");
+		Bus->BroadcastTeam(DFTags::Message_TowerPlaced, Message);
+	}
+	FDFBuildResult Result;
+	Result.Trap = Trap;
 	return Result;
 }
 

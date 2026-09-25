@@ -63,6 +63,9 @@ public:
 	/** Destructible and at 0 hp: its weapon is silent and it is removed at the end of the frame. */
 	bool IsBroken() const;
 
+	/** Host: the next structure id. Towers and traps share the sequence (the sim's w.NextId). */
+	static int32 AllocateStructureId();
+
 	// ---- host setup ------------------------------------------------------------------------------
 	/** Host: become DefId (a towers.json id) on SocketId, built by OwnerSeat for Spent money. False if the def is unknown. */
 	bool InitializeTower(FName InDefId, FName InSocketId, int32 InOwnerSeat, int32 InSpent);
