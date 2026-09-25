@@ -1,5 +1,9 @@
 # Deep Field 3D
 
+> **Working on the Unreal rebuild (branch `unreal/main`)?** Everything below this box is the Godot
+> game. The step-by-step runbook for the Unreal project (prerequisites, setup, build, test, play)
+> is **[unreal/README.md](unreal/README.md)**.
+
 First-person co-op tower defense (1–4 players, self-hosted over Tailscale).
 The 3D rebuild of [deep-field-td](https://github.com/cbhead/deep-field-td):
 Bloons-depth counters and machine-swept balance, Sanctum-style build-and-shoot.
