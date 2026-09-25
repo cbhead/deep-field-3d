@@ -5,7 +5,7 @@ title: Enemies & AI
 state: active
 owner: session-62767025
 claimed_at: 2026-09-19T23:20:27Z
-lease_expires: 2026-09-22T09:40:04Z
+lease_expires: 2026-09-26T01:16:48Z
 branch: ws/05-enemies-ai/waveplan
 last_commit: fb2ae91
 editor_heavy: true

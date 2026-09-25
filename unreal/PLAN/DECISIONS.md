@@ -67,3 +67,15 @@ Date 2026-09-19 · Accepted · `/Volumes/Toshiba/Deepfield-Unreal/deepfield-3d` 
 
 ## ADR-0022 OSSv2 spike verdict: keep OnlineServicesEOS behind UDFOnlineSubsystem
 Date 2026-09-19 · Accepted 2026-09-19 by INT (landed with ws/11-online/ossv2-spike, 9a450a6; the EOS block in rfcs/needs-int-eos-config.md is applied when the portal product exists) · Context: ADR-0003 gated the online layer on a spike proving OSSv2 on the 5.8.2 launcher build. Verified on the Mac: the launcher build ships `OnlineServicesEOS` (Auth: Auto/ExchangeCode/Developer/PersistentAuth/AccountPortal, Presence, Social), `OnlineServicesEOSGS` (Lobbies with schema-filtered search, invite/kick/attributes/join-policy, TitleFile, PlayerSanctions), `SocketSubsystemEOS` (`NetDriverEOS`, `RelayControl=ForceRelays`, `[EOS:<puid>]` connect strings, Ip passthrough for non-EOS URLs) and EOS SDK 1.19.1 for Mac and Win64; `UDFOnlineSubsystem` builds against `UE::Online` and `DF.Online.NullLogin`/`NullSession` prove login → lobby → join code → approval → handshake headless on the Null services. Decision: OSSv2 is the provider behind the facade; Null is the test provider; switching to EOS is config only (`unreal/PLAN/rfcs/needs-int-eos-config.md`); lobby search keys live on the hard-coded `LobbyBase` schema (only a base schema may be `Searchable`). Consequences: no OSSv1 code; the two-machine relay test is the remaining gate and runs when the portal product exists; a relay failure would be absorbed inside `IDFSessionBackend` and the lobby plumbing, never above C13/C14. Links: `workstreams/ws-11-online.md` "Spike verdict", `CONTRACTS/online.md`.
+
+## ADR-0023 The GPU workstation exists; the Mac keeps the 8 GB floor
+Date 2026-09-24 · Accepted · Supersedes the "Mac-only initially" half of ADR-0016. The Windows GPU
+workstation is in hand. The split: **the Mac** runs every gameplay C++ workstream, logic tests under
+`-nullrhi`, the content pipeline, graybox levels and Mac packaging, and remains the 8 GB memory floor
+(if it runs there it runs anywhere); **the GPU box** runs what the Mac has never been able to prove —
+Nanite/Lumen/VSM verification, the Megascans-heavy `L_<Map>_Art` sublevels (still `fetchexclude`d on
+the Mac), Windows packaging and the EOS overlay, perf budgets, Gauntlet, the endless soak, the
+Nanite-skeletal gate, and the self-hosted CI runner. Bring-up is `unreal/Build/windows-bringup.md`,
+written on the Mac and not yet executed; whoever runs it corrects it in place. The render, perf and
+Windows lanes stay marked unverified in the ledger until that box has actually produced a result —
+owning the hardware is not the same as having measured anything on it.
