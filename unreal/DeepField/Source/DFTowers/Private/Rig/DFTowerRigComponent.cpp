@@ -167,7 +167,7 @@ bool UDFTowerRigComponent::AimAt(const FVector& TargetCm, float DeltaSeconds)
 	case EDFTowerRigStyle::None:
 		return true;
 	case EDFTowerRigStyle::Spin:
-		SpinDeg = FRotator::NormalizeAxis(SpinDeg + DFTowerRig::SpinEngagedDegPerSec * DeltaSeconds);
+		SpinDeg = DFTowerRig::NormalizeDeg(SpinDeg + DFTowerRig::SpinEngagedDegPerSec * DeltaSeconds);
 		ApplyAngles();
 		return true;
 	default:
@@ -192,7 +192,7 @@ void UDFTowerRigComponent::Idle(float DeltaSeconds)
 {
 	if (Style == EDFTowerRigStyle::Spin)
 	{
-		SpinDeg = FRotator::NormalizeAxis(SpinDeg + DFTowerRig::SpinIdleDegPerSec * DeltaSeconds);
+		SpinDeg = DFTowerRig::NormalizeDeg(SpinDeg + DFTowerRig::SpinIdleDegPerSec * DeltaSeconds);
 		ApplyAngles();
 	}
 	WobbleRemaining = 0.f;

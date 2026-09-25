@@ -48,7 +48,7 @@ namespace DFTowerRig
 			return FVector2D::ZeroVector;
 		}
 		const float WorldYaw = FMath::RadiansToDegrees(static_cast<float>(FMath::Atan2(To.Y, To.X)));
-		const float Yaw = FRotator::NormalizeAxis(WorldYaw - TowerYawDeg);
+		const float Yaw = NormalizeDeg(WorldYaw - TowerYawDeg);
 		const float Pitch = FMath::RadiansToDegrees(static_cast<float>(FMath::Atan2(To.Z, Flat)));
 		return FVector2D(Yaw, Pitch);
 	}
@@ -56,7 +56,7 @@ namespace DFTowerRig
 	FVector2D ClampToLimits(const FVector2D& Desired, const FDFTowerRigLimits& Limits)
 	{
 		const float Yaw = Limits.bUnlimitedYaw
-			? FRotator::NormalizeAxis(static_cast<float>(Desired.X))
+			? NormalizeDeg(static_cast<float>(Desired.X))
 			: FMath::Clamp(static_cast<float>(Desired.X), Limits.YawMinDeg, Limits.YawMaxDeg);
 		const float Pitch = FMath::Clamp(static_cast<float>(Desired.Y), Limits.PitchMinDeg, Limits.PitchMaxDeg);
 		return FVector2D(Yaw, Pitch);
@@ -72,7 +72,7 @@ namespace DFTowerRig
 		if (Limits.bUnlimitedYaw)
 		{
 			const float Delta = FMath::FindDeltaAngleDegrees(YawDeg, static_cast<float>(Aim.X));   // the short way
-			YawDeg = FRotator::NormalizeAxis(YawDeg + FMath::Clamp(Delta, -YawStep, YawStep));
+			YawDeg = NormalizeDeg(YawDeg + FMath::Clamp(Delta, -YawStep, YawStep));
 			YawRemaining = FMath::FindDeltaAngleDegrees(YawDeg, static_cast<float>(Aim.X));
 		}
 		else

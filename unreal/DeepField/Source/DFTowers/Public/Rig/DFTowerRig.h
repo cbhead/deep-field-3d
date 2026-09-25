@@ -34,6 +34,10 @@ namespace DFTowerRig
 	constexpr float SpinEngagedDegPerSec = 110.f;
 	/** Night: a turret searches this long before it locks on a new target (rig.md). */
 	constexpr float SearchWobbleSeconds = 0.2f;
+	/** An angle folded into (-180, 180], in float. (FRotator::NormalizeAxis is double in UE5; the rig keeps
+	 *  float angles, so the narrowing is spelled out here once.) */
+	inline float NormalizeDeg(float AngleDeg) { return static_cast<float>(FRotator::NormalizeAxis(static_cast<double>(AngleDeg))); }
+
 	/** Within this many degrees of the (clamped) aim on both axes, the turret is settled. */
 	constexpr float SettledToleranceDeg = 0.5f;
 
