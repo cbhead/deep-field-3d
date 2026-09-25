@@ -95,7 +95,7 @@ void ADFGameMode::PreLogin(const FString& Options, const FString& Address, const
 		return;
 	}
 	const FString OnlineId = UGameplayStatics::ParseOption(Options, DFJoinSeams::OptOnlineId);
-	for (UGameInstanceSubsystem* Subsystem : GameInstance->GetSubsystemArray<UGameInstanceSubsystem>())
+	for (UGameInstanceSubsystem* Subsystem : GameInstance->GetSubsystemArrayCopy<UGameInstanceSubsystem>())
 	{
 		FString Reason;
 		if (IDFJoinValidator* Validator = Cast<IDFJoinValidator>(Subsystem); Validator && !Validator->ValidateJoin(Options, Reason))
