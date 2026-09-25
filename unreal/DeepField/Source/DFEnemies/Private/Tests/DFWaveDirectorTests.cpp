@@ -385,6 +385,45 @@ bool FDFWaveDirectorDestroyedInExhaustedTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFWaveDirectorLateReportTest, "DF.Unit.WaveDirector.LateReportsIntoADestroyedDirector", DFWaveDirectorTest::Flags)
+bool FDFWaveDirectorLateReportTest::RunTest(const FString& Parameters)
+{
+	using namespace DFWaveDirectorTest;
+	// NotifyEnemyRemoved is a public entry point that reaches CheckCleared, and it guarded on
+	// bWaveActive alone — which destruction did not clear. So: destroy the director from the
+	// exhausted broadcast with bodies still alive, then let the stragglers report in, as WS-19's
+	// brood vents and WS-24's mutables will. Alive falls to zero and a cleared wave is announced
+	// out of a torn-down match. No caller does this today; the invariant sending them here does.
+	FDFTestWorld World;
+	ADFWaveDirector* Director = World.SpawnActor<ADFWaveDirector>();
+	FString Error;
+	Director->ConfigureWithTables(9u, Tables(), Error);
+
+	int32 Cleared = 0;
+	int32 Alive = 0;
+	Director->OnSpawnRequested.AddLambda([&Alive](const FDFSpawnEntry&) { ++Alive; });
+	Director->OnWaveSpawnsExhausted.AddLambda([Director](int32) { Director->Destroy(); });
+	Director->OnWaveCleared.AddLambda([&Cleared](int32) { ++Cleared; });
+
+	Director->BeginWave(0, 1);
+	Director->Tick(5.f);   // long enough to exhaust the plan, so the exhausted broadcast fires
+
+	TestFalse(TEXT("the director is gone"), IsValid(Director));
+	TestTrue(TEXT("with bodies still alive"), Alive > 0);
+
+	// The stragglers report in afterwards, one at a time, exactly as a killed enemy would.
+	for (int32 I = 0; I < Alive; ++I)
+	{
+		Director->NotifyEnemyRemoved();
+	}
+	Director->NotifyEnemyAdded(2);
+	Director->NotifyEnemyRemoved(2);
+
+	TestEqual(TEXT("no wave cleared out of a destroyed director"), Cleared, 0);
+	TestFalse(TEXT("and it does not think a wave is running"), Director->IsWaveActive());
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFWaveDirectorDescribeTest, "DF.Unit.WaveDirector.DescribeWaveAndContent", DFWaveDirectorTest::Flags)
 bool FDFWaveDirectorDescribeTest::RunTest(const FString& Parameters)
 {

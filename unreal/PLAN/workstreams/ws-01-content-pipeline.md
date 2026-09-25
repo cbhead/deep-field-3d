@@ -2,10 +2,10 @@
 ws: 01
 slug: content-pipeline
 title: Content pipeline
-state: active
-owner: session-75b58b1b/agent-ws01
+state: paused
+owner: 
 claimed_at: 2026-09-19T15:16:34Z
-lease_expires: 2026-09-20T15:21:30Z
+lease_expires: 
 branch: ws/01-content-pipeline/commandlet
 last_commit: d8168ba
 editor_heavy: false

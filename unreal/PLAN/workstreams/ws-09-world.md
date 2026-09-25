@@ -2,10 +2,10 @@
 ws: 09
 slug: world
 title: World: lanes, sockets, traversal, conditions, terrain import
-state: active
-owner: session-75b58b1b/agent-ws09
+state: paused
+owner: 
 claimed_at: 2026-09-19T15:16:34Z
-lease_expires: 2026-09-20T15:16:34Z
+lease_expires: 
 branch: ws/09-world/lanegraph-importer
 last_commit: 75ed8f4
 editor_heavy: true

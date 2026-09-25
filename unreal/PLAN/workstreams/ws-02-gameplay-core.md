@@ -2,10 +2,10 @@
 ws: 02
 slug: gameplay-core
 title: Gameplay core (GAS)
-state: active
-owner: session-75b58b1b/agent-ws02
+state: paused
+owner: 
 claimed_at: 2026-09-19T15:16:34Z
-lease_expires: 2026-09-20T15:16:34Z
+lease_expires: 
 branch: ws/02-gameplay-core/gas
 last_commit: 
 editor_heavy: false

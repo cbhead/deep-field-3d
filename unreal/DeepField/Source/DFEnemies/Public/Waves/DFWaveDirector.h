@@ -59,7 +59,11 @@ public:
 	FDFMsg_Wave DescribeWave(int32 WaveIndex, int32 PlayerCount) const;
 
 	bool IsConfigured() const { return bConfigured; }
-	bool IsWaveActive() const { return bWaveActive; }
+	/** Whether a wave is running *here and now*. Asks IsLiveWave rather than the raw flag, because a
+	 *  destroyed director must not tell a caller a wave is running: DFMatch and the mutables are the
+	 *  callers, and they ask this to decide whether to act. The flag alone is stale on a pending-kill
+	 *  actor whose EndPlay never ran. */
+	bool IsWaveActive() const { return IsLiveWave(); }
 	int32 GetWaveIndex() const { return ActiveWave; }
 	int32 GetAliveCount() const { return Alive; }
 	const FDFWaveSchedule& GetSchedule() const { return Schedule; }
@@ -74,6 +78,16 @@ public:
 
 	virtual void Tick(float DeltaSeconds) override;
 
+	/** Teardown ends the wave. Every guard in this class already asks `bWaveActive`, so clearing it
+	 *  here is what makes them all correct for a destroyed director at once — rather than an
+	 *  IsValid term at each entry point, which is the same mistake as guarding the callouts that
+	 *  happened to bite me. It matters because `NotifyEnemyRemoved` is a *public* entry point that
+	 *  reaches `CheckCleared`: destroy the director with bodies still alive and the stragglers' late
+	 *  reports would drive Alive to zero and broadcast a cleared wave out of a torn-down match. No
+	 *  caller does that today; WS-19's brood vents and WS-24's mutables are being sent at this very
+	 *  API, and a caller reaching into a garbage actor is not going to be obvious to them. */
+	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
+
 private:
 	void CheckCleared();
 
@@ -85,7 +99,15 @@ private:
 	 *  releasing the *replacement* wave's entries against the old wave's clock. So "still this wave"
 	 *  is a token the code compares rather than a state it infers, and it is re-checked after every
 	 *  broadcast rather than after the ones that have bitten us. */
-	bool IsStillReleasing(uint64 Generation) const { return IsValid(this) && bWaveActive && WaveGeneration == Generation; }
+	bool IsStillReleasing(uint64 Generation) const { return IsLiveWave() && WaveGeneration == Generation; }
+
+	/** A wave is running *and* this director is still a live object. Both halves are load-bearing and
+	 *  neither implies the other: `Destroy()` only marks an actor pending-kill, and `EndPlay` — which
+	 *  clears `bWaveActive` below — is never called at all for an actor that never began play, which
+	 *  is a real configuration (a director torn down before BeginPlay dispatches, and every
+	 *  automation world without a game state). Relying on the hook alone left a wave clearing out of
+	 *  a destroyed director; the predicate is the thing that has to be right. */
+	bool IsLiveWave() const { return IsValid(this) && bWaveActive; }
 
 	FDFWavePlanTables Tables;
 	FDFWaveSchedule Schedule;

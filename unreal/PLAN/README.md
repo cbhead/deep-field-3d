@@ -8,6 +8,7 @@ for every workstream, the Appendices for the workstreams that cite them.
 | File / dir | What it is | Who writes it |
 |---|---|---|
 | `PROGRAMME.md` | The plan of record (vendored from `~/.claude/plans/`). Changes land as PRs like any other file. | INT |
+| `NEXT.md` | **Where the rebuild actually stands and what to pick up next** — the part `PROGRAMME.md` (rarely changes) and `STATUS.md` (generated) cannot carry: what is finished, what is stranded on a branch, which machine does what, and the hazards that will cost a new session time. Hand-written and dated; distrust it if it is stale and say so. | whoever last acted INT |
 | `STATUS.md` | One table of every workstream: state, owner, lease, last commit, blocked-on, next. **Generated** by `unreal/Build/plan-status.py` — never hand-edited. | script |
 | `OWNERSHIP.md` | Path glob → workstream. CI refuses a PR that touches binaries outside the PR's workstream globs. | INT |
 | `DECISIONS.md` | ADR log. Append-only; INT numbers new entries. | anyone appends |
@@ -29,7 +30,7 @@ for every workstream, the Appendices for the workstreams that cite them.
 
 Paste this into a new Claude Code session (replace `WS-NN`):
 
-> You are working on Deep Field 3D's Unreal rebuild. Read `unreal/PLAN/PROGRAMME.md` (Sections 3, 5, 6 and the Appendix your workstream cites), then `unreal/PLAN/STATUS.md`, `unreal/PLAN/DECISIONS.md`, `unreal/PLAN/CONTRACTS/` for the contracts you consume, and the latest `unreal/PLAN/digests/`. Claim workstream **WS-NN** per Section 6.2 (or continue it if you own it), run the session-start checklist (6.5), take an editor slot if `editor_heavy` (6.7), then work toward its DoD in PRs of ≤1 day each to `unreal/main`. Never edit another workstream's paths; propose contract changes as RFCs (6.6). End with the session-end checklist.
+> You are working on Deep Field 3D's Unreal rebuild. Read `unreal/PLAN/PROGRAMME.md` (Sections 3, 5, 6 and the Appendix your workstream cites), then `unreal/PLAN/NEXT.md` (where things stand and what is worth doing), `unreal/PLAN/STATUS.md`, `unreal/PLAN/DECISIONS.md`, `unreal/PLAN/CONTRACTS/` for the contracts you consume, and the latest `unreal/PLAN/digests/`. Claim workstream **WS-NN** per Section 6.2 (or continue it if you own it), run the session-start checklist (6.5), take an editor slot if `editor_heavy` (6.7), then work toward its DoD in PRs of ≤1 day each to `unreal/main`. Never edit another workstream's paths; propose contract changes as RFCs (6.6). End with the session-end checklist.
 
 ## Claiming in one command
 

@@ -2,10 +2,10 @@
 ws: 12
 slug: ui
 title: UI (Common UI + MVVM)
-state: active
-owner: session-fae2d0c5
+state: paused
+owner: 
 claimed_at: 2026-09-19T20:58:00Z
-lease_expires: 2026-09-20T21:33:47Z
+lease_expires: 
 branch: ws/12-ui/viewmodels
 last_commit: 278e262
 editor_heavy: true

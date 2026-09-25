@@ -2,10 +2,10 @@
 ws: 15
 slug: automation-ci
 title: Automation, CI, packaging, store
-state: active
-owner: session-75b58b1b/agent-ws15
+state: paused
+owner: 
 claimed_at: 2026-09-19T15:16:34Z
-lease_expires: 2026-09-20T21:35:55Z
+lease_expires: 
 branch: ws/15-automation-ci/harness
 last_commit: bd9d16a
 editor_heavy: false

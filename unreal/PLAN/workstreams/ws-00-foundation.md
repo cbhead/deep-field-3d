@@ -3,9 +3,9 @@ ws: 00
 slug: foundation
 title: Foundation & contracts
 state: review
-owner: session-75b58b1b (INT)
+owner: 
 claimed_at: 2026-09-17T07:17:27Z
-lease_expires: 2026-09-18T07:17:27Z
+lease_expires: 
 branch: unreal/main
 last_commit: ff379ca
 editor_heavy: true
