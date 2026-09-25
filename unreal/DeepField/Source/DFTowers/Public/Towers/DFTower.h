@@ -8,6 +8,7 @@
 #include "DFTower.generated.h"
 
 class UDFTargetingComponent;
+class UDFTowerRigComponent;
 struct FDFConditionRow;
 struct FDFTowerRow;
 
@@ -36,7 +37,8 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FDFOnTowerShot, class ADFTower* /*Tower*/, 
  * the frame (DF.Message.TowerDestroyed), so every hit that frame still lands, as Step.cs removes only
  * after every enemy has swung. A row with StructureHp 0 is indestructible.
  *
- * Still to come (the WS-04 file lists them): the C9 rig driving the mesh.
+ * The C9 rig (UDFTowerRigComponent) is cosmetic and runs on every machine that draws: it turns the
+ * turret toward the replicated CurrentTarget and shows the stage modules for the replicated path levels.
  */
 UCLASS()
 class DFTOWERS_API ADFTower : public AActor, public IDFStructure
@@ -100,6 +102,7 @@ public:
 	FDFOnTowerShot OnShotLanded;
 
 	UDFTargetingComponent* GetTargeting() const { return Targeting; }
+	UDFTowerRigComponent* GetRig() const { return Rig; }
 
 private:
 	void StepWeapon(const FDFTowerRow& Row, float DeltaSeconds);
@@ -115,14 +118,21 @@ private:
 	/** Clients: the replicated hp moved; re-broadcast it locally as DF.Message.StructureDamaged, so a
 	 *  health bar on every machine hears it without a reliable RPC per siege tick. */
 	UFUNCTION() void OnRep_Hp(float OldHp);
+	UFUNCTION() void OnRep_DefId();
+	UFUNCTION() void OnRep_PathLevels();
+	/** Build the rig for DefId (its DA_Tower_<id> when one has been imported) and show the path levels. */
+	void ConfigureRig();
+	/** Every machine that draws: turn toward the replicated target, or idle. */
+	void TickRig(float DeltaSeconds);
 
 	UPROPERTY(VisibleAnywhere, Category = "DF|Tower") TObjectPtr<UDFTargetingComponent> Targeting;
+	UPROPERTY(VisibleAnywhere, Category = "DF|Tower") TObjectPtr<UDFTowerRigComponent> Rig;
 
-	UPROPERTY(Replicated) FName DefId;
+	UPROPERTY(ReplicatedUsing = OnRep_DefId) FName DefId;
 	UPROPERTY(Replicated) FName SocketId;
 	UPROPERTY(Replicated) int32 StructureId = 0;
 	UPROPERTY(Replicated) int32 OwnerSeat = 0;
-	UPROPERTY(Replicated) TArray<int32> PathLevels;
+	UPROPERTY(ReplicatedUsing = OnRep_PathLevels) TArray<int32> PathLevels;
 	UPROPERTY(ReplicatedUsing = OnRep_Hp) float Hp = 0.f;
 	UPROPERTY(Replicated) FName ActiveConditionId;
 	UPROPERTY(Replicated) TObjectPtr<AActor> CurrentTarget;
@@ -137,6 +147,7 @@ private:
 	float DamageDealt = 0.f;
 	int32 Kills = 0;
 	FName LastBarricadeState;
+	TWeakObjectPtr<AActor> LastRigTarget;
 
 	struct FShotInFlight
 	{

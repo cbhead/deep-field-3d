@@ -1,6 +1,6 @@
 # C9 — Tower rig (ADR-0007)
 
-**Canonical:** `unreal/DeepField/Source/DFTowers/Public/Rig/UDFTowerRigComponent.h`, `DA_Tower_<id>.Rig`, the socket names in `naming.md`. **Owner:** WS-04. **Rule:** R.
+**Canonical:** `unreal/DeepField/Source/DFTowers/Public/Rig/DFTowerRigComponent.h` (the component), `Rig/DFTowerRig.h` (`FDFTowerRigLimits` and the pure aim math), `Rig/DFTowerDefinition.h` (`UDFTowerDefinition`, the class of `DA_Tower_<id>`: meshes, `.Rig`, stage sets), the socket names in `naming.md`. **Owner:** WS-04. **Rule:** R.
 
 A tower is a **static-mesh component chain** on `ADFTower`:
 
@@ -20,3 +20,5 @@ Aura/support towers (singularity, arc, detector, overclock): `Foot → Spin` (ro
 **Firing**: bolt/flak rounds spawn at `Muzzle` along +X and rejoin the server's simulated round over 0.2 s (visual lead); **Nova and flak fire indirect ballistics** (`Projectile{Speed,Gravity}`) solved server-side against the target's predicted position; beams/tesla are Niagara beams from `Muzzle` to the hit with `Heat` (filament) or hop targets (arc); every shot passes the targeting component's LOS test (`map-authoring-3d.md`).
 
 **Replicated per tower:** `DefTag, SocketId, OwnerPlayerId, PathLevels[3], HpFraction (uint8), TargetId, Heat (uint8), ChargesLeft, FedBy (overclock)`. Clients drive the rig from `TargetId` locally.
+
+**Implementation notes (WS-04, 2026-09-25).** The manifest's `pitchSign` is -1 in every block: that is Godot's X-rotation convention. Unreal's pitch is + up, so `FDFTowerRigLimits::PitchSign` is +1 for all four, and stays for a mesh authored the other way round. Until WS-30 imports `DA_Tower_<id>`, `DFTowerRig::ManifestLimitsFor` supplies the four manifest blocks and the component draws no meshes (angles, settle and stage bookkeeping still run). A missing `DA_Tower_<id>` is not logged by the tower: reporting missing bindings is the registry audit's (WS-01). The night search is a single sweep of ±6° over `SearchWobbleSeconds` (0.2 s), during which `AimAt` never reports settled.

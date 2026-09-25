@@ -10,11 +10,14 @@
 #include "Damage/DFDamageContext.h"
 #include "Effects/DFGE_Damage.h"
 #include "Components/SceneComponent.h"
+#include "Engine/AssetManager.h"
 #include "Engine/World.h"
 #include "Messages/DFMessageBus.h"
 #include "Messages/DFMessages.h"
 #include "Net/UnrealNetwork.h"
 #include "Status/DFStatusComponent.h"
+#include "Rig/DFTowerDefinition.h"
+#include "Rig/DFTowerRigComponent.h"
 #include "Towers/DFTargetingComponent.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DFTower)
@@ -30,6 +33,24 @@ namespace
 	{
 		return IsValid(Actor) ? Cast<IDFTargetable>(Actor) : nullptr;
 	}
+
+	/** DA_Tower_<id>, quietly: most towers have none until WS-30 imports them, and reporting a missing
+	 *  binding is the registry audit's job (WS-01), not a log error every time a tower is built. */
+	const UDFTowerDefinition* FindTowerDefinition(FName DefId)
+	{
+		UAssetManager* Manager = UAssetManager::GetIfInitialized();
+		if (!Manager || DefId.IsNone())
+		{
+			return nullptr;
+		}
+		const FPrimaryAssetId Id(FPrimaryAssetType(TEXT("Tower")), DefId);
+		if (UObject* Loaded = Manager->GetPrimaryAssetObject(Id))
+		{
+			return Cast<UDFTowerDefinition>(Loaded);
+		}
+		const FSoftObjectPath Path = Manager->GetPrimaryAssetPath(Id);
+		return Path.IsValid() ? Cast<UDFTowerDefinition>(Path.TryLoad()) : nullptr;
+	}
 }
 
 ADFTower::ADFTower()
@@ -42,6 +63,8 @@ ADFTower::ADFTower()
 	SetReplicatingMovement(false);   // a tower does not move
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));   // placed on its socket's pad
 	Targeting = CreateDefaultSubobject<UDFTargetingComponent>(TEXT("Targeting"));
+	Rig = CreateDefaultSubobject<UDFTowerRigComponent>(TEXT("Rig"));
+	Rig->SetupAttachment(RootComponent);
 }
 
 void ADFTower::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -75,6 +98,7 @@ bool ADFTower::InitializeTower(FName InDefId, FName InSocketId, int32 InOwnerSea
 	Hp = Row->StructureHp;
 	LastBarricadeState = TEXT("intact");
 	Cooldown = 0.f;
+	ConfigureRig();
 	ForceNetUpdate();
 	return true;
 }
@@ -100,6 +124,7 @@ void ADFTower::ApplyUpgrade(int32 PathIndex, int32 MoneyCost)
 	{
 		++PathLevels[PathIndex];
 		Spent += MoneyCost;
+		OnRep_PathLevels();   // the host draws too
 		ForceNetUpdate();
 	}
 }
@@ -250,6 +275,56 @@ void ADFTower::Tick(float DeltaSeconds)
 	{
 		StepTower(DeltaSeconds);
 	}
+	if (GetNetMode() != NM_DedicatedServer)
+	{
+		TickRig(DeltaSeconds);
+	}
+}
+
+void ADFTower::OnRep_DefId()
+{
+	ConfigureRig();
+}
+
+void ADFTower::OnRep_PathLevels()
+{
+	if (const FDFTowerRow* Row = GetRow())
+	{
+		Rig->SetPathLevels(*Row, PathLevels);
+	}
+}
+
+void ADFTower::ConfigureRig()
+{
+	const FDFTowerRow* Row = GetRow();
+	if (!Row)
+	{
+		return;
+	}
+	Rig->Configure(DefId, Row->Kind, FindTowerDefinition(DefId));
+	Rig->SetPathLevels(*Row, PathLevels);
+}
+
+void ADFTower::TickRig(float DeltaSeconds)
+{
+	AActor* Target = CurrentTarget;
+	if (Target != LastRigTarget.Get())
+	{
+		LastRigTarget = Target;
+		// Night (rig.md): a turret searches before it locks on something new, the look of the acquisition delay.
+		const FDFConditionRow* Condition = GetActiveCondition();
+		if (Target && Condition && Condition->AcquisitionDelaySeconds > 0.f)
+		{
+			Rig->StartSearchWobble();
+		}
+	}
+	if (!IsValid(Target))
+	{
+		Rig->Idle(DeltaSeconds);
+		return;
+	}
+	const IDFTargetable* Body = Cast<IDFTargetable>(Target);
+	Rig->AimAt(Body ? Body->GetAimPoint() : Target->GetActorLocation(), DeltaSeconds);
 }
 
 void ADFTower::StepTower(float DeltaSeconds)
