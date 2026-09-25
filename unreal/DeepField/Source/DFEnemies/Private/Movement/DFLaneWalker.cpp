@@ -241,6 +241,13 @@ bool FDFLaneWalker::Begin(const UDFLaneGraphAsset& Graph, const FDFLaneItinerary
 	Out.ViaCursor = 1;   // Via[0] is where it stands; routing asks about the next one
 	const FDFLaneNode* Start = Graph.FindNode(Itinerary.Via[0]);
 	const FVector At = Start ? Start->Position : FVector::ZeroVector;
+	// A walker that does not begin must leave no trace — in the state *or* in the event stream.
+	// ArriveAtNode appends before it can know the caller will reject the result (ReachedCore on a
+	// core start, Stranded on a shut one), and ReachedCore means "apply the leak damage and remove
+	// the body": left in place, the first caller to drain a shared per-frame array would deduct a
+	// life for an enemy that was never created. The old code scrubbed the state and left the events,
+	// which is the asymmetry that gives it away as an oversight rather than a decision.
+	const int32 EventsBefore = OutEvents.Num();
 	const EDFArrival Arrival = ArriveAtNode(Graph, Itinerary, Params, Routing, Itinerary.Via[0], At, Out, OutEvents);
 	if (Arrival == EDFArrival::Moving)
 	{
@@ -259,6 +266,7 @@ bool FDFLaneWalker::Begin(const UDFLaneGraphAsset& Graph, const FDFLaneItinerary
 	}
 	Out.EdgeIndex = INDEX_NONE;
 	Out.bStranded = false;
+	OutEvents.SetNum(EventsBefore);   // the line that falsifies the test of this
 	return false;
 }
 

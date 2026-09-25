@@ -533,9 +533,18 @@ bool FDFLaneWalkerBeginRoutesTest::RunTest(const FString& Parameters)
 
 	// **The discriminating case.** `EdgesOf(Itinerary)[0]` with an is-it-open check and a real
 	// routing decision agree on every fixture where the only way to the next via is the itinerary's
-	// own first edge — which is why the first version of this test passed against both. Here the
-	// route names spawn -> mid -> core, its own first edge is shut, and another way to `mid` exists
-	// through `side`. Taking index 0 refuses; routing goes round. Only one of those is Step.cs.
+	// own first edge — which is why the first version of this test passed against both.
+	//
+	// The route names spawn -> mid -> core and its own first edge is shut, so a second way to `mid`
+	// has to exist for "route toward the next via" to mean anything. `Straight()` has no such edge —
+	// `mid-side` is directed mid -> side, and the relaxation does not traverse a directed edge
+	// backwards — so this fixture adds `side -> mid` explicitly. Without it the test still passed,
+	// but for the wrong reason (the via was abandoned rather than reached another way), and a
+	// comment claiming a mechanism the graph does not have is worse than no comment: the next
+	// person to change routing reads it, reasons from it, and adjusts the wrong thing.
+	FDFLaneEdge SideToMid = Walk(TEXT("side"), TEXT("mid"), { FVector(100 * M, 100 * M, 0), FVector(100 * M, 0, 0) });
+	G->Edges.Add(SideToMid);
+	G->RebuildIndex();
 	FRouting Detour(*G);
 	Detour.EdgeOpen[G->EdgeIndexOf(TEXT("spawn-mid"))] = false;
 	Detour.EdgeOpen[G->EdgeIndexOf(TEXT("spawn-side"))] = true;
@@ -544,6 +553,7 @@ bool FDFLaneWalkerBeginRoutesTest::RunTest(const FString& Parameters)
 	FDFLaneWalkerState Routed;
 	TestTrue(TEXT("a shut first edge is routed around, not refused"), FDFLaneWalker::Begin(*G, It, Params(10.f), Detour, 0.f, Routed, Spawned));
 	TestEqual(TEXT("it starts on the open way to the same via"), G->Edges[Routed.EdgeIndex].Id, FName(TEXT("spawn-side")));
+	TestTrue(TEXT("and that way really does reach the via, rather than abandoning it"), G->EdgeBetween(TEXT("side"), TEXT("mid"), EDFEnemyLayer::Ground) != INDEX_NONE);
 	TestFalse(TEXT("and is not stranded"), Routed.bStranded);
 
 	// With every way out shut it does refuse, loudly: a wave group whose route cannot start is a
@@ -578,6 +588,36 @@ bool FDFLaneWalkerBeginRoutesTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("a ram starts by breaching its barricaded first edge"), FDFLaneWalker::Begin(*G, It, Ram, Walled, 0.f, Sieger, AtSpawn));
 	TestEqual(TEXT("and the breach is announced at the spawn node"), CountOf(AtSpawn, EDFWalkEventKind::BreachStarted), 1);
 	TestEqual(TEXT("along with the edge it entered"), CountOf(AtSpawn, EDFWalkEventKind::EnteredEdge), 1);
+
+	// An itinerary that starts *at* a core is an authoring fault in the route, and it is diagnosed
+	// as one rather than as a shut lane. Nothing else in the tree reaches this branch, so without
+	// this the whole core-start path could be deleted with the suite still green.
+	FDFLaneItinerary AtCore;
+	AtCore.Id = TEXT("startsAtCore");
+	AtCore.Via = { TEXT("core"), TEXT("mid") };
+	FDFLaneWalkerState Never;
+	TArray<FDFWalkEvent> CoreEvents;
+	AddExpectedMessage(TEXT("starts at core node"), ELogVerbosity::Error, EAutomationExpectedMessageFlags::Contains, 1);
+	TestFalse(TEXT("an itinerary starting at a core does not begin"), FDFLaneWalker::Begin(*G, AtCore, Params(10.f), Open, 0.f, Never, CoreEvents));
+	TestFalse(TEXT("and nothing is left walking"), Never.IsWalking());
+
+	// **A walker that did not begin leaves no events behind.** ReachedCore means "apply the leak
+	// damage and remove the body", so an abandoned Begin that left one in a shared per-frame array
+	// would cost a life for an enemy that never existed; the stranded case would likewise report a
+	// body stranded at the spawn that does not exist.
+	TestEqual(TEXT("a core-start leaves no events in the caller's array"), CoreEvents.Num(), 0);
+
+	FRouting Shut(*G);
+	Shut.EdgeOpen[G->EdgeIndexOf(TEXT("spawn-mid"))] = false;
+	Shut.EdgeOpen[G->EdgeIndexOf(TEXT("spawn-side"))] = false;
+	Shut.Rebuild(*G);
+	TArray<FDFWalkEvent> ShutEvents;
+	ShutEvents.AddDefaulted();   // a caller's array is not empty when the spawn loop is mid-frame
+	FDFLaneWalkerState NoStart;
+	AddExpectedMessage(TEXT("nothing open out of"), ELogVerbosity::Error, EAutomationExpectedMessageFlags::Contains, 1);
+	TestFalse(TEXT("a shut start does not begin"), FDFLaneWalker::Begin(*G, It, Params(10.f), Shut, 0.f, NoStart, ShutEvents));
+	TestEqual(TEXT("and appends nothing to what was already there"), ShutEvents.Num(), 1);
+	TestFalse(TEXT("state says it did not begin"), NoStart.bStranded);
 
 	// A replicated or saved state with a stale edge index is not trusted input.
 	FDFLaneWalkerState Corrupt = S;
