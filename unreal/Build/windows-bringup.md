@@ -84,12 +84,16 @@ produce the same bits everywhere pins its arithmetic with the `DF_DET_FP_*` prag
       self-hosted runner".
 - [ ] Decide **service or interactive** for each lane, and note the choice in `CONTRACTS/ci.md`
       (WS-15 owns it).
-- [ ] The Windows workflow (its steps: `unreal\deepfield ci-local`) and the port of `int-merge.sh` onto
-      `deepfield.ps1` (`pr-check`, `smoke` and `ci-local` already are deepfield commands) are WS-15
-      work and the first thing worth doing once this section is green. Until
-      they exist, GitHub proves nothing about the Unreal tree beyond the hosted Python checks. Once the
-      runner's check is green, requiring it on `unreal/main` through branch protection is the owner's
-      call (CONTRACTS/ci.md, 2026-09-25).
+- [ ] Git (with LFS) on the runner's PATH, and Python findable by the runner's account
+      (CONTRACTS/ci.md, runner step 4). `actions/checkout` fails without Git on PATH.
+- [ ] Arm the lane (CONTRACTS/ci.md, runner step 8): land `.github/workflows/unreal-win.yml` on `main`
+      as well, dispatch it once with `full` ticked, and when that run is green set the repository
+      variable `WIN_RUNNER_READY` to `true`. Until then its PR and nightly runs show as skipped, and
+      GitHub proves nothing about the Unreal tree beyond the hosted Python checks. Requiring the check
+      on `unreal/main` through branch protection comes after, and is the owner's call (CONTRACTS/ci.md,
+      2026-09-25).
+- [ ] The port of `int-merge.sh` onto `deepfield.ps1` is the last WS-15 script port (`pr-check`, `smoke`
+      and `ci-local` already are deepfield commands).
 
 ## 6. When the list is green
 

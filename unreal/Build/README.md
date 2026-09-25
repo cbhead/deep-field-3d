@@ -51,4 +51,4 @@ on Windows today.
 
 `unreal/DeepField/Saved/` is untracked: `Logs/build-editor.log`, `Logs/test-*.log`, `Logs/smoke-*.log`, and
 `Automation/Reports/<name>/index.json` (+ an `index.html` you can open). The lanes and the self-hosted
-runner are described in `unreal/PLAN/CONTRACTS/ci.md`. `deepfield.ps1` writes its own setup transcript to `%LOCALAPPDATA%\DeepField\`. The one-time work that commissions the GPU box is [windows-bringup.md](windows-bringup.md).
+runner are described in `unreal/PLAN/CONTRACTS/ci.md`; the `unreal-win` workflow uploads these files, plus the `deepfield` transcript, as the `unreal-win-logs-<run>` artifact. `deepfield.ps1` writes a transcript of every run to `%LOCALAPPDATA%\DeepField\deepfield-<command>.log`. The one-time work that commissions the GPU box is [windows-bringup.md](windows-bringup.md).

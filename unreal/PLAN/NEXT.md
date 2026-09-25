@@ -68,7 +68,7 @@ demonstrated.** No build or test result from the GPU box has been recorded yet;
 | Enemies (WS-05) | `FDFWavePlan` (what spawns), `ADFWaveDirector` (when), `FDFLaneWalker` (where it goes), `KnockBack` (how it gets moved) — all pure, all tested against the frozen sim |
 | Match flow (WS-28) | The shells from PR #48 (`50dc5af`): phase machine, `ADFMatchState`, `ADFPlayerState`, `ADFPlayerController`, `ADFEventRelay`, 13 `DF.Unit.Match` tests. Merged without a build; `unreal/main` then failed to compile until `fcc1e1d`. WS-28 itself is unclaimed (ADR-0024). |
 | Towers (WS-04) | `DFTowerMath` from PR #51 (`910e51b`): the sim's tower rules as pure functions, 8 `DF.Unit.Tower` tests. **Merged unbuilt**, so build it, then run `DF.Unit.Tower`, before building on it. |
-| Automation (WS-15) | The Python checks, the hosted `unreal-checks` workflow, the gate definition (`DF_GATE_FILTER`, enforced by `check-test-coverage.py`), and on Windows `deepfield.ps1` + `machine-inventory.ps1` (PR #52–#55; not yet adopted by WS-15). The zsh wrappers await ports (above). |
+| Automation (WS-15) | The Python checks, the hosted `unreal-checks` workflow, the gate definition (`DF_GATE_FILTER`, enforced by `check-test-coverage.py`), on Windows `deepfield.ps1` + `machine-inventory.ps1` (PR #52–#55), and the `unreal-win` workflow, written but not armed until a runner exists (`WIN_RUNNER_READY`). Only `int-merge` awaits a port (above). |
 
 ## Stranded or in flight
 
@@ -89,9 +89,12 @@ demonstrated.** No build or test result from the GPU box has been recorded yet;
    fix, with no test run of it reported.
 2. **Register the runner and port the scripts** (WS-15; `windows-bringup.md` §5, `CONTRACTS/ci.md`).
    Today `unreal-checks` is the only lane that runs, so a green PR check means only that the ledger
-   and schemas are consistent. `deepfield ci-local` is the one command a Windows workflow needs; until
-   that workflow and an `int-merge` port exist, every landing is verified by hand with it. Branch protection requiring the runner's
-   check comes after that, and is the owner's call.
+   and schemas are consistent. The Windows workflow is written (`.github/workflows/unreal-win.yml`,
+   every step `deepfield ci-local`) and arms itself once `WIN_RUNNER_READY` is set: register the
+   runner, land the file on `main` too, dispatch it once, then set the variable (CONTRACTS/ci.md,
+   runner step 8). Until then, and until `int-merge` is ported, every landing is verified by hand with
+   `deepfield ci-local`. Branch protection requiring the runner's check comes after, and is the owner's
+   call.
 3. **`ADFEnemy` + `UDFEnemyMovement`** (WS-05, active): the actor that turns three tested cores into
    something that walks down a lane and can be shot.
 4. **WS-04 Towers and WS-03 Player** (both active; WS-03 claimed on 2026-09-25): both on the critical

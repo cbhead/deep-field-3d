@@ -254,8 +254,8 @@ merge button, because the button skips the only step that compiles (CONTRACTS/ci
 unreal\deepfield ci-local
 ```
 
-What the nightly lane runs, and what INT runs on a rebased branch before it lands (`Build/ci-local.sh`'s
-job): layering, ownership in the INT view (`-Ws NN` for a workstream's), content schemas, test coverage,
+What the nightly lane runs (`.github/workflows/unreal-win.yml`, once armed: CONTRACTS/ci.md), and what
+INT runs on a rebased branch before it lands (`Build/ci-local.sh`'s job): layering, ownership in the INT view (`-Ws NN` for a workstream's), content schemas, test coverage,
 the `STATUS.md` check, the build, the landing gate, then the smoke. It stops at the first failure and
 prints a summary table either way, ending `ci-local: OK`.
 

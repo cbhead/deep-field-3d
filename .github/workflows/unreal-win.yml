@@ -1,0 +1,147 @@
+# The engine lane for the Unreal rebuild (WS-15; unreal/PLAN/CONTRACTS/ci.md): the Windows GPU box
+# registered as a self-hosted runner (ADR-0028). Every step is a command developers run by hand on
+# the same machine: unreal\deepfield.cmd ci-local (unreal/README.md §5.5). Nothing here is CI-only.
+#
+#   pull_request      the checks and the editor build (no tests: the box is shared with the agent
+#                     sessions, and a PR's own tests run before it opens, with `deepfield pr-check`)
+#   schedule          the whole INT pre-merge set on unreal/main: checks, build, the landing gate, smoke
+#   workflow_dispatch either, on any ref (Actions -> unreal-win -> Run workflow)
+#
+# ARMING. Until a runner exists, a job for these labels would sit "queued" on every PR and fail after
+# 24 hours. So the automatic triggers run only once the repository variable WIN_RUNNER_READY is
+# 'true'; until then they show as skipped. A manual dispatch always runs, so the runner can be proven
+# with one dispatch before the lane is armed (CONTRACTS/ci.md, "The GPU box as the self-hosted runner").
+#
+# SCHEDULE. GitHub fires `schedule` only for workflow files on the default branch (main, the Godot
+# game), so this file must also be copied to main for the nightly to run (ci.md step 0). A
+# pull_request run uses the workflow file in the PR's merge commit, so the PR lane works from
+# unreal/main alone.
+name: unreal-win
+
+on:
+  schedule:
+    # 03:00 America/Chicago. GitHub cron is UTC and has no time zone: 08:00 UTC is 03:00 CDT
+    # (March-November) and 02:00 CST; the hour drifts with daylight saving, on purpose.
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch, tag or sha to build (the Unreal integration branch, not the repository default)'
+        type: string
+        default: 'unreal/main'
+      full:
+        description: 'Run the full pre-merge set (checks, build, landing gate, smoke) instead of checks + build'
+        type: boolean
+        default: true
+      client_count:
+        description: 'Clients in the listen-host smoke (1-3)'
+        type: number
+        default: 1
+      clean:
+        description: 'Wipe the workspace first (a full rebuild) instead of building incrementally'
+        type: boolean
+        default: false
+  pull_request:
+    branches: [unreal/main]
+    paths:
+      - 'unreal/**'
+      - 'tools/**'
+      - '.github/workflows/unreal-*.yml'
+
+permissions:
+  contents: read
+
+# The box runs one job at a time anyway. A newer push to the same PR replaces its queued run; the
+# nightly and a PR never cancel each other.
+concurrency:
+  group: unreal-win-${{ github.event_name == 'pull_request' && github.ref || 'nightly' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  win:
+    # Never run code from a fork on the self-hosted machine: a fork PR could edit the scripts this job
+    # executes. And do not queue automatic runs until the lane is armed (see ARMING above).
+    if: >-
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+      && (github.event_name == 'workflow_dispatch' || vars.WIN_RUNNER_READY == 'true')
+    runs-on: [self-hosted, Windows, X64, deepfield]
+    timeout-minutes: 180
+    defaults:
+      run:
+        shell: cmd
+    env:
+      # Optional: the engine folder. deepfield.ps1 finds it through the launcher's machine-wide
+      # records when this is empty, so it only matters for an engine in an unusual place.
+      UE_ROOT: ${{ vars.UE_ROOT }}
+      # Extra ci-local arguments for the full set, e.g. "-Strict" or "-Skip smoke". A repository
+      # variable so INT can change it without editing this file.
+      CI_LOCAL_ARGS: ${{ vars.CI_LOCAL_ARGS }}
+      DF_CLIENTS: ${{ inputs.client_count || 1 }}
+      # What the ownership check diffs against: the PR's base, or unreal/main.
+      DF_BASE: origin/${{ github.event.pull_request.base.ref || 'unreal/main' }}
+    steps:
+      # clean: false (below) keeps the workspace between runs, so last run's logs, reports and ci-local
+      # transcript would otherwise be uploaded and summarised as this run's. Forget them first, before
+      # the checkout, so even a failed checkout cannot report someone else's results.
+      - name: Forget the last run's logs and transcript
+        run: |
+          if exist unreal\DeepField\Saved\Logs rmdir /s /q unreal\DeepField\Saved\Logs
+          if exist unreal\DeepField\Saved\Automation\Reports rmdir /s /q unreal\DeepField\Saved\Automation\Reports
+          if exist "%LOCALAPPDATA%\DeepField\deepfield-ci-local.log" del /q "%LOCALAPPDATA%\DeepField\deepfield-ci-local.log"
+          exit /b 0
+
+      # A schedule run would check out main (the Godot game), so the nightly names unreal/main and a
+      # dispatch takes its ref input; a PR checks out its merge commit (empty ref). fetch-depth 0 so
+      # the ownership check can diff against the base. clean: false keeps Intermediate\ and Binaries\
+      # between runs, so builds are incremental; the `clean` input forces a full rebuild.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'unreal/main' || github.event_name == 'workflow_dispatch' && inputs.ref || '' }}
+          fetch-depth: 0
+          lfs: true
+          clean: ${{ inputs.clean || false }}
+
+      # ---- PR (and a dispatch with full unticked): the checks and the build
+      - name: deepfield ci-local -Skip tests,smoke
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && !inputs.full)
+        run: |
+          call unreal\deepfield.cmd ci-local -Skip tests,smoke -Dir "%GITHUB_WORKSPACE%" -Base "%DF_BASE%"
+          exit /b %errorlevel%
+
+      # ---- nightly (and a dispatch with full ticked): the whole INT pre-merge set, first failure stops it
+      - name: deepfield ci-local
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.full)
+        run: |
+          call unreal\deepfield.cmd ci-local -Clients %DF_CLIENTS% -Dir "%GITHUB_WORKSPACE%" -Base "%DF_BASE%" %CI_LOCAL_ARGS%
+          exit /b %errorlevel%
+
+      # ci-local prints a summary table on every exit; put it on the run's page, and keep the full
+      # transcript with the logs.
+      - name: Summary
+        if: always()
+        shell: powershell
+        run: |
+          $t = Join-Path $env:LOCALAPPDATA 'DeepField\deepfield-ci-local.log'
+          if (-not (Test-Path $t)) { 'deepfield did not start (no transcript): see the step log above.' | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY; exit 0 }
+          $logs = 'unreal\DeepField\Saved\Logs'
+          New-Item -ItemType Directory -Force -Path $logs | Out-Null
+          Copy-Item $t (Join-Path $logs 'deepfield-ci-local.log') -Force
+          $lines = @(Get-Content $t)
+          $hit = $lines | Select-String -SimpleMatch 'ci-local summary' | Select-Object -Last 1
+          if (-not $hit) { 'ci-local stopped before its summary: see the step log above.' | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY; exit 0 }
+          $table = $lines[($hit.LineNumber - 1)..($lines.Count - 1)] | Where-Object { $_ -notmatch '^\*+$|^Windows PowerShell transcript end|^End time:' }
+          @('```') + $table + @('```') | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
+
+      - name: Editor logs, automation report and transcript
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unreal-win-logs-${{ github.run_number }}
+          if-no-files-found: ignore
+          retention-days: 14
+          path: |
+            unreal/DeepField/Saved/Logs/build-editor.log
+            unreal/DeepField/Saved/Logs/test-*.log
+            unreal/DeepField/Saved/Logs/smoke-*.log
+            unreal/DeepField/Saved/Logs/deepfield-ci-local.log
+            unreal/DeepField/Saved/Automation/Reports/**
