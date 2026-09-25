@@ -200,3 +200,28 @@ message that never appears **does** fail the test. But:
   actual count is 0), so the natural way to write "the wrong diagnosis is gone" asserts the opposite of
   what it reads like. Asserting absence needs your own log sink.
 
+## Every change to `unreal/main` goes through `int-merge` (INT, 2026-09-25)
+**The GitHub merge button bypasses the only step that compiles anything.** Three incidents through that
+one door, each worse than the last:
+
+| PR | what the route cost |
+|---|---|
+| #40 | merged via the UI, so it skipped build, tests and smoke entirely. Known-compiling only because every later landing happened to include it. |
+| #41 | stacked on #40's branch and merged into it **one minute after** #40 had already merged that branch to main, so ~1400 lines never reached the trunk and sat lost for a day (recovered as #44). |
+| #48 | said **in its own description** that none of its C++ was compiled and asked for a Mac build before landing. Merged via the UI. `unreal/main` did not build for the next hour. |
+| #51 | merged via the UI, also labelled unbuilt, onto the still-broken trunk. |
+
+#48's Python checks were all green — layering, ownership, schemas, `check-test-coverage` — because none
+of them need a compiler. That is not a careless author; it is the same shape as every other verification
+failure in this project, one level further out: **the check ran and told you nothing.**
+
+So the rule: **land with `unreal/Build/int-merge.sh <branch> --ws NN`, never with the merge button.**
+It refuses at the build step, which is exactly where #48 needed refusing — 765 s in, with nothing on the
+trunk. A PR that cannot be landed from a machine with the engine installed is not ready to land.
+
+**Recommended to the human, sequenced, because the order matters:** register the self-hosted runner
+(`windows-bringup.md` §8), *then* require that check on `unreal/main` via branch protection. Requiring a
+check that has no runner blocks everything; there are currently **zero runners registered**, so today
+the rule above is the only thing standing between an unbuilt PR and the trunk. Enabling protection is a
+change to how every session and every human works, so it is the repository owner's call, not INT's.
+
