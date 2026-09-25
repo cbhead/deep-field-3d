@@ -2,11 +2,11 @@
 ws: 28
 slug: match-flow
 title: Match flow (DFMatch)
-state: unclaimed
-owner: 
-claimed_at: 
-lease_expires: 
-branch: 
+state: active
+owner: session-01DTQRZ3-cloud
+claimed_at: 2026-09-25T22:58:32Z
+lease_expires: 2026-09-26T22:58:32Z
+branch: ws/28-match-flow/hero-state
 last_commit: 
 editor_heavy: false
 phase: P2-P3
@@ -50,6 +50,7 @@ blocked_on:
 
 ## Session log
 <!-- append-only: date · session · what landed · what's next -->
+- 2026-09-25 · session-01DTQRZ3-cloud · **claim** — cloud session, on the user's ask; the same session holds WS-03. INT's note asks whoever claims first to build the shells, run `DF.Unit.Match` and the smoke, and fix what the compiler finds: this session has no engine, so that first build has to happen on the GPU box (`unreal\deepfield pr-check -Ws 28`), and whatever it finds comes back here. First PR on `ws/28-match-flow/hero-state`: host WS-03's `UDFHeroStateComponent` on `ADFPlayerState`, relay its events as `PlayerDowned`/`PlayerRevived`/`PlayerRespawned`, credit the reviver, respawn bled-out heroes at the wave boundary and move respawned pawns to a player start (ADR-0024; ws-03-player.md Needs INT). Code-only.
 
 ## From INT (2026-09-25) — why this workstream exists, and its first PR
 Registered by ruling R1 (`rfcs/needs-int-rulings-2026-09-25.md`, ADR-0024). Until now no workstream
