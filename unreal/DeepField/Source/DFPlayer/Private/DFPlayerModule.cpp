@@ -2,7 +2,7 @@
 
 #include "Modules/ModuleManager.h"
 
-DEFINE_LOG_CATEGORY_STATIC(LogDFPlayer, Log, All);
+DEFINE_LOG_CATEGORY(LogDFPlayer);
 
 void FDFPlayerModule::StartupModule()
 {
