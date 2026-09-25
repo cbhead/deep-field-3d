@@ -556,19 +556,8 @@ bool FDFLaneWalkerBeginRoutesTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("and that way really does reach the via, rather than abandoning it"), G->EdgeBetween(TEXT("side"), TEXT("mid"), EDFEnemyLayer::Ground) != INDEX_NONE);
 	TestFalse(TEXT("and is not stranded"), Routed.bStranded);
 
-	// With every way out shut it does refuse, loudly: a wave group whose route cannot start is a
-	// content fault, not a thing to swallow.
-	FRouting R(*G);
-	R.EdgeOpen[G->EdgeIndexOf(TEXT("spawn-mid"))] = false;
-	R.EdgeOpen[G->EdgeIndexOf(TEXT("spawn-side"))] = false;
-	R.Rebuild(*G);
-
-	FDFLaneWalkerState S;
-	AddExpectedMessage(TEXT("nothing open out of"), ELogVerbosity::Error, EAutomationExpectedMessageFlags::Contains, 1);
-	TestFalse(TEXT("it refuses when nothing is open"), FDFLaneWalker::Begin(*G, It, Params(10.f), R, 0.f, S, Spawned));
-	TestFalse(TEXT("and is not left walking one"), S.IsWalking());
-
 	// The ordinary case still starts on the itinerary's own first edge.
+	FDFLaneWalkerState S;
 	FRouting Open(*G);
 	TestTrue(TEXT("and starts normally when the way is open"), FDFLaneWalker::Begin(*G, It, Params(10.f), Open, 0.f, S, Spawned));
 	TestEqual(TEXT("on the first edge"), G->Edges[S.EdgeIndex].Id, FName(TEXT("spawn-mid")));
@@ -597,7 +586,10 @@ bool FDFLaneWalkerBeginRoutesTest::RunTest(const FString& Parameters)
 	AtCore.Via = { TEXT("core"), TEXT("mid") };
 	FDFLaneWalkerState Never;
 	TArray<FDFWalkEvent> CoreEvents;
-	AddExpectedMessage(TEXT("starts at core node"), ELogVerbosity::Error, EAutomationExpectedMessageFlags::Contains, 1);
+	// Exact, and the whole sentence: `Contains` on a shared fragment would be met by whichever
+	// diagnosis survived, which is how this assertion passed a falsification that collapsed the two
+	// branches into one. Plain rather than the regex overload so the quotes need no escaping.
+	AddExpectedMessagePlain(TEXT("itinerary 'startsAtCore' starts at core node 'core'"), ELogVerbosity::Error, EAutomationExpectedMessageFlags::Exact, 1);
 	TestFalse(TEXT("an itinerary starting at a core does not begin"), FDFLaneWalker::Begin(*G, AtCore, Params(10.f), Open, 0.f, Never, CoreEvents));
 	TestFalse(TEXT("and nothing is left walking"), Never.IsWalking());
 
@@ -614,17 +606,23 @@ bool FDFLaneWalkerBeginRoutesTest::RunTest(const FString& Parameters)
 	TArray<FDFWalkEvent> ShutEvents;
 	ShutEvents.AddDefaulted();   // a caller's array is not empty when the spawn loop is mid-frame
 	FDFLaneWalkerState NoStart;
-	AddExpectedMessage(TEXT("nothing open out of"), ELogVerbosity::Error, EAutomationExpectedMessageFlags::Contains, 1);
+	// The other half of the same pin: the shut-lane case must produce the *shut-lane* sentence, so
+	// collapsing the branches fails here too whichever way round the survivor is. This is the only
+	// shut-start case in the test on purpose — there were two, shutting the same edges on the same
+	// itinerary, so they logged the identical sentence and one `Contains` expectation was quietly
+	// matching both. Overlapping expectations are how a log assertion stops discriminating.
+	AddExpectedMessagePlain(TEXT("nothing open out of 'spawn' for itinerary 'ground'"), ELogVerbosity::Error, EAutomationExpectedMessageFlags::Exact, 1);
 	TestFalse(TEXT("a shut start does not begin"), FDFLaneWalker::Begin(*G, It, Params(10.f), Shut, 0.f, NoStart, ShutEvents));
 	TestEqual(TEXT("and appends nothing to what was already there"), ShutEvents.Num(), 1);
 	TestFalse(TEXT("state says it did not begin"), NoStart.bStranded);
+	TestFalse(TEXT("and it is not left walking a shut edge"), NoStart.IsWalking());
 
 	// A replicated or saved state with a stale edge index is not trusted input.
 	FDFLaneWalkerState Corrupt = S;
 	Corrupt.EdgeIndex = 9999;
 	AddExpectedMessage(TEXT("walker state holds edge index"), ELogVerbosity::Error, EAutomationExpectedMessageFlags::Contains, 1);
 	TestEqual(TEXT("an out-of-range edge index sorts last rather than reading past the array"),
-		FDFLaneWalker::RemainingToCoreMeters(*G, It, Corrupt, R.EdgeOpen), TNumericLimits<float>::Max());
+		FDFLaneWalker::RemainingToCoreMeters(*G, It, Corrupt, Open.EdgeOpen), TNumericLimits<float>::Max());
 	return true;
 }
 
