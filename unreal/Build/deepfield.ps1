@@ -286,12 +286,22 @@ function Find-Python {
       (Join-Path $env:ProgramFiles 'Python3*\python.exe'), (Join-Path $env:SystemDrive 'Python3*\python.exe'))) {
     foreach ($f in @(Get-ChildItem $pattern -ErrorAction SilentlyContinue | Sort-Object FullName -Descending)) { $candidates += ,@($f.FullName) }
   }
+  $script:PythonProbes = @()
   foreach ($candidate in $candidates) {
     $exe = $candidate[0]; $pre = @($candidate | Select-Object -Skip 1)
-    if (-not (Get-Command $exe -ErrorAction SilentlyContinue)) { continue }
-    $out = Get-NativeOutput $exe ($pre + @('-c', 'import sys; print("%d.%d.%d" % sys.version_info[:3])'))
-    if ($out -and $out -match '^\d+\.\d+\.\d+$' -and [version]$out -ge $MinPython) {
-      return [pscustomobject]@{ Exe = $exe; Pre = $pre; Version = $out }
+    $cmd = Get-Command $exe -ErrorAction SilentlyContinue
+    if (-not $cmd) { continue }
+    # `--version`, not `-c "..."`: Windows PowerShell 5.1 strips double quotes inside arguments it
+    # passes to native programs, which turned the old probe into a SyntaxError on every machine.
+    $out = Get-NativeOutput $exe ($pre + @('--version'))
+    $where = $cmd.Source; if (-not $where) { $where = $exe }
+    if ($out -and $out -match 'Python (\d+\.\d+\.\d+)') {
+      $v = $Matches[1]
+      $script:PythonProbes += "$where -> Python $v"
+      if ([version]$v -ge $MinPython) { return [pscustomobject]@{ Exe = $exe; Pre = $pre; Version = $v } }
+    } else {
+      $hint = ''; if ($where -like '*WindowsApps*') { $hint = ' (the Microsoft Store placeholder)' }
+      $script:PythonProbes += "$where -> did not run$hint"
     }
   }
   return $null
@@ -305,6 +315,8 @@ function Assert-Python {
     Install-WithWinget 'Python.Python.3.12' 'Python 3.12' '/quiet InstallAllUsers=0 PrependPath=1 Include_launcher=1 Include_test=0' | Out-Null
     $script:Python = Find-Python
     if (-not $script:Python) {
+      if ($script:PythonProbes.Count -gt 0) { Write-Info 'what was found:'; foreach ($pp in $script:PythonProbes) { Write-Info "  $pp" } }
+      else { Write-Info 'no python.exe or py.exe was found on PATH or in the usual install folders' }
       Fail 'Python did not install' "Install Python 3.12 from https://www.python.org/downloads/ (tick 'Add python.exe to PATH'),`nor turn off the Store's python.exe alias in Settings > Apps > Advanced app settings > App execution aliases, then run this again."
       return
     }
