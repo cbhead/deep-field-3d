@@ -79,6 +79,7 @@ It ends with `setup: done`. From then on, in a terminal in the clone's `unreal\`
 | `deepfield host` / `deepfield join <ip>` | Host a game others on your network can join (port 7777), or join one. Allow UnrealEditor through Windows Firewall when asked. |
 | `deepfield editor` | Builds if needed, then opens the Unreal editor. The first open compiles shaders: slow once, fast afterwards. |
 | `deepfield test [filter]` | Builds, then runs the automated tests headless and prints PASS/FAIL per test. No filter = the landing gate from `Build/test.sh`. Example: `deepfield test DF.Unit.Tower`. |
+| `deepfield pr-check` | Everything to run before opening a PR: the repository checks, your workstream's ownership check, the build, then the landing gate ([§5.4](#54-before-you-open-a-pr)). |
 | `deepfield check` | The repository checks that need no engine (layering, content schemas, test coverage). Seconds. |
 | `deepfield build` | Only the build (DeepFieldEditor Win64 Development). |
 | `deepfield solution` | Generates `DeepField.sln` for working on the C++ in Visual Studio or Rider. |
@@ -227,16 +228,22 @@ condition against the new join path before relying on it (PLAN/NEXT.md).
 
 ### 5.4 Before you open a PR
 
-This is `Build/pr-check.sh`'s job: `deepfield check`, then your workstream's ownership check, then
-`deepfield test` with no filter, which is the full landing gate, the same tests your branch will be
-landed on. A filtered run is for iterating, not for a PR. Add §5.3 if you touched anything networked.
-
 ```bat
-python unreal\Build\ownership-check.py --ws <NN> --base origin/unreal/main
+unreal\deepfield pr-check
 ```
 
-A binary outside your workstream's globs in `PLAN/OWNERSHIP.md` is a violation. A text file outside
-them is a warning: open a PR to the owner, or write an RFC. Landing goes through INT, never the GitHub
+It runs, in order: the repository checks and your workstream's ownership check, the build, then the
+full landing gate, the same tests your branch will be landed on. The workstream comes from the branch
+name (`ws/04-towers/rig` → `04`); on any other branch pass it: `deepfield pr-check -Ws 04`. `-Base`
+changes the ref the ownership check diffs against (default `origin/unreal/main`).
+
+**What you should see:** `pr-check: OK (WS-NN)`. It stops at the first failing step and says which. A
+filter (`deepfield pr-check DF.Unit.Tower`) runs only those tests, for iterating, and ends
+`pr-check: PARTIAL` rather than `OK`: run it without a filter before opening the PR. It does not run the
+smoke, so add §5.3 if you touched anything networked.
+
+In the ownership check, a binary outside your workstream's globs in `PLAN/OWNERSHIP.md` is a violation.
+A text file outside them is a warning: open a PR to the owner, or write an RFC. Landing goes through INT, never the GitHub
 merge button, because the button skips the only step that compiles (CONTRACTS/ci.md, 2026-09-25).
 
 ---

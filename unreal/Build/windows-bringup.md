@@ -84,8 +84,8 @@ produce the same bits everywhere pins its arithmetic with the `DF_DET_FP_*` prag
       self-hosted runner".
 - [ ] Decide **service or interactive** for each lane, and note the choice in `CONTRACTS/ci.md`
       (WS-15 owns it).
-- [ ] The Windows workflow, and the ports of `pr-check.sh`, `ci-local.sh` and `int-merge.sh` onto
-      `deepfield.ps1`, are WS-15 work and the first thing worth doing once this section is green. Until
+- [ ] The Windows workflow, and the ports of `ci-local.sh` and `int-merge.sh` onto `deepfield.ps1`
+      (`pr-check.sh` already is `deepfield pr-check`), are WS-15 work and the first thing worth doing once this section is green. Until
       they exist, GitHub proves nothing about the Unreal tree beyond the hosted Python checks. Once the
       runner's check is green, requiring it on `unreal/main` through branch protection is the owner's
       call (CONTRACTS/ci.md, 2026-09-25).

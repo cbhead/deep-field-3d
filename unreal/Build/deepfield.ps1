@@ -12,6 +12,10 @@
     doctor   Check every prerequisite and report. Installs nothing, changes nothing.
     build    Build the editor target (DeepFieldEditor Win64 Development).
     test     Build, then run the automated tests headless. Optional filter: `test DF.Unit.Tower`.
+    pr-check What to run before opening a PR (Build/pr-check.sh on Windows): the repository checks
+             plus your workstream's ownership check, the build, then the landing gate. The workstream
+             comes from the branch name (ws/NN-slug/topic) or -Ws NN. A filter (`pr-check DF.Unit`)
+             runs only that and is reported PARTIAL, never OK.
     check    The fast repository checks (Python, no engine): layering, content schemas, test coverage.
     editor   Build, then open the Unreal editor on the project.
     play     Build, then run the game in a window. `-Map /Game/DF/Maps/Testlane/L_Testlane` for another map.
@@ -39,14 +43,16 @@
 .EXAMPLE
   deepfield test DF.Unit
 .EXAMPLE
+  deepfield pr-check -Ws 04
+.EXAMPLE
   deepfield play -Map /Game/DF/Maps/Testlane/L_Testlane
 #>
 [CmdletBinding()]
 param(
   [Parameter(Position = 0)]
-  [ValidateSet('setup', 'doctor', 'build', 'test', 'check', 'editor', 'play', 'host', 'join', 'solution', 'help')]
+  [ValidateSet('setup', 'doctor', 'build', 'test', 'pr-check', 'check', 'editor', 'play', 'host', 'join', 'solution', 'help')]
   [string]$Command = 'setup',
-  # test: the automation filter (default: the landing gate from test.sh). join: the host address.
+  # test, pr-check: the automation filter (default: the landing gate from test.sh). join: the host address.
   [Parameter(Position = 1)]
   [string]$Arg = '',
   # Where to clone when the script is not inside a clone. Default D:\DF\deepfield-3d, or C:\DF\deepfield-3d without a D: drive.
@@ -56,6 +62,10 @@ param(
   [string]$Map = '/Game/DF/Dev/L_Dev_Empty',
   # setup: the branch to clone (default unreal/main), e.g. a PR branch to try before it merges.
   [string]$Branch = '',
+  # pr-check: the workstream whose ownership globs apply (default: from the branch name ws/NN-slug/topic).
+  [string]$Ws = '',
+  # pr-check: the ref the ownership check diffs against.
+  [string]$Base = 'origin/unreal/main',
   [int]$Port = 7777,
   # setup: keep the light clone (skip Megascans and the art/lighting sublevels, as the Mac does).
   [switch]$LightClone,
@@ -918,17 +928,47 @@ function Invoke-Tests([string]$Filter) {
   return $false
 }
 
-function Invoke-RepoChecks {
+function Invoke-RepoChecks([object[]]$Extra = @()) {
+  # $Extra: more checks, each an array of the script name and its arguments (pr-check adds ownership).
   Write-Step 'Repository checks (no engine needed)'
   $build = Join-Path $script:Repo 'unreal\Build'
   $failed = @()
-  foreach ($c in @(@('layering-check.py'), @('validate-content-json.py'), @('check-test-coverage.py'))) {
+  foreach ($c in (@(@('layering-check.py'), @('validate-content-json.py'), @('check-test-coverage.py')) + $Extra)) {
     Write-Host "   -- $($c -join ' ')"
     $rc = Invoke-Python (@((Join-Path $build $c[0])) + @($c | Select-Object -Skip 1))
     if ($rc -ne 0) { $failed += $c[0] }
   }
   if ($failed.Count -gt 0) { Fail "failed: $($failed -join ', ')" 'The output above says what is wrong.' ; return }
   Write-Ok 'repository checks passed'
+}
+
+function Get-WorkstreamFromBranch {
+  # ws/04-towers/rig -> 04 ; ws/10a-map-foundry/x -> 10a (the same rule as pr-check.sh)
+  $branch = Get-NativeOutput 'git' @('-C', $script:Repo, 'rev-parse', '--abbrev-ref', 'HEAD')
+  if ($branch -and $branch -match '^ws/([0-9]+[a-z]?)-') { return $Matches[1] }
+  return $null
+}
+
+function Invoke-PrCheck([string]$Filter) {
+  # Build/pr-check.sh on Windows (PROGRAMME.md 6.5): what a workstream runs before opening a PR. With no
+  # filter the tests are the landing gate, the same set a landing runs, so a PR never learns about a red
+  # suite at landing time. A filtered run is for iterating and is reported PARTIAL, never OK: an
+  # omitted suite has to be visible (CONTRACTS/ci.md).
+  $wsId = $Ws
+  if (-not $wsId) { $wsId = Get-WorkstreamFromBranch }
+  if (-not $wsId) { Fail 'pr-check needs your workstream' 'Pass -Ws NN (for example: deepfield pr-check -Ws 04), or run it on a ws/NN-slug/topic branch.'; return $false }
+  Write-Info "workstream WS-$wsId; ownership is checked against $Base"
+  Invoke-RepoChecks -Extra (, @('ownership-check.py', '--ws', $wsId, '--base', $Base))
+  if (-not (Invoke-Build)) { return $false }
+  if (-not (Invoke-Tests $Filter)) { return $false }
+  Write-Host ''
+  if ($Filter) {
+    Write-Host "pr-check: PARTIAL (WS-$wsId, tests: $Filter only) - run it without a filter before opening the PR" -ForegroundColor Yellow
+  } else {
+    Write-Host "pr-check: OK (WS-$wsId) - open the PR titled [WS-$wsId] ..., listing the contracts touched and the tests above" -ForegroundColor Green
+  }
+  Write-Info 'Touched anything networked? Also run the listen-host smoke by hand (unreal\README.md, 5.3).'
+  return $true
 }
 
 function Start-Game([string[]]$Extra, [string]$What) {
@@ -1004,14 +1044,21 @@ try {
     $script:Repo = @(Find-ExistingClones) | Select-Object -First 1
     if (-not $script:Repo) { Fail 'no clone found' 'Run: deepfield setup' }
     $script:Project = Join-Path $script:Repo 'unreal\DeepField\DeepField.uproject'
-    if ($Command -eq 'check') {
+    if (@('check', 'pr-check') -contains $Command) {
       $script:Python = Find-Python
       if (-not $script:Python) { Fail 'Python is not installed' 'Run: deepfield setup' }
-    } else {
+    }
+    if ($Command -eq 'pr-check') {
+      # The ownership check runs git from Python, so git must be on PATH for this process and its
+      # children; use an installed-but-off-PATH Git (as setup does) rather than failing.
+      if (-not (Get-Command git -ErrorAction SilentlyContinue)) { $off = Find-GitOffPath; if ($off) { $env:Path = "$off;$env:Path" } }
+      if (-not (Get-Command git -ErrorAction SilentlyContinue)) { Fail 'Git is not installed' 'Run: deepfield setup' }
+    }
+    if ($Command -ne 'check') {
       Read-EngineAssociation
       $script:Engine = Find-Engine $script:EngineAssociation
       if (-not $script:Engine) { Fail "Unreal Engine $($script:EngineAssociation) is not installed" 'Run: deepfield setup' }
-      if (@('build', 'test', 'editor', 'play', 'host', 'join') -contains $Command -and -not (Get-VsVerdict | Where-Object { $_.Good.Count -gt 0 })) {
+      if (@('build', 'test', 'pr-check', 'editor', 'play', 'host', 'join') -contains $Command -and -not (Get-VsVerdict | Where-Object { $_.Good.Count -gt 0 })) {
         Fail 'Visual Studio with an MSVC toolset UE 5.8 accepts is not installed' 'Run: deepfield setup'
       }
     }
@@ -1038,6 +1085,7 @@ try {
     }
     'build'    { [void](Invoke-Build) }
     'test'     { if (Invoke-Build) { [void](Invoke-Tests $Arg) } }
+    'pr-check' { [void](Invoke-PrCheck $Arg) }
     'check'    { Invoke-RepoChecks }
     'editor'   {
       if (Invoke-Build) {

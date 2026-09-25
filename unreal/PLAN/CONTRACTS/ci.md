@@ -13,7 +13,7 @@
 
 *Planned* means the workflow and the Windows ports of the `unreal/Build/*.sh` scripts do not exist yet (WS-15). Until they do, `unreal-checks` is the only lane that runs on an Unreal PR, and verification is a by-hand run on the box (`unreal/README.md` §5.4).
 
-The PR lane builds but runs no tests: the box is shared with the agent sessions, and a full test run per push would starve them. A PR's own tests run on the box by hand before the PR opens. The nightly runs the whole landing gate, the one filter every landing inherits (`DF_GATE_FILTER` in `unreal/Build/test.sh`, enforced by `check-test-coverage.py`).
+The PR lane builds but runs no tests: the box is shared with the agent sessions, and a full test run per push would starve them. A PR's own tests run on the box before the PR opens: `deepfield pr-check`, which ends with the landing gate. The nightly runs the whole landing gate, the one filter every landing inherits (`DF_GATE_FILTER` in `unreal/Build/test.sh`, enforced by `check-test-coverage.py`).
 
 A `STATUS.md` that no longer matches the workstream frontmatter is a **warning** on the nightly, not a failure: claims and lease renewals are pushed straight to `unreal/main` between INT cycles by design (PROGRAMME.md §6.2), and every landing regenerates the ledger, so a red nightly for that drift would hide the red that matters. INT makes it blocking with `--strict`, passed through the repository variable `CI_LOCAL_ARGS`.
 
