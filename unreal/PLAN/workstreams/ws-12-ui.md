@@ -40,6 +40,7 @@ blocked_on:
 
 ## Needs INT
 <!-- e.g. "add plugin X to .uproject" -->
+- **`unreal/main` has one red test, and it is not WS-12's — it blocks every `int-merge` landing, including PR #44.** `DF.Func.Status.ThermalShockInLevel` fails on the trunk: the test's own logic passes (the log shows `chill + burn -> thermalShock ... 12.0 of 100 hp, health 88.0, ReactionTriggered seen`), but it runs its PIE session in `L_Dev_Empty`, and `DFWorldSubsystem.cpp:121` logs `Error: <level> has no lane graph` for any level without one. The automation framework turns an unexpected Error log into a failure, and `DFStatusLevelTests.cpp` declares no expected error for it. Two workstreams that each landed unbuilt (#48, #51) met here. Not caused by this branch: it differs from `origin/unreal/main` only in `Source/DFUI/**`, `Config/Tags/DF_UI.ini` and this file, and the failure involves only DFGameplay and DFWorld. **The one-line fix is WS-02's to make** (the test knowingly runs in a level with no lane graph, so it should declare that expected error) **or WS-09's** (a dev level without a lane graph is not an error). I have not touched either path.
 - Label the first PR `contract-append` for `Source/DFCore/Public/Match/DFMatchTypes.h` (new file; ownership-check warns, as it should).
 - ~~For WS-15: `test.sh` matched `Result={Passed|Failed}` but 5.8.2 logs `Result={Success|Fail}`.~~ Fixed by WS-15 in `0735b89` (verdict now comes from the JSON report); nothing owed.
 
