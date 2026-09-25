@@ -20,7 +20,7 @@ build and `DF.Unit+DF.Content+DF.Online` run after landing is its verification.
 | R11 | Accepted | `palette.md` |
 | R12 | Accepted | `modules.json` |
 | R13 | Accepted | `UDFStatusComponent::TryGetTimeRemaining` + `DF.Unit.Status.TimeRemainingUnknownBeforeServerClock`; `status.md` |
-| R14 | Accepted | `ci.md` "Decided (R14)"; enforced by `test-gate-check.py` |
+| R14 | **Superseded on main** (`a6505ad`) | INT ran the ground truth itself: all four suites were green and joined the gate. The gate is defined once (`DF_GATE_FILTER` in `test.sh`) and `check-test-coverage.py` enforces it. This branch's `test-gate-check.py` was retired in the merge |
 
 Original draft note: each ruling below was a recommendation to accept, amend, or reject one at a time. The "On acceptance" lines list the exact edits; INT (or the
 workstream named) makes them in the usual way. Evidence comes from `origin/unreal/main` at `d9798bf`
@@ -386,3 +386,10 @@ suites as reasoned exclusions.
 
 Target: DF.Online and DF.UI are headless and should join at once; DF.Editor and DF.Func load
 maps, so they join once their run time is known.
+
+**Outcome (2026-09-25).** Done on `unreal/main` before this branch landed (`a6505ad`), and better than
+the steps above: INT ran the ground truth itself, and DF.Online, DF.Editor, DF.UI and DF.Func were all
+green, so all four joined the gate. The gate is defined once, as `DF_GATE_FILTER` in `test.sh`, and
+`check-test-coverage.py` fails a registered suite outside it unless its `EXCLUDED` table gives a reason.
+This branch's `test-gate-check.py` and `test-gate-exclusions.tsv` were deleted in the merge; its wiring now
+runs `check-test-coverage.py` instead (the `coverage` step in `ci-local.sh`, and a job in `unreal-checks.yml`).

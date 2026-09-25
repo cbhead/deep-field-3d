@@ -15,7 +15,14 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/../.." && pwd)"
 UE_ROOT="${UE_ROOT:-/Users/Shared/Epic Games/UE_5.8}"
 PROJECT="$REPO/unreal/DeepField/DeepField.uproject"
-FILTER="${1:-DF.Unit+DF.Content+DF.Net}"
+# The landing gate, defined once here so int-merge, ci-local and pr-check all inherit it.
+# check-test-coverage.py fails if a registered DF.* suite is missing from this list without a
+# recorded reason — the gate ran DF.Unit+DF.Content for weeks while four suites gated nothing.
+# NOTE on filter semantics: the automation filter is a case-insensitive SUBSTRING match, not a
+# prefix. Plain "DF" matches engine tests like "SharedFragments" and "RangedFor" (it pulled in 133
+# of them once), so the roots are always spelled out.
+DF_GATE_FILTER="DF.Unit+DF.Content+DF.Online+DF.Editor+DF.UI+DF.Func"
+FILTER="${1:-$DF_GATE_FILTER}"
 SAFE="$(echo "$FILTER" | tr '+.' '__')"
 SAVED="$REPO/unreal/DeepField/Saved"
 LOG="$SAVED/Logs/test-$SAFE.log"
