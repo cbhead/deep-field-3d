@@ -1,6 +1,7 @@
 # Runbook: match night (M1)
 
-The verified path for hosting a co-op Foundry match over Tailscale.
+The verified path for hosting a co-op Foundry match over Tailscale
+([download](https://tailscale.com/download); every player needs it).
 
 ## 1. Verify before you invite anyone
 

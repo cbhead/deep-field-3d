@@ -1,6 +1,6 @@
 # unreal/Build — scripts (WS-15)
 
-Everything CI runs is a script here, and every script runs by hand the same way. Paths are relative to the repository root; `python3` is the system 3.9+ (no third-party packages), the shell scripts are zsh. The engine is found through `UE_ROOT` (default `/Users/Shared/Epic Games/UE_5.8`); Xcode through `DEVELOPER_DIR` (default `/Applications/Xcode.app/Contents/Developer`).
+Everything CI runs is a script here, and every script runs by hand the same way. Paths are relative to the repository root; `python3` is the system 3.9+ (no third-party packages; otherwise [python.org](https://www.python.org/downloads/)), the shell scripts are zsh. The engine ([Unreal Engine 5.8.2](https://www.unrealengine.com/download) through the [Epic Games Launcher](https://store.epicgames.com/download)) is found through `UE_ROOT` (default `/Users/Shared/Epic Games/UE_5.8`); [Xcode](https://apps.apple.com/app/xcode/id497799835) through `DEVELOPER_DIR` (default `/Applications/Xcode.app/Contents/Developer`). The full install list with versions is in [../README.md](../README.md#12-software).
 
 ## Before a PR / for INT
 
