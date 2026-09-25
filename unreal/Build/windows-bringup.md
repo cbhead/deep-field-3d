@@ -1,5 +1,11 @@
 # Windows GPU workstation — bring-up runbook
 
+> **Setting up any Windows machine to build, test or play: run `unreal\deepfield.cmd setup` (or the
+> one-line bootstrap in [../README.md §0](../README.md#0-windows-one-script)).** It automates §0-§5 of
+> this file: prerequisites, Visual Studio, the engine, the clone, the build and the tests. What stays
+> manual here is what only the GPU box does: the Defender exclusions (§0), the real-RHI check (§5),
+> packaging (§6) and the floating-point check (§7).
+
 **Status: written on the Mac, not yet run on the box.** Every command below comes from this
 repository's config, from the engine's own requirement files in the UE 5.8.2 install, or from
 Epic's and GitHub's documented tooling — but no step has been executed on Windows yet. Work
