@@ -1,7 +1,7 @@
 # Cheap, always-on checks for the Unreal rebuild (WS-15; unreal/PLAN/CONTRACTS/ci.md).
 # GitHub-hosted ubuntu, no engine: the pure-python ledger/layout checks and the sim→JSON drift
 # check. The same scripts developers run from unreal/Build (pr-check.sh). The engine build and
-# the automation tests run on the self-hosted Mac in unreal-mac.yml.
+# the automation tests have no CI lane yet (the GPU-box lane is planned; CONTRACTS/ci.md).
 name: unreal-checks
 
 on:

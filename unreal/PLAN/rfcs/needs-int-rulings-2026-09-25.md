@@ -46,8 +46,8 @@ The order is by what each ruling unblocks: R1 unblocks the most.
 | R13 | A client that doesn't yet know the server clock shows no countdown | WS-02, WS-12 | closes WS-02's one open minor |
 | R14 | The landing test filter: get ground truth, then widen | INT (ci.md) | 15 tests that have never gated a landing |
 
-Not INT rulings, and still yours as the human: register the Mac as the self-hosted runner, copy
-`unreal-mac.yml`/`unreal-checks.yml` to `main` (a push to the default branch), create the EOS portal
+Not INT rulings, and still yours as the human: copy
+`unreal-checks.yml` to `main` (a push to the default branch), create the EOS portal
 product, and install the GPU box.
 
 ---

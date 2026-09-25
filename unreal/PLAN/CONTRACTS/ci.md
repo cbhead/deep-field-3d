@@ -1,6 +1,6 @@
 # CI — lanes, the self-hosted runner, and what runs where
 
-**Canonical:** `.github/workflows/unreal-checks.yml`, `unreal/Build/*` (every workflow step is a script a developer runs by hand; nothing is CI-only). **Owner:** WS-15. **Rule:** A (a new check or lane is a PR; changing what an existing lane blocks on is INT's call). The Godot lane `.github/workflows/ci.yml` is untouched and retires with `game/` at G3. `.github/workflows/unreal-mac.yml` was the retired Mac's lane: it never ran (no runner was ever registered), and WS-15 replaces it with a Windows lane on the GPU box (ADR-0028).
+**Canonical:** `.github/workflows/unreal-checks.yml`, `unreal/Build/*` (every workflow step is a script a developer runs by hand; nothing is CI-only). **Owner:** WS-15. **Rule:** A (a new check or lane is a PR; changing what an existing lane blocks on is INT's call). The Godot lane `.github/workflows/ci.yml` is untouched and retires with `game/` at G3. `.github/workflows/unreal-mac.yml`, the retired Mac's lane, never ran (no runner was ever registered) and was removed on 2026-09-25; WS-15 replaces it with a Windows lane on the GPU box (ADR-0028).
 
 ## Lanes
 
@@ -21,7 +21,7 @@ A `STATUS.md` that no longer matches the workstream frontmatter is a **warning**
 
 The box is registered **once, at repository level, and is used by the nightly and by same-repository PRs only**. It is a development machine too, and the agent sessions share it.
 
-0. **Where the workflow files must live.** GitHub fires `schedule` only for workflow files on the repository's *default* branch — `main`, the Godot game — and lists a workflow under *Actions → Run workflow* only if it exists there; `unreal/main` is not the default until G3 merges it. So INT lands the Unreal workflow files on `main` as well (a `[WS-15]` PR to `main` carrying only those files, byte-identical to `unreal/main`'s; repeat when they change, and remove `unreal-mac.yml` from both branches). The nightly then checks out `unreal/main` explicitly (the `ref:` on its checkout step), and a dispatch takes `ref` as an input (default `unreal/main`) whatever branch the *Run workflow* dropdown shows. The `pull_request` and `push` triggers read the workflow file from the branch itself, so those lanes work from `unreal/main` alone.
+0. **Where the workflow files must live.** GitHub fires `schedule` only for workflow files on the repository's *default* branch — `main`, the Godot game — and lists a workflow under *Actions → Run workflow* only if it exists there; `unreal/main` is not the default until G3 merges it. So INT lands the Unreal workflow files on `main` as well (a `[WS-15]` PR to `main` carrying only those files, byte-identical to `unreal/main`'s; repeat when they change). The nightly then checks out `unreal/main` explicitly (the `ref:` on its checkout step), and a dispatch takes `ref` as an input (default `unreal/main`) whatever branch the *Run workflow* dropdown shows. The `pull_request` and `push` triggers read the workflow file from the branch itself, so those lanes work from `unreal/main` alone.
 1. **Register.** GitHub → repository *Settings → Actions → Runners → New self-hosted runner → Windows / x64* (the page shows the download command and a one-time token; the zips are also on [actions/runner releases](https://github.com/actions/runner/releases)). Unpack to a short path such as `C:\actions-runner`, then:
    ```bat
    config.cmd --url https://github.com/cbhead/deep-field-3d --token <token> ^
@@ -49,12 +49,11 @@ The box is registered **once, at repository level, and is used by the nightly an
 | Workflow | Runs when | Covers |
 |---|---|---|
 | `unreal-checks` | `unreal/**`, `tools/**`, `sim/**`, `unreal-*.yml` | python ledger checks + `content-export --diff` (hosted) |
-| `unreal-mac` | nightly 08:00 UTC + `workflow_dispatch` | full Mac suite (**self-hosted; no runner is registered yet, so this lane has never run**) |
 | `ci` (Godot + sim) | `game/**`, `sim/**`, `docs/**`, the art-contract scripts, its own file | the frozen client and sim; **path-filtered on 2026-09-21** |
 
 An Unreal-only PR therefore runs `unreal-checks` and nothing else, and its verification comes from
 `int-merge` on the Mac (build + `DF.Unit`+`DF.Content` + listen smoke) rather than from GitHub.
-*(2026-09-25, ADR-0028: the Mac is retired, so `unreal-mac` will never run and `int-merge` has no
+*(2026-09-25, ADR-0028: the Mac is retired, so `unreal-mac` never ran (removed the same day) and `int-merge` has no
 machine until its Windows port. Verification is a by-hand run on the GPU box; the current lanes are
 at the top of this file.)* That is
 the honest position until a runner exists: **GitHub currently proves almost nothing about the Unreal
