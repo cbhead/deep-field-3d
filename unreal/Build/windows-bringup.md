@@ -21,6 +21,11 @@ DDC. It is *not* a replacement for the Mac: the Mac stays the macOS build/packag
 
 ## 0. Before you start
 
+**Measure first.** `powershell -ExecutionPolicy Bypass -File unreal\Build\machine-inventory.ps1`
+(from PowerShell, not Git Bash) writes [`machines/windows-gpu.md`](machines/windows-gpu.md). Its
+readiness table checks the box against every requirement in this file. Re-run it after each section
+below and commit the result, so the next session reads what the box has instead of guessing.
+
 - [ ] Windows 11 (or Windows 10 ≥ 19041 — the engine's `MinSoftwareVersion`), fully updated
       ([Windows 11 download](https://www.microsoft.com/software-download/windows11)).
 - [ ] Current NVIDIA driver (Studio or Game Ready), installed clean
