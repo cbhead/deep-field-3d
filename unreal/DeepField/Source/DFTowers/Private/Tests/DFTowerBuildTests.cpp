@@ -249,7 +249,7 @@ bool FDFTowerBuildNoWalletTest::RunTest(const FString& Parameters)
 		return false;
 	}
 	F.Build->SetWalletOverride(nullptr);   // and a test world has no game state to carry one
-	AddExpectedError(TEXT("No team wallet"), EAutomationExpectedErrorFlags::Contains, 0);
+	AddExpectedMessage(TEXT("No team wallet"), ELogVerbosity::Warning, EAutomationExpectedMessageFlags::Contains, 1);
 	TestEqual(TEXT("with no purse, nothing is affordable"), F.Build->PlaceTower(1, TEXT("lance"), TEXT("g1")).Reason, DFTowerMath::Reasons::InsufficientFunds);
 	TestEqual(TEXT("and nothing was built"), F.Build->GetTowers().Num(), 0);
 	return true;

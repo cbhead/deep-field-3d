@@ -407,7 +407,7 @@ void ADFTower::StepWeapon(const FDFTowerRow& Row, float DeltaSeconds)
 			DFBalance::Dial(this, TEXT("beamRampPerSecond"), 0.6f), RampCap);
 		// The cap the ramp is heading for, with the "peak" path, so full heat means "at the cap".
 		const float Cap = RampCap * DFTowerMath::PathFactor(Row, PathLevels, TEXT("peak"));   // BeamRamp's cap
-		Heat = Cap > 1.f ? static_cast<uint8>(FMath::Clamp((Ramp - 1.f) / (Cap - 1.f), 0.f, 1.f) * 255.f + 0.5f) : 0;
+		Heat = Cap > 1.f ? static_cast<uint8>(FMath::Clamp((Ramp - 1.f) / (Cap - 1.f), 0.f, 1.f) * 255.f + 0.5f) : uint8(0);
 		DealDamage(Row, Target, DFTowerMath::EffectiveDamage(Row, PathLevels) * Ramp * DeltaSeconds, DFTags::Damage_Type_Thermal);
 		return;
 	}

@@ -31,6 +31,14 @@ namespace
 			? Cast<IDFTeamWallet>(Object) : nullptr;
 	}
 
+	/** A quiet "is this id in the table": UDFContentSubsystem's lookups log a missing row as an Error
+	 *  (content that should exist and does not), but a player asking for an id that is not a tower is
+	 *  a refusal, not broken content. */
+	bool HasRow(const UDFContentSubsystem* Content, const TCHAR* Table, FName Id)
+	{
+		return Content && !Id.IsNone() && Content->Ids(Table).Contains(Id);
+	}
+
 	FDFBuildResult Refuse(FName Reason)
 	{
 		FDFBuildResult Result;
@@ -154,7 +162,7 @@ void UDFBuildSubsystem::SetWaveCondition(FName ConditionId)
 	if (!ConditionId.IsNone())
 	{
 		const UDFContentSubsystem* Content = UDFContentSubsystem::Get(this);
-		if (Content && !Content->Condition(ConditionId))
+		if (Content && !HasRow(Content, TEXT("conditions"), ConditionId))
 		{
 			UE_LOG(LogDFBuild, Warning, TEXT("Wave condition '%s' has no conditions.json row; towers fight in clear weather."), *ConditionId.ToString());
 			ConditionId = NAME_None;
@@ -364,11 +372,14 @@ FDFBuildResult UDFBuildSubsystem::PlaceTower(int32 PlayerId, FName TowerId, FNam
 		return Refuse(Reasons::UnknownSocket);
 	}
 	const UDFContentSubsystem* Content = UDFContentSubsystem::Get(this);
-	if (const FDFTrapRow* TrapRow = Content ? Content->Trap(TowerId) : nullptr)
+	if (HasRow(Content, TEXT("traps"), TowerId))
 	{
-		return PlaceTrap(PlayerId, TowerId, *TrapRow, *Socket);   // Step.cs: trap defs route to ApplyPlaceTrap
+		if (const FDFTrapRow* TrapRow = Content->Trap(TowerId))
+		{
+			return PlaceTrap(PlayerId, TowerId, *TrapRow, *Socket);   // Step.cs: trap defs route to ApplyPlaceTrap
+		}
 	}
-	const FDFTowerRow* Row = Content ? Content->Tower(TowerId) : nullptr;
+	const FDFTowerRow* Row = HasRow(Content, TEXT("towers"), TowerId) ? Content->Tower(TowerId) : nullptr;
 	if (!Row)
 	{
 		return Refuse(Reasons::UnknownTower);

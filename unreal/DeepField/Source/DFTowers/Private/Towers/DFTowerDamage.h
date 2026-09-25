@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
 
+class AActor;
+
 /** How a structure hurts a body: shared by ADFTower and ADFTrap (Step.cs Damage / ApplyStatus). */
 namespace DFTowerDamage
 {

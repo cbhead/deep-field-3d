@@ -7,6 +7,7 @@
 #include "DFTowerRigComponent.generated.h"
 
 class UDFTowerDefinition;
+class UStaticMesh;
 class UStaticMeshComponent;
 
 /** How a tower moves (rig.md). */
