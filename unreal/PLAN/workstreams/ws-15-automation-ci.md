@@ -69,3 +69,4 @@ all of them. It is a few lines, it is O(files) forever, and it converts an entir
 misconfiguration into a red test. Worth pairing with an assertion that every tag the native list
 declares is also resolvable, so the two registration paths are both pinned.
 
+- 2026-09-25 · INT · `DF.Unit.Tags.EveryIniTagRegisters` (your INT ask) and `test-gate-check.py` + `test-gate-exclusions.tsv` are on `claude/happy-babbage-t6qrhw` for review (written in a cloud session; the C++ is not built). **R14:** at the next INT cycle, one `editor-lock.sh test.sh DF` run, then each green suite moves into both landing filters with its exclusion row deleted (ci.md, 2026-09-25).

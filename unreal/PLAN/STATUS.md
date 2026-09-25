@@ -1,8 +1,8 @@
 # Workstream status
 
-Generated 2026-09-21T09:43:24Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-25T00:27:17Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
-active: 8 · review: 1 · unclaimed: 40
+active: 8 · review: 1 · unclaimed: 41
 
 | WS | Title | Phase | CP | State | Owner | Lease expires | Last commit | Editor-heavy | Blocked on |
 |---|---|---|---|---|---|---|---|---|---|
@@ -11,7 +11,7 @@ active: 8 · review: 1 · unclaimed: 40
 | WS-02 | Gameplay core (GAS) | P1-P2 | CP | active (lease expired) | session-75b58b1b/agent-ws02 | 2026-09-20T15:16:34Z | — |  | — |
 | WS-03 | Player | P2 | CP | unclaimed | — | — | — | yes | — |
 | WS-04 | Towers & build | P2-P3 | CP | unclaimed | — | — | — | yes | — |
-| WS-05 | Enemies & AI | P2-P3 | CP | active | session-62767025 | 2026-09-22T06:54:32Z | d0ce639 | yes | — |
+| WS-05 | Enemies & AI | P2-P3 | CP | active (lease expired) | session-62767025 | 2026-09-22T06:54:32Z | d0ce639 | yes | — |
 | WS-06 | Economy, scrap, gunsmith | P3 |  | unclaimed | — | — | — |  | — |
 | WS-07 | Factions & abilities | P2-P4 | CP | unclaimed | — | — | — |  | — |
 | WS-08 | Vehicles | P3-P4 |  | unclaimed | — | — | — | yes | — |
@@ -39,6 +39,7 @@ active: 8 · review: 1 · unclaimed: 40
 | WS-25 | Physics layer | P4 |  | unclaimed | — | — | — | yes | — |
 | WS-26 | Co-op verbs & security rules | P4 |  | unclaimed | — | — | — |  | — |
 | WS-27 | Waves, tiers, endless, balance | P4 (last) |  | unclaimed | — | — | — |  | — |
+| WS-28 | Match flow (DFMatch) | P2-P3 | CP | unclaimed | — | — | — |  | — |
 | WS-30 | Art pipeline (Claude Design → Unreal, terrain lane, validators) | P1+ |  | active (lease expired) | session-75b58b1b/agent-ws30 | 2026-09-20T15:16:34Z | 76f3662 | yes | — |
 | WS-31 | Materials & palette | P1+ |  | unclaimed | — | — | — | yes | — |
 | WS-32 | Skeletons & animation contract | P2+ |  | unclaimed | — | — | — | yes | — |

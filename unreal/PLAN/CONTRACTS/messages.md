@@ -12,6 +12,8 @@ ADR-0004 (one relay) and from the module layering — DFEnemies is layer 3 and c
 generalises: towers, economy and world systems hand DFMatch a payload rather than broadcasting their own.
 The exception is a refusal, which goes `Client_Refused` to the issuing client from wherever it was refused.
 
+**Appended fields.** `FDFMsg_Player.OnlineId` (FString, default empty; ruling R3, 2026-09-25): the player's `FDFOnlineId::ToString()` on `JoinRequest`, `JoinApproved`, `Kicked` and `HostMigrationOffered`, so the UI can approve or kick from the message alone.
+
 Messages mirror `sim/Sim.Core/Events.cs:17-317` one-to-one (same names, same fields) — the port must keep the list; new ones are appended:
 
 **Lobby/match:** `PlayerJoined, PlayerLeft, JoinRejected{reason,yourBuild,hostBuild}, FactionSet, MatchLaunched, WaveStarted, WaveCleared, Intermission, Victory, Defeat, CoreBreached{lives}, ConditionAnnounced{next}, EndlessLap, TierSet, EarlyCallVote{player,vote}, EarlyCalled{bonus}`.

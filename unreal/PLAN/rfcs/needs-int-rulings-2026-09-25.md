@@ -1,7 +1,28 @@
 # Needs INT — the open rulings, drafted (2026-09-25)
 
-Status: **Draft for INT.** Each ruling below is a recommendation to accept, amend, or reject **one at
-a time**. Nothing here has been applied. The "On acceptance" lines list the exact edits; INT (or the
+Status: **Accepted and applied by INT, 2026-09-25** — every ruling, R4 as amended below (decided on
+player experience). The outcome table says where each one landed; the ruling texts are kept as the
+record of what was asked and why. Code applied in a cloud session is **not yet built**: the first Mac
+build and `DF.Unit+DF.Content+DF.Online` run after landing is its verification.
+
+| # | Outcome | Applied in |
+|---|---|---|
+| R1 | Accepted | ADR-0023; `registry.json` + `workstreams/ws-28-match-flow.md`; `OWNERSHIP.md`; PROGRAMME.md §4.2, §5.1, §5.2; INT notes in ws-00/03/05/06/07/09/12 |
+| R2 | Accepted | `Source/DFCore/Public/Determinism/` (moved, DFEnemies includes updated); `CONTRACTS/README.md` |
+| R3 | Accepted | `Source/DFCore/Public/Online/DFJoinSeams.h`; `ADFGameMode::PreLogin`; `UDFOnlineSubsystem : IDFJoinValidator`; `FDFMsg_Player.OnlineId`; `online.md`, `messages.md` |
+| R4 | Accepted, **amended** (player experience) | ADR-0025: explicit "Share code", advertised only while live, host's friends admitted without a prompt, non-modal admit toast; WS-11 / WS-12 implement |
+| R5 | Accepted | ADR-0024 (ADR-0006 status line points to it) |
+| R6 | Accepted | ADR-0026; WS-30's DoD restored to §5.4's wording in `registry.json` and its file |
+| R7 | Accepted | `OWNERSHIP.md` header + WS-09 row |
+| R8 | Accepted | `OWNERSHIP.md` row |
+| R9 | Accepted | `rfcs/0003-closable-by-and-levers.md`; `lanegraph.md` |
+| R10 | Accepted | `DFGameplayTagList.inl` (4 leaves); `DFContentTagCoverageTest.cpp` roots; `tags.md` |
+| R11 | Accepted | `palette.md` |
+| R12 | Accepted | `modules.json` |
+| R13 | Accepted | `UDFStatusComponent::TryGetTimeRemaining` + `DF.Unit.Status.TimeRemainingUnknownBeforeServerClock`; `status.md` |
+| R14 | Accepted | `ci.md` "Decided (R14)"; enforced by `test-gate-check.py` |
+
+Original draft note: each ruling below was a recommendation to accept, amend, or reject one at a time. The "On acceptance" lines list the exact edits; INT (or the
 workstream named) makes them in the usual way. Evidence comes from `origin/unreal/main` at `d9798bf`
 and the open `ws/*` branches. Where a ruling proposes an ADR, INT numbers it at acceptance; the next
 free number is ADR-0023.
@@ -176,7 +197,7 @@ item 5). Strike the three Needs-INT items.
 
 ---
 
-## R4 — Join codes advertise the lobby only while a code is live *(design decision, yours)*
+## R4 — Join codes advertise the lobby only while a code is live *(decided on player experience: see ADR-0025, which amends this text)*
 
 **Asked by WS-11.** EOS `INVITEONLY` lobbies can't be found by search, so a join code alone
 can't reach one.
@@ -193,6 +214,16 @@ since EOS resolves the host through `[EOS:<puid>]` only after a join.
 "send the code in a chat" join. Choose B if codes are only for friends-of-friends anyway.
 **On acceptance:** WS-11 wires `ModifyLobbyJoinPolicy` and adds a `DF.Online.JoinCodePolicyReverts`
 test on Null. The real proof is step (5) of WS-11's credential checklist.
+
+**As decided (ADR-0025).** Option A, shaped for players:
+- the rotator is always live today, so the host now **shares** a code on purpose (a "Share code" panel
+  in the lobby and pause menu), and the lobby is advertised only while that shared code is live;
+- the host's **friends** arriving by code are admitted without a prompt;
+- everyone else is admitted through a **non-modal** toast that never pauses play.
+
+The risk found while deciding: the join code is a searchable attribute, and search results return
+searchable attributes, so while a lobby is advertised anyone listing Deep Field lobbies can read its code.
+Approval for non-friends is therefore not optional, and the ADR says so.
 
 ---
 
@@ -237,7 +268,9 @@ each actor's transform and properties. This is ci.md's "something must prove the
 the input", applied: the proof is a data fingerprint, not the bytes. WS-30's reimport-in-place stays
 worth doing, but **as a follow-up**, not a DoD item. It becomes required only when a CI job
 re-imports on every run and must leave the tree clean.
-**On acceptance:** no PROGRAMME change. Close WS-30's question citing §5.4's wording.
+**On acceptance:** no PROGRAMME change. Close WS-30's question citing §5.4's wording. (Applying it found the
+source of the confusion: `registry.json` — and so the WS-30 file generated from it — had shortened the
+DoD to "byte-identically"; both now carry §5.4's wording.)
 WS-09's re-save item becomes "diff the actor set", tracked in its file.
 
 ---
@@ -252,8 +285,8 @@ it names the workstream (`owners_of` returns every match). The header describes 
 doesn't apply.
 
 **Ruling:** remove `tools/ue-bridge/terrain/**` from the WS-09 row. WS-09 sends changes to the
-heightmap tool as PRs to WS-30, and `build_level.py`, when it exists, goes under a
-`tools/ue-bridge/levels/**` glob for WS-09. Rewrite the header: *"A file belongs to every workstream
+heightmap tool as PRs to WS-30. (WS-09's level importer is the `DFLevelImport` commandlet, which has its
+own row; the `build_level.py` both workstreams' scope lines mention was never written.) Rewrite the header: *"A file belongs to every workstream
 whose row matches it; overlapping rows are deliberate shared ownership and each overlap says why."*
 **On acceptance:** those two `OWNERSHIP.md` edits. `ownership-check.py --ws 30` is unaffected.
 

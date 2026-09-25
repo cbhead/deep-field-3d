@@ -155,3 +155,12 @@ run the full `DF` filter once to get ground truth, record what is red and why, t
 filter to everything that is green and name each exclusion with its reason. An exclusion with a reason
 is a decision; a filter that silently omits four suites is an accident.
 
+
+**Decided (INT ruling R14, 2026-09-25).** The order above stands, and it is now enforced:
+`unreal/Build/test-gate-check.py` (a `ci-local.sh` step, an `int-merge.sh` check and an `unreal-checks.yml`
+job) fails any registered `DF.*` test that is neither in the landing filter nor excluded by a reasoned row
+in `unreal/Build/test-gate-exclusions.tsv`, and fails if `int-merge.sh` and `ci-local.sh` disagree. The
+exclusions start as today's four never-gated suites. At the next INT cycle on the Mac:
+`editor-lock.sh test.sh DF` once; every suite that is green moves into both filters in the same commit that
+deletes its exclusion row (DF.Online and DF.UI are headless and expected first); a red one keeps its row
+with the failing test and its owner in the reason until the owner fixes it.

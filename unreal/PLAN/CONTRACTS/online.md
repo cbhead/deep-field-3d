@@ -23,5 +23,5 @@ class IDFSessionBackend { /* P2P listen-server backend now (EOS relay, ForceRela
 ```
 - Player identity everywhere in gameplay is the **EOS `ProductUserId`** (`FDFOnlineId`) — owners, kicks, saves, logs; never a display name.
 - Net driver: `SocketSubsystemEOS` / EOS P2P with relays forced; version + **content hash** carried in the session attributes and checked at `PreLogin` (`DF.Message.JoinRejected{versionMismatch|contentMismatch|notInvited|banned}`).
-- `PreLogin` also calls `IDFSanctionsCheck` and `IDFAntiCheatCheck` — both pass-through at Level 1 (seams for L2/L3).
+- `PreLogin` asks the join seams in `Source/DFCore/Public/Online/DFJoinSeams.h` (ruling R3, 2026-09-25; DFMatch cannot call DFOnline, so the question goes through DFCore): every game-instance subsystem implementing `IDFJoinValidator` (the handshake above — `UDFOnlineSubsystem`), `IDFSanctionsCheck` or `IDFAntiCheatCheck` is asked, and the first refusal's reason is PreLogin's error. Sanctions and anti-cheat have no implementer at Level 1, which is the pass-through (seams for L2/L3). The traveller's id is the `onlineId` URL option (`DFJoinSeams::OptOnlineId`).
 - The spike (P1) records its verdict as an ADR: OSSv2 login + session + P2P relay working on the 5.8.2 launcher build, or the OSSv1 fallback inside this same facade.

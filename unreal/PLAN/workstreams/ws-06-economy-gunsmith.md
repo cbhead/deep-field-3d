@@ -42,3 +42,4 @@ blocked_on:
 
 ## Session log
 <!-- append-only: date · session · what landed · what's next -->
+- 2026-09-25 · INT · ADR-0023 (ruling R1): money, lives, team scrap and bounty replicate from a **`UDFEconomyStateComponent`** (DFGameplay/Economy) that WS-28 attaches to `ADFMatchState`; personal scrap and weapon builds from a **`UDFLoadoutStateComponent`** on `ADFPlayerState`. WS-28 reads lives for Defeat and never writes them; leaks arrive as a message and your component takes the lives off. Scrap can draw from `DFCore/Public/Determinism/DFDetRng.h` (R2).
