@@ -33,7 +33,7 @@ the script turned out different, fix it in the same PR.
       packages arrive. At the last inventory (2026-09-26 19:22), C: had 500.1 GB free of 923 GB: the
       inventory's row reads OK at exactly the line, before any art or package has arrived, so this box
       stays open. It was 359.4 GB at 17:34 the same day. About 141 GB came back between the two runs,
-      cause not established, and the runner's first build (in `C:ctions-runner\_work`) was already
+      cause not established, and the runner's first build (in `C:\actions-runner\_work`) was already
       counted against the second. Plan the space before the art lanes start.
 - [x] `machine-inventory.ps1` re-run elevated and committed (2026-09-26 19:22, after the runner). Its readiness table shows no
       `FAIL`, and has an elevated run behind it so that the Defender row is
@@ -118,7 +118,7 @@ produce the same bits everywhere pins its arithmetic with the `DF_DET_FP_*` prag
 
 - [x] Register the box as the repository's runner, following CONTRACTS/ci.md, "The GPU box as the
       self-hosted runner". *(2026-09-26: `deepfield-gpu`, label `deepfield`, runner 2.337.0 in
-      `C:ctions-runner`, repository-level, Default pool.)*
+      `C:\actions-runner`, repository-level, Default pool.)*
 - [x] Decide **service or interactive** for each lane, and note the choice in `CONTRACTS/ci.md`
       (WS-15 owns it). *(2026-09-26: interactive as `Cbhea` for every lane, started by the logon task
       `deepfield-runner`; ci.md runner step 2.)*
@@ -126,7 +126,7 @@ produce the same bits everywhere pins its arithmetic with the `DF_DET_FP_*` prag
       (CONTRACTS/ci.md, runner step 4). `actions/checkout` fails without Git on PATH. *(2026-09-26: Git
       2.55 + LFS 3.7.1 on the system PATH; `core.autocrlf false` and `core.longpaths true` set
       `--system`; the per-user Python 3.12 serves, because the runner is that user; `.env` carries
-      `UE-LocalDataCachePath`; `C:ctions-runner` is a Defender exclusion.)*
+      `UE-LocalDataCachePath`; `C:\actions-runner` is a Defender exclusion.)*
 - [x] Arm the lane (CONTRACTS/ci.md, runner step 8): `.github/workflows/unreal-win.yml` is already on
       `main`, the trunk, so dispatch it once with `full` ticked, and when that run is green set the
       repository variable `WIN_RUNNER_READY` to `true`. Until then its PR and nightly runs show as
