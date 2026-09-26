@@ -111,10 +111,17 @@ same command again; everything done so far is kept.
 ### 1.4 Once per machine, by hand: Defender exclusions
 
 The script does not change antivirus settings. Real-time scanning of the DDC and Intermediate writes is
-the largest avoidable build cost on Windows. In Windows Security → Virus & threat protection →
-Exclusions, add the clone's parent folder (for example `D:\DF\`), the engine folder (`%UE_ROOT%`), and
-the processes `UnrealEditor.exe`, `UnrealEditor-Cmd.exe`, `ShaderCompileWorker.exe`,
-`UnrealBuildTool.exe`, `cl.exe` and `link.exe`.
+the largest avoidable build cost on Windows. Exclude the clone, the `DDC` folder beside it, the engine
+folder (`%UE_ROOT%`), and the processes `UnrealEditor.exe`, `UnrealEditor-Cmd.exe`,
+`ShaderCompileWorker.exe`, `UnrealBuildTool.exe`, `cl.exe` and `link.exe`. Exclude the clone's parent
+only when it holds nothing else (`D:\DF\`); on the box the parent is the user profile, so name the two
+folders. In Windows Security → Virus & threat protection → Exclusions, or from an elevated PowerShell
+(the box's paths shown):
+
+```powershell
+Add-MpPreference -ExclusionPath 'C:\Users\Cbhea\deep-field-3d', 'C:\Users\Cbhea\DDC', 'C:\Program Files\Epic Games\UE_5.8'
+Add-MpPreference -ExclusionProcess 'UnrealEditor.exe', 'UnrealEditor-Cmd.exe', 'ShaderCompileWorker.exe', 'UnrealBuildTool.exe', 'cl.exe', 'link.exe'
+```
 
 **Why exactly 5.8.2:** a different engine patch version re-saves every asset it opens. On a shared LFS
 repository that shows up as a wall of binary changes nobody meant to make. The script accepts any 5.8

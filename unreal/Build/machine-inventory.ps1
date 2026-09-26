@@ -259,9 +259,13 @@ $roots += @(Get-ChildItem 'HKLM:\SOFTWARE\EpicGames\Unreal Engine' -ErrorAction 
     ForEach-Object { RegValue $_.PSPath 'InstalledDirectory' })
 $roots += @(Get-ChildItem "$pf\Epic Games" -Directory -Filter 'UE_*' -ErrorAction SilentlyContinue | ForEach-Object FullName)
 if ($env:UE_ROOT) { $roots += $env:UE_ROOT }
-foreach ($r in ($roots | Where-Object { $_ } | ForEach-Object { $_.TrimEnd('\') } | Sort-Object -Unique)) {
-    $bv = Try-Get { Get-Content (Join-Path $r 'Engine\Build\Build.version') -Raw | ConvertFrom-Json }
-    $sdkJson = Try-Get { Get-Content (Join-Path $r 'Engine\Config\Windows\Windows_SDK.json') -Raw | ConvertFrom-Json }
+# The launcher's records can name folders that hold no engine (seen on the box: an 'Epic Games\4.0'
+# entry), so only a root with an Engine folder counts. -ErrorAction Stop, because Try-Get only
+# catches terminating errors and a missing file is not one.
+foreach ($r in ($roots | Where-Object { $_ } | ForEach-Object { $_.TrimEnd('\') } | Sort-Object -Unique |
+        Where-Object { Test-Path -LiteralPath (Join-Path $_ 'Engine') })) {
+    $bv = Try-Get { Get-Content (Join-Path $r 'Engine\Build\Build.version') -Raw -ErrorAction Stop | ConvertFrom-Json }
+    $sdkJson = Try-Get { Get-Content (Join-Path $r 'Engine\Config\Windows\Windows_SDK.json') -Raw -ErrorAction Stop | ConvertFrom-Json }
     $ue += [ordered]@{
         root       = $r
         version    = if ($bv) { "$($bv.MajorVersion).$($bv.MinorVersion).$($bv.PatchVersion) (CL $($bv.Changelist))" } else { 'no Build.version' }
@@ -339,7 +343,7 @@ Check 'Long paths enabled' 'LongPathsEnabled = 1' "$($settings.long_paths)" $(if
 
 $exTxt = if ($defender.exclusions -is [string]) { $defender.exclusions } elseif ($defender.exclusions) { ($defender.exclusions -join '; ') } else { 'none' }
 $exStatus = if ($defender.exclusions -is [string]) { 'UNKNOWN' } elseif ($defender.exclusions) { 'OK' } else { 'FAIL' }
-Check 'Defender exclusions' 'clone, engine, UnrealEditor/cl/link/... processes' $exTxt $exStatus 'runbook 1.4'
+Check 'Defender exclusions' 'the clone, the DDC beside it, the engine, UnrealEditor/cl/link/... processes' $exTxt $exStatus 'runbook 1.4'
 
 # The same policy as deepfield.ps1: any 5.8 builds (the .uproject names 5.8), and a patch other than 2
 # is a warning, because it re-saves every asset it opens.
