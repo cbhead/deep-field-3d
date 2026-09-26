@@ -854,6 +854,21 @@ function Assert-Repo {
     if ($free -lt 50) { Write-Warn2 ("{0:N0} GB free on the clone's drive; the first build and the DDC need tens of GB" -f $free) }
     else { Write-Ok ("{0:N0} GB free on the clone's drive" -f $free) }
   }
+
+  # The DDC beside the clone (DefaultEngine.ini's DDC store). The project config alone does not move
+  # Unreal Zen Storage, which the editor also writes: without a per-machine local DDC path it keeps its
+  # store in %LOCALAPPDATA%\UnrealEngine\Common\Zen\Data. With UE-LocalDataCachePath set, Zen follows
+  # it into <DDC>\Zen, so the whole cache sits in one folder (and under the Defender exclusion, runbook 1.4).
+  $ddc = Join-Path (Split-Path $repo -Parent) 'DDC'
+  $ddcVar = [Environment]::GetEnvironmentVariable('UE-LocalDataCachePath', 'User')
+  if ($ddcVar -eq $ddc) { Write-Ok "UE-LocalDataCachePath=$ddc (the DDC, Zen's store inside it)" }
+  elseif ($script:DoctorOnly) { Write-Warn2 "UE-LocalDataCachePath is $(if ($ddcVar) { $ddcVar } else { 'unset' }), not $ddc; Zen keeps its store in %LOCALAPPDATA%. Run: deepfield setup" }
+  else {
+    if (-not (Test-Path $ddc)) { New-Item -ItemType Directory $ddc | Out-Null }
+    [Environment]::SetEnvironmentVariable('UE-LocalDataCachePath', $ddc, 'User')
+    [Environment]::SetEnvironmentVariable('UE-LocalDataCachePath', $ddc, 'Process')
+    Write-Fix "set UE-LocalDataCachePath=$ddc for your user, so Zen keeps its store in the DDC (new terminals see it)"
+  }
 }
 
 function Get-FreeGB([string]$Path) {

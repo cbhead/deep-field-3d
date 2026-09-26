@@ -60,12 +60,15 @@ the script turned out different, fix it in the same PR.
       checked in the viewport: an engine cube with Nanite enabled (not saved) turns into coloured
       triangles under Nanite Visualization > Triangles, and Virtual Shadow Map > Virtual Page shows pages
       on it.
-- [ ] A `DDC` folder beside the clone exists and is filling; nothing appeared under
-      `%LOCALAPPDATA%\UnrealEngine\Common\DerivedDataCache`. At first light, `C:\Users\Cbhea\DDC` is
-      the writable local store and the `DerivedDataCache` folder is absent, but the editor also runs a
-      local Zen server (`ZenLocal`, about 0.25 GB in `%LOCALAPPDATA%\UnrealEngine\Common\Zen\Data`), and
-      warns that the `[InstalledDerivedDataBackendGraph]` section is deprecated in favour of
-      `[DerivedDataCacheStores]`. Open until the DDC config is moved and Zen's place is decided.
+- [x] A `DDC` folder beside the clone exists and is filling; nothing appeared under
+      `%LOCALAPPDATA%\UnrealEngine\Common\DerivedDataCache`. At first light that folder was absent, but
+      Unreal Zen Storage (`ZenLocal`, the store the editor writes first) kept its data in
+      `%LOCALAPPDATA%\UnrealEngine\Common\Zen\Data`. Zen ignores the project's DDC path and follows only
+      a per-machine one, so `deepfield setup` now sets `UE-LocalDataCachePath` to the `DDC` folder
+      (runbook §2), and the store config moved from the deprecated `[InstalledDerivedDataBackendGraph]`
+      to `[DerivedDataCacheStores]`. Checked 2026-09-26 with a commandlet: Zen's data dir is
+      `C:\Users\Cbhea\DDC\Zen` and filling, and the deprecation warning is gone. The old
+      `%LOCALAPPDATA%\UnrealEngine\Common\Zen\Data` (0.45 GB) is no longer used and can be deleted.
 
 ## 3. First Windows package
 

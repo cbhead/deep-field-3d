@@ -147,9 +147,13 @@ set UE=%UE_ROOT%\Engine\Binaries\Win64\UnrealEditor-Cmd.exe
 set PROJ=%CD%\unreal\DeepField\DeepField.uproject
 ```
 
-The DDC needs no configuration: `Config/DefaultEngine.ini` puts it at `%GAMEDIR%../../../DDC`, a `DDC`
-folder beside the clone, shared by the clone and every worktree. The `UE-LocalDataCachePath`
-environment variable overrides it if a machine needs another location.
+The DDC is a `DDC` folder beside the clone, shared by the clone and every worktree.
+`Config/DefaultEngine.ini` puts the file-system store there (`%GAMEDIR%../../../DDC`). The editor
+writes first to Unreal Zen Storage, though, and the project config cannot move Zen's store: it follows
+only a per-machine path, the `UE-LocalDataCachePath` environment variable. `deepfield setup` sets that
+to the `DDC` folder for your user, and Zen then keeps its store in `DDC\Zen`. Without it, Zen fills
+`%LOCALAPPDATA%\UnrealEngine\Common\Zen\Data`. Point the variable elsewhere if a machine needs
+another location.
 
 ---
 
@@ -368,7 +372,7 @@ changing anything.
 | `Cannot remove … as it is read only` when saving an asset | LFS checks lockable assets out read-only | `git lfs lock <path>`. The importer commandlets clear the flag on exactly the files they write. |
 | `-run=DFTerrainImport … could not find the class` | That commandlet's module loads late | Use `-run=DFEditor.DFTerrainImport` |
 | Hundreds of engine tests run instead of ours | An automation filter is a case-insensitive **substring**, so `DF` matches engine test names | Spell out the roots, as in [§5](#5-test) |
-| The DDC fills `%LOCALAPPDATA%\UnrealEngine\Common\DerivedDataCache` instead of a `DDC` folder beside the clone | `UE-LocalDataCachePath` points elsewhere, or the project is not at `<clone>\unreal\DeepField` | See [§2](#2-commands-by-hand) |
+| The DDC fills `%LOCALAPPDATA%\UnrealEngine\Common\DerivedDataCache` or `...\Common\Zen\Data` instead of a `DDC` folder beside the clone | `UE-LocalDataCachePath` is unset (Zen's store) or points elsewhere, or the project is not at `<clone>\unreal\DeepField` | `deepfield setup`, then restart the editor; see [§2](#2-commands-by-hand) |
 
 Still stuck: the per-script details are in [Build/README.md](Build/README.md), and the hazards known
 to every session are in [PLAN/NEXT.md](PLAN/NEXT.md).
