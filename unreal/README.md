@@ -67,9 +67,20 @@ in a terminal.
 | Git | Git for Windows and Git LFS | Installs them with winget |
 | Python | Python 3.9+ (the Store's fake `python.exe` does not count) | Installs Python 3.12 with winget |
 | Repository | An existing clone anywhere on the machine (see pass 1; `-Dir` picks one when there are several) | Clones `unreal/main` to `D:\DF\deepfield-3d` (else `C:\DF\deepfield-3d`, or `-Dir`), turns off line-ending conversion, fetches every LFS file |
-| Unreal Engine | The version `DeepField.uproject` names (5.8), ideally patch 5.8.2 | Installs the Epic Games Launcher and opens it. **This is the one manual step:** sign in, then Unreal Engine > Library > **+** next to *Engine versions* > **5.8.2** > Install. Press Enter in the script's window when it has finished. Sets `UE_ROOT` for you. |
+| Unreal Engine | The version `DeepField.uproject` names (5.8), ideally patch 5.8.3 | Installs the Epic Games Launcher and opens it. **This is the one manual step:** sign in, then Unreal Engine > Library > **+** next to *Engine versions* > **5.8** > Install (the launcher offers only the newest hotfix), with **Editor symbols for debugging** ticked in its options. Press Enter in the script's window when it has finished. Sets `UE_ROOT` for you. |
 | Visual Studio | VS 2022 (or 2026, or Build Tools) with an MSVC toolset the installed engine accepts (read from its `Engine\Config\Windows\Windows_SDK.json`; checked after the engine for that reason), and a Windows SDK 10.0.19041+ | Installs VS 2022 Community with the C++ game workloads, or updates and modifies the one you have. If it still has no accepted toolset, it prints the toolsets found and the engine's rules |
 | Build | - | Builds the editor (10-30 minutes the first time) |
+
+**Why a pinned patch, 5.8.3:** a different engine patch version re-saves every asset it opens. On a
+shared LFS repository that shows up as a wall of binary changes nobody meant to make. The script
+accepts any 5.8 the `.uproject` names but warns when the patch is not the pinned one (`$EnginePatch`
+in `Build/deepfield.ps1`). The pin moved from 5.8.2 to 5.8.3 on 2026-09-26: the launcher installs only
+the newest hotfix, and 5.8.3 is what the GPU box, the only engine machine, has. Move it the same way
+when the box takes a new hotfix: the script's `$EnginePatch` and this paragraph (the inventory reads the
+script's value).
+
+**Editor symbols for debugging** (about 60 GB) are what make a crash's callstack name engine
+functions. Without them every engine frame reads `UnknownFunction` (the box's first crash did).
 
 It ends with `setup: done`. From then on, in a terminal in the clone's `unreal\` folder (in PowerShell, type
 `.\deepfield` instead of `deepfield`):
@@ -122,10 +133,6 @@ folders. In Windows Security → Virus & threat protection → Exclusions, or fr
 Add-MpPreference -ExclusionPath 'C:\Users\Cbhea\deep-field-3d', 'C:\Users\Cbhea\DDC', 'C:\Program Files\Epic Games\UE_5.8'
 Add-MpPreference -ExclusionProcess 'UnrealEditor.exe', 'UnrealEditor-Cmd.exe', 'ShaderCompileWorker.exe', 'UnrealBuildTool.exe', 'cl.exe', 'link.exe'
 ```
-
-**Why exactly 5.8.2:** a different engine patch version re-saves every asset it opens. On a shared LFS
-repository that shows up as a wall of binary changes nobody meant to make. The script accepts any 5.8
-the `.uproject` names but warns when the patch is not 2.
 
 ---
 
@@ -346,7 +353,7 @@ changing anything.
 | Symptom | Cause | Fix |
 |---|---|---|
 | `The system cannot find the path specified` for `%UE%` or `Build.bat` | `UE_ROOT` is not set in this terminal | Open a new terminal after `setup`, or `setx UE_ROOT "<engine folder>"` |
-| UBT complains about build settings | The engine is not 5.8 | Install 5.8.2 exactly |
+| UBT complains about build settings | The engine is not 5.8 | Install 5.8 from the launcher (§1.2; the pinned patch is 5.8.3) |
 | Errors about paths longer than 260 characters | The clone is too deep | Keep the clone at a short root. The script's default is `D:\DF\deepfield-3d`, or `C:\DF\deepfield-3d` without a D: drive; the box's clone at `C:\Users\Cbhea\deep-field-3d` is short enough. |
 | Builds and the first editor open are very slow | Defender is scanning the DDC and Intermediate writes | [§1.4](#14-once-per-machine-by-hand-defender-exclusions) |
 | `... is newer than the built modules` from `deepfield test` | The build before the tests failed, so the binary is stale | Fix the build; never pass `-AllowStale` to get past it |

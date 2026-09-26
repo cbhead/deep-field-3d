@@ -345,12 +345,15 @@ $exTxt = if ($defender.exclusions -is [string]) { $defender.exclusions } elseif 
 $exStatus = if ($defender.exclusions -is [string]) { 'UNKNOWN' } elseif ($defender.exclusions) { 'OK' } else { 'FAIL' }
 Check 'Defender exclusions' 'the clone, the DDC beside it, the engine, UnrealEditor/cl/link/... processes' $exTxt $exStatus 'runbook 1.4'
 
-# The same policy as deepfield.ps1: any 5.8 builds (the .uproject names 5.8), and a patch other than 2
-# is a warning, because it re-saves every asset it opens.
-$ue582 = $ue | Where-Object { $_.version -like '5.8.2 *' } | Select-Object -First 1
+# The same policy as deepfield.ps1: any 5.8 builds (the .uproject names 5.8), and a patch other than the
+# pinned one is a warning, because it re-saves every asset it opens. The pin is defined once, as
+# deepfield.ps1's $EnginePatch, and read from there.
+$pinHit = Select-String -Path (Join-Path $PSScriptRoot 'deepfield.ps1') -Pattern '^\$EnginePatch\s*=\s*(\d+)' -ErrorAction SilentlyContinue | Select-Object -First 1
+$pin = if ($pinHit) { $pinHit.Matches[0].Groups[1].Value } else { '?' }
+$uePinned = $ue | Where-Object { $_.version -like "5.8.$pin *" } | Select-Object -First 1
 $ue58  = $ue | Where-Object { $_.version -like '5.8.*' } | Select-Object -First 1
 $ueTxt = if ($ue) { ($ue | ForEach-Object { "$($_.version) at $($_.root)" }) -join '; ' } else { 'none installed' }
-Check 'Unreal Engine 5.8.2' 'UE 5.8 from the launcher, patch 2: another patch re-saves assets on open' $ueTxt $(if ($ue582) { 'OK' } elseif ($ue58) { 'WARN' } else { 'FAIL' }) 'runbook 1.2'
+Check "Unreal Engine 5.8.$pin" "UE 5.8 from the launcher, the pinned patch $pin (deepfield.ps1 `$EnginePatch): another patch re-saves assets on open" $ueTxt $(if ($uePinned) { 'OK' } elseif ($ue58) { 'WARN' } else { 'FAIL' }) 'runbook 1.2'
 Check 'UE_ROOT' 'set to the 5.8 install (deepfield finds the engine without it; the by-hand commands in runbook 2 use it)' $(if ($envVars.UE_ROOT) { $envVars.UE_ROOT } else { 'unset' }) $(if ($envVars.UE_ROOT -and (Test-Path $envVars.UE_ROOT)) { 'OK' } else { 'WARN' }) 'runbook 2'
 
 $allMsvc = @($vs | ForEach-Object { MsvcLabels $_ })

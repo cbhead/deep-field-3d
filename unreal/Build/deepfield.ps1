@@ -103,7 +103,7 @@ $ProgressPreference = 'SilentlyContinue'   # Invoke-WebRequest is 10x slower wit
 # ---------------------------------------------------------------------------------------------------
 $RepoUrl       = 'https://github.com/cbhead/deep-field-3d.git'
 $RepoBranch    = 'unreal/main'
-$EnginePatch   = 2          # UE 5.8.2: a different patch re-saves assets on open (Build/windows-bringup.md 1)
+$EnginePatch   = 3          # UE 5.8.3: a different patch re-saves assets on open (runbook 1.2, "Why a pinned patch")
 $MinFreeGB     = 150
 $MinPython     = [version]'3.9'
 $MinWinBuild   = 19041
@@ -670,8 +670,8 @@ function Assert-Engine {
     Write-Host '   In the launcher:' -ForegroundColor Yellow
     Write-Host '     1. Sign in (a free Epic account is enough).' -ForegroundColor Yellow
     Write-Host "     2. Unreal Engine (left) > Library > the + next to ENGINE VERSIONS > pick $assoc.$EnginePatch > Install." -ForegroundColor Yellow
-    Write-Host '        Keep the default location. In Options, "Editor symbols for debugging" is only for C++ debugging' -ForegroundColor Yellow
-    Write-Host '        (adds ~60 GB); the rest of the defaults are right.' -ForegroundColor Yellow
+    Write-Host '        Keep the default location. In Options, tick "Editor symbols for debugging" (~60 GB): without it a' -ForegroundColor Yellow
+    Write-Host '        crash callstack shows every engine frame as UnknownFunction. The rest of the defaults are right.' -ForegroundColor Yellow
     Write-Host '     3. Wait for the download to finish (about 40 GB; it can take an hour or more).' -ForegroundColor Yellow
     Start-Process $launcher | Out-Null
     while (-not $engine) {

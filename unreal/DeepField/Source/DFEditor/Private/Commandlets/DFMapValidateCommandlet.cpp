@@ -530,6 +530,10 @@ UDFMapValidateCommandlet::FResult UDFMapValidateCommandlet::CheckCoverage(UWorld
 	FString Json;
 	const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Json);
 	FJsonSerializer::Serialize(Root, Writer);
+	// The pretty printer ends lines with LINE_TERMINATOR, which is CRLF on Windows: write LF everywhere,
+	// so a committed report is the same bytes whichever machine ran the validator (the first run on the
+	// GPU box rewrote every line of foundry.coverage.json).
+	Json.ReplaceInline(TEXT("\r\n"), TEXT("\n"), ESearchCase::CaseSensitive);
 	const FString Path = ReportPath(MapId);
 	IFileManager::Get().MakeDirectory(*FPaths::GetPath(Path), true);
 	// The report is text (never LFS-lockable), but the validator writes nothing else, and a

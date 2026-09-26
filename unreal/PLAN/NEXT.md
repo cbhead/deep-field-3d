@@ -24,7 +24,7 @@ The first thing that will make this project feel real is an `ADFEnemy` that a di
 walker moves, and then a Lance that shoots it.
 
 **The trunk builds on MSVC and passes the landing gate: 155 of 155, on the GPU box, 2026-09-26**
-(`e859ffb`, UE 5.8.2, MSVC 14.44). It is the first verdict from the box and the first since the
+(`e859ffb`, UE 5.8.3, MSVC 14.44). It is the first verdict from the box and the first since the
 retired Mac. It also covers PR #48 and #51, both merged unbuilt, and the ~9,000 lines of C++ that
 landed after `fcc1e1d` without a compiler. Three fixes were needed: `b234449` (DFOnline: MSVC
 rejects a comma list of statics in an exported class, C2487), `cb820b2` (the match looked up the lane

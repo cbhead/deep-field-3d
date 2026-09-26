@@ -10,27 +10,30 @@ measured anything on it.
 unreal\Build\machine-inventory.ps1` (from PowerShell or cmd, not Git Bash) writes
 [`machines/windows-gpu.md`](machines/windows-gpu.md). Its readiness table checks the box against this
 file. Re-run it and commit the result after each section, so the next session reads what the box has
-instead of guessing. At the last inventory (2026-09-24), the engine, Visual Studio, the Windows SDK and
-the .NET 8 SDK were not installed yet, the clone was at `C:\Users\Cbhea\deep-field-3d`, and the only
-volume (C:) had 181 GB free.
+instead of guessing. At the last inventory (2026-09-26, `fae3e7d`): UE 5.8.3 at
+`C:\Program Files\Epic Games\UE_5.8`, VS 2022 with MSVC 14.44 (compiler 14.44.35229), Windows SDK
+10.0.22621, Defender exclusions set, no .NET 8 SDK (optional), the clone at
+`C:\Users\Cbhea\deep-field-3d`, and C: (the only volume) at 429.5 GB free of 923 GB.
 
 Tick boxes in a PR as you go, write what you observed into your session log, and if a runbook step or
 the script turned out different, fix it in the same PR.
 
 ## 1. The box builds and tests
 
-- [ ] `unreal\deepfield.cmd setup` ends with `setup: done`: Git and LFS, Python, Visual Studio with an
-      accepted MSVC toolset, a Windows SDK, UE 5.8.2 (tick **Editor symbols for debugging** in the
-      launcher's install options, because crash callstacks are useless without them), the clone with
-      every LFS file, and the first build. The Defender exclusions (runbook §1.4) are done.
+- [x] `unreal\deepfield.cmd setup`: Git and LFS, Python, Visual Studio with an accepted MSVC toolset, a
+      Windows SDK, UE 5.8.3, the clone with every LFS file, and the first build (setup's own build
+      stopped on C2487; `deepfield build` finished it after `b234449`). The Defender exclusions
+      (runbook §1.4) are done, 2026-09-26.
+- [ ] **Editor symbols for debugging**, in the launcher's options for the 5.8 install (about 60 GB).
+      The box does not have them: the first crash's engine frames all read `UnknownFunction`.
 - [ ] Disk: the drive the clone is on has **≥ 500 GB free** once the art sublevels, Megascans and
-      packages arrive. At the last inventory, C: had 181 GB. Plan the space before the art lanes start.
-- [ ] `machine-inventory.ps1` re-run and committed. Its readiness table shows no `FAIL` except the
+      packages arrive. At the last inventory, C: had 429.5 GB. Plan the space before the art lanes start.
+- [x] `machine-inventory.ps1` re-run elevated and committed (`fae3e7d`, 2026-09-26). Its readiness table shows no `FAIL` except the
       runner (§5) and the disk (above), and has an elevated run behind it so that the Defender row is
       not `UNKNOWN`. Optional tools (the .NET 8 SDK for the WavePlan goldens, the GitHub CLI) and an
-      engine patch other than 5.8.2 are `WARN`.
+      engine patch other than the pinned 5.8.3 are `WARN`.
 - [x] §5.1 (`deepfield test`) passes the landing gate: **155 of 155 on 2026-09-26** (`e859ffb`, UE
-      5.8.2, MSVC 14.44), every registered suite. It was the suite's first MSVC verdict and the first
+      5.8.3, MSVC 14.44), every registered suite. It was the suite's first MSVC verdict and the first
       build of PR #51. It took three fixes (`b234449`, `cb820b2`, `e859ffb`; PLAN/NEXT.md).
 - [x] `deepfield ci-local` passes end to end, which is what the runner's nightly will run: **OK on
       2026-09-26, 45 s** (layering, ownership, schemas, coverage, plan-status, build, the gate, and
