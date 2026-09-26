@@ -30,11 +30,14 @@ the script turned out different, fix it in the same PR.
       installed 2026-09-26, and the inventory's `Editor symbols` row reads them. Before that, the first
       crash's engine frames all read `UnknownFunction`.
 - [ ] Disk: the drive the clone is on has **≥ 500 GB free** once the art sublevels, Megascans and
-      packages arrive. At the last inventory, C: had 359.4 GB (down 70 GB from the inventory before, mostly the symbols). Plan the
-      space before the art lanes start.
-- [x] `machine-inventory.ps1` re-run elevated and committed (`c06c5bb`, 2026-09-26). Its readiness table shows no `FAIL` except the
-      runner (§5) and the disk (above), and has an elevated run behind it so that the Defender row is
-      not `UNKNOWN`. Optional tools (the .NET 8 SDK for the WavePlan goldens, the GitHub CLI) and an
+      packages arrive. At the last inventory (2026-09-26 19:22), C: had 500.1 GB free of 923 GB: the
+      inventory's row reads OK at exactly the line, before any art or package has arrived, so this box
+      stays open. It was 359.4 GB at 17:34 the same day. About 141 GB came back between the two runs,
+      cause not established, and the runner's first build (in `C:ctions-runner\_work`) was already
+      counted against the second. Plan the space before the art lanes start.
+- [x] `machine-inventory.ps1` re-run elevated and committed (2026-09-26 19:22, after the runner). Its readiness table shows no
+      `FAIL`, and has an elevated run behind it so that the Defender row is
+      not `UNKNOWN`. The one non-optional `WARN` is the clone root's length (28 characters, against 24). Optional tools (the .NET 8 SDK for the WavePlan goldens, the GitHub CLI) and an
       engine patch other than the pinned 5.8.3 are `WARN`.
 - [x] §5.1 (`deepfield test`) passes the landing gate: **155 of 155 on 2026-09-26** (`e859ffb`, UE
       5.8.3, MSVC 14.44), every registered suite. It was the suite's first MSVC verdict and the first

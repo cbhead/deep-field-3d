@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-09-26T17:34:14-04:00",
+    "generated":  "2026-09-26T19:22:40-04:00",
     "generator":  "unreal/Build/machine-inventory.ps1",
     "system":  {
                    "hostname":  "CHANDLER-ALIEN",
@@ -100,7 +100,7 @@
                         "label":  "OS",
                         "fs":  "NTFS",
                         "size_gb":  923.3,
-                        "free_gb":  359.4
+                        "free_gb":  500.1
                     }
                 ],
     "network":  [
@@ -119,6 +119,7 @@
                                       "realtime":  true,
                                       "antivirus":  true,
                                       "exclusions":  [
+                                                         "C:\\actions-runner",
                                                          "C:\\Program Files\\Epic Games\\UE_5.8",
                                                          "C:\\Users\\Cbhea\\DDC",
                                                          "C:\\Users\\Cbhea\\deep-field-3d",
@@ -188,7 +189,7 @@
                                  "found":  true,
                                  "on_path":  true,
                                  "path":  "C:\\Users\\Cbhea\\AppData\\Local\\Programs\\Microsoft VS Code\\bin\\code.cmd",
-                                 "version":  "1.138.0"
+                                 "version":  "1.139.1"
                              },
                   "7zip":  {
                                "found":  false
@@ -311,9 +312,7 @@
              },
     "env":  {
                 "UE_ROOT":  "C:\\Program Files\\Epic Games\\UE_5.8",
-                "UE-LocalDataCachePath":  {
-
-                                          },
+                "UE-LocalDataCachePath":  "C:\\Users\\Cbhea\\DDC",
                 "UE_LOCAL_DDC":  {
 
                                  },
@@ -324,8 +323,8 @@
     "clone":  {
                   "path":  "C:\\Users\\Cbhea\\deep-field-3d",
                   "path_length":  28,
-                  "branch":  "unreal/main",
-                  "head":  "5109e16 2026-09-26 machine-inventory: read git config as the clone sees it, wherever the script starts",
+                  "branch":  "main",
+                  "head":  "f80dcdf 2026-09-26 [WS-15] unreal-win armed: first full dispatch green on the GPU box, WIN_RUNNER_READY set",
                   "worktrees":  1,
                   "ddc_sibling":  true
               },
@@ -333,9 +332,7 @@
                    "services":  [
 
                                 ],
-                   "folders":  {
-
-                               }
+                   "folders":  "C:\\actions-runner"
                },
     "checks":  [
                    {
@@ -355,8 +352,8 @@
                    {
                        "item":  "Free NVMe space",
                        "need":  "\u003e= 500 GB free on one volume",
-                       "have":  "C: 359.4 GB free of 923.3 GB",
-                       "status":  "FAIL",
+                       "have":  "C: 500.1 GB free of 923.3 GB",
+                       "status":  "OK",
                        "runbook":  "windows-bringup 1"
                    },
                    {
@@ -376,7 +373,7 @@
                    {
                        "item":  "Defender exclusions",
                        "need":  "the clone, the DDC beside it, the engine, UnrealEditor/cl/link/... processes",
-                       "have":  "C:\\Program Files\\Epic Games\\UE_5.8; C:\\Users\\Cbhea\\DDC; C:\\Users\\Cbhea\\deep-field-3d; cl.exe; link.exe; ShaderCompileWorker.exe; UnrealBuildTool.exe; UnrealEditor-Cmd.exe; UnrealEditor.exe",
+                       "have":  "C:\\actions-runner; C:\\Program Files\\Epic Games\\UE_5.8; C:\\Users\\Cbhea\\DDC; C:\\Users\\Cbhea\\deep-field-3d; cl.exe; link.exe; ShaderCompileWorker.exe; UnrealBuildTool.exe; UnrealEditor-Cmd.exe; UnrealEditor.exe",
                        "status":  "OK",
                        "runbook":  "runbook 1.4"
                    },
@@ -474,8 +471,8 @@
                    {
                        "item":  "Self-hosted runner",
                        "need":  "registered as deepfield-gpu with --labels deepfield",
-                       "have":  "none",
-                       "status":  "FAIL",
+                       "have":  "C:\\actions-runner",
+                       "status":  "OK",
                        "runbook":  "ci.md runner 1-8"
                    }
                ]
