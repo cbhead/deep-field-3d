@@ -124,12 +124,16 @@ produce the same bits everywhere pins its arithmetic with the `DF_DET_FP_*` prag
       2.55 + LFS 3.7.1 on the system PATH; `core.autocrlf false` and `core.longpaths true` set
       `--system`; the per-user Python 3.12 serves, because the runner is that user; `.env` carries
       `UE-LocalDataCachePath`; `C:ctions-runner` is a Defender exclusion.)*
-- [ ] Arm the lane (CONTRACTS/ci.md, runner step 8): `.github/workflows/unreal-win.yml` is already on
+- [x] Arm the lane (CONTRACTS/ci.md, runner step 8): `.github/workflows/unreal-win.yml` is already on
       `main`, the trunk, so dispatch it once with `full` ticked, and when that run is green set the
       repository variable `WIN_RUNNER_READY` to `true`. Until then its PR and nightly runs show as
       skipped, and GitHub proves nothing about the Unreal tree beyond the hosted Python checks.
       Requiring the check on `main` through branch protection comes after, and is the owner's call
       (CONTRACTS/ci.md, 2026-09-25).
+      *(2026-09-26: the first dispatch was red at the build, Live Coding's guard tripped by the
+      owner's editor on the other checkout, fixed in `ed36015`; the second, on `ed36015`, was green:
+      `ci-local: OK` in 54 s, gate 155 passed, smoke with one client. `WIN_RUNNER_READY` = `true` set
+      by the owner. Branch protection not requested.)*
 - [ ] The port of `int-merge.sh` onto `deepfield.ps1` is the last WS-15 script port (`pr-check`, `smoke`
       and `ci-local` already are deepfield commands).
 
