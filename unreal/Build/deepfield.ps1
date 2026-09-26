@@ -530,12 +530,15 @@ function Assert-VisualStudio {
     if (-not $vs) { Fail 'Visual Studio did not install' 'Install Visual Studio 2022 Community from https://visualstudio.microsoft.com/ with the workloads "Desktop development with C++" and "Game development with C++", then run this again.'; return }
   }
 
-  # Components (vswhere -requires answers per instance).
+  # Components: vswhere -requires lists the instances that have one, and we look for ours among them.
+  # (Not -path: vswhere rejects it combined with any other selection option, error 0x7f and no output,
+  # which read as every component missing.)
   $vswhere = Get-VsWhere
   $missing = @()
   foreach ($c in $VsRequired) {
-    $hit = Get-NativeOutput $vswhere @('-products', '*', '-prerelease', '-path', $vs.Instance.installationPath, '-requires', $c, '-property', 'instanceId')
-    if (-not $hit) { $missing += $c }
+    $ids = @("$(Get-NativeOutput $vswhere @('-products', '*', '-prerelease', '-requires', $c, '-property', 'instanceId'))" -split '\r?\n' |
+      ForEach-Object { $_.Trim() })
+    if ($ids -notcontains $vs.Instance.instanceId) { $missing += $c }
   }
   $needUpdate = ($vs.Good.Count -eq 0)
   if ($missing.Count -gt 0 -or $needUpdate) {
@@ -917,6 +920,22 @@ function Get-Paths {
   }
 }
 
+function Test-EditorMayHoldProject {
+  # UBT refuses to build while "Live Coding is active", which it detects by a mutex named after the
+  # target's executable. With an installed engine that is the engine's own UnrealEditor.exe, so an open
+  # editor on ANY project blocks every build on the machine: the runner's checkout, an agent worktree.
+  # The guard only matters when the editor has THIS project's DLLs loaded. True when an editor has this
+  # project open, or when we cannot tell (no project on its command line, or the line is unreadable).
+  $mine = ([IO.Path]::GetFullPath($script:Project)).Replace('/', '\')
+  $editors = @(Get-CimInstance Win32_Process -Filter "Name LIKE 'UnrealEditor%'" -ErrorAction SilentlyContinue)
+  foreach ($e in $editors) {
+    $cmd = "$($e.CommandLine)".Replace('/', '\')
+    if (-not $cmd -or $cmd -notmatch '\.uproject') { return $true }
+    if ($cmd.IndexOf($mine, [StringComparison]::OrdinalIgnoreCase) -ge 0) { return $true }
+  }
+  return $false
+}
+
 function Invoke-Build {
   Write-Step 'Build: DeepFieldEditor Win64 Development'
   $p = Get-Paths
@@ -924,9 +943,16 @@ function Invoke-Build {
   $log = Join-Path $logDir 'build-editor.log'
   Write-Info 'The first build compiles every module and takes 10-30 minutes; later builds only what changed.'
   Write-Info "Full log: $log"
+  $ubtArgs = @('DeepFieldEditor', 'Win64', 'Development', "-Project=$($script:Project)", '-WaitMutex', '-NoHotReload')
+  if (Test-EditorMayHoldProject) {
+    Write-Info 'An editor may have this project open: if the build stops at "Live Coding is active", close it or press Ctrl+Alt+F11 in it.'
+  } else {
+    # Every open editor is on another project or checkout, so the Live Coding guard is a false positive.
+    $ubtArgs += '-NoHotReloadFromIDE'
+  }
   $old = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
   try {
-    & $p.BuildBat 'DeepFieldEditor' 'Win64' 'Development' "-Project=$($script:Project)" '-WaitMutex' '-NoHotReload' 2>&1 |
+    & $p.BuildBat @ubtArgs 2>&1 |
       ForEach-Object { "$_" } | Tee-Object -FilePath $log | ForEach-Object {
         if ($_ -match ': (fatal )?error |error [A-Z]+\d+|Result: Failed|BUILD FAILED') { Write-Host $_ -ForegroundColor Red }
         elseif ($_ -match '^\[\d+/\d+\]|Result: Succeeded|Total execution time|Building |Using ') { Write-Host $_ }
