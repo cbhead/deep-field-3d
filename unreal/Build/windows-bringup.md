@@ -113,12 +113,17 @@ produce the same bits everywhere pins its arithmetic with the `DF_DET_FP_*` prag
 
 ## 5. The self-hosted runner
 
-- [ ] Register the box as the repository's runner, following CONTRACTS/ci.md, "The GPU box as the
-      self-hosted runner".
-- [ ] Decide **service or interactive** for each lane, and note the choice in `CONTRACTS/ci.md`
-      (WS-15 owns it).
-- [ ] Git (with LFS) on the runner's PATH, and Python findable by the runner's account
-      (CONTRACTS/ci.md, runner step 4). `actions/checkout` fails without Git on PATH.
+- [x] Register the box as the repository's runner, following CONTRACTS/ci.md, "The GPU box as the
+      self-hosted runner". *(2026-09-26: `deepfield-gpu`, label `deepfield`, runner 2.337.0 in
+      `C:ctions-runner`, repository-level, Default pool.)*
+- [x] Decide **service or interactive** for each lane, and note the choice in `CONTRACTS/ci.md`
+      (WS-15 owns it). *(2026-09-26: interactive as `Cbhea` for every lane, started by the logon task
+      `deepfield-runner`; ci.md runner step 2.)*
+- [x] Git (with LFS) on the runner's PATH, and Python findable by the runner's account
+      (CONTRACTS/ci.md, runner step 4). `actions/checkout` fails without Git on PATH. *(2026-09-26: Git
+      2.55 + LFS 3.7.1 on the system PATH; `core.autocrlf false` and `core.longpaths true` set
+      `--system`; the per-user Python 3.12 serves, because the runner is that user; `.env` carries
+      `UE-LocalDataCachePath`; `C:ctions-runner` is a Defender exclusion.)*
 - [ ] Arm the lane (CONTRACTS/ci.md, runner step 8): `.github/workflows/unreal-win.yml` is already on
       `main`, the trunk, so dispatch it once with `full` ticked, and when that run is green set the
       repository variable `WIN_RUNNER_READY` to `true`. Until then its PR and nightly runs show as
