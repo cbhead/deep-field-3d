@@ -133,5 +133,65 @@ Leave in the ws file: the exact commands you want run on a machine with the engi
 each should print; every number you chose and why; and anything you could not verify. The next session
 should be able to import, validate and playtest without re-deriving your reasoning.
 
+### Corrections to the above, from a source audit (INT, 2026-09-25)
+
+Five readers checked the brief against the tree. Most of it held; **these did not, and two of them
+would have sent you down a dead end. They override anything above that contradicts them.**
+
+**1. `build_level.py` does not exist.** §3.2 names it as the thing that imports the heightmap and
+auto-cuts socket pads. There is no such file. The importers are C++ editor commandlets —
+`-run=DFTerrainImport`, `-run=DFLevelImport`, `-run=DFMapValidate`. So **you cannot cut a pad, project a
+route onto the surface, or test lane walkability by any means available to you.** Author the intent in
+the level file and let the engine-side run do the cutting. Sample `unreal/content/terrain/out/foundry_height.{png,json}`
+directly if you need to reason about heights — that is what WS-30's note suggests and it is pure Python.
+
+**2. Do not use `pytest` — it is not installed.** `test_build_heightmap.py` is a standalone script with
+its own `__main__` runner. Run `python3 tools/ue-bridge/terrain/test_build_heightmap.py`; it passes 9/9.
+`numpy` and `PIL` are also absent, by design (`build_heightmap.py:13` says so) — the script ships its own
+`read_png_gray`, so use that to inspect output rather than reaching for PIL.
+
+**3. `validate-content-json.py` does not validate terrain or level files.** It covers
+`unreal/content/json/`. `terrain.schema.json` exists with **no consumer**, and `unreal/content/levels/`
+is validated by nothing in pure Python. So the self-check list above overstated what you can lean on.
+
+**4. `level.schema.json` does not exist**, though `map-authoring-3d.md:3` names it as canonical.
+**Write it first — this is now the highest-value single deliverable in the workstream and I am making it
+an explicit ask.** It is pure JSON Schema, fully verifiable where you are, it turns the level half of
+every future map from prose into something machine-checkable, and it closes the gap that let this
+contradiction sit unnoticed. Derive it from `map-authoring-3d.md` §1, the C++ loader `FDFLevelFile`, and
+`docs/MAP-AUTHORING.md` §2, and note in the ws file every field where those three disagree — that list
+is itself worth having. Then wire it into `validate-content-json.py` so terrain and level files are
+covered too.
+
+**5. The socket numbers in §3.2 and in the contract disagree, and the contract governs your authoring.**
+`map-authoring-3d.md:13`: pad **≥1.1 m** (ground/trap) or a wall face; **pad slope ≤5 % after the cut**;
+surrounding ungraded slope **≤25 %**; sockets **≥3.5 m off any lane centreline**. §3.2's "1.2 m" is what
+the importer cuts for `pad: true`, not a minimum you must clear. I did not include the ≤5 % or the 3.5 m
+rule above; both are binding.
+
+**6. The boss route has two conditions I omitted** (`map-authoring-3d.md:22`): no operated gate it cannot
+break, and **at least one nest overlooking ≥50 % of it** — on top of 8 m clearance, ≤15 % grade and no
+warp legs.
+
+**7. Rulings on the questions the audit found genuinely open** — decide these my way or argue back:
+- **WS-30's committed `foundry.terrain.json` is a reference, not your starting point.** Its geometry is
+  pinned to the *legacy* socket and route positions and WS-30 itself calls it "legacy brief, not the
+  redesign". **Author a fresh landform** in the same file, keeping its structure and its `note` discipline.
+  Say in your first commit what you kept and what you replaced.
+- **"Three slag terraces stepping ~8 m each" means two 8 m steps, ~16 m of total terrace drop** (T1 +16 /
+  T2 +8 / T3 0), which is how the committed file reads it. G2 needs **≥8 m of relief on the lane**, so 16 m
+  across the lane's descent clears it with margin. If you want 24 m, say why in the ws file.
+- **A1 says 24 ground sockets; the legacy file has 23.** A1 is the brief: aim for 24, and if the terrain
+  argues for a different count, record the number and the reason. The validator reads the file, not A1.
+- The vent spur's side and the slag heaps' count and placement are **unspecified in C§1** — WS-30 put the
+  spur north between T1 and T2 and three heaps in the belt. Yours to decide; write down the choice.
+
+**8. Two things nobody can close yet, so do not promise them.** Contract rule 2 (the 3.4 m walkable
+corridor) is a hard SKIP in the validator — it reports "no navmesh: not checked, not passed" — and ten of
+the sixteen rules have no implementation at all. The committed `foundry.coverage.json` was produced from
+the **legacy flat** level, so it is a shape to imitate, not a baseline your redesign can be scored
+against until someone runs the validator on your file. Plan the hand-over knowing the engine-side pass
+will be the first real measurement.
+
 ## Session log
 <!-- append-only: date · session · what landed · what's next -->
