@@ -2,11 +2,11 @@
 ws: 10a
 slug: map-foundry
 title: Map redesign: Foundry
-state: unclaimed
-owner: 
-claimed_at: 
-lease_expires: 
-branch: 
+state: active
+owner: session-01Bqjmob-cloud
+claimed_at: 2026-09-26T00:24:17Z
+lease_expires: 2026-09-27T00:24:17Z
+branch: claude/ws-10a-work-ue4a6i
 last_commit: 
 editor_heavy: true
 phase: P2
@@ -195,3 +195,4 @@ will be the first real measurement.
 
 ## Session log
 <!-- append-only: date · session · what landed · what's next -->
+- 2026-09-26 · session-01Bqjmob-cloud · **claim** — cloud session, no engine, on the user's ask. Taking INT's brief and its corrections as written: JSON, Python and ledger prose only, no C++, no editor commands. Order: `level.schema.json` first and wired into `validate-content-json.py` (with the list of fields where the contract, `FDFLevelFile` and `docs/MAP-AUTHORING.md` disagree), then a fresh `foundry.terrain.json`, then the new `foundry.level.json`, then the hand-over. The session is bound to branch `claude/ws-10a-work-ue4a6i` rather than `ws/10a-map-foundry/<topic>`; PRs go to `unreal/main` titled `[WS-10a] …` as usual.
