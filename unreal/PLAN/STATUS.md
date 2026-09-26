@@ -1,15 +1,15 @@
 # Workstream status
 
-Generated 2026-09-26T06:24:06Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-26T23:47:17Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
-active: 7 · paused: 6 · review: 1 · unclaimed: 36
+active: 7 · claimed: 1 · paused: 5 · review: 1 · unclaimed: 36
 
 | WS | Title | Phase | CP | State | Owner | Lease expires | Last commit | Editor-heavy | Blocked on |
 |---|---|---|---|---|---|---|---|---|---|
 | WS-00 | Foundation & contracts | P1 | CP | review | — | — | ff379ca | yes | WS-15 for CI |
 | WS-01 | Content pipeline | P1 | CP | paused | — | — | 7f7b9b8 |  | — |
 | WS-02 | Gameplay core (GAS) | P1-P2 | CP | paused | — | — | — |  | — |
-| WS-03 | Player | P2 | CP | active | session-01DTQRZ3-cloud | 2026-09-26T22:01:42Z | 25f8061 | yes | — |
+| WS-03 | Player | P2 | CP | active (lease expired) | session-01DTQRZ3-cloud | 2026-09-26T22:01:42Z | 25f8061 | yes | — |
 | WS-04 | Towers & build | P2-P3 | CP | active (lease expired) | session-01HszbJQ-cloud | 2026-09-26T02:29:31Z | — | yes | — |
 | WS-05 | Enemies & AI | P2-P3 | CP | active (lease expired) | session-62767025 | 2026-09-26T02:05:59Z | 6809042 | yes | — |
 | WS-06 | Economy, scrap, gunsmith | P3 |  | unclaimed | — | — | — |  | — |
@@ -26,11 +26,11 @@ active: 7 · paused: 6 · review: 1 · unclaimed: 36
 | WS-12 | UI (Common UI + MVVM) | P2-P5 | CP | active (lease expired) | session-fae2d0c5 | 2026-09-26T02:11:40Z | 042f7d7 | yes | — |
 | WS-13 | Audio (MetaSounds) | P2-P5 |  | unclaimed | — | — | — | yes | — |
 | WS-14 | VFX (Niagara) | P2-P5 |  | unclaimed | — | — | — | yes | — |
-| WS-15 | Automation, CI, packaging, store | P1+ |  | paused | — | — | bd59e2c |  | — |
+| WS-15 | Automation, CI, packaging, store | P1+ |  | claimed | session-gpu-box-2026-09-26 | 2026-09-27T23:47:06Z | 2ec9e62 |  | — |
 | WS-16 | Overclock tower + grid | P4 |  | unclaimed | — | — | — |  | — |
 | WS-17 | Elite modifiers | P4 |  | unclaimed | — | — | — |  | — |
 | WS-18 | Weak points + Specter passive | P4 |  | unclaimed | — | — | — |  | — |
-| WS-19 | Boss Frame01 | P4 |  | active | session-01EeMqPt-cloud | 2026-09-26T14:34:44Z | — | yes | — |
+| WS-19 | Boss Frame01 | P4 |  | active (lease expired) | session-01EeMqPt-cloud | 2026-09-26T14:34:44Z | — | yes | — |
 | WS-20 | New enemies ×5 | P4 |  | unclaimed | — | — | — |  | — |
 | WS-21 | New weapons, melee, mastery, chargeCells | P4 |  | unclaimed | — | — | — |  | — |
 | WS-22 | Tether channel, new statuses, new traps | P4 |  | unclaimed | — | — | — |  | — |
@@ -39,7 +39,7 @@ active: 7 · paused: 6 · review: 1 · unclaimed: 36
 | WS-25 | Physics layer | P4 |  | unclaimed | — | — | — | yes | — |
 | WS-26 | Co-op verbs & security rules | P4 |  | unclaimed | — | — | — |  | — |
 | WS-27 | Waves, tiers, endless, balance | P4 (last) |  | unclaimed | — | — | — |  | — |
-| WS-28 | Match flow (DFMatch) | P2-P3 | CP | active | session-01DTQRZ3-cloud | 2026-09-26T22:58:32Z | ea6a1d4 |  | — |
+| WS-28 | Match flow (DFMatch) | P2-P3 | CP | active (lease expired) | session-01DTQRZ3-cloud | 2026-09-26T22:58:32Z | ea6a1d4 |  | — |
 | WS-30 | Art pipeline (Claude Design → Unreal, terrain lane, validators) | P1+ |  | paused | — | — | aa379d0 | yes | — |
 | WS-31 | Materials & palette | P1+ |  | unclaimed | — | — | — | yes | — |
 | WS-32 | Skeletons & animation contract | P2+ |  | unclaimed | — | — | — | yes | — |

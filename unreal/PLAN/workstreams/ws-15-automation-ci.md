@@ -2,12 +2,12 @@
 ws: 15
 slug: automation-ci
 title: Automation, CI, packaging, store
-state: paused
-owner: 
-claimed_at: 2026-09-19T15:16:34Z
-lease_expires: 
-branch: ws/15-automation-ci/harness
-last_commit: bd59e2c
+state: claimed
+owner: session-gpu-box-2026-09-26
+claimed_at: 2026-09-26T23:47:06Z
+lease_expires: 2026-09-27T23:47:06Z
+branch: ws/15-automation-ci/int-merge
+last_commit: 2ec9e62
 editor_heavy: false
 phase: P1+
 size: M
