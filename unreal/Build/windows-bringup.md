@@ -34,7 +34,11 @@ the script turned out different, fix it in the same PR.
       2026-09-26, 45 s** (layering, ownership, schemas, coverage, plan-status, build, the gate, and
       the smoke with host seat 1 and client seat 2; the client was admitted through the dev-join
       branch, runbook §5.3). That covers the §3 checks and §5.3.
-- [ ] Runbook §5.2 (the map validator) passes.
+- [x] Runbook §5.2 (the map validator) ran on all five maps, 2026-09-26. Foundry passes, with the same
+      numbers WS-10a recorded on the Mac (54 segments, 0 dead, 379 traces). The legacy maps' failures
+      are in their level files, not the platform (toaster's apron distances match the JSON to the
+      decimetre). They are now in `map-validation-baseline.tsv` with measured reasons, so `-all` exits 0
+      and any new failure is still an error.
 
 ## 2. First light with a real RHI
 

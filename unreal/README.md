@@ -196,8 +196,12 @@ report: `unreal\DeepField\Saved\Automation\Reports\test-<filter>\index.html`.
 "%UE%" "%PROJ%" -run=DFMapValidate -all -nullrhi -unattended -nop4 -nosplash -NoSound
 ```
 
+This is a cmd command (§2). In PowerShell, `"%UE%"` is only a string: start `cmd` first.
+
 **What you should see:** one `DFMapValidate <map>: N pass, 0 fail, …` line per map, and exit code 0.
-Failures listed in `unreal/map-validation-baseline.tsv` show as warnings, not errors.
+Failures listed in `unreal/map-validation-baseline.tsv` show as warnings, not errors; the legacy maps
+(spire, switchyard, toaster) and the `testlane` fixture carry some until their redesigns. `corridor`
+shows `[SKIP]` on every map until a navmesh is baked.
 
 ### 5.3 The network smoke test (a listen host and headless clients)
 
