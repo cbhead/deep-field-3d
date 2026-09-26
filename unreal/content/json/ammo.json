@@ -1,0 +1,75 @@
+{
+  "$schema": "deepfield-content/1",
+  "table": "ammo",
+  "generated": "2026-09-17T07:21:16Z",
+  "sourceSha": "b44eea1",
+  "rows": [
+    {
+      "id": "standard",
+      "damageFactor": 1,
+      "ignoresFlatArmor": false,
+      "unarmoredBonusFactor": 1,
+      "recipe": {}
+    },
+    {
+      "id": "ap",
+      "damageFactor": 0.85,
+      "ignoresFlatArmor": true,
+      "unarmoredBonusFactor": 1,
+      "recipe": {
+        "Plating": 4
+      }
+    },
+    {
+      "id": "hollowPoint",
+      "damageFactor": 1,
+      "ignoresFlatArmor": false,
+      "unarmoredBonusFactor": 1.3,
+      "recipe": {
+        "Alloy": 5
+      }
+    },
+    {
+      "id": "incendiary",
+      "damageFactor": 0.9,
+      "ignoresFlatArmor": false,
+      "unarmoredBonusFactor": 1,
+      "applies": "burn",
+      "recipe": {
+        "Flux": 3,
+        "Alloy": 2
+      }
+    },
+    {
+      "id": "cryo",
+      "damageFactor": 0.9,
+      "ignoresFlatArmor": false,
+      "unarmoredBonusFactor": 1,
+      "applies": "chill",
+      "recipe": {
+        "Flux": 4
+      }
+    },
+    {
+      "id": "toxin",
+      "damageFactor": 0.8,
+      "ignoresFlatArmor": false,
+      "unarmoredBonusFactor": 1,
+      "applies": "poison",
+      "recipe": {
+        "Plating": 3,
+        "Gravium": 1
+      }
+    },
+    {
+      "id": "shock",
+      "damageFactor": 0.92,
+      "ignoresFlatArmor": false,
+      "unarmoredBonusFactor": 1,
+      "applies": "shock",
+      "recipe": {
+        "Flux": 5
+      }
+    }
+  ]
+}

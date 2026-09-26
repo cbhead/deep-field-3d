@@ -1,0 +1,126 @@
+{
+  "$schema": "deepfield-content/1",
+  "table": "attachments",
+  "generated": "2026-09-17T07:21:16Z",
+  "sourceSha": "b44eea1",
+  "rows": [
+    {
+      "id": "longBarrel",
+      "slot": "Barrel",
+      "damageFactor": 1.1,
+      "rateFactor": 0.92,
+      "rangeFactor": 1.25,
+      "recipe": {
+        "Alloy": 6
+      }
+    },
+    {
+      "id": "shortBarrel",
+      "slot": "Barrel",
+      "damageFactor": 0.95,
+      "rateFactor": 1.18,
+      "rangeFactor": 0.8,
+      "recipe": {
+        "Alloy": 4
+      }
+    },
+    {
+      "id": "compensator",
+      "slot": "Muzzle",
+      "damageFactor": 1.12,
+      "rateFactor": 1,
+      "rangeFactor": 1,
+      "recipe": {
+        "Alloy": 4,
+        "Plating": 2
+      }
+    },
+    {
+      "id": "rangefinder",
+      "slot": "Optic",
+      "damageFactor": 1,
+      "rateFactor": 1,
+      "rangeFactor": 1.2,
+      "recipe": {
+        "Flux": 3
+      }
+    },
+    {
+      "id": "drumFeed",
+      "slot": "Magazine",
+      "damageFactor": 1,
+      "rateFactor": 1.15,
+      "rangeFactor": 1,
+      "recipe": {
+        "Alloy": 5,
+        "Flux": 2
+      }
+    },
+    {
+      "id": "braceStock",
+      "slot": "Stock",
+      "damageFactor": 1,
+      "rateFactor": 1.08,
+      "rangeFactor": 1.05,
+      "recipe": {
+        "Alloy": 3
+      }
+    },
+    {
+      "id": "stabilizer",
+      "slot": "Underbarrel",
+      "damageFactor": 1.18,
+      "rateFactor": 0.95,
+      "rangeFactor": 1,
+      "recipe": {
+        "Gravium": 2
+      }
+    },
+    {
+      "id": "emberCoil",
+      "slot": "Infusion",
+      "damageFactor": 1,
+      "rateFactor": 1,
+      "rangeFactor": 1,
+      "applies": "burn",
+      "recipe": {
+        "Flux": 4
+      }
+    },
+    {
+      "id": "cryoCell",
+      "slot": "Infusion",
+      "damageFactor": 1,
+      "rateFactor": 1,
+      "rangeFactor": 1,
+      "applies": "chill",
+      "recipe": {
+        "Flux": 3,
+        "Alloy": 2
+      }
+    },
+    {
+      "id": "voltCap",
+      "slot": "Infusion",
+      "damageFactor": 1,
+      "rateFactor": 1,
+      "rangeFactor": 1,
+      "applies": "shock",
+      "recipe": {
+        "Flux": 5
+      }
+    },
+    {
+      "id": "toxinFeed",
+      "slot": "Infusion",
+      "damageFactor": 1,
+      "rateFactor": 1,
+      "rangeFactor": 1,
+      "applies": "poison",
+      "recipe": {
+        "Plating": 3,
+        "Flux": 2
+      }
+    }
+  ]
+}

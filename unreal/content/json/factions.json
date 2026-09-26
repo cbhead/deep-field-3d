@@ -1,0 +1,53 @@
+{
+  "$schema": "deepfield-content/1",
+  "table": "factions",
+  "generated": "2026-09-17T07:21:16Z",
+  "sourceSha": "b44eea1",
+  "rows": [
+    {
+      "id": "forge",
+      "abilityId": "overdrive",
+      "cooldownSeconds": 30,
+      "radiusMeters": 10,
+      "durationSeconds": 4,
+      "magnitude": 1.5,
+      "passive": "buildDiscount"
+    },
+    {
+      "id": "ember",
+      "abilityId": "ignitionWave",
+      "cooldownSeconds": 22,
+      "radiusMeters": 6,
+      "durationSeconds": 0,
+      "magnitude": 1,
+      "passive": "burnDuration"
+    },
+    {
+      "id": "tempest",
+      "abilityId": "chainSurge",
+      "cooldownSeconds": 26,
+      "radiusMeters": 7,
+      "durationSeconds": 0,
+      "magnitude": 6,
+      "passive": "reloadSpeed"
+    },
+    {
+      "id": "glacier",
+      "abilityId": "cryoField",
+      "cooldownSeconds": 24,
+      "radiusMeters": 8,
+      "durationSeconds": 0,
+      "magnitude": 1,
+      "passive": "chilledBonus"
+    },
+    {
+      "id": "specter",
+      "abilityId": "revealPulse",
+      "cooldownSeconds": 34,
+      "radiusMeters": 0,
+      "durationSeconds": 0,
+      "magnitude": 1,
+      "passive": "weakPoints"
+    }
+  ]
+}

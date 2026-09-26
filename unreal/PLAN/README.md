@@ -1,0 +1,93 @@
+# Deep Field 3D on Unreal — programme ledger
+
+This directory is the coordination surface for every session working on the Unreal rebuild.
+The programme itself — decisions, contracts, workstreams, phases, gameplay and art specs — is
+[PROGRAMME.md](PROGRAMME.md). Read it before anything else; Sections 3, 5 and 6 are mandatory
+for every workstream, the Appendices for the workstreams that cite them.
+
+| File / dir | What it is | Who writes it |
+|---|---|---|
+| `PROGRAMME.md` | The plan of record. Changes land as PRs like any other file. | INT |
+| `NEXT.md` | **Where the rebuild actually stands and what to pick up next** — the part `PROGRAMME.md` (rarely changes) and `STATUS.md` (generated) cannot carry: what is finished, what is stranded on a branch, which machine does what, and the hazards that will cost a new session time. Hand-written and dated; distrust it if it is stale and say so. | whoever last acted INT |
+| `STATUS.md` | One table of every workstream: state, owner, lease, last commit, blocked-on, next. **Generated** by `unreal/Build/plan-status.py` — never hand-edited. | script |
+| `OWNERSHIP.md` | Path glob → workstream. CI refuses a PR that touches binaries outside the PR's workstream globs. | INT |
+| `DECISIONS.md` | ADR log. Append-only; INT numbers new entries. | anyone appends |
+| `CONTRACTS/` | One human-readable document per frozen contract C1–C16, plus `map-authoring-3d.md` and `ci.md` (lanes, runner, test rules). The twin of the header/asset it describes. | contract owner (RFC to change) |
+| `rfcs/NNNN-<slug>.md` | Contract change proposals (Section 6.6). | author |
+| `workstreams/ws-NN-<slug>.md` | One file per workstream: frontmatter (state/owner/lease/branch/last_commit/editor_heavy) + Scope/DoD, contracts consumed, interfaces changed, open questions, session log. | the owning session |
+| `digests/YYYY-MM-DD.md` | INT cycle digest: merged PRs, interface changes, expired leases, red tests, open RFCs, unverified render lanes. | INT |
+| `registry.json` | The workstream registry used by `plan-scaffold.py` to create missing ws files. Edit only to add a workstream (INT). | INT |
+
+## Working copies (ADR-0028)
+
+- **Everything runs on the Windows GPU workstation.** The Unreal working copy is wherever `deepfield setup` put it (default `D:\DF\deepfield-3d`, else `C:\DF\deepfield-3d`; the box's actual path is in `Build/machines/windows-gpu.md`). The DDC is the `DDC` folder beside it.
+- Parallel sessions: `git worktree add ..\wt-ws-NN -b ws/NN-<slug>/<topic> origin/unreal/main`, run from that clone, so the worktree sits beside it and shares the DDC.
+- Setup, build, test and play: `unreal\deepfield.cmd` ([the runbook](../README.md), §1); the smoke, the validator and packaging are in the runbook too. The `unreal/Build/*.sh` scripts are Mac-era and do not run on Windows.
+
+## Session bootstrap prompt
+
+Paste this into a new Claude Code session (replace `WS-NN`). This is the only copy; PROGRAMME.md §6.10 points here.
+
+> You are working on Deep Field 3D's Unreal rebuild, on the Windows GPU workstation. Read `unreal/PLAN/PROGRAMME.md` (Sections 3, 5, 6 and the Appendix your workstream cites), then `unreal/PLAN/STATUS.md` (who owns what), `unreal/PLAN/NEXT.md` (where things stand and what is worth doing), `unreal/PLAN/DECISIONS.md`, `unreal/PLAN/CONTRACTS/` for the contracts you consume, and the latest `unreal/PLAN/digests/`. `unreal/README.md` is how to build, test and run. Claim workstream **WS-NN** per Section 6.2 (or continue it if you own it), run the session-start checklist (6.5), then work toward its DoD in PRs of ≤1 day each to `unreal/main`. Never edit another workstream's paths; propose contract changes as RFCs (6.6). End with the session-end checklist.
+
+## Claiming in one command
+
+From your worktree, on a branch off `origin/unreal/main`:
+
+```bat
+python unreal/Build/plan-claim.py ws-04 --owner "<your session handle>" --branch ws/04-towers/rig
+git commit -m "PLAN: claim WS-04 (<your session handle>)" unreal/PLAN/workstreams/ws-04-towers.md
+git pull --rebase origin unreal/main
+git push origin HEAD:unreal/main
+```
+
+`plan-claim.py` edits only your workstream file (owner, `claimed_at`, `lease_expires` = +24 h, branch,
+state → `claimed`); it does not commit, so the `git commit` line is required. Ledger commits like this
+one, and INT's own ledger updates, are the only direct pushes to `unreal/main`. If the push is
+rejected, re-read the file, because someone else may have claimed it.
+
+## Regenerating STATUS.md
+
+```bat
+python unreal/Build/plan-status.py
+python unreal/Build/plan-scaffold.py
+```
+
+The first writes `unreal/PLAN/STATUS.md` from the workstream frontmatter. The second creates any
+workstream file missing from `registry.json` and never overwrites.
+
+## INT: do not write into a workstream file while its PR is open
+Three ledger conflicts tonight had one cause. A workstream's `.md` is edited by its own branch *and*
+pushed to directly — by its owner renewing a §6.2 lease, and by INT recording a ruling. The moment both
+happen, the open PR conflicts, and the conflict is always the same shape: an append-only session log
+where both sides are correct and the resolution is a union in date order, never a winner.
+
+WS-05 drew the rule for itself first: **a direct ledger push is only safe while no open PR of yours
+edits that file — otherwise rebase the PR immediately, not hours later.** INT then hit the same wall
+from the other side, twice, by recording rulings in `ws-05-enemies-ai.md` and `ws-02-gameplay-core.md`
+while both had PRs in flight.
+
+So, for INT specifically:
+- Prefer the **contract doc, the RFC, or the digest** for a ruling. Those are INT-owned and nobody's PR
+  edits them. A ruling in `CONTRACTS/lanegraph.md` is also more findable later than one in a ws file.
+- Write into a **workstream file** only when the note must be read by whoever claims it next (the
+  `NotifyEnemyAdded` invariant in ws-17/19/20/24 is the right use — those are unclaimed), and check
+  `gh pr list` first when the workstream is active.
+- When a conflict happens anyway, the resolution is mechanical: union both sides' dated entries, sort
+  by date, keep the newer frontmatter. Never take one side wholesale — both are real history.
+
+## The verify worktree belongs to the landing, not to whoever wants an editor
+`int-merge` lands every branch from one persistent verify worktree, `int-verify` (beside the clone),
+claimed through `int-verify.lock`. That lock serialises **landings against each other**. It does not
+protect the worktree from an operator running something in it by hand.
+
+INT proved this the direct way (on the Mac, 2026-09-21): it started a full-suite run there for ground
+truth, then started the #46 landing a moment later. The landing checked its branch out from under the
+running test, and `test.sh` refused with *"DFGameplay.Build.cs is newer than
+libUnrealEditor-DFOnline.dylib"*. That was a correct refusal of a genuinely inconsistent state, caught by
+the stale-binary guard. Without the guard, that run would have reported a verdict for a mixture of two trees.
+
+So: **do not run tests, commandlets or the editor in `int-verify` by hand.** For an ad-hoc run, add a
+throwaway worktree, or wait for `int-verify.lock` to clear and hold it. The cost of the rule is one
+extra build; the cost of breaking it is a verdict about nothing in particular. (`int-merge.sh` has no
+Windows port yet; the rule applies to whatever replaces it.)

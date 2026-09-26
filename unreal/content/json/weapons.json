@@ -1,0 +1,98 @@
+{
+  "$schema": "deepfield-content/1",
+  "table": "weapons",
+  "generated": "2026-09-17T07:21:16Z",
+  "sourceSha": "b44eea1",
+  "rows": [
+    {
+      "id": "cryoSprayer",
+      "recipe": {
+        "Flux": 8,
+        "Alloy": 4
+      },
+      "damage": 2.2,
+      "shotsPerSecond": 7,
+      "rangeMeters": 14,
+      "applies": [
+        "chill"
+      ],
+      "magazineSize": 45,
+      "reloadSeconds": 2.1,
+      "automatic": true
+    },
+    {
+      "id": "sidearm",
+      "recipe": {},
+      "damage": 7,
+      "shotsPerSecond": 3,
+      "rangeMeters": 60,
+      "applies": [],
+      "magazineSize": 12,
+      "reloadSeconds": 1.3,
+      "automatic": false
+    },
+    {
+      "id": "rifle",
+      "recipe": {
+        "Alloy": 8,
+        "Flux": 5,
+        "Plating": 2
+      },
+      "damage": 15,
+      "shotsPerSecond": 2.2,
+      "rangeMeters": 80,
+      "applies": [
+        "mark"
+      ],
+      "magazineSize": 24,
+      "reloadSeconds": 1.9,
+      "automatic": true
+    },
+    {
+      "id": "scattergun",
+      "recipe": {
+        "Alloy": 10,
+        "Plating": 3
+      },
+      "damage": 33,
+      "shotsPerSecond": 1.1,
+      "rangeMeters": 14,
+      "applies": [],
+      "magazineSize": 6,
+      "reloadSeconds": 2.4,
+      "automatic": false
+    },
+    {
+      "id": "emberPistol",
+      "recipe": {
+        "Alloy": 6,
+        "Flux": 4
+      },
+      "damage": 5.5,
+      "shotsPerSecond": 2,
+      "rangeMeters": 40,
+      "applies": [
+        "burn"
+      ],
+      "magazineSize": 10,
+      "reloadSeconds": 1.5,
+      "automatic": false
+    },
+    {
+      "id": "poisonStream",
+      "recipe": {
+        "Plating": 6,
+        "Flux": 4
+      },
+      "damage": 2.8,
+      "shotsPerSecond": 6,
+      "rangeMeters": 18,
+      "applies": [
+        "poison"
+      ],
+      "magazineSize": 40,
+      "reloadSeconds": 2.2,
+      "automatic": true
+    }
+  ]
+}

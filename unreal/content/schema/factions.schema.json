@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deepfield.dev/content/factions.schema.json",
+  "title": "factions",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "table",
+    "generated",
+    "rows"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "deepfield-content/1"
+    },
+    "table": {
+      "type": "string"
+    },
+    "generated": {
+      "type": "string"
+    },
+    "sourceSha": {
+      "type": "string"
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "abilityId",
+          "cooldownSeconds",
+          "radiusMeters",
+          "durationSeconds",
+          "magnitude",
+          "passive"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "abilityId": {
+            "type": "string"
+          },
+          "cooldownSeconds": {
+            "type": "number"
+          },
+          "radiusMeters": {
+            "type": "number"
+          },
+          "durationSeconds": {
+            "type": "number"
+          },
+          "magnitude": {
+            "type": "number"
+          },
+          "passive": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

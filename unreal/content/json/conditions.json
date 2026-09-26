@@ -1,0 +1,35 @@
+{
+  "$schema": "deepfield-content/1",
+  "table": "conditions",
+  "generated": "2026-09-17T07:21:16Z",
+  "sourceSha": "b44eea1",
+  "rows": [
+    {
+      "id": "fog",
+      "name": "FOG",
+      "effect": "Tower range reduced. Detectors see through it.",
+      "towerRangeFactor": 0.7,
+      "rangeExemptTowerIds": [
+        "detector",
+        "skywatch"
+      ],
+      "acquisitionDelaySeconds": 0,
+      "acquisitionDelayExemptsMarked": false,
+      "heroRangeFactor": 0.7,
+      "stealthWeightFactor": 1,
+      "channelDurationFactors": {}
+    },
+    {
+      "id": "night",
+      "name": "NIGHT",
+      "effect": "More stealth. Towers acquire unmarked targets slowly.",
+      "towerRangeFactor": 1,
+      "rangeExemptTowerIds": [],
+      "acquisitionDelaySeconds": 0.2,
+      "acquisitionDelayExemptsMarked": true,
+      "heroRangeFactor": 1,
+      "stealthWeightFactor": 1.5,
+      "channelDurationFactors": {}
+    }
+  ]
+}

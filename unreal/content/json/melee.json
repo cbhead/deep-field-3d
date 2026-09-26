@@ -1,0 +1,104 @@
+{
+  "$schema": "deepfield-content/1",
+  "table": "melee",
+  "generated": "2026-09-17T07:21:16Z",
+  "sourceSha": "b44eea1",
+  "rows": [
+    {
+      "id": "wrench",
+      "recipe": {},
+      "damage": 14,
+      "swingsPerSecond": 1.4,
+      "reachMeters": 2.6,
+      "arcDegrees": 45,
+      "knockbackMeters": 0,
+      "applies": [],
+      "masteryCosts": [
+        30,
+        41,
+        55,
+        74,
+        100,
+        135,
+        182,
+        246,
+        332,
+        448
+      ]
+    },
+    {
+      "id": "blade",
+      "recipe": {
+        "Alloy": 7
+      },
+      "damage": 19,
+      "swingsPerSecond": 2,
+      "reachMeters": 2.4,
+      "arcDegrees": 35,
+      "knockbackMeters": 0,
+      "applies": [],
+      "masteryCosts": [
+        30,
+        41,
+        55,
+        74,
+        100,
+        135,
+        182,
+        246,
+        332,
+        448
+      ]
+    },
+    {
+      "id": "maul",
+      "recipe": {
+        "Alloy": 6,
+        "Plating": 4
+      },
+      "damage": 34,
+      "swingsPerSecond": 0.8,
+      "reachMeters": 3,
+      "arcDegrees": 80,
+      "knockbackMeters": 3.5,
+      "applies": [],
+      "masteryCosts": [
+        30,
+        41,
+        55,
+        74,
+        100,
+        135,
+        182,
+        246,
+        332,
+        448
+      ]
+    },
+    {
+      "id": "spear",
+      "recipe": {
+        "Alloy": 5,
+        "Flux": 3
+      },
+      "damage": 22,
+      "swingsPerSecond": 1.1,
+      "reachMeters": 4.2,
+      "arcDegrees": 25,
+      "knockbackMeters": 0,
+      "applies": [],
+      "masteryCosts": [
+        30,
+        41,
+        55,
+        74,
+        100,
+        135,
+        182,
+        246,
+        332,
+        448
+      ]
+    }
+  ]
+}

@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deepfield.dev/content/towers.schema.json",
+  "title": "towers",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "table",
+    "generated",
+    "rows"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "deepfield-content/1"
+    },
+    "table": {
+      "type": "string"
+    },
+    "generated": {
+      "type": "string"
+    },
+    "sourceSha": {
+      "type": "string"
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "kind",
+          "cost",
+          "rangeMeters",
+          "minRangeMeters",
+          "damage",
+          "shotsPerSecond",
+          "projectileSpeed",
+          "splashRadius",
+          "splashFalloff",
+          "chainJumps",
+          "chainRange",
+          "chainFalloff",
+          "structureHp",
+          "applies",
+          "targetLayers",
+          "upgradePaths"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "Bolt",
+              "Mortar",
+              "Aura",
+              "Flak",
+              "Tesla",
+              "Beam",
+              "Barricade"
+            ]
+          },
+          "cost": {
+            "type": "integer"
+          },
+          "rangeMeters": {
+            "type": "number"
+          },
+          "minRangeMeters": {
+            "type": "number"
+          },
+          "damage": {
+            "type": "number"
+          },
+          "shotsPerSecond": {
+            "type": "number"
+          },
+          "projectileSpeed": {
+            "type": "number"
+          },
+          "splashRadius": {
+            "type": "number"
+          },
+          "splashFalloff": {
+            "type": "number"
+          },
+          "chainJumps": {
+            "type": "integer"
+          },
+          "chainRange": {
+            "type": "number"
+          },
+          "chainFalloff": {
+            "type": "number"
+          },
+          "structureHp": {
+            "type": "number"
+          },
+          "applies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "targetLayers": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "Ground",
+                "Air"
+              ]
+            }
+          },
+          "upgradePaths": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "perLevelFactor",
+                "levelCosts",
+                "breakpointRecipes"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "perLevelFactor": {
+                  "type": "number"
+                },
+                "levelCosts": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  }
+                },
+                "breakpointRecipes": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "integer"
+                    },
+                    "propertyNames": {
+                      "enum": [
+                        "Alloy",
+                        "Flux",
+                        "Plating",
+                        "Gravium"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

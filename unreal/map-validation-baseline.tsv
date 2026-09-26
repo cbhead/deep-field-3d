@@ -1,0 +1,6 @@
+# DF.Map.Validate ratchet (CONTRACTS/map-authoring-3d.md §2). One "<map>\t<rule>" per line: a rule
+# failing on a listed map is a warning; anywhere else it is an error. Remove a line when the map is
+# fixed; add one only with the reason. Seeded from the legacy exports (the briefs, not the outputs).
+# map	rule	why
+spire	socketOffset	legacy Spire: w19/w21 sit 2.0 m off the stair lane (deck sockets over a climbing lane; redesign fixes)
+spire	spawnApron	legacy Spire: trap t1 is 4 m from the street spawn (redesign fixes)

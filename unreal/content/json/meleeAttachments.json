@@ -1,0 +1,95 @@
+{
+  "$schema": "deepfield-content/1",
+  "table": "meleeAttachments",
+  "generated": "2026-09-17T07:21:16Z",
+  "sourceSha": "b44eea1",
+  "rows": [
+    {
+      "id": "honedEdge",
+      "slot": "Edge",
+      "damageFactor": 1.18,
+      "speedFactor": 0.92,
+      "reachFactor": 1,
+      "recipe": {
+        "Alloy": 5
+      }
+    },
+    {
+      "id": "serratedEdge",
+      "slot": "Edge",
+      "damageFactor": 1.05,
+      "speedFactor": 1.1,
+      "reachFactor": 1,
+      "recipe": {
+        "Alloy": 4,
+        "Plating": 1
+      }
+    },
+    {
+      "id": "balancedGrip",
+      "slot": "Grip",
+      "damageFactor": 1,
+      "speedFactor": 1.15,
+      "reachFactor": 1,
+      "recipe": {
+        "Alloy": 3
+      }
+    },
+    {
+      "id": "heavyWeight",
+      "slot": "Counterweight",
+      "damageFactor": 1.1,
+      "speedFactor": 0.9,
+      "reachFactor": 1.15,
+      "recipe": {
+        "Plating": 3
+      }
+    },
+    {
+      "id": "emberCore",
+      "slot": "CoreInfusion",
+      "damageFactor": 1,
+      "speedFactor": 1,
+      "reachFactor": 1,
+      "applies": "burn",
+      "recipe": {
+        "Flux": 4
+      }
+    },
+    {
+      "id": "cryoCore",
+      "slot": "CoreInfusion",
+      "damageFactor": 1,
+      "speedFactor": 1,
+      "reachFactor": 1,
+      "applies": "chill",
+      "recipe": {
+        "Flux": 3,
+        "Alloy": 2
+      }
+    },
+    {
+      "id": "voltCore",
+      "slot": "CoreInfusion",
+      "damageFactor": 1,
+      "speedFactor": 1,
+      "reachFactor": 1,
+      "applies": "shock",
+      "recipe": {
+        "Flux": 5
+      }
+    },
+    {
+      "id": "toxinCore",
+      "slot": "CoreInfusion",
+      "damageFactor": 1,
+      "speedFactor": 1,
+      "reachFactor": 1,
+      "applies": "poison",
+      "recipe": {
+        "Plating": 3,
+        "Flux": 2
+      }
+    }
+  ]
+}

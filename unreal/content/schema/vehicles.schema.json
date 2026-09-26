@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deepfield.dev/content/vehicles.schema.json",
+  "title": "vehicles",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "table",
+    "generated",
+    "rows"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "deepfield-content/1"
+    },
+    "table": {
+      "type": "string"
+    },
+    "generated": {
+      "type": "string"
+    },
+    "sourceSha": {
+      "type": "string"
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "seats"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "seats": {
+            "type": "integer"
+          },
+          "boardRadiusMeters": {
+            "type": "number"
+          },
+          "maxSpeedMetersPerSec": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  }
+}

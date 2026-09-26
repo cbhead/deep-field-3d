@@ -1,0 +1,742 @@
+{
+  "$schema": "deepfield-content/1",
+  "table": "towers",
+  "generated": "2026-09-17T07:21:16Z",
+  "sourceSha": "b44eea1",
+  "rows": [
+    {
+      "id": "arc",
+      "kind": "Tesla",
+      "cost": 90,
+      "rangeMeters": 11,
+      "minRangeMeters": 0,
+      "damage": 9,
+      "shotsPerSecond": 1.2,
+      "projectileSpeed": 0,
+      "splashRadius": 0,
+      "splashFalloff": 1,
+      "chainJumps": 1,
+      "chainRange": 6,
+      "chainFalloff": 0.6,
+      "structureHp": 120,
+      "applies": [
+        "shock"
+      ],
+      "targetLayers": [
+        "Ground",
+        "Air"
+      ],
+      "upgradePaths": [
+        {
+          "id": "damage",
+          "perLevelFactor": 1.1,
+          "levelCosts": [
+            40,
+            54,
+            73,
+            98,
+            132,
+            178,
+            240,
+            324,
+            438
+          ],
+          "breakpointRecipes": {
+            "4": {
+              "Alloy": 8,
+              "Plating": 2
+            },
+            "7": {
+              "Plating": 6,
+              "Flux": 3
+            },
+            "10": {
+              "Gravium": 4,
+              "Plating": 6
+            }
+          }
+        },
+        {
+          "id": "range",
+          "perLevelFactor": 1.12,
+          "levelCosts": [
+            40,
+            54,
+            73,
+            98,
+            132,
+            178,
+            240,
+            324,
+            438
+          ],
+          "breakpointRecipes": {
+            "4": {
+              "Alloy": 8,
+              "Flux": 2
+            },
+            "7": {
+              "Flux": 7,
+              "Alloy": 6
+            },
+            "10": {
+              "Gravium": 4,
+              "Flux": 6
+            }
+          }
+        },
+        {
+          "id": "rate",
+          "perLevelFactor": 1.1,
+          "levelCosts": [
+            40,
+            54,
+            73,
+            98,
+            132,
+            178,
+            240,
+            324,
+            438
+          ],
+          "breakpointRecipes": {
+            "4": {
+              "Flux": 3,
+              "Alloy": 4
+            },
+            "7": {
+              "Flux": 8,
+              "Plating": 3
+            },
+            "10": {
+              "Gravium": 3,
+              "Flux": 8
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "barricade",
+      "kind": "Barricade",
+      "cost": 60,
+      "rangeMeters": 0,
+      "minRangeMeters": 0,
+      "damage": 0,
+      "shotsPerSecond": 0,
+      "projectileSpeed": 0,
+      "splashRadius": 0,
+      "splashFalloff": 1,
+      "chainJumps": 0,
+      "chainRange": 0,
+      "chainFalloff": 1,
+      "structureHp": 300,
+      "applies": [],
+      "targetLayers": [],
+      "upgradePaths": []
+    },
+    {
+      "id": "lance",
+      "kind": "Bolt",
+      "cost": 75,
+      "rangeMeters": 12,
+      "minRangeMeters": 0,
+      "damage": 8,
+      "shotsPerSecond": 1.6,
+      "projectileSpeed": 30,
+      "splashRadius": 0,
+      "splashFalloff": 1,
+      "chainJumps": 0,
+      "chainRange": 0,
+      "chainFalloff": 1,
+      "structureHp": 120,
+      "applies": [],
+      "targetLayers": [
+        "Ground"
+      ],
+      "upgradePaths": [
+        {
+          "id": "damage",
+          "perLevelFactor": 1.1,
+          "levelCosts": [
+            40,
+            54,
+            73,
+            98,
+            132,
+            178,
+            240,
+            324,
+            438
+          ],
+          "breakpointRecipes": {
+            "4": {
+              "Alloy": 8,
+              "Plating": 2
+            },
+            "7": {
+              "Plating": 6,
+              "Flux": 3
+            },
+            "10": {
+              "Gravium": 4,
+              "Plating": 6
+            }
+          }
+        },
+        {
+          "id": "range",
+          "perLevelFactor": 1.12,
+          "levelCosts": [
+            40,
+            54,
+            73,
+            98,
+            132,
+            178,
+            240,
+            324,
+            438
+          ],
+          "breakpointRecipes": {
+            "4": {
+              "Alloy": 8,
+              "Flux": 2
+            },
+            "7": {
+              "Flux": 7,
+              "Alloy": 6
+            },
+            "10": {
+              "Gravium": 4,
+              "Flux": 6
+            }
+          }
+        },
+        {
+          "id": "rate",
+          "perLevelFactor": 1.1,
+          "levelCosts": [
+            40,
+            54,
+            73,
+            98,
+            132,
+            178,
+            240,
+            324,
+            438
+          ],
+          "breakpointRecipes": {
+            "4": {
+              "Flux": 3,
+              "Alloy": 4
+            },
+            "7": {
+              "Flux": 8,
+              "Plating": 3
+            },
+            "10": {
+              "Gravium": 3,
+              "Flux": 8
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "nova",
+      "kind": "Mortar",
+      "cost": 115,
+      "rangeMeters": 16,
+      "minRangeMeters": 5,
+      "damage": 22,
+      "shotsPerSecond": 0.5,
+      "projectileSpeed": 14,
+      "splashRadius": 3.2,
+      "splashFalloff": 0.35,
+      "chainJumps": 0,
+      "chainRange": 0,
+      "chainFalloff": 1,
+      "structureHp": 140,
+      "applies": [],
+      "targetLayers": [
+        "Ground"
+      ],
+      "upgradePaths": [
+        {
+          "id": "damage",
+          "perLevelFactor": 1.1,
+          "levelCosts": [
+            40,
+            54,
+            73,
+            98,
+            132,
+            178,
+            240,
+            324,
+            438
+          ],
+          "breakpointRecipes": {
+            "4": {
+              "Alloy": 8,
+              "Plating": 2
+            },
+            "7": {
+              "Plating": 6,
+              "Flux": 3
+            },
+            "10": {
+              "Gravium": 4,
+              "Plating": 6
+            }
+          }
+        },
+        {
+          "id": "range",
+          "perLevelFactor": 1.12,
+          "levelCosts": [
+            40,
+            54,
+            73,
+            98,
+            132,
+            178,
+            240,
+            324,
+            438
+          ],
+          "breakpointRecipes": {
+            "4": {
+              "Alloy": 8,
+              "Flux": 2
+            },
+            "7": {
+              "Flux": 7,
+              "Alloy": 6
+            },
+            "10": {
+              "Gravium": 4,
+              "Flux": 6
+            }
+          }
+        },
+        {
+          "id": "rate",
+          "perLevelFactor": 1.1,
+          "levelCosts": [
+            40,
+            54,
+            73,
+            98,
+            132,
+            178,
+            240,
+            324,
+            438
+          ],
+          "breakpointRecipes": {
+            "4": {
+              "Flux": 3,
+              "Alloy": 4
+            },
+            "7": {
+              "Flux": 8,
+              "Plating": 3
+            },
+            "10": {
+              "Gravium": 3,
+              "Flux": 8
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "detector",
+      "kind": "Aura",
+      "cost": 70,
+      "rangeMeters": 13,
+      "minRangeMeters": 0,
+      "damage": 0,
+      "shotsPerSecond": 0,
+      "projectileSpeed": 0,
+      "splashRadius": 0,
+      "splashFalloff": 1,
+      "chainJumps": 0,
+      "chainRange": 0,
+      "chainFalloff": 1,
+      "structureHp": 100,
+      "applies": [
+        "reveal"
+      ],
+      "targetLayers": [
+        "Ground",
+        "Air"
+      ],
+      "upgradePaths": [
+        {
+          "id": "field",
+          "perLevelFactor": 1.14,
+          "levelCosts": [
+            40,
+            54,
+            73,
+            98,
+            132,
+            178,
+            240,
+            324,
+            438
+          ],
+          "breakpointRecipes": {
+            "4": {
+              "Flux": 4,
+              "Alloy": 4
+            },
+            "7": {
+              "Flux": 9,
+              "Plating": 4
+            },
+            "10": {
+              "Gravium": 4,
+              "Flux": 8
+            }
+          }
+        },
+        {
+          "id": "analysis",
+          "perLevelFactor": 1.1,
+          "levelCosts": [
+            40,
+            54,
+            73,
+            98,
+            132,
+            178,
+            240,
+            324,
+            438
+          ],
+          "breakpointRecipes": {
+            "4": {
+              "Flux": 4,
+              "Alloy": 4
+            },
+            "7": {
+              "Flux": 9,
+              "Plating": 4
+            },
+            "10": {
+              "Gravium": 4,
+              "Flux": 8
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "filament",
+      "kind": "Beam",
+      "cost": 125,
+      "rangeMeters": 12,
+      "minRangeMeters": 0,
+      "damage": 7,
+      "shotsPerSecond": 0,
+      "projectileSpeed": 0,
+      "splashRadius": 0,
+      "splashFalloff": 1,
+      "chainJumps": 0,
+      "chainRange": 0,
+      "chainFalloff": 1,
+      "structureHp": 130,
+      "applies": [],
+      "targetLayers": [
+        "Ground",
+        "Air"
+      ],
+      "upgradePaths": [
+        {
+          "id": "ramp",
+          "perLevelFactor": 1.12,
+          "levelCosts": [
+            40,
+            54,
+            73,
+            98,
+            132,
+            178,
+            240,
+            324,
+            438
+          ],
+          "breakpointRecipes": {
+            "4": {
+              "Flux": 4,
+              "Alloy": 4
+            },
+            "7": {
+              "Flux": 9,
+              "Plating": 4
+            },
+            "10": {
+              "Gravium": 4,
+              "Flux": 8
+            }
+          }
+        },
+        {
+          "id": "peak",
+          "perLevelFactor": 1.15,
+          "levelCosts": [
+            40,
+            54,
+            73,
+            98,
+            132,
+            178,
+            240,
+            324,
+            438
+          ],
+          "breakpointRecipes": {
+            "4": {
+              "Flux": 4,
+              "Alloy": 4
+            },
+            "7": {
+              "Flux": 9,
+              "Plating": 4
+            },
+            "10": {
+              "Gravium": 4,
+              "Flux": 8
+            }
+          }
+        },
+        {
+          "id": "optics",
+          "perLevelFactor": 1.1,
+          "levelCosts": [
+            40,
+            54,
+            73,
+            98,
+            132,
+            178,
+            240,
+            324,
+            438
+          ],
+          "breakpointRecipes": {
+            "4": {
+              "Flux": 4,
+              "Alloy": 4
+            },
+            "7": {
+              "Flux": 9,
+              "Plating": 4
+            },
+            "10": {
+              "Gravium": 4,
+              "Flux": 8
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "singularity",
+      "kind": "Aura",
+      "cost": 110,
+      "rangeMeters": 9,
+      "minRangeMeters": 0,
+      "damage": 0,
+      "shotsPerSecond": 0,
+      "projectileSpeed": 0,
+      "splashRadius": 0,
+      "splashFalloff": 1,
+      "chainJumps": 0,
+      "chainRange": 0,
+      "chainFalloff": 1,
+      "structureHp": 110,
+      "applies": [
+        "chill"
+      ],
+      "targetLayers": [
+        "Ground",
+        "Air"
+      ],
+      "upgradePaths": [
+        {
+          "id": "range",
+          "perLevelFactor": 1.12,
+          "levelCosts": [
+            40,
+            54,
+            73,
+            98,
+            132,
+            178,
+            240,
+            324,
+            438
+          ],
+          "breakpointRecipes": {
+            "4": {
+              "Alloy": 8,
+              "Flux": 2
+            },
+            "7": {
+              "Flux": 7,
+              "Alloy": 6
+            },
+            "10": {
+              "Gravium": 4,
+              "Flux": 6
+            }
+          }
+        },
+        {
+          "id": "rate",
+          "perLevelFactor": 1.1,
+          "levelCosts": [
+            40,
+            54,
+            73,
+            98,
+            132,
+            178,
+            240,
+            324,
+            438
+          ],
+          "breakpointRecipes": {
+            "4": {
+              "Flux": 3,
+              "Alloy": 4
+            },
+            "7": {
+              "Flux": 8,
+              "Plating": 3
+            },
+            "10": {
+              "Gravium": 3,
+              "Flux": 8
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "skywatch",
+      "kind": "Flak",
+      "cost": 90,
+      "rangeMeters": 15,
+      "minRangeMeters": 0,
+      "damage": 8,
+      "shotsPerSecond": 3,
+      "projectileSpeed": 45,
+      "splashRadius": 0,
+      "splashFalloff": 1,
+      "chainJumps": 0,
+      "chainRange": 0,
+      "chainFalloff": 1,
+      "structureHp": 110,
+      "applies": [],
+      "targetLayers": [
+        "Air"
+      ],
+      "upgradePaths": [
+        {
+          "id": "damage",
+          "perLevelFactor": 1.1,
+          "levelCosts": [
+            40,
+            54,
+            73,
+            98,
+            132,
+            178,
+            240,
+            324,
+            438
+          ],
+          "breakpointRecipes": {
+            "4": {
+              "Alloy": 8,
+              "Plating": 2
+            },
+            "7": {
+              "Plating": 6,
+              "Flux": 3
+            },
+            "10": {
+              "Gravium": 4,
+              "Plating": 6
+            }
+          }
+        },
+        {
+          "id": "range",
+          "perLevelFactor": 1.12,
+          "levelCosts": [
+            40,
+            54,
+            73,
+            98,
+            132,
+            178,
+            240,
+            324,
+            438
+          ],
+          "breakpointRecipes": {
+            "4": {
+              "Alloy": 8,
+              "Flux": 2
+            },
+            "7": {
+              "Flux": 7,
+              "Alloy": 6
+            },
+            "10": {
+              "Gravium": 4,
+              "Flux": 6
+            }
+          }
+        },
+        {
+          "id": "rate",
+          "perLevelFactor": 1.1,
+          "levelCosts": [
+            40,
+            54,
+            73,
+            98,
+            132,
+            178,
+            240,
+            324,
+            438
+          ],
+          "breakpointRecipes": {
+            "4": {
+              "Flux": 3,
+              "Alloy": 4
+            },
+            "7": {
+              "Flux": 8,
+              "Plating": 3
+            },
+            "10": {
+              "Gravium": 3,
+              "Flux": 8
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

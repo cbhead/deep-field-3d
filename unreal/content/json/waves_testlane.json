@@ -1,0 +1,35 @@
+{
+  "$schema": "deepfield-content/1",
+  "table": "waves_testlane",
+  "generated": "2026-09-17T07:21:16Z",
+  "sourceSha": "b44eea1",
+  "rows": [
+    {
+      "id": "w01g01",
+      "waveIndex": 0,
+      "enemyId": "drifter",
+      "count": 5,
+      "spacingTicks": 24,
+      "startDelayTicks": 0,
+      "routeId": "ground"
+    },
+    {
+      "id": "w02g01",
+      "waveIndex": 1,
+      "enemyId": "drifter",
+      "count": 8,
+      "spacingTicks": 22,
+      "startDelayTicks": 0,
+      "routeId": "ground"
+    },
+    {
+      "id": "w03g01",
+      "waveIndex": 2,
+      "enemyId": "drifter",
+      "count": 11,
+      "spacingTicks": 20,
+      "startDelayTicks": 0,
+      "routeId": "ground"
+    }
+  ]
+}
