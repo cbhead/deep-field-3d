@@ -65,21 +65,20 @@ def main() -> int:
         }
         consumes = "\n".join(f"- {c}" for c in e.get("consumes", [])) or "- (none)"
         provides = "\n".join(f"- {c}" for c in e.get("provides", [])) or "- (none)"
-        path.write_text(
-            TEMPLATE.format(
-                frontmatter=render_frontmatter(meta).rstrip("\n"),
-                ws=e["ws"],
-                title=e["title"],
-                scope=e["scope"],
-                dod=e["dod"],
-                spec=e["spec"],
-                size=e.get("size", ""),
-                phase=e.get("phase", ""),
-                consumes=consumes,
-                provides=provides,
-            ),
-            encoding="utf-8",
+        text = TEMPLATE.format(
+            frontmatter=render_frontmatter(meta).rstrip("\n"),
+            ws=e["ws"],
+            title=e["title"],
+            scope=e["scope"],
+            dod=e["dod"],
+            spec=e["spec"],
+            size=e.get("size", ""),
+            phase=e.get("phase", ""),
+            consumes=consumes,
+            provides=provides,
         )
+        with open(path, "w", encoding="utf-8", newline="\n") as f:   # LF on Windows too
+            f.write(text)
         created += 1
     print(f"created {created} workstream file(s) in {WS_DIR}")
     return 0

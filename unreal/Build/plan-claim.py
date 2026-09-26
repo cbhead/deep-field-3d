@@ -75,7 +75,9 @@ def main() -> int:
         meta["lease_expires"] = ""
         meta["state"] = "paused" if meta.get("state") != "done" else "done"
 
-    path.write_text(render_frontmatter(meta) + body, encoding="utf-8")
+    # newline="\n": text mode on Windows writes CRLF, which would rewrite every line of the file.
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write(render_frontmatter(meta) + body)
     print(f"updated {path.name}: state={meta.get('state')} owner={meta.get('owner') or '—'} lease={meta.get('lease_expires') or '—'}")
     return 0
 

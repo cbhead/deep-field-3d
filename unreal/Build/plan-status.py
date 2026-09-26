@@ -87,7 +87,8 @@ def main() -> int:
 
     text, n = render(now_iso())
     target = Path(a.out) if a.out else STATUS
-    target.write_text(text, encoding="utf-8")
+    with open(target, "w", encoding="utf-8", newline="\n") as f:   # LF on Windows too
+        f.write(text)
     print(f"wrote {target} ({n} workstreams)")
     return 0
 

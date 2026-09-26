@@ -23,7 +23,7 @@ UNION_SECTIONS = ("## Session log", "## Interfaces I changed")
 
 
 def stage(path: str, n: int) -> str:
-    out = subprocess.run(["git", "show", f":{n}:{path}"], capture_output=True, text=True)
+    out = subprocess.run(["git", "show", f":{n}:{path}"], capture_output=True, text=True, encoding="utf-8")
     if out.returncode != 0:
         raise SystemExit(f"merge-ws-log: {path} has no stage {n} — is it actually conflicted?")
     return out.stdout
@@ -76,7 +76,9 @@ def main() -> int:
     if check_only:
         print(f"merge-ws-log: {path} is mergeable ({'; '.join(did) or 'frontmatter only'})")
         return 0
-    Path(path).write_text(text)
+    # UTF-8 and LF on every platform: Windows' defaults (cp1252, CRLF) would rewrite every line.
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write(text)
     subprocess.run(["git", "add", path], check=True)
     print(f"merge-ws-log: {path} union-merged and staged — {'; '.join(did) or 'frontmatter only'}")
     return 0
