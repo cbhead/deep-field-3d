@@ -27,9 +27,10 @@ the script turned out different, fix it in the same PR.
       packages arrive. At the last inventory, C: had 181 GB. Plan the space before the art lanes start.
 - [ ] `machine-inventory.ps1` re-run and committed. Its readiness table shows no `FAIL` except the
       runner (§5), and has an elevated run behind it so that the Defender row is not `UNKNOWN`.
-- [ ] Runbook §3 checks pass, and §5.1 (`deepfield test`) passes the landing gate. This is the suite's
-      first MSVC verdict, since every earlier run was Apple clang on the retired Mac. Record the count.
-      It is also the first build of PR #51, which has never been compiled (PLAN/NEXT.md).
+- [x] §5.1 (`deepfield test`) passes the landing gate: **155 of 155 on 2026-09-26** (`e859ffb`, UE
+      5.8.2, MSVC 14.44), every registered suite. It was the suite's first MSVC verdict and the first
+      build of PR #51. It took three fixes (`b234449`, `cb820b2`, `e859ffb`; PLAN/NEXT.md).
+- [ ] Runbook §3 checks pass (`deepfield check`).
 - [ ] Runbook §5.2 (map validator) and §5.3 (`deepfield smoke`) pass. Then `deepfield ci-local` runs
       the whole pre-merge set end to end, which is also what the runner's nightly will run.
 
@@ -51,8 +52,12 @@ the script turned out different, fix it in the same PR.
 
 ## 4. The floating-point check on a Game target
 
-`BuildSettingsVersion.V7` compiles **Editor** targets FP-precise but leaves **Game / Client / Server**
-targets at Default, which is `/fp:fast` on MSVC (CONTRACTS/ci.md, "GPU-box lane"). Code that must
+`BuildSettingsVersion.V7` is read as compiling **Editor** targets FP-precise but leaving **Game / Client
+/ Server** targets at Default, which is `/fp:fast` on MSVC (CONTRACTS/ci.md, "GPU-box lane"). The
+first MSVC build casts doubt on the Editor half: an Editor module lost a signed-zero fold that
+`/fp:precise` must keep (`e859ffb`). Read the `/fp:` flags from the build's `.rsp` files (runbook §8)
+and correct this paragraph and ci.md. If Editor targets are fast too, the Editor-target run below
+proves the pragmas, not the target's defaults. Code that must
 produce the same bits everywhere pins its arithmetic with the `DF_DET_FP_*` pragmas in
 `Source/DFCore/Public/Determinism/` (`DFDetMath.h`, `DFDetRng.h`), used by
 `DFEnemies/Private/Waves/DFWavePlan.cpp`, `DFEnemies/Private/Movement/DFLaneWalker.cpp` and
