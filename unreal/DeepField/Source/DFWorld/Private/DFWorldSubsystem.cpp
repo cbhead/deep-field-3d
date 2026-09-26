@@ -109,12 +109,18 @@ void UDFWorldSubsystem::Resolve()
 	}
 }
 
-UDFLaneGraphAsset* UDFWorldSubsystem::GetLaneGraph()
+UDFLaneGraphAsset* UDFWorldSubsystem::FindLaneGraph()
 {
 	if (!bResolved)
 	{
 		Resolve();
 	}
+	return LaneGraph;
+}
+
+UDFLaneGraphAsset* UDFWorldSubsystem::GetLaneGraph()
+{
+	FindLaneGraph();
 	if (!LaneGraph && !bReportedMissing && GetWorld() && GetWorld()->IsGameWorld())
 	{
 		bReportedMissing = true;

@@ -137,7 +137,9 @@ void ADFMatchState::EnsureDirector()
 	{
 		if (UDFWorldSubsystem* WorldSubsystem = GetWorld()->GetSubsystem<UDFWorldSubsystem>())
 		{
-			if (const UDFLaneGraphAsset* Graph = WorldSubsystem->GetLaneGraph())
+			// Find, not Get: no graph is the dev-map case below, not an error (GetLaneGraph's error
+			// failed DF.Func.Status.ThermalShockInLevel, which runs on L_Dev_Empty).
+			if (const UDFLaneGraphAsset* Graph = WorldSubsystem->FindLaneGraph())
 			{
 				MapId = Graph->MapId;
 			}
