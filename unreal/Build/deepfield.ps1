@@ -22,6 +22,12 @@
              layering, ownership (-Ws, default INT), schemas, test coverage, plan-status (a warning
              unless -Strict), build, the landing gate, the smoke. -Skip smoke,plan-status skips steps.
              Stops at the first failure and prints a summary table either way.
+    int-merge  INT: land one workstream branch on main (Build/int-merge.sh on Windows, PROGRAMME.md 6.8):
+             `int-merge ws/04-towers/rig -Ws 04`. Rebases the branch onto origin/main in a verify
+             worktree beside the clone (int-verify; -VerifyDir moves it), then the checks, the build,
+             the landing gate and the smoke, then pushes the branch and main. -NoSmoke, -DryRun (verify,
+             push nothing), -Resume (continue the landing the worktree holds, e.g. after resolving a
+             conflict there by hand). A conflict outside the ledger stops for a human.
     check    The fast repository checks (Python, no engine): layering, content schemas, test coverage.
     editor   Build, then open the Unreal editor on the project. -Mcp also starts UE's experimental
              Unreal MCP server at http://localhost:8000/mcp (-McpPort to move it) for an AI agent.
@@ -59,9 +65,10 @@
 [CmdletBinding()]
 param(
   [Parameter(Position = 0)]
-  [ValidateSet('setup', 'doctor', 'build', 'test', 'pr-check', 'smoke', 'ci-local', 'check', 'editor', 'play', 'host', 'join', 'solution', 'help')]
+  [ValidateSet('setup', 'doctor', 'build', 'test', 'pr-check', 'smoke', 'ci-local', 'int-merge', 'check', 'editor', 'play', 'host', 'join', 'solution', 'help')]
   [string]$Command = 'setup',
   # test, pr-check, ci-local: the automation filter (default: the landing gate from test.sh). join: the host address.
+  # int-merge: the branch to land.
   [Parameter(Position = 1)]
   [string]$Arg = '',
   # Where to clone when the script is not inside a clone. Default D:\DF\deepfield-3d, or C:\DF\deepfield-3d without a D: drive.
@@ -72,8 +79,14 @@ param(
   # setup: the branch to clone (default main, the trunk), e.g. a PR branch to try before it merges.
   [string]$Branch = '',
   # pr-check: the workstream whose ownership globs apply (default: from the branch name ws/NN-slug/topic).
-  # ci-local: the ownership view (default INT, which lists everything and fails only on binaries outside every glob).
+  # ci-local, int-merge: the ownership view (default INT, which lists everything and fails only on binaries outside every glob).
   [string]$Ws = '',
+  # int-merge: skip the smoke; verify without pushing; continue the landing the verify worktree holds.
+  [switch]$NoSmoke,
+  [switch]$DryRun,
+  [switch]$Resume,
+  # int-merge: the verify worktree (default: int-verify beside the clone, or DF_INT_VERIFY_WT).
+  [string]$VerifyDir = '',
   # pr-check, ci-local: the ref the ownership check diffs against.
   [string]$Base = 'origin/main',
   # smoke, ci-local: how many headless clients join the listen host (1-3: the host takes one of the 4 seats).
@@ -139,6 +152,7 @@ $script:Quiet = $false        # the second setup pass prints only what it change
 $script:Repo = $null; $script:Project = $null; $script:Engine = $null; $script:EngineAssociation = '5.8'
 $script:Python = $null; $script:PythonProbes = @(); $script:MsvcRules = $null
 $script:OkCount = 0
+$script:LandingLock = $null; $script:IM = $null   # int-merge: the lock's open handle, and the landing's state
 
 function Write-Step([string]$Text) { if (-not $script:Quiet) { Write-Host ''; Write-Host "== $Text" -ForegroundColor Cyan } }
 function Write-Ok([string]$Text)   { $script:OkCount++; if (-not $script:Quiet) { Write-Host "   [ OK ] $Text" -ForegroundColor Green } }
@@ -827,23 +841,27 @@ function Assert-Repo {
   # Line endings. The JSON content is hashed in the join handshake, so a CRLF checkout disagrees
   # with every other machine about the same commit (Build/windows-bringup.md 3).
   $crlf = Get-NativeOutput 'git' @('-C', $repo, 'config', '--get', 'core.autocrlf')
-  $probe = Join-Path $repo 'unreal\Build\test.sh'
-  $hasCr = (Test-Path $probe) -and ((Get-Content $probe -Raw) -match "`r`n")
-  if (($crlf -and $crlf -ne 'false') -or $hasCr) {
-    if ($script:DoctorOnly) { Fail 'the clone converts line endings (core.autocrlf is not false)' 'deepfield setup fixes it when the working tree has no uncommitted changes.'; }
+  $converted = @(Get-CrlfCheckout $repo)
+  if (($crlf -and $crlf -ne 'false') -or $converted.Count -gt 0) {
+    $what = 'core.autocrlf is not false'
+    if ($converted.Count -gt 0) { $what = "$($converted.Count) file(s) committed with LF are CRLF on disk, e.g. $($converted[0])" }
+    if ($script:DoctorOnly) { Fail "the clone converts line endings ($what)" 'deepfield setup fixes it when the working tree has no uncommitted changes.'; }
     else {
       $dirty = Get-NativeOutput 'git' @('-C', $repo, 'status', '--porcelain')
       if ($dirty) {
-        Write-Warn2 'the clone converts line endings, and there are uncommitted changes, so it is left alone.'
-        Write-Info "Commit or stash them, then: git -C `"$repo`" config core.autocrlf false; git -C `"$repo`" reset --hard HEAD"
+        Write-Warn2 "the clone converts line endings ($what), and there are uncommitted changes, so it is left alone."
+        Write-Info 'Commit or stash them, then run deepfield setup again.'
       } else {
         Write-Fix 'turning off line-ending conversion for this clone and re-checking the files out as committed'
         Invoke-Native 'git' @('-C', $repo, 'config', 'core.autocrlf', 'false') | Out-Null
-        Invoke-Native 'git' @('-C', $repo, 'reset', '--hard', '-q', 'HEAD') | Out-Null
-        Write-Ok 'line endings as committed'
+        $converted = @(Get-CrlfCheckout $repo)
+        if ($converted.Count -gt 0) { [void](Repair-CrlfCheckout $repo $converted) }
+        $left = @(Get-CrlfCheckout $repo)
+        if ($left.Count -gt 0) { Fail "$($left.Count) file(s) are still CRLF on disk, e.g. $($left[0])" "Run: git -C `"$repo`" rm --cached -r -q . ; git -C `"$repo`" reset --hard -q" }
+        else { Write-Ok "line endings as committed ($($converted.Count) file(s) re-checked out)" }
       }
     }
-  } else { Write-Ok 'line endings as committed (core.autocrlf=false)' }
+  } else { Write-Ok 'line endings as committed (core.autocrlf=false, no file converted)' }
 
   # LFS content: the full set on Windows (the Mac's .lfsconfig skips the art sublevels).
   if (-not $script:DoctorOnly) {
@@ -887,6 +905,29 @@ function Assert-Repo {
     [Environment]::SetEnvironmentVariable('UE-LocalDataCachePath', $ddc, 'Process')
     Write-Fix "set UE-LocalDataCachePath=$ddc for your user, so Zen keeps its store in the DDC (new terminals see it)"
   }
+}
+
+function Get-CrlfCheckout([string]$Root) {
+  # Files git stores with LF that are CRLF on disk: a checkout made while core.autocrlf was true (Git for
+  # Windows' installer default). Git still calls them clean, because it trusts their timestamps, so neither
+  # `git status` nor `reset --hard` notices; the GPU box's clone had 633 of them, the content JSON among
+  # them, which the join handshake hashes (Build/windows-bringup.md 1).
+  $old = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+  try { $lines = @(& git -C $Root -c core.quotepath=off ls-files --eol 2>$null) } finally { $ErrorActionPreference = $old }
+  return @($lines | ForEach-Object {
+      $t = "$_" -split "`t", 2
+      if ($t.Count -eq 2 -and $t[0] -match '^i/lf\s+w/crlf\s') { $t[1] }
+    })
+}
+
+function Repair-CrlfCheckout([string]$Root, [string[]]$Paths) {
+  # Delete, then check out again: git will not rewrite a file whose timestamp matches its index entry.
+  $list = Join-Path $env:TEMP "deepfield-crlf-$PID.txt"
+  [IO.File]::WriteAllText($list, (($Paths -join "`n") + "`n"), (New-Object Text.UTF8Encoding($false)))
+  foreach ($p in $Paths) { Remove-Item -LiteralPath (Join-Path $Root $p) -Force -ErrorAction SilentlyContinue }
+  $rc = Invoke-Native 'git' @('--literal-pathspecs', '-C', $Root, 'checkout', "--pathspec-from-file=$list", '--')
+  Remove-Item -LiteralPath $list -ErrorAction SilentlyContinue
+  return $rc
 }
 
 function Get-FreeGB([string]$Path) {
@@ -936,6 +977,10 @@ function Test-EditorMayHoldProject {
   return $false
 }
 
+# A build line that says why it failed: MSVC `file(12): error C2065:`, `fatal error`, linker `error LNK2019`,
+# UHT `file(12): Error:`, and UBT's own refusals ("Unable to build while Live Coding is active").
+$BuildErrorRe = ': (fatal )?error[ :]|error [A-Z]+\d+|Unable to build|Result: Failed|BUILD FAILED'
+
 function Invoke-Build {
   Write-Step 'Build: DeepFieldEditor Win64 Development'
   $p = Get-Paths
@@ -954,12 +999,19 @@ function Invoke-Build {
   try {
     & $p.BuildBat @ubtArgs 2>&1 |
       ForEach-Object { "$_" } | Tee-Object -FilePath $log | ForEach-Object {
-        if ($_ -match ': (fatal )?error |error [A-Z]+\d+|Result: Failed|BUILD FAILED') { Write-Host $_ -ForegroundColor Red }
+        if ($_ -match $BuildErrorRe) { Write-Host $_ -ForegroundColor Red }
         elseif ($_ -match '^\[\d+/\d+\]|Result: Succeeded|Total execution time|Building |Using ') { Write-Host $_ }
       }
     $rc = $LASTEXITCODE
   } finally { $ErrorActionPreference = $old }
   if ($rc -ne 0) {
+    # All of them together, whatever scrolled past: int-merge.sh's filter once hid clang's `file:12:34: error:`
+    # lines, and recovering a message the first build had already produced cost two full rebuilds.
+    $diag = @(Select-String -Path $log -Pattern $BuildErrorRe -ErrorAction SilentlyContinue | Select-Object -First 30)
+    if ($diag.Count -gt 0) {
+      Write-Host '   -- the diagnostics, in full:' -ForegroundColor Red
+      $diag | ForEach-Object { Write-Host "      $($_.Line)" -ForegroundColor Red }
+    }
     Fail "the build failed (exit $rc)" "The errors are above; the whole output is in $log.`nIf it says the compiler or SDK is missing or banned, run: deepfield doctor"
     return $false
   }
@@ -982,13 +1034,24 @@ function Assert-FreshBinaries {
   if ($bins.Count -eq 0) { Fail "nothing built at $($p.Binaries)" 'Run: deepfield build'; return }
   $newestBin = $bins[0].LastWriteTime
   $src = Join-Path $script:Repo 'unreal\DeepField'
-  $newer = @(Get-ChildItem (Join-Path $src 'Source'), (Join-Path $src 'Config') -Recurse -File -Include *.cpp, *.h, *.inl, *.cs, *.ini -ErrorAction SilentlyContinue |
-      Where-Object { $_.LastWriteTime -gt $newestBin } | Select-Object -First 1)
+  # test.sh's list, the .uproject included: a module added or a plugin enabled there changes what gets
+  # built, so a binary older than it tests a project that no longer exists (dropped by the first port).
+  $newer = @(@(Get-ChildItem (Join-Path $src 'Source'), (Join-Path $src 'Config') -Recurse -File -Include *.cpp, *.h, *.inl, *.cs, *.ini -ErrorAction SilentlyContinue) +
+      @(Get-Item $script:Project -ErrorAction SilentlyContinue) |
+      Where-Object { $_ -and $_.LastWriteTime -gt $newestBin } | Select-Object -First 1)
   if ($newer.Count -gt 0) {
     $rel = $newer[0].FullName.Substring($script:Repo.Length + 1)
     if ($AllowStale) { Write-Warn2 "$rel is newer than the built modules; testing anyway (-AllowStale)" }
     else { Fail "$rel is newer than the built modules, so the tests would run code that is not in them" 'Build first (deepfield test builds unless the build fails), or pass -AllowStale if you mean it.' }
   }
+}
+
+function Test-EmptyAllowed([string]$Filter, [string]$Log) {
+  # A filter that matches nothing is a failure (a typo reads as green otherwise). test.sh's one escape,
+  # DF_TEST_ALLOW_EMPTY=1, for a suite a workstream has not written yet; documented, so it exists here too.
+  if ($env:DF_TEST_ALLOW_EMPTY -eq '1') { Write-Warn2 "no test matched '$Filter'; allowed by DF_TEST_ALLOW_EMPTY=1 ($Log)"; return $true }
+  Fail "no test matched '$Filter'" "A typo in the filter? (DF_TEST_ALLOW_EMPTY=1 if an empty suite is expected.) Log: $Log"
+  return $false
 }
 
 function Invoke-Tests([string]$Filter) {
@@ -1026,14 +1089,14 @@ function Invoke-Tests([string]$Filter) {
         if ($e.event.type -eq 'Error' -or $e.event.type -eq 'Warning') { Write-Host "        $($e.event.type): $($e.event.message)" -ForegroundColor Red }
       }
     }
-    if ($tests.Count -eq 0) { Fail "no test matched '$Filter'" "A typo in the filter? Log: $log"; return $false }
+    if ($tests.Count -eq 0) { return (Test-EmptyAllowed $Filter $log) }
     if ($failed -gt 0) { Fail "$failed of $($tests.Count) tests failed" "Log: $log"; return $false }
     Write-Ok "$($tests.Count) passed"
     return $true
   }
   if (Test-Path $log) {
     $none = Select-String -Path $log -Pattern 'No automation tests matched' | Select-Object -First 1
-    if ($none) { Fail "no test matched '$Filter'" "A typo in the filter? Log: $log"; return $false }
+    if ($none) { return (Test-EmptyAllowed $Filter $log) }
     Select-String -Path $log -Pattern 'Error:|Fatal|Assertion' | Select-Object -First 10 | ForEach-Object { Write-Host "   $($_.Line)" -ForegroundColor Red }
   }
   Fail "the editor exited ($($proc.ExitCode)) without a test report" "Log: $log"
@@ -1227,6 +1290,386 @@ function Invoke-CiLocal([string]$Filter, [int]$ClientCount, [int]$SmokePort) {
   return $true
 }
 
+# ---------------------------------------------------------------------------------------------------
+# int-merge: land one workstream branch on main (Build/int-merge.sh on Windows; PROGRAMME.md 6.8)
+# ---------------------------------------------------------------------------------------------------
+# Ported rule by rule, not line by line (the WS-15 brief of 2026-09-25): each guard says what went wrong
+# without it. Read that before deciding one is incidental.
+#
+# Paths whose change on main never invalidates a build or test verdict: the ledger, docs and the ledger
+# scripts. The cheap checks still re-run on any movement, because OWNERSHIP.md is among these paths and
+# the ownership verdict depends on it. deepfield.ps1 is deliberately absent: it decides how the build
+# and the tests run.
+$DocOnlyRe = '^(unreal/PLAN/|docs/|README\.md$|.*\.md$|unreal/Build/(int-merge\.sh|plan-[a-z]+\.py|plan_lib\.py|merge-ws-log\.py)$)'
+# The only conflicts a landing resolves itself: STATUS.md is generated, and a workstream file's dated
+# sections are append-only, which merge-ws-log.py unions. Everything else stops for a human. Widening
+# this is how someone's work is lost to a merge nobody read.
+$LedgerConflictRe = '^unreal/PLAN/(workstreams/ws-[0-9a-z-]+\.md|STATUS\.md)$'
+
+function Invoke-Git([string[]]$GitArgs) {
+  # git in the current location: the exit code, the output discarded.
+  $old = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+  try { & git @GitArgs 2>&1 | Out-Null; return $LASTEXITCODE } finally { $ErrorActionPreference = $old }
+}
+
+function Get-GitLines([string[]]$GitArgs) {
+  # git's stdout as lines, empty ones dropped; nothing when git fails.
+  $old = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+  try {
+    $out = @(& git @GitArgs 2>$null)
+    if ($LASTEXITCODE -ne 0) { return @() }
+    return @($out | ForEach-Object { "$_" } | Where-Object { $_ -ne '' })
+  } finally { $ErrorActionPreference = $old }
+}
+
+function Get-GitOne([string[]]$GitArgs) { return (@(Get-GitLines $GitArgs) | Select-Object -First 1) }
+
+function Stop-Landing([string]$What) {
+  Fail "int-merge failed at: $What" "The verify worktree is left at $($script:IM.Wt) on $($script:IM.IntBranch). Fix it there and rerun with -Resume, or rerun without it to start over."
+}
+
+function Enter-LandingLock([string]$LockPath, [string]$What) {
+  # Guard: one landing at a time. Two landings in one verify worktree swap the tree under a running test;
+  # that happened, and only the staleness guard caught it. int-merge.sh used a mkdir lock holding a pid,
+  # plus a 60 s grace for a holder that crashed before writing it. Here the lock is an open handle with no
+  # sharing, which Windows releases when the holding process exits, however it exits: a crashed landing
+  # cannot leave a stale lock, so nothing has to be judged from pids and ages. The holder's pid and branch
+  # sit beside it only for the waiting message.
+  $holderFile = "$LockPath.holder"
+  $max = 7200; if ($env:DF_INT_LOCK_MAX) { $max = [int]$env:DF_INT_LOCK_MAX }
+  $waited = 0
+  while ($true) {
+    try {
+      $script:LandingLock = [IO.File]::Open($LockPath, [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+      Set-Content -LiteralPath $holderFile -Encoding ascii -Value "pid $PID, $What"
+      return
+    } catch [System.IO.IOException] {
+      $holder = ''; try { $holder = Get-Content -LiteralPath $holderFile -TotalCount 1 -ErrorAction Stop } catch { }
+      if ($waited -ge $max) { Fail "another landing ($holder) has held $LockPath for $max s" 'Wait for it or stop it; the lock frees itself when that process exits.'; return }
+      if ($waited -eq 0) { Write-Info "waiting for the landing in progress ($holder)" }
+      Start-Sleep -Seconds 30; $waited += 30
+    }
+  }
+}
+
+function Exit-LandingLock { if ($script:LandingLock) { $script:LandingLock.Dispose(); $script:LandingLock = $null } }
+
+function Test-InRebase {
+  foreach ($d in 'rebase-merge', 'rebase-apply') {
+    $p = Get-GitOne @('rev-parse', '--git-path', $d)
+    if ($p -and (Test-Path -LiteralPath $p)) { return $true }
+  }
+  return $false
+}
+
+function Get-LandingBranch {
+  # The branch even mid-rebase, when HEAD is detached and only the rebase state names it.
+  foreach ($d in 'rebase-merge', 'rebase-apply') {
+    $p = Get-GitOne @('rev-parse', '--git-path', "$d/head-name")
+    if ($p -and (Test-Path -LiteralPath $p)) { return ((Get-Content -LiteralPath $p -TotalCount 1).Trim() -replace '^refs/heads/', '') }
+  }
+  $b = Get-GitOne @('rev-parse', '--abbrev-ref', 'HEAD')
+  if ($b) { return $b }
+  return '?'
+}
+
+function Invoke-RebaseOntoMain {
+  # Rebase onto origin/main, or finish a rebase already in progress, until HEAD sits on top of main. One
+  # pass is not enough: a fetch may move main while a human is resolving. True when done; false, after
+  # saying why, when a human is needed.
+  $guard = 0
+  while ($true) {
+    if (-not (Test-InRebase)) {
+      if ((Invoke-Git @('merge-base', '--is-ancestor', 'origin/main', 'HEAD')) -eq 0) { return $true }
+      [void](Invoke-Git @('rebase', '-q', 'origin/main'))
+      if (-not (Test-InRebase)) {
+        if ((Invoke-Git @('merge-base', '--is-ancestor', 'origin/main', 'HEAD')) -eq 0) { return $true }
+        Write-Warn2 'git rebase refused to start (or stopped without conflicts):'
+        Get-GitLines @('status', '--short') | Select-Object -First 5 | ForEach-Object { Write-Info $_ }
+        return $false
+      }
+    }
+    $guard++
+    if ($guard -gt 200) { Write-Warn2 'rebase: 200 steps without finishing; stopping'; return $false }
+
+    $conflicted = @(Get-GitLines @('diff', '--name-only', '--diff-filter=U'))
+    if ($conflicted.Count -gt 0) {
+      if (@($conflicted | Where-Object { $_ -notmatch $LedgerConflictRe }).Count -gt 0) {
+        Write-Warn2 'conflicts left for a human (resolve and STAGE them in the verify worktree, then rerun with -Resume):'
+        $conflicted | ForEach-Object { Write-Info $_ }
+        return $false
+      }
+      foreach ($f in $conflicted) {
+        if ($f -eq 'unreal/PLAN/STATUS.md') {
+          Write-Info 'STATUS.md conflict: regenerated'
+          if ((Invoke-Python @('unreal/Build/plan-status.py')) -ne 0 -or (Invoke-Git @('add', '--', $f)) -ne 0) { Write-Warn2 'could not regenerate STATUS.md'; return $false }
+        } else {
+          # The clone's merge-ws-log.py, not the branch's: a branch older than the tool does not carry it.
+          if ((Invoke-Python @((Join-Path $PSScriptRoot 'merge-ws-log.py'), $f)) -ne 0) { Write-Warn2 "could not union-merge $f"; return $false }
+        }
+      }
+    }
+
+    # Guard: never continue or skip over unstaged or untracked work. We cannot tell what the human meant,
+    # and --skip on a merely-unstaged resolution drops the author's commit and force-pushes the result.
+    if ((Invoke-Git @('diff', '--quiet')) -ne 0 -or @(Get-GitLines @('ls-files', '--others', '--exclude-standard')).Count -gt 0) {
+      Write-Warn2 "unstaged or untracked changes in $($script:IM.Wt): stage what belongs in the commit, discard the rest, then rerun with -Resume"
+      Get-GitLines @('status', '--short') | Select-Object -First 10 | ForEach-Object { Write-Info $_ }
+      return $false
+    }
+
+    # Guard: `git rebase --continue` exits non-zero when it commits and then stops at the NEXT conflict,
+    # the normal case here and not a failure (treating it as one made a two-conflict branch unlandable).
+    # The loop re-inspects; only a step that changes nothing at all is stuck.
+    $before = Get-GitOne @('rev-parse', 'HEAD')
+    if ((Invoke-Git @('diff', '--cached', '--quiet')) -eq 0) {
+      Write-Info 'a commit became empty after the rebase; skipping it'
+      [void](Invoke-Git @('rebase', '--skip'))
+    } else {
+      [void](Invoke-Git @('rebase', '--continue'))
+    }
+    if ((Test-InRebase) -and (Get-GitOne @('rev-parse', 'HEAD')) -eq $before -and @(Get-GitLines @('diff', '--name-only', '--diff-filter=U')).Count -eq 0) {
+      Write-Warn2 'rebase is stuck: nothing conflicted, nothing applied. git says:'
+      Get-GitLines @('status') | Select-Object -First 12 | ForEach-Object { Write-Info $_ }
+      return $false
+    }
+  }
+}
+
+function Save-Verified {
+  # Guard: the verification record pins branch, base, HEAD, smoke and workstream, and the base is the
+  # merge-base, never origin/main: refs are shared by every worktree of the clone and any session's fetch
+  # moves them mid-build, which would make "main did not move" a lie. Recording the ref cost one landing
+  # three rejected pushes.
+  $im = $script:IM
+  $im.VerifiedBase = Get-GitOne @('merge-base', 'HEAD', 'origin/main')
+  $head = Get-GitOne @('rev-parse', 'HEAD')
+  Set-Content -LiteralPath $im.VbFile -Encoding ascii -Value ('{0} {1} {2} {3} {4}' -f $im.Branch, $im.VerifiedBase, $head, [int]$im.Smoke, $im.WsId)
+}
+
+function Save-BranchTip { Set-Content -LiteralPath $script:IM.TipFile -Encoding ascii -Value "$($script:IM.Branch) $($script:IM.BranchTip)" }
+
+function Read-Record([string]$Path) {
+  if (Test-Path -LiteralPath $Path) { return @(("$(Get-Content -LiteralPath $Path -TotalCount 1)").Trim() -split ' ') }
+  return @()
+}
+
+function Save-StatusCommit {
+  # STATUS.md for the state about to land, as its own commit when more than its timestamp moved.
+  [void](Invoke-Python @('unreal/Build/plan-status.py'))
+  if ((Invoke-Git @('diff', '--quiet', '--', 'unreal/PLAN/STATUS.md')) -eq 0) { return }
+  $changed = @(Get-GitLines @('diff', '-U0', '--', 'unreal/PLAN/STATUS.md') | Where-Object { $_ -match '^[+-]' -and $_ -notmatch '^(\+\+\+|---) ' })
+  if (@($changed | Where-Object { $_ -notmatch '^[+-]Generated ' }).Count -eq 0) {
+    [void](Invoke-Git @('checkout', '-q', '--', 'unreal/PLAN/STATUS.md'))   # only the timestamp moved: not a commit
+    return
+  }
+  if ((Invoke-Git @('add', '--', 'unreal/PLAN/STATUS.md')) -ne 0 -or (Invoke-Git @('commit', '-q', '-m', "PLAN: STATUS regenerated after landing $($script:IM.Branch)")) -ne 0) {
+    Stop-Landing 'committing the regenerated STATUS.md'
+  }
+  Write-Info 'STATUS.md regenerated (its own commit)'
+}
+
+function Get-OtherUbtCount {
+  # Real UBT processes only: dotnet running UnrealBuildTool.dll. int-merge.sh's first try, pgrep -f, also
+  # counted every shell whose command line merely mentioned the name (other sessions watch the queue so).
+  return @(Get-CimInstance Win32_Process -Filter "Name = 'dotnet.exe' OR Name = 'UnrealBuildTool.exe'" -ErrorAction SilentlyContinue |
+      Where-Object { $_.Name -eq 'UnrealBuildTool.exe' -or "$($_.CommandLine)" -match 'UnrealBuildTool\.dll' }).Count
+}
+
+function Wait-OtherBuilds {
+  # Guard: yield to other builds before starting one. Kept on the GPU box, deliberately (2026-09-26): the
+  # Mac's 8 GB ceiling is gone, but the box is shared by the agent sessions and the runner, and UBT's
+  # -WaitMutex is not FIFO, so a landing that merely queued could jump an agent's build, the critical path.
+  $max = 5400; if ($env:DF_INT_YIELD_MAX) { $max = [int]$env:DF_INT_YIELD_MAX }
+  $n = Get-OtherUbtCount
+  if ($n -eq 0) { return }
+  Write-Info "yielding: $n other UnrealBuildTool process(es) running or queued (up to $max s)"
+  $w = 0
+  while ((Get-OtherUbtCount) -gt 0 -and $w -lt $max) { Start-Sleep -Seconds 30; $w += 30 }
+  Write-Info "yielded $w s; $(Get-OtherUbtCount) other build(s) left"
+}
+
+function Invoke-LandingChecks {
+  # The branch's own checks, from the verify worktree, with ownership judged against origin/main.
+  Write-Step 'checks'
+  $checks = @(@('layering-check.py'), @('ownership-check.py', '--ws', $script:IM.WsId, '--base', 'origin/main'),
+    @('validate-content-json.py'), @('check-test-coverage.py'))
+  foreach ($c in $checks) {
+    Write-Host "   -- $($c -join ' ')"
+    if ((Invoke-Python (@("unreal/Build/$($c[0])") + @($c | Select-Object -Skip 1))) -ne 0) { Stop-Landing $c[0] }
+  }
+  Write-Ok 'checks passed'
+}
+
+function Invoke-LandingVerify {
+  Invoke-LandingChecks
+  Wait-OtherBuilds
+  # Invoke-Build prints every diagnostic line on a failure (the next guard in the brief).
+  if (-not (Invoke-Build)) { Stop-Landing 'build' }
+  if (-not (Invoke-Tests '')) { Stop-Landing 'tests' }   # no filter: test.sh's DF_GATE_FILTER, the landing gate
+  if ($script:IM.Smoke) { if (-not (Invoke-Smoke $script:IM.Clients $script:IM.SmokePort)) { Stop-Landing 'smoke' } }
+  Save-Verified
+}
+
+function Test-DocOnlyMove([string]$From, [string]$To) {
+  # True when only ledger/doc paths differ between two commits; false when git cannot say.
+  if ((Invoke-Git @('cat-file', '-e', "$From^{commit}")) -ne 0 -or (Invoke-Git @('cat-file', '-e', "$To^{commit}")) -ne 0) { return $false }
+  $files = @(Get-GitLines @('diff', '--name-only', $From, $To))
+  return (@($files | Where-Object { $_ -notmatch $DocOnlyRe }).Count -eq 0)
+}
+
+function Start-Landing {
+  $im = $script:IM
+  Remove-Item -LiteralPath $im.VbFile, $im.TipFile -ErrorAction SilentlyContinue
+  if (Test-InRebase) { [void](Invoke-Git @('rebase', '--abort')) }
+  # Tracked and untracked files reset; ignored Intermediate, Binaries and Saved stay, so builds are incremental.
+  [void](Invoke-Git @('reset', '-q', '--hard'))
+  [void](Invoke-Git @('clean', '-qfd'))
+  if ((Invoke-Native 'git' @('checkout', '-q', '-B', $im.IntBranch, "origin/$($im.Branch)")) -ne 0) { Stop-Landing "checkout origin/$($im.Branch) (does the branch exist?)" }
+  # Guard: the branch push's lease is the tip this landing took, persisted for -Resume, never the ref a
+  # later fetch refreshed. Without it a landing silently overwrites an author who pushed during
+  # verification. It fired for real, and refused, correctly.
+  $im.BranchTip = Get-GitOne @('rev-parse', "origin/$($im.Branch)")
+  Save-BranchTip
+  Write-Step 'rebase onto origin/main'
+  if (-not (Invoke-RebaseOntoMain)) { Stop-Landing 'rebase' }
+  [void](Invoke-Native 'git' @('log', '--oneline', 'origin/main..HEAD'))
+  Invoke-LandingVerify
+}
+
+function Resume-Landing {
+  $im = $script:IM
+  $cur = Get-LandingBranch
+  if ($cur -ne $im.IntBranch) { Stop-Landing "resume: the verify worktree holds '$cur', not $($im.IntBranch) (rerun without -Resume)" }
+  $tip = Read-Record $im.TipFile
+  if ($tip.Count -lt 2 -or $tip[0] -ne $im.Branch -or -not $tip[1]) { Stop-Landing "resume: no record of which origin/$($im.Branch) tip this worktree took (rerun without -Resume)" }
+  $im.BranchTip = $tip[1]
+  if (Test-InRebase) {
+    Write-Info "finishing the rebase left in $($im.Wt)"
+  } else {
+    # Nothing in flight: what gets verified must be exactly what gets pushed, so no uncommitted or
+    # untracked work may ride along (it would pass the build and never reach main).
+    if ((Invoke-Git @('diff', '--quiet')) -ne 0 -or (Invoke-Git @('diff', '--cached', '--quiet')) -ne 0) {
+      Get-GitLines @('status', '--short') | Select-Object -First 10 | ForEach-Object { Write-Info $_ }
+      Stop-Landing 'resume: uncommitted changes in the verify worktree; commit them (they are then verified) or discard them'
+    }
+    $untracked = @(Get-GitLines @('ls-files', '--others', '--exclude-standard'))
+    if ($untracked.Count -gt 0) { Stop-Landing "resume: untracked files in the verify worktree: $(($untracked | Select-Object -First 5) -join ' ')" }
+  }
+  if (-not (Invoke-RebaseOntoMain)) { Stop-Landing 'rebase' }
+  $curTip = Get-GitOne @('rev-parse', "origin/$($im.Branch)")
+  if ($curTip -ne $im.BranchTip) {
+    if ($curTip -and (Invoke-Git @('merge-base', '--is-ancestor', $curTip, 'HEAD')) -eq 0) {
+      Write-Info "origin/$($im.Branch) moved to $($curTip.Substring(0, 7)) and this worktree already contains it; lease updated"
+      $im.BranchTip = $curTip; Save-BranchTip
+    } else {
+      Stop-Landing "origin/$($im.Branch) moved from $($im.BranchTip.Substring(0, 7)) and this worktree does not contain the new commits (its author pushed); rerun without -Resume"
+    }
+  }
+  $vb = Read-Record $im.VbFile
+  $head = Get-GitOne @('rev-parse', 'HEAD')
+  if ($vb.Count -ge 5 -and $vb[0] -eq $im.Branch -and $vb[2] -eq $head -and $vb[4] -eq $im.WsId -and ($vb[3] -eq '1' -or -not $im.Smoke)) {
+    $im.VerifiedBase = $vb[1]
+    Write-Info "resuming $($im.IntBranch): HEAD $($head.Substring(0, 7)) was verified against $($vb[1].Substring(0, 7))"
+  } else {
+    Write-Info "resuming $($im.IntBranch): no verification record for this HEAD and these settings; verifying"
+    [void](Invoke-Native 'git' @('log', '--oneline', 'origin/main..HEAD'))
+    Invoke-LandingVerify
+  }
+}
+
+function Publish-Landing {
+  $im = $script:IM
+  Write-Step 'land'
+  for ($attempt = 1; $attempt -le 3; $attempt++) {
+    if ((Invoke-Git @('fetch', '-q', 'origin')) -ne 0) { Stop-Landing 'fetch' }
+    $main = Get-GitOne @('rev-parse', 'origin/main')
+    if ($main -ne $im.VerifiedBase) {
+      # Guard: ledger/doc-only movement re-runs the cheap checks and rebases without rebuilding; code or
+      # content movement verifies again.
+      if (Test-DocOnlyMove $im.VerifiedBase $main) {
+        Write-Info 'main moved by ledger/doc-only commits since verification: rebasing and re-running the checks, no rebuild'
+        if (-not (Invoke-RebaseOntoMain)) { Stop-Landing 'rebase onto the moved main' }
+        Invoke-LandingChecks
+        Save-Verified
+      } else {
+        Write-Info 'main moved with code or content since verification: verifying again'
+        if (-not (Invoke-RebaseOntoMain)) { Stop-Landing 'rebase onto the moved main' }
+        Invoke-LandingVerify
+      }
+    }
+    Save-StatusCommit
+    Save-Verified
+    if ((Invoke-Native 'git' @('push', '-q', 'origin', "HEAD:$($im.Branch)", "--force-with-lease=$($im.Branch):$($im.BranchTip)")) -ne 0) {
+      Stop-Landing "push branch: origin/$($im.Branch) moved since this landing took it at $($im.BranchTip.Substring(0, 7)) (its author pushed?); rerun without -Resume to take the new tip"
+    }
+    $im.BranchTip = Get-GitOne @('rev-parse', 'HEAD'); Save-BranchTip
+    if ((Invoke-Git @('push', '-q', 'origin', 'HEAD:main')) -eq 0) {
+      Remove-Item -LiteralPath $im.VbFile, $im.TipFile -ErrorAction SilentlyContinue
+      return
+    }
+    Write-Info "push to main rejected (attempt $attempt); refetching"
+  }
+  Stop-Landing 'push main after 3 attempts (rerun with -Resume)'
+}
+
+function Invoke-IntMerge([string]$Target, [int]$ClientCount, [int]$SmokePort) {
+  if (-not $Target) { Fail 'int-merge needs the branch to land' 'Example: deepfield int-merge ws/04-towers/rig -Ws 04'; return $false }
+  $Target = $Target -replace '^origin/', ''
+  $clone = $script:Repo
+  # Beside the clone by default, so its DefaultEngine.ini DDC (../../../DDC) is the clone's too, and the
+  # path stays short. int-merge.sh's /Volumes/Toshiba path has no Windows analogue.
+  $wt = $VerifyDir
+  if (-not $wt) { $wt = $env:DF_INT_VERIFY_WT }
+  if (-not $wt) { $wt = Join-Path (Split-Path $clone -Parent) 'int-verify' }
+  $wt = [IO.Path]::GetFullPath($wt)
+  $wsId = $Ws; if (-not $wsId) { $wsId = 'INT' }
+  $script:IM = @{
+    Branch = $Target; IntBranch = "int/$Target"; Wt = $wt; WsId = $wsId; Smoke = (-not $NoSmoke)
+    Clients = $ClientCount; SmokePort = $SmokePort
+    VbFile = "$wt.verified-base"; TipFile = "$wt.branch-tip"; BranchTip = ''; VerifiedBase = ''
+  }
+  $env:GIT_EDITOR = 'true'   # rebase --continue must never wait for an editor
+  $savedRepo = $script:Repo; $savedProject = $script:Project
+  $inWorktree = $false
+  Enter-LandingLock "$wt.lock" "landing $Target"
+  try {
+    Write-Step 'fetch'
+    if ((Invoke-Native 'git' @('-C', $clone, 'fetch', '-q', 'origin')) -ne 0) { Stop-Landing 'fetch' }
+    if (-not (Test-Path -LiteralPath (Join-Path $wt '.git'))) {
+      [void](Invoke-Native 'git' @('-C', $clone, 'worktree', 'prune'))
+      if ((Invoke-Native 'git' @('-C', $clone, 'worktree', 'add', '-q', '--detach', $wt, 'origin/main')) -ne 0) { Stop-Landing "worktree add $wt" }
+      Write-Info "created the verify worktree at $wt (its first build compiles every module)"
+    }
+    Push-Location -LiteralPath $wt; $inWorktree = $true
+    $script:Repo = $wt; $script:Project = Join-Path $wt 'unreal\DeepField\DeepField.uproject'
+    if ($Resume) { Resume-Landing } else { Start-Landing }
+    if ($DryRun) {
+      Write-Host ''
+      Write-Host "int-merge: dry run, verified and not pushed. The verify worktree is at $wt on $($script:IM.IntBranch)" -ForegroundColor Yellow
+      return $true
+    }
+    Publish-Landing
+    Pop-Location; $inWorktree = $false
+    # The clone follows main when it is on main and clean; anything else is someone's work, left alone.
+    $onMain = (Get-NativeOutput 'git' @('-C', $clone, 'symbolic-ref', '-q', '--short', 'HEAD')) -eq 'main'
+    $dirty = Get-NativeOutput 'git' @('-C', $clone, 'status', '--porcelain', '--untracked-files=no')
+    if ($onMain -and -not $dirty) {
+      if ((Invoke-Native 'git' @('-C', $clone, 'merge', '-q', '--ff-only', 'origin/main')) -ne 0) { Write-Info 'the clone has local commits on main; not fast-forwarded' }
+    } else { Write-Info 'the clone is not clean on main; not touching it' }
+    Write-Host ''
+    Write-Host "int-merge: landed $Target on main" -ForegroundColor Green
+    return $true
+  } catch [System.OperationCanceledException] {
+    Write-Info "int-merge stopped; the verify worktree is left at $wt on $($script:IM.IntBranch)"
+    throw
+  } finally {
+    if ($inWorktree) { Pop-Location }
+    $script:Repo = $savedRepo; $script:Project = $savedProject
+    Exit-LandingLock
+  }
+}
+
 function Start-Game([string[]]$Extra, [string]$What) {
   $p = Get-Paths
   $log = Join-Path $p.Saved "Logs\$What.log"
@@ -1300,11 +1743,11 @@ try {
     $script:Repo = @(Find-ExistingClones) | Select-Object -First 1
     if (-not $script:Repo) { Fail 'no clone found' 'Run: deepfield setup' }
     $script:Project = Join-Path $script:Repo 'unreal\DeepField\DeepField.uproject'
-    if (@('check', 'pr-check', 'ci-local') -contains $Command) {
+    if (@('check', 'pr-check', 'ci-local', 'int-merge') -contains $Command) {
       $script:Python = Find-Python
       if (-not $script:Python) { Fail 'Python is not installed' 'Run: deepfield setup' }
     }
-    if (@('pr-check', 'ci-local') -contains $Command) {
+    if (@('pr-check', 'ci-local', 'int-merge') -contains $Command) {
       # The ownership check runs git from Python, so git must be on PATH for this process and its
       # children; use an installed-but-off-PATH Git (as setup does) rather than failing.
       if (-not (Get-Command git -ErrorAction SilentlyContinue)) { $off = Find-GitOffPath; if ($off) { $env:Path = "$off;$env:Path" } }
@@ -1314,7 +1757,7 @@ try {
       Read-EngineAssociation
       $script:Engine = Find-Engine $script:EngineAssociation
       if (-not $script:Engine) { Fail "Unreal Engine $($script:EngineAssociation) is not installed" 'Run: deepfield setup' }
-      if (@('build', 'test', 'pr-check', 'smoke', 'ci-local', 'editor', 'play', 'host', 'join') -contains $Command -and -not (Get-VsVerdict | Where-Object { $_.Good.Count -gt 0 })) {
+      if (@('build', 'test', 'pr-check', 'smoke', 'ci-local', 'int-merge', 'editor', 'play', 'host', 'join') -contains $Command -and -not (Get-VsVerdict | Where-Object { $_.Good.Count -gt 0 })) {
         Fail 'Visual Studio with an MSVC toolset UE 5.8 accepts is not installed' 'Run: deepfield setup'
       }
     }
@@ -1346,6 +1789,7 @@ try {
     'pr-check' { [void](Invoke-PrCheck $Arg) }
     'smoke'    { if (Invoke-Build) { [void](Invoke-Smoke $Clients $smokePort) } }
     'ci-local' { [void](Invoke-CiLocal -Filter $Arg -ClientCount $Clients -SmokePort $smokePort) }
+    'int-merge' { [void](Invoke-IntMerge -Target $Arg -ClientCount $Clients -SmokePort $smokePort) }
     'check'    { Invoke-RepoChecks }
     'editor'   {
       if (Invoke-Build) {
