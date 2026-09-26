@@ -188,3 +188,36 @@ Consequences:
   Standing asks the move made moot are struck through (ws-15) or annotated (the rulings doc, the
   WS-10a claim step, the int-merge ruling in ci.md) with a dated note, not deleted.
 Links: PROGRAMME.md §1.1, §6.2, §6.3, §6.5 and the G3 row; `digests/2026-09-26.md`; `NEXT.md`; `README.md`.
+
+## ADR-0030 `unreal/main` is not locked; revertability is the guarantee instead
+Date 2026-09-26 · Accepted (project owner) · Amends ADR-0029 §3. Context: ADR-0029 §3 said the freeze of
+`unreal/main` "needs a lock rather than an agreement" and left the owner to add a ruleset rule restricting
+updates to `refs/heads/unreal/main`. The owner has declined the lock: pushes may occur, on the condition
+that changes can be reverted. Decision: **no update restriction is added.** The condition is met, and by
+something already in place rather than by discipline:
+
+- The **"Protect Trunks" ruleset** (active) covers `~DEFAULT_BRANCH` and `refs/heads/unreal/main` and
+  blocks **`deletion`** and **`non_fast_forward`**. History therefore cannot be rewritten and neither
+  trunk can be deleted, so every commit stays reachable and `git revert` always has a target. Free
+  pushing is safe *because* those two are blocked — they are the guarantee, not the ruleset's absence of
+  a status check.
+- **ADR-0029's merge-commit rule compounds it**: `unreal/main` came onto `main` as a merge, not a squash,
+  so all 208 commits and every ledger-cited sha remain reachable and individually revertable.
+
+Two limits to state plainly, because "we can revert" is true and not sufficient:
+
+1. **LFS objects are the one narrow gap.** 47 files on `main` are LFS-tracked and `.lfsconfig` still
+   carries a `fetchexclude` (Megascans, `L_*_Art*`, `L_*_Lighting*`, `Env/**`) that ADR-0028 wants
+   dropped. A revert restores a *pointer*; it restores the file only if the object is on the server. So a
+   commit pushed from a clone whose LFS upload failed reverts to a pointer with no object. `git lfs fsck`
+   detects it; `locksverify = true` is on. Worth one check after any binary-heavy landing.
+2. **The binding constraint is not the ability to revert, it is knowing what to revert.** ~43 commits and
+   ~9,100 lines of C++ are on the trunk that nothing has compiled. If something is broken, the revert is
+   trivial and the diagnosis is not. `fcc1e1d` is recorded in `NEXT.md` as the last commit known to
+   compile, so the search is a bisect rather than a hunt — but that marker is a substitute for a gate,
+   not a replacement. **This is the argument for the runner (WS-15), not for a lock.**
+
+Consequence for INT: ADR-0029 §3's interim duty becomes permanent — run
+`git log origin/main..origin/unreal/main` each cycle and merge anything found onto `main` with a merge
+commit. It returned 0 at the time of writing. Deleting `unreal/main` remains the owner's call.
+

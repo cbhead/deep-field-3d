@@ -218,3 +218,19 @@ behind it, so the port can be checked rule by rule rather than read as 259 lines
 It also lists six places the docs overclaim, including that this workstream's own `last_commit` is on no
 branch with six landings unrecorded, and that `OWNERSHIP.md` grants it a directory that does not exist.
 
+## 2026-09-26: `unreal/main` will not be locked (ADR-0030)
+The owner declined the update restriction ADR-0029 §3 asked for: pushes may occur, provided changes can
+be reverted. That condition is already met — the **"Protect Trunks" ruleset blocks `deletion` and
+`non_fast_forward`** on both trunks, so history cannot be rewritten and every commit stays reachable and
+revertable, and ADR-0029's merge-commit (rather than squash) kept all 208 `unreal/main` commits
+individually revertable.
+
+**So INT's stray check is permanent, not interim:** run `git log origin/main..origin/unreal/main` each
+cycle and merge anything found onto `main` with a merge commit. It is 0 today.
+
+Two things revertability does **not** cover, recorded in ADR-0030: an LFS object that was never pushed
+reverts to a pointer with no file (`git lfs fsck` finds it — worth a check after a binary-heavy landing);
+and the real bottleneck, which is **knowing what to revert** — ~9,100 lines of C++ on the trunk that
+nothing has compiled. `fcc1e1d` is the bisect marker, and it is a substitute for a gate rather than a
+replacement for one.
+
