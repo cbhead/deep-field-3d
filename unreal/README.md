@@ -301,6 +301,22 @@ prints a summary table either way, ending `ci-local: OK`.
 the DDC, which is slow once and fast afterwards. The editor starts on `/Game/DF/Dev/L_Dev_Empty`, an
 empty test level.
 
+**For an AI agent: `unreal\deepfield editor -Mcp`** also starts UE 5.8's experimental Unreal MCP
+server (`Engine\Plugins\Experimental\ModelContextProtocol`) at `http://127.0.0.1:8000/mcp` (`-McpPort`
+to move it), with the Editor, AutomationTest, ConfigSettings and SlateInspector toolsets. An agent can
+then read the output log, inspect and change actors, assets and Blueprints, set console variables,
+drive the viewport and Play-In-Editor, and run automation tests in the live editor. The plugins are
+enabled on the command line for that launch only, not in `DeepField.uproject`: they are experimental,
+and CI and packaged builds stay without them.
+
+- **No authentication.** Anything that can reach the port can edit the project. The engine's HTTP
+  server binds to localhost unless `[HTTPServer.Listeners]` says otherwise (the GPU box: `127.0.0.1:8000`
+  only), and the server rejects browser `Origin`s that are not localhost. Do not add a bind address.
+- **Registering it with Claude Code.** With the CLI: `claude mcp add --transport http --scope local
+  unreal http://127.0.0.1:8000/mcp`. Without it (the desktop app), put that server in a `.mcp.json` at
+  the clone's root and add `/.mcp.json` to `.git/info/exclude`, so the file stays on that machine. A
+  session picks the server up when it starts, and only while an `-Mcp` editor is running.
+
 ### 6.2 Play a map
 
 - **In the editor:** Content Browser → `Content/DF/Maps/<Map>/L_<Map>` (for example `L_Foundry`, or

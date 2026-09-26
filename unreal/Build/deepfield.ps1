@@ -23,7 +23,8 @@
              unless -Strict), build, the landing gate, the smoke. -Skip smoke,plan-status skips steps.
              Stops at the first failure and prints a summary table either way.
     check    The fast repository checks (Python, no engine): layering, content schemas, test coverage.
-    editor   Build, then open the Unreal editor on the project.
+    editor   Build, then open the Unreal editor on the project. -Mcp also starts UE's experimental
+             Unreal MCP server at http://localhost:8000/mcp (-McpPort to move it) for an AI agent.
     play     Build, then run the game in a window. `-Map /Game/DF/Maps/Testlane/L_Testlane` for another map.
     host     Like play, but as a listen host other players can join (port 7777, or -Port).
     join     Join a host: `join 192.168.1.20` (and -Port if the host changed it).
@@ -90,6 +91,10 @@ param(
   [switch]$AllowStale,
   # setup: do not ask before installing what the check found missing.
   [switch]$Yes,
+  # editor: also enable UE's experimental Unreal MCP server (runbook 6.1), on this launch only.
+  [switch]$Mcp,
+  # editor -Mcp: the port the MCP server listens on (localhost only).
+  [int]$McpPort = 8000,
   # Keep the window open at the end (the .cmd passes this when the script was double-clicked).
   [switch]$Pause
 )
@@ -105,6 +110,8 @@ $RepoUrl       = 'https://github.com/cbhead/deep-field-3d.git'
 $RepoBranch    = 'unreal/main'
 $EnginePatch   = 3          # UE 5.8.3: a different patch re-saves assets on open (runbook 1.2, "Why a pinned patch")
 $MinFreeGB     = 150
+# editor -Mcp: the Unreal MCP server and the engine toolsets it serves (Engine\Plugins\Experimental\Toolsets).
+$McpPlugins    = @('ModelContextProtocol', 'EditorToolset', 'AutomationTestToolset', 'ConfigSettingsToolset', 'SlateInspectorToolset')
 $MinPython     = [version]'3.9'
 $MinWinBuild   = 19041
 $WinSdkWanted  = '10.0.22621.0'
@@ -1309,8 +1316,17 @@ try {
     'editor'   {
       if (Invoke-Build) {
         $p = Get-Paths
-        Start-Process $p.Editor -ArgumentList @("`"$($script:Project)`"") | Out-Null
+        $editorArgs = @("`"$($script:Project)`"")
+        if ($Mcp) {
+          # Enabled on the command line, not in DeepField.uproject: the plugin is experimental and has a
+          # Runtime module, so CI and packaged builds stay without it. The server has no authentication;
+          # the engine's HTTP server binds to localhost unless [HTTPServer.Listeners] says otherwise.
+          $editorArgs += "-EnablePlugins=$($McpPlugins -join ',')"
+          $editorArgs += "-ExecCmds=`"ModelContextProtocol.StartServer $McpPort`""
+        }
+        Start-Process $p.Editor -ArgumentList $editorArgs | Out-Null
         Write-Ok 'editor starting (the first open compiles shaders: slow once, fast afterwards)'
+        if ($Mcp) { Write-Info "Unreal MCP server: http://localhost:$McpPort/mcp once the editor has loaded (toolsets: $(($McpPlugins | Select-Object -Skip 1) -join ', '))" }
       }
     }
     'play'     { if (Invoke-Build) { Start-Game @($Map) 'play' } }
