@@ -10,10 +10,10 @@ measured anything on it.
 unreal\Build\machine-inventory.ps1` (from PowerShell or cmd, not Git Bash) writes
 [`machines/windows-gpu.md`](machines/windows-gpu.md). Its readiness table checks the box against this
 file. Re-run it and commit the result after each section, so the next session reads what the box has
-instead of guessing. At the last inventory (2026-09-26, `fae3e7d`): UE 5.8.3 at
-`C:\Program Files\Epic Games\UE_5.8`, VS 2022 with MSVC 14.44 (compiler 14.44.35229), Windows SDK
-10.0.22621, Defender exclusions set, no .NET 8 SDK (optional), the clone at
-`C:\Users\Cbhea\deep-field-3d`, and C: (the only volume) at 429.5 GB free of 923 GB.
+instead of guessing. At the last inventory (2026-09-26, `c06c5bb`): UE 5.8.3 at
+`C:\Program Files\Epic Games\UE_5.8` with Editor symbols, VS 2022 with MSVC 14.44 (compiler
+14.44.35229), Windows SDK 10.0.22621, Defender exclusions set, no .NET 8 SDK (optional), the clone at
+`C:\Users\Cbhea\deep-field-3d`, and C: (the only volume) at 359.4 GB free of 923 GB.
 
 Tick boxes in a PR as you go, write what you observed into your session log, and if a runbook step or
 the script turned out different, fix it in the same PR.
@@ -24,11 +24,13 @@ the script turned out different, fix it in the same PR.
       Windows SDK, UE 5.8.3, the clone with every LFS file, and the first build (setup's own build
       stopped on C2487; `deepfield build` finished it after `b234449`). The Defender exclusions
       (runbook §1.4) are done, 2026-09-26.
-- [ ] **Editor symbols for debugging**, in the launcher's options for the 5.8 install (about 60 GB).
-      The box does not have them: the first crash's engine frames all read `UnknownFunction`.
+- [x] **Editor symbols for debugging**, in the launcher's options for the 5.8 install (about 60 GB):
+      installed 2026-09-26, and the inventory's `Editor symbols` row reads them. Before that, the first
+      crash's engine frames all read `UnknownFunction`.
 - [ ] Disk: the drive the clone is on has **≥ 500 GB free** once the art sublevels, Megascans and
-      packages arrive. At the last inventory, C: had 429.5 GB. Plan the space before the art lanes start.
-- [x] `machine-inventory.ps1` re-run elevated and committed (`fae3e7d`, 2026-09-26). Its readiness table shows no `FAIL` except the
+      packages arrive. At the last inventory, C: had 359.4 GB (down 70 GB from the inventory before, mostly the symbols). Plan the
+      space before the art lanes start.
+- [x] `machine-inventory.ps1` re-run elevated and committed (`c06c5bb`, 2026-09-26). Its readiness table shows no `FAIL` except the
       runner (§5) and the disk (above), and has an elevated run behind it so that the Defender row is
       not `UNKNOWN`. Optional tools (the .NET 8 SDK for the WavePlan goldens, the GitHub CLI) and an
       engine patch other than the pinned 5.8.3 are `WARN`.
