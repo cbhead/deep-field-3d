@@ -1,0 +1,403 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deepfield.dev/content/level.schema.json",
+  "title": "level",
+  "description": "A map's level file (CONTRACTS/map-authoring-3d.md §1, docs/MAP-AUTHORING.md §2): unreal/content/levels/<map>.level.json (authored, \"deepfield-level/1\") or unreal/content/levels/legacy/<map>.level.json (the Godot export, \"deepfield-level/legacy\"). Read by FDFLevelFile::Load (DFWorld) for -run=DFLevelImport and -run=DFMapValidate. Frame: SIM METRES, x right, y up, -z forward; the loader converts to Unreal cm once. Where the contract, the loader and MAP-AUTHORING disagree, the list is in unreal/PLAN/workstreams/ws-10a-map-foundry.md ('level.schema.json: where the three sources disagree'). Checked by unreal/Build/validate-content-json.py, which adds the cross-file rules a schema cannot express (unique ids, teleport-leg rules, gate sockets, condition ids, and every waves_<map>.json routeId resolving to a route here).",
+  "oneOf": [
+    { "$ref": "#/$defs/authored" },
+    { "$ref": "#/$defs/legacy" }
+  ],
+  "$defs": {
+    "vec3": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 3,
+      "maxItems": 3,
+      "description": "[x, y, z] sim metres."
+    },
+    "vec2": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+      "description": "Permanent (lanegraph.md: socket, node and edge ids are never renamed, only added). No '@' — warp gate keys are \"<node>@<edge>\"."
+    },
+
+    "authored": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["$schema", "id", "field", "totalWaves", "brief", "anchors", "routes", "sockets"],
+      "properties": {
+        "$schema": { "const": "deepfield-level/1" },
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*$", "description": "Map id: the file name, the maps.json row, the terrain file." },
+        "label": { "type": "string" },
+        "kit": { "type": "string", "description": "Asset prefix (MAP-AUTHORING §2)." },
+        "note": { "type": "string" },
+        "units": { "type": "string" },
+        "field": { "$ref": "#/$defs/vec2", "description": "Playable extent [x, z] metres. Must match the terrain file's bounds.playable." },
+        "totalWaves": { "type": "integer", "minimum": 1 },
+        "brief": { "$ref": "#/$defs/brief" },
+        "anchors": { "$ref": "#/$defs/anchors" },
+        "routes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/route" } },
+        "sockets": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/socket" } },
+        "conditions": { "$ref": "#/$defs/conditions" },
+        "vehicles": { "type": "array", "items": { "$ref": "#/$defs/vehicle" } },
+        "laneNodeNames": { "type": "array", "items": { "$ref": "#/$defs/laneNodeName" } },
+        "laneGates": { "type": "array", "maxItems": 8, "items": { "$ref": "#/$defs/laneGate" } },
+        "operatedGates": { "type": "array", "items": { "$ref": "#/$defs/operatedGate" } },
+        "bossRoute": { "$ref": "#/$defs/bossRoute" },
+        "mutables": { "type": "array", "items": { "$ref": "#/$defs/mutable" } },
+        "containerGates": { "type": "array", "items": { "$ref": "#/$defs/placed" } },
+        "vehicleRoads": { "type": "array", "items": { "$ref": "#/$defs/vehicleRoad" } },
+        "nests": { "type": "array", "items": { "$ref": "#/$defs/nest" } },
+        "caches": { "type": "array", "items": { "$ref": "#/$defs/placed" } },
+        "barrelSpawns": { "type": "array", "items": { "$ref": "#/$defs/placed" } },
+        "volumes": { "type": "array", "items": { "$ref": "#/$defs/volume" } },
+        "areas": { "type": "array", "items": { "$ref": "#/$defs/area" } },
+        "place": { "type": "array", "items": { "$ref": "#/$defs/placeItem" } }
+      }
+    },
+
+    "brief": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lesson", "intent"],
+      "description": "map-authoring-3d.md §3: the lesson (one sentence, preserved from the legacy map) and the design intent (prose).",
+      "properties": {
+        "lesson": { "type": "string", "minLength": 1 },
+        "intent": { "type": "string", "minLength": 1 },
+        "legacy": { "type": "string", "description": "Path of the legacy level file this redesign takes as its brief." },
+        "decisions": { "type": "array", "items": { "type": "string" }, "description": "Numbers chosen and why, one per line, for whoever iterates next." }
+      }
+    },
+    "anchors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["heroSpawn", "armory", "stations"],
+      "properties": {
+        "heroSpawn": { "$ref": "#/$defs/vec3" },
+        "armory": { "$ref": "#/$defs/vec3" },
+        "stations": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/station" } }
+      }
+    },
+    "station": {
+      "oneOf": [
+        {
+          "type": "array",
+          "prefixItems": [ { "$ref": "#/$defs/id" }, { "$ref": "#/$defs/vec3" } ],
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[\"id\", [x,y,z]]"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "pos"],
+          "properties": { "id": { "$ref": "#/$defs/id" }, "pos": { "$ref": "#/$defs/vec3" }, "note": { "type": "string" } }
+        }
+      ]
+    },
+    "route": {
+      "oneOf": [ { "$ref": "#/$defs/groundRoute" }, { "$ref": "#/$defs/airRoute" } ]
+    },
+    "groundRoute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "layer", "waypoints"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "layer": { "const": "ground" },
+        "waypoints": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "#/$defs/vec3" },
+          "description": "Projected to the terrain on import (y is a hint for readers, not a height), unless `elevated`."
+        },
+        "teleportLegs": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1 },
+          "description": "Leg i runs waypoints[i] -> waypoints[i+1]; never the first or last leg, never two in a row (MAP-AUTHORING §2.1)."
+        },
+        "elevated": { "type": "boolean", "description": "Keep the authored heights (a deck or bridge route); do not project." },
+        "note": { "type": "string" }
+      }
+    },
+    "airRoute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "layer", "agl", "waypoints"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "layer": { "const": "air" },
+        "agl": {
+          "const": true,
+          "description": "Declares that every waypoint's y is metres ABOVE THE GROUND under it, not absolute (map-authoring-3d.md §1). Required so that a reader which predates AGL cannot take these heights as absolute without noticing."
+        },
+        "waypoints": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "array",
+            "prefixItems": [ { "type": "number" }, { "type": "number", "minimum": 8, "maximum": 15 }, { "type": "number" } ],
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "[x, agl, z]: the air ribbon is 8-15 m AGL (§3.2)."
+          }
+        },
+        "note": { "type": "string" }
+      }
+    },
+    "socket": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "tag", "pos"],
+          "properties": {
+            "id": { "$ref": "#/$defs/id" },
+            "tag": { "enum": ["ground", "wall", "trap", "barricade"] },
+            "pos": { "$ref": "#/$defs/vec3" },
+            "pad": { "type": "boolean", "description": "The importer cuts a level pad here (terrain maps). Only the object form carries it: FDFLevelFile reads `pad` from objects only." },
+            "note": { "type": "string" }
+          }
+        },
+        {
+          "type": "array",
+          "prefixItems": [ { "$ref": "#/$defs/id" }, { "$ref": "#/$defs/vec3" }, { "enum": ["ground", "wall", "trap", "barricade"] } ],
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "[\"id\", [x,y,z], \"tag\"] (MAP-AUTHORING §2.2). No pad: use the object form on terrain."
+        }
+      ]
+    },
+    "conditions": {
+      "type": "object",
+      "propertyNames": { "pattern": "^(0|[1-9][0-9]*)$" },
+      "additionalProperties": { "type": "string" },
+      "description": "0-based wave index -> condition id (conditions.json): {\"8\": \"fog\"} is W9 fog, as Conditions.cs reads it."
+    },
+    "vehicle": {
+      "oneOf": [
+        {
+          "type": "array",
+          "prefixItems": [ { "$ref": "#/$defs/id" }, { "type": "string" }, { "$ref": "#/$defs/vec3" }, { "type": "number" } ],
+          "minItems": 4,
+          "maxItems": 4,
+          "description": "[\"id\", \"def\", [x,y,z], yawDegrees]"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "defId", "pos"],
+          "properties": {
+            "id": { "$ref": "#/$defs/id" },
+            "defId": { "type": "string" },
+            "pos": { "$ref": "#/$defs/vec3" },
+            "yawDegrees": { "type": "number" }
+          }
+        }
+      ]
+    },
+    "laneNodeName": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "at"],
+      "properties": { "id": { "$ref": "#/$defs/id" }, "at": { "$ref": "#/$defs/vec3" }, "note": { "type": "string" } }
+    },
+    "laneGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["edgeId", "socketId"],
+      "properties": { "edgeId": { "type": "string" }, "socketId": { "$ref": "#/$defs/id" } }
+    },
+    "operatedGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "edgeId", "at"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "edgeId": { "type": "string" },
+        "at": { "$ref": "#/$defs/vec3" },
+        "label": { "type": "string" }
+      }
+    },
+    "bossRoute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["routeId"],
+      "description": "C6 BossRoutes[] {Id, Via[]}: the boss walks the edges of the named ground route. Rule 13: 8 m clearance, <=15 % grade, no warp legs, no operated gate it cannot break, a nest overlooking >=50 % of it.",
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "routeId": { "$ref": "#/$defs/id" },
+        "clearanceMetres": { "type": "number", "minimum": 8 },
+        "note": { "type": "string" }
+      }
+    },
+    "mutable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "at"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "enum": ["floodgate", "crusher", "wall", "cache", "nest", "barrel", "container"] },
+        "edgeId": { "type": "string" },
+        "at": { "$ref": "#/$defs/vec3" },
+        "params": { "type": "object", "additionalProperties": { "type": "number" } },
+        "note": { "type": "string" }
+      }
+    },
+    "placed": {
+      "type": "object",
+      "required": ["id", "at"],
+      "description": "Shape provisional: containerGates, caches and barrelSpawns are named by the contract and by nobody's loader yet. id + position; extra keys are allowed until an owner specifies them.",
+      "properties": { "id": { "$ref": "#/$defs/id" }, "at": { "$ref": "#/$defs/vec3" }, "note": { "type": "string" } }
+    },
+    "nest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "at"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "at": { "$ref": "#/$defs/vec3" },
+        "overlooks": { "type": "array", "items": { "$ref": "#/$defs/id" }, "description": "Route ids it is meant to overwatch (rule 13 needs one over >=50 % of the boss route)." },
+        "note": { "type": "string" }
+      }
+    },
+    "vehicleRoad": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "width", "points"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "enum": ["asphalt", "gravel", "grass", "water"] },
+        "width": { "type": "number", "minimum": 0 },
+        "points": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/vec3" } },
+        "maxGradePercent": { "type": "number", "minimum": 0, "maximum": 12, "description": "Rule 9: roads <= 12 %." },
+        "note": { "type": "string" }
+      }
+    },
+    "box": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["at", "size"],
+      "properties": { "at": { "$ref": "#/$defs/vec3" }, "size": { "$ref": "#/$defs/vec3" } }
+    },
+    "volume": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "box"],
+      "description": "MAP-AUTHORING §2.4: something a player can stand on, walk into or be stopped by.",
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "box": { "$ref": "#/$defs/box" },
+        "solid": { "type": "boolean" },
+        "surface": { "type": "string" },
+        "run": { "enum": ["x", "z"] },
+        "piece": { "type": "number" },
+        "note": { "type": "string" }
+      }
+    },
+    "area": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "box"],
+      "description": "MAP-AUTHORING §2.5 traversal. A ladder must top out level with a surface.",
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "enum": ["ladder", "zipline", "launcher", "teleporter", "elevator", "nest", "armory", "controlPoint"] },
+        "box": { "$ref": "#/$defs/box" },
+        "to": { "$ref": "#/$defs/vec3" },
+        "velocity": { "$ref": "#/$defs/vec3" },
+        "padId": { "type": "string" },
+        "label": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    },
+    "placeItem": {
+      "type": "array",
+      "prefixItems": [ { "type": "string" }, { "$ref": "#/$defs/vec3" }, { "type": "number" }, { "type": "number" } ],
+      "minItems": 3,
+      "maxItems": 4,
+      "description": "[model, [x,y,z], yawRadians, scale?] (MAP-AUTHORING §2.6)."
+    },
+
+    "legacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["$schema", "id", "field", "totalWaves", "heroSpawn", "armory", "routes", "sockets", "stations"],
+      "description": "The Godot export out of sim/Sim.Core/Content/Maps.cs: flat (y = 0 is grade), capitalised enums, anchors at the top level, object forms throughout. Frozen: it is the brief's record, never edited.",
+      "properties": {
+        "$schema": { "const": "deepfield-level/legacy" },
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*$" },
+        "note": { "type": "string" },
+        "units": { "type": "string" },
+        "field": { "$ref": "#/$defs/vec2" },
+        "totalWaves": { "type": "integer", "minimum": 1 },
+        "heroSpawn": { "$ref": "#/$defs/vec3" },
+        "armory": { "$ref": "#/$defs/vec3" },
+        "routes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "layer", "waypoints"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "layer": { "enum": ["Ground", "Air"] },
+              "waypoints": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/vec3" } },
+              "barricadeGate": { "type": ["string", "null"] },
+              "fallbackRouteId": { "type": ["string", "null"] },
+              "teleportLegs": { "type": ["array", "null"], "items": { "type": "integer", "minimum": 1 } }
+            }
+          }
+        },
+        "sockets": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "tag", "pos"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "tag": { "enum": ["Ground", "Wall", "Trap", "Barricade"] },
+              "pos": { "$ref": "#/$defs/vec3" }
+            }
+          }
+        },
+        "stations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "pos"],
+            "properties": { "id": { "$ref": "#/$defs/id" }, "pos": { "$ref": "#/$defs/vec3" } }
+          }
+        },
+        "conditionSchedule": { "$ref": "#/$defs/conditions" },
+        "vehicles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "defId", "pos"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "defId": { "type": "string" },
+              "pos": { "$ref": "#/$defs/vec3" },
+              "yawDegrees": { "type": "number" }
+            }
+          }
+        },
+        "laneNodeNames": { "type": "array", "items": { "$ref": "#/$defs/laneNodeName" } },
+        "laneGates": { "type": "array", "maxItems": 8, "items": { "$ref": "#/$defs/laneGate" } },
+        "operatedGates": { "type": "array", "items": { "$ref": "#/$defs/operatedGate" } }
+      }
+    }
+  }
+}

@@ -11,8 +11,10 @@ json/<table>.json        one file per table: towers, traps, enemies, statuses, r
                          melee, meleeAttachments, attachments, ammo, conditions, vehicles, maps, balance,
                          waves_<map> (one per map)
 schema/<table>.schema.json   JSON Schema per table (waves.schema.json covers every waves_<map>;
-                         terrain.schema.json is WS-30's, for terrain/)
+                         terrain.schema.json is WS-30's, for terrain/; level.schema.json covers
+                         levels/<map>.level.json and levels/legacy/)
 content-ids.json         every table's ids in row order (what DF.Content.TagCoverage / RoundTrip check)
+levels/<map>.level.json  the authored 3D level files (WS-10x; "deepfield-level/1", CONTRACTS/map-authoring-3d.md)
 levels/legacy/           the Godot-era level briefs (input to WS-09/WS-10x; -run=DFLevelImport -legacy)
 levels/reports/          map-validator reports
 terrain/<map>.terrain.json   text-authored terrain specs (WS-30; build_heightmap.py → -run=DFEditor.DFTerrainImport)

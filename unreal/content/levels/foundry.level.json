@@ -1,0 +1,969 @@
+{
+  "$schema": "deepfield-level/1",
+  "id": "foundry",
+  "label": "The Foundry",
+  "kit": "foundry",
+  "note": "Foundry for the Unreal rebuild (WS-10a; CONTRACTS/map-authoring-3d.md; lands on unreal/content/terrain/foundry.terrain.json). The legacy file levels/legacy/foundry.level.json was the brief: its lesson, its 24/11/11 socket counts, its ground:air length ratio and W9 fog carry over; every position is new. The layout was iterated against the dead-ground report that tools/ue-bridge/terrain/predict_level.py predicts on the terrain (levels/reports/foundry.predicted.json); the engine's DF.Map.Validate report is the measurement it has to reproduce.",
+  "units": "metres, sim frame: x right, y up, -z forward (the loader converts to Unreal cm). Ground points are projected to the terrain on import; their y is the terrain.json bed elevation, for readers. Air points are [x, AGL, z]. Wall sockets keep their y (the deck top).",
+  "field": [
+    110,
+    80
+  ],
+  "totalWaves": 10,
+  "brief": {
+    "lesson": "layers & armour",
+    "intent": "The high ground covers, the low ground hides, and a wave's armour is answered by which layer you build on rather than by how much you build. The lane is one haul road down a works cut into a hillside: out of the tapping pit up a 25 % cinder bank (the kill zone: drifters slow on all 12 m of it, and the pads on T1 and inside the haul loop look straight down it), across the landing, down a ramp cut through T1's north shoulder and the spur, round the deck's corner under the overlook, along the bench below T2's south lip, and into the basin where W9's fog pools. Three layers of sockets hold it: T1 (+16) owns the climb and the head of the ramp; the deck (+14, all 11 wall pads) owns the foot of the ramp and the top of the bench and is where the air lane comes lowest over a wall; T2's lip, the basin rim and the south shelf own the second half. The south shelf is mortar country: its pads sit below the bench edge, so a Lance there loses the lane behind the bench and a Nova lobs over it (G2).",
+    "legacy": "levels/legacy/foundry.level.json",
+    "decisions": [
+      "Terraces T1 +16, T2 +8, T3 0 (two 8 m steps, INT ruling 7), basin -2.5 at the core; 18.5 m of relief on the lane (G2 needs 8).",
+      "Ground lane 169.5 m (legacy 126): the boss rule (<= 15 %) over 18.5 m of drop needs >= 123 m of descent. Chosen by the user over a legacy-length lane with no boss route: waves walk ~35 % further, a balance input for WS-27.",
+      "One climb, 3 m over 12 m at 25 % (<= 30 %, > +15 % so x0.85 on all of it): the only uphill on the map, so G2's 'drifters slow on the climb' has one unambiguous place.",
+      "Every descent is a constant 13.5 %: inside the +/-15 % band, so no stretch is sped up x1.1 (INT 2026-09-21: the band is for a drop that reads as one) and the boss can walk it.",
+      "Boss route: the lane, except that it takes the pit's haul ramp (43.8 m at 10 %) round the climb; the two meet on a level landing at right angles so neither bed bends the other. Walkers take the climb (15 m against 43.8 to the same junction). Bed 8 m wide for the boss's clearance; no structure spans the lane.",
+      "Ground:air length 169.5:124.3 = 1.36 (legacy 126:84.9 = 1.48; the contract allows +/-20 %, 1.19-1.78).",
+      "Air 9 -> 13 -> 9 m AGL: over the haul loop, T1's rim and the spur at 9-11, over the deck at 13, down to 9 over the basin. Waypoints are dense enough that lifting only the waypoints to terrain + AGL keeps the lane within 0.9 m of the authored AGL everywhere (rule 3 allows 2).",
+      "Sockets 24 ground / 11 wall / 11 trap, as A1. Ground pads placed greedily against the predicted dead-ground report (each pad: flat <= 18 % before the cut, >= 4 m off every lane, >= 8.5 m from a spawn), then pruned to 24 while keeping every segment at >= 3; g14 is kept although it covers nothing directly: it is the G2 demonstration pad.",
+      "W9 fog is {\"8\": \"fog\"}: condition keys are 0-based wave indices (Conditions.cs:111).",
+      "The vent tunnel is a hero passage, not a lane (a 3 m bore is narrower than the 3.4 m corridor): north-south through the spur at x = -12, portals at (-12, 8, 9.5) and (-12, 8, -7.5), T2 level both ends. It needs a Landscape hole and a mesh (WS-37); nothing in this file makes it.",
+      "A1's features: the 'bridge ladder' is deckLadder (the deck is the gantry; a bridge over the lane would break the boss's 8 m clearance), the launcher throws from the south shelf over the bench onto T2's lip, the zipline runs from the deck east to T3 beside the basin, the control point stands on T2 north, which has no sockets on purpose: it is the flank the heroes hold, not the towers.",
+      "The deck station and the wall pads assume the deck exists at +14 (volumes.deck). DFLevelImport does not build volumes yet, so until a graybox deck is placed the deck station projects to T2 below it."
+    ]
+  },
+  "anchors": {
+    "heroSpawn": [
+      14,
+      8,
+      -14
+    ],
+    "armory": [
+      14,
+      8,
+      -8
+    ],
+    "stations": [
+      [
+        "yard",
+        [
+          14,
+          8,
+          -11
+        ]
+      ],
+      [
+        "deck",
+        [
+          -4,
+          14,
+          -14
+        ]
+      ],
+      [
+        "pitRim",
+        [
+          -35,
+          16,
+          38
+        ]
+      ],
+      [
+        "basinRim",
+        [
+          50,
+          0,
+          -9
+        ]
+      ]
+    ]
+  },
+  "routes": [
+    {
+      "id": "ground",
+      "layer": "ground",
+      "waypoints": [
+        [
+          -50,
+          13.0,
+          28
+        ],
+        [
+          -42,
+          13.0,
+          28
+        ],
+        [
+          -30,
+          16.0,
+          28
+        ],
+        [
+          -27,
+          16.0,
+          28
+        ],
+        [
+          -24,
+          16.0,
+          28
+        ],
+        [
+          -19,
+          14.94,
+          22
+        ],
+        [
+          -19,
+          8.87,
+          -23
+        ],
+        [
+          -12,
+          7.62,
+          -29
+        ],
+        [
+          36,
+          1.13,
+          -29
+        ],
+        [
+          43,
+          -0.2,
+          -22
+        ],
+        [
+          43,
+          -2.5,
+          -5
+        ],
+        [
+          43,
+          -2.5,
+          0
+        ]
+      ],
+      "note": "The haul road: pit floor (13, the 8 m apron) -> the climb (25 %) -> the landing (16) -> the ramp through the north shoulder and the spur (13.5 %) -> round the deck's corner -> the bench below T2's lip -> the basin -> the core plinth (-2.5). y is the terrain.json bed elevation; the importer projects."
+    },
+    {
+      "id": "air",
+      "layer": "air",
+      "agl": true,
+      "waypoints": [
+        [
+          -50,
+          9,
+          22
+        ],
+        [
+          -36,
+          9,
+          18
+        ],
+        [
+          -28,
+          9,
+          4
+        ],
+        [
+          -24.7,
+          9.5,
+          1.7
+        ],
+        [
+          -23.1,
+          9.7,
+          0.5
+        ],
+        [
+          -14,
+          11,
+          -6
+        ],
+        [
+          -12.3,
+          11.3,
+          -7.1
+        ],
+        [
+          -2,
+          13,
+          -14
+        ],
+        [
+          14,
+          11,
+          -18
+        ],
+        [
+          28.0,
+          9.4,
+          -13.3
+        ],
+        [
+          31.0,
+          9.1,
+          -12.3
+        ],
+        [
+          32,
+          9,
+          -12
+        ],
+        [
+          43,
+          9,
+          0
+        ]
+      ],
+      "note": "[x, AGL, z]. 9 over the pit and T1, 11 over the spur, 13 over the deck, 9 into the basin."
+    },
+    {
+      "id": "boss",
+      "layer": "ground",
+      "waypoints": [
+        [
+          -50,
+          13.0,
+          28
+        ],
+        [
+          -42,
+          13.0,
+          28
+        ],
+        [
+          -42,
+          13.0,
+          21
+        ],
+        [
+          -38,
+          13.99,
+          12
+        ],
+        [
+          -27,
+          15.1,
+          12
+        ],
+        [
+          -27,
+          16.0,
+          21
+        ],
+        [
+          -27,
+          16.0,
+          28
+        ],
+        [
+          -24,
+          16.0,
+          28
+        ],
+        [
+          -19,
+          14.94,
+          22
+        ],
+        [
+          -19,
+          8.87,
+          -23
+        ],
+        [
+          -12,
+          7.62,
+          -29
+        ],
+        [
+          36,
+          1.13,
+          -29
+        ],
+        [
+          43,
+          -0.2,
+          -22
+        ],
+        [
+          43,
+          -2.5,
+          -5
+        ],
+        [
+          43,
+          -2.5,
+          0
+        ]
+      ],
+      "note": "Not a wave route (no wave names it): the ground lane with the pit's haul ramp in place of the climb, so the boss never sees more than 13.5 %."
+    }
+  ],
+  "sockets": [
+    {
+      "id": "g1",
+      "tag": "ground",
+      "pos": [
+        -50,
+        15.8,
+        16
+      ],
+      "pad": true
+    },
+    {
+      "id": "g2",
+      "tag": "ground",
+      "pos": [
+        -48,
+        15.9,
+        11
+      ],
+      "pad": true
+    },
+    {
+      "id": "g3",
+      "tag": "ground",
+      "pos": [
+        -31,
+        16.0,
+        21
+      ],
+      "pad": true
+    },
+    {
+      "id": "g4",
+      "tag": "ground",
+      "pos": [
+        -28,
+        16.0,
+        32
+      ],
+      "pad": true
+    },
+    {
+      "id": "g5",
+      "tag": "ground",
+      "pos": [
+        -24,
+        16.0,
+        32
+      ],
+      "pad": true
+    },
+    {
+      "id": "g6",
+      "tag": "ground",
+      "pos": [
+        -11,
+        16.0,
+        4.5
+      ],
+      "pad": true
+    },
+    {
+      "id": "g7",
+      "tag": "ground",
+      "pos": [
+        -40,
+        15.9,
+        4
+      ],
+      "pad": true
+    },
+    {
+      "id": "g8",
+      "tag": "ground",
+      "pos": [
+        -33,
+        15.9,
+        4
+      ],
+      "pad": true
+    },
+    {
+      "id": "g9",
+      "tag": "ground",
+      "pos": [
+        -28,
+        16.1,
+        2
+      ],
+      "pad": true
+    },
+    {
+      "id": "g10",
+      "tag": "ground",
+      "pos": [
+        -10,
+        16.0,
+        1
+      ],
+      "pad": true
+    },
+    {
+      "id": "g11",
+      "tag": "ground",
+      "pos": [
+        -37,
+        15.9,
+        -1
+      ],
+      "pad": true
+    },
+    {
+      "id": "g12",
+      "tag": "ground",
+      "pos": [
+        0,
+        8.0,
+        -21
+      ],
+      "pad": true
+    },
+    {
+      "id": "g13",
+      "tag": "ground",
+      "pos": [
+        10,
+        7.9,
+        -21
+      ],
+      "pad": true
+    },
+    {
+      "id": "g14",
+      "tag": "ground",
+      "pos": [
+        16,
+        -0.2,
+        -37
+      ],
+      "pad": true
+    },
+    {
+      "id": "g15",
+      "tag": "ground",
+      "pos": [
+        20,
+        8.0,
+        -21
+      ],
+      "pad": true
+    },
+    {
+      "id": "g16",
+      "tag": "ground",
+      "pos": [
+        23,
+        8.1,
+        -10
+      ],
+      "pad": true
+    },
+    {
+      "id": "g17",
+      "tag": "ground",
+      "pos": [
+        26,
+        8.1,
+        -21
+      ],
+      "pad": true
+    },
+    {
+      "id": "g18",
+      "tag": "ground",
+      "pos": [
+        27,
+        -0.1,
+        -37
+      ],
+      "pad": true
+    },
+    {
+      "id": "g19",
+      "tag": "ground",
+      "pos": [
+        47,
+        0.1,
+        -33
+      ],
+      "pad": true
+    },
+    {
+      "id": "g20",
+      "tag": "ground",
+      "pos": [
+        35,
+        -0.1,
+        -18
+      ],
+      "pad": true
+    },
+    {
+      "id": "g21",
+      "tag": "ground",
+      "pos": [
+        50,
+        -0.1,
+        -16
+      ],
+      "pad": true
+    },
+    {
+      "id": "g22",
+      "tag": "ground",
+      "pos": [
+        35,
+        -1.2,
+        -6
+      ],
+      "pad": true
+    },
+    {
+      "id": "g23",
+      "tag": "ground",
+      "pos": [
+        50,
+        -1.7,
+        -2
+      ],
+      "pad": true
+    },
+    {
+      "id": "g24",
+      "tag": "ground",
+      "pos": [
+        34,
+        -1.2,
+        5
+      ],
+      "pad": true
+    },
+    {
+      "id": "w1",
+      "tag": "wall",
+      "pos": [
+        -11,
+        14,
+        -18
+      ]
+    },
+    {
+      "id": "w2",
+      "tag": "wall",
+      "pos": [
+        -7,
+        14,
+        -18
+      ]
+    },
+    {
+      "id": "w3",
+      "tag": "wall",
+      "pos": [
+        -3,
+        14,
+        -18
+      ]
+    },
+    {
+      "id": "w4",
+      "tag": "wall",
+      "pos": [
+        1,
+        14,
+        -18
+      ]
+    },
+    {
+      "id": "w5",
+      "tag": "wall",
+      "pos": [
+        3,
+        14,
+        -14
+      ]
+    },
+    {
+      "id": "w6",
+      "tag": "wall",
+      "pos": [
+        1,
+        14,
+        -10
+      ]
+    },
+    {
+      "id": "w7",
+      "tag": "wall",
+      "pos": [
+        -3,
+        14,
+        -10
+      ]
+    },
+    {
+      "id": "w8",
+      "tag": "wall",
+      "pos": [
+        -7,
+        14,
+        -10
+      ]
+    },
+    {
+      "id": "w9",
+      "tag": "wall",
+      "pos": [
+        -11,
+        14,
+        -10
+      ]
+    },
+    {
+      "id": "w10",
+      "tag": "wall",
+      "pos": [
+        -11,
+        14,
+        -14
+      ]
+    },
+    {
+      "id": "w11",
+      "tag": "wall",
+      "pos": [
+        3,
+        14,
+        -10
+      ]
+    },
+    [
+      "t1",
+      [
+        -38,
+        14.0,
+        28
+      ],
+      "trap"
+    ],
+    [
+      "t2",
+      [
+        -33,
+        15.25,
+        28
+      ],
+      "trap"
+    ],
+    [
+      "t3",
+      [
+        -19,
+        13.86,
+        14
+      ],
+      "trap"
+    ],
+    [
+      "t4",
+      [
+        -19,
+        12.24,
+        2
+      ],
+      "trap"
+    ],
+    [
+      "t5",
+      [
+        -19,
+        10.62,
+        -10
+      ],
+      "trap"
+    ],
+    [
+      "t6",
+      [
+        -15.5,
+        8.24,
+        -26
+      ],
+      "trap"
+    ],
+    [
+      "t7",
+      [
+        -2,
+        6.27,
+        -29
+      ],
+      "trap"
+    ],
+    [
+      "t8",
+      [
+        10,
+        4.65,
+        -29
+      ],
+      "trap"
+    ],
+    [
+      "t9",
+      [
+        22,
+        3.02,
+        -29
+      ],
+      "trap"
+    ],
+    [
+      "t10",
+      [
+        39.5,
+        0.46,
+        -25.5
+      ],
+      "trap"
+    ],
+    [
+      "t11",
+      [
+        43,
+        -1.55,
+        -12
+      ],
+      "trap"
+    ]
+  ],
+  "conditions": {
+    "8": "fog"
+  },
+  "laneNodeNames": [
+    {
+      "id": "westGate",
+      "at": [
+        -50,
+        13.0,
+        28
+      ]
+    },
+    {
+      "id": "pitFloor",
+      "at": [
+        -42,
+        13.0,
+        28
+      ],
+      "note": "where the boss haul ramp leaves the lane"
+    },
+    {
+      "id": "climbTop",
+      "at": [
+        -30,
+        16.0,
+        28
+      ],
+      "note": "the top of the climb; DFLaneGraphBuilder promotes it to a node (step 2b) because the climb and the haul are parallel spans"
+    },
+    {
+      "id": "haulBend",
+      "at": [
+        -38,
+        13.99,
+        12
+      ],
+      "note": "the haul's promoted middle waypoint, for the same reason"
+    },
+    {
+      "id": "landing",
+      "at": [
+        -27,
+        16.0,
+        28
+      ],
+      "note": "where the haul rejoins, on the climb's landing"
+    },
+    {
+      "id": "core",
+      "at": [
+        43,
+        -2.5,
+        0
+      ]
+    },
+    {
+      "id": "airGate",
+      "at": [
+        -50,
+        9,
+        22
+      ]
+    },
+    {
+      "id": "airCore",
+      "at": [
+        43,
+        9,
+        0
+      ]
+    }
+  ],
+  "bossRoute": {
+    "id": "haul",
+    "routeId": "boss",
+    "clearanceMetres": 8,
+    "note": "Rule 13: 8 m bed, <= 13.6 % predicted, no warps, no gates; deckRoof overlooks 83 % of it (predicted; rule 13 needs 50 %)."
+  },
+  "nests": [
+    {
+      "id": "deckRoof",
+      "at": [
+        -4,
+        18,
+        -14
+      ],
+      "overlooks": [
+        "boss"
+      ],
+      "note": "A sniper perch on the deck's gantry, 4 m above the deck."
+    }
+  ],
+  "volumes": [
+    {
+      "id": "deck",
+      "box": {
+        "at": [
+          -4,
+          13.8,
+          -14
+        ],
+        "size": [
+          16,
+          0.4,
+          10
+        ]
+      },
+      "solid": true,
+      "surface": "foundry_deck",
+      "run": "x",
+      "piece": 4.0,
+      "note": "The overlook: 6 m above T2 on the deckFootings flat; the 11 wall pads are 1 m inside its edges."
+    }
+  ],
+  "areas": [
+    {
+      "id": "deckLadder",
+      "kind": "ladder",
+      "box": {
+        "at": [
+          4.6,
+          11,
+          -12
+        ],
+        "size": [
+          0.6,
+          6,
+          1
+        ]
+      },
+      "note": "T2 (8) to the deck top (14), topping out level with it."
+    },
+    {
+      "id": "deckNest",
+      "kind": "nest",
+      "box": {
+        "at": [
+          -4,
+          18,
+          -14
+        ],
+        "size": [
+          2,
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "id": "deckZip",
+      "kind": "zipline",
+      "box": {
+        "at": [
+          3.5,
+          15,
+          -14
+        ],
+        "size": [
+          1,
+          2,
+          1
+        ]
+      },
+      "to": [
+        33,
+        1.5,
+        -14
+      ],
+      "note": "Deck east to T3 beside the basin; does not cross the lane."
+    },
+    {
+      "id": "shelfLauncher",
+      "kind": "launcher",
+      "box": {
+        "at": [
+          22,
+          0.1,
+          -37
+        ],
+        "size": [
+          2,
+          0.2,
+          2
+        ]
+      },
+      "velocity": [
+        0,
+        14,
+        9.2
+      ],
+      "note": "South shelf over the bench onto T2's lip near (22, 8, -18): 2.1 s airtime, peak ~10 m."
+    },
+    {
+      "id": "controlPoint",
+      "kind": "controlPoint",
+      "box": {
+        "at": [
+          8,
+          9,
+          24
+        ],
+        "size": [
+          6,
+          2,
+          6
+        ]
+      },
+      "note": "T2 north. controlPoint is not one of MAP-AUTHORING's seven kinds: flagged in the ws file, not assumed."
+    },
+    {
+      "id": "armory",
+      "kind": "armory",
+      "box": {
+        "at": [
+          14,
+          9,
+          -8
+        ],
+        "size": [
+          2,
+          2,
+          2
+        ]
+      }
+    }
+  ]
+}
