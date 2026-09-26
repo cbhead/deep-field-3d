@@ -1,8 +1,8 @@
 # Workstream status
 
-Generated 2026-09-26T00:04:32Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-26T01:17:18Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
-active: 6 · paused: 6 · review: 1 · unclaimed: 37
+active: 7 · paused: 6 · review: 1 · unclaimed: 36
 
 | WS | Title | Phase | CP | State | Owner | Lease expires | Last commit | Editor-heavy | Blocked on |
 |---|---|---|---|---|---|---|---|---|---|
@@ -16,7 +16,7 @@ active: 6 · paused: 6 · review: 1 · unclaimed: 37
 | WS-07 | Factions & abilities | P2-P4 | CP | unclaimed | — | — | — |  | — |
 | WS-08 | Vehicles | P3-P4 |  | unclaimed | — | — | — | yes | — |
 | WS-09 | World: lanes, sockets, traversal, conditions, terrain import | P1-P4 | CP | paused | — | — | 75ed8f4 | yes | — |
-| WS-10a | Map redesign: Foundry | P2 | CP | unclaimed | — | — | — | yes | — |
+| WS-10a | Map redesign: Foundry | P2 | CP | active | session-01Bqjmob-cloud | 2026-09-27T01:01:55Z | 788db74 | yes | — |
 | WS-10b | Map redesign: Switchyard | P3 |  | unclaimed | — | — | — | yes | — |
 | WS-10c | Map redesign: Spire | P3 |  | unclaimed | — | — | — | yes | — |
 | WS-10d | Map redesign: Toaster | P3 |  | unclaimed | — | — | — | yes | — |

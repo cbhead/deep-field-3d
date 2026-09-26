@@ -152,3 +152,22 @@ Zero runners are registered, so `unreal-win` reports *skipped* and `unreal-check
 compile anything. Until a machine with the engine gates the trunk, more unbuilt C++ makes the eventual
 reckoning larger, and `fcc1e1d` is the commit to bisect from when someone finally has a compiler.
 
+## Assignment, 2026-09-25: WS-07 Factions & abilities is prepped and unclaimed
+**The last unclaimed critical-path workstream**, and G2 depends on it through the ability clause of
+`DF.Net.Feel`. A full audited brief is in `unreal/PLAN/workstreams/ws-07-factions.md`, section
+"Assignment from INT" — claim it there per §6.2.
+
+Five readers audited it against the tree first, and the headline is that **half of it already exists**:
+all five faction passives are built and fed by live `balance.json` dials under WS-02's name, all 15
+faction/ability tags are native, `UDFGameplayAbility`/`UDFAbilitySet` exist, and `factions.json` matches
+the frozen sim value-for-value. **None of the ability half exists**, and neither do the ability cue
+leaves that G2's predicted-cue criterion needs.
+
+The brief carries **twelve INT rulings** on contradictions the audit found, including three worth knowing
+about outside WS-07: `UDFLocalProgressionProvider::MaxLevel` is **20 against the sim's 5, with a live
+test asserting the wrong number** (WS-11 to fix); `UDFCombatSet` is **not registered on the hero**, so two
+of the five passives currently have no attribute to write (WS-03 to fix); and `FDFFactionRow.Signature`
+is declared in the header while `factions.schema.json` forbids it — a live C2 break, fixable as a
+one-line JSON append with no engine. One question is left explicitly to the human rather than ruled:
+three documents give three different XP-cap semantics, and at 100 XP/level × 5 levels the reading matters.
+
