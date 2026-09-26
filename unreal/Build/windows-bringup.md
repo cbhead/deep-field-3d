@@ -30,9 +30,11 @@ the script turned out different, fix it in the same PR.
 - [x] §5.1 (`deepfield test`) passes the landing gate: **155 of 155 on 2026-09-26** (`e859ffb`, UE
       5.8.2, MSVC 14.44), every registered suite. It was the suite's first MSVC verdict and the first
       build of PR #51. It took three fixes (`b234449`, `cb820b2`, `e859ffb`; PLAN/NEXT.md).
-- [ ] Runbook §3 checks pass (`deepfield check`).
-- [ ] Runbook §5.2 (map validator) and §5.3 (`deepfield smoke`) pass. Then `deepfield ci-local` runs
-      the whole pre-merge set end to end, which is also what the runner's nightly will run.
+- [x] `deepfield ci-local` passes end to end, which is what the runner's nightly will run: **OK on
+      2026-09-26, 45 s** (layering, ownership, schemas, coverage, plan-status, build, the gate, and
+      the smoke with host seat 1 and client seat 2; the client was admitted through the dev-join
+      branch, runbook §5.3). That covers the §3 checks and §5.3.
+- [ ] Runbook §5.2 (the map validator) passes.
 
 ## 2. First light with a real RHI
 

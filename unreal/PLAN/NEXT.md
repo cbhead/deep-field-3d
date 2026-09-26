@@ -30,8 +30,10 @@ landed after `fcc1e1d` without a compiler. Three fixes were needed: `b234449` (D
 rejects a comma list of statics in an exported class, C2487), `cb820b2` (the match looked up the lane
 graph loudly on `L_Dev_Empty`, and the error failed `DF.Func.Status.ThermalShockInLevel`) and
 `e859ffb` (the lane-graph builder's signed-zero fold was optimised away, so `Derive` asserted; see
-the FP hazard below). Still unmeasured: the smoke, the map validator and `deepfield ci-local` end to
-end (`unreal/Build/windows-bringup.md` §1), and everything after it.
+the FP hazard below). The same day, `deepfield ci-local` passed end to end (checks, build, gate, and
+the listen-host smoke with one client), in 45 s. Still unmeasured: the map validator
+(`unreal/Build/windows-bringup.md` §1), first light, a package, the Game-target FP check, and the
+runner.
 
 ## The machine (this changed on 2026-09-25)
 
@@ -86,8 +88,8 @@ end (`unreal/Build/windows-bringup.md` §1), and everything after it.
 ## What to do next, in the order I would do it
 
 1. **Commission the box, starting with a build of the trunk** (`windows-bringup.md` §1–3):
-   `deepfield setup`, `deepfield build` and `deepfield test` are done (155 of 155, 2026-09-26). Next,
-   `deepfield ci-local` (adds the checks and the smoke), the map validator, then the first package.
+   `deepfield setup`, `deepfield test` (155 of 155) and `deepfield ci-local` (OK, with the smoke) are
+   done as of 2026-09-26. Next: the map validator, first light (§2), then the first package.
 2. **Register the runner and port the scripts** (WS-15; `windows-bringup.md` §5, `CONTRACTS/ci.md`).
    Today `unreal-checks` is the only lane that runs, so a green PR check means only that the ledger
    and schemas are consistent. The Windows workflow is written (`.github/workflows/unreal-win.yml`,
