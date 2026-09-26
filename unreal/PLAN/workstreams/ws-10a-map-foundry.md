@@ -193,6 +193,30 @@ the **legacy flat** level, so it is a shape to imitate, not a baseline your rede
 against until someone runs the validator on your file. Plan the hand-over knowing the engine-side pass
 will be the first real measurement.
 
+## level.schema.json: where the three sources disagree (session-01Bqjmob-cloud, 2026-09-26)
+INT asked for this list (correction 4). Sources: **C** = `CONTRACTS/map-authoring-3d.md` §1–3, **L** = the
+loader `FDFLevelFile::Load` (`DFWorld/Private/LaneGraph/DFLevelFile.cpp`) and what `DFLevelImport` does with
+it, **M** = `docs/MAP-AUTHORING.md` §2. The schema's choice is in the last column. Rows marked **engine** need
+a WS-09 change before an authored 3D file imports correctly; the rest are settled by the schema alone.
+
+| Field | C says | L does | M says | Schema |
+|---|---|---|---|---|
+| **Air route heights** (**engine**) | `agl`, 8–15 m above ground, "instead of absolute Y" | no `agl` field; the importer never projects air points and keeps y as absolute (its comment: "3D: AGL, which is the same thing over a flat floor") | y 8–15 absolute over decks, 9 on a flat map | air routes must carry `"agl": true` and every waypoint is `[x, agl, z]` with agl in [8, 15]. **Until the importer adds the ground height under each air point, an authored air lane lands inside the hill** (Foundry's T1 is at +16 m). |
+| Socket pad | `pad: true` → importer cuts a level **1.2 m** pad; rule 4 says pad **≥ 1.1 m**, **≤ 5 %** after the cut | reads `pad` from the **object form only**; no pad size, yaw or slope field (C6 has `PadYaw`, `PadSlopePercent` with no level-file source) | 1.1 m radius visual, 1.2 m collision | `pad` on the object form only. Reading M: 1.1 and 1.2 are both radii, so C and §3.2 do not actually conflict. |
+| Socket tag / route layer case | — | case-insensitive | lowercase | authored: lowercase; legacy: capitalised (as exported) |
+| Anchors | — | top level **or** under `anchors` | under `anchors` (+ `stations`) | authored: `anchors{heroSpawn, armory, stations}`; legacy: top level |
+| Conditions | — | reads **both** `conditionSchedule` and `conditions` and merges them | `conditions` | authored: `conditions`. Keys are **0-based wave indices** (`Conditions.cs:111`), so A1's "W9 fog" is `{"8": "fog"}`; M's example does not say. |
+| `brief` | §1: "the lesson and the design intent, prose"; §3: `brief.lesson` + `brief.intent` | ignored | — | object: `lesson`, `intent` required; `legacy`, `decisions[]` optional. (`maps.json` also has a `lesson` field, currently `""` for Foundry — two homes for one sentence.) |
+| `bossRoute` (**engine**) | singular, shape unspecified | ignored; `BuildFromLevel` resets `BossRoutes` | — | `{routeId, id?, clearanceMetres?}` naming a ground route, matching C6's `BossRoutes[] {Id, Via[]}` (the Via is that route's edges). |
+| Vehicle roads | `vehicleRoads[]`, splines with `maxGradePercent` | ignored | `roads[] {kind, width, points}` (the surface a vehicle reads) | `vehicleRoads[] {id, kind, width, points, maxGradePercent ≤ 12}`; `roads` not accepted in authored files. |
+| `pond` | — (water is `terrain.json` `water[]` now) | ignored | `pond {at, radius}` | dropped from authored files. |
+| `mutables`, `containerGates`, `nests`, `caches`, `barrelSpawns` | named, no shapes | ignored | — | `mutables` from C6 `FDFMutableDef`; `nests {id, at, overlooks[]}`; the other three are **provisional** `{id, at}` with extra keys allowed until an owner specifies them. |
+| `volumes`, `areas`, `place`, `label`, `kit` | — | ignored | §2.4–2.6 | accepted as M specifies. `areas.kind` adds **`controlPoint`**: A1 gives Foundry a control point and M's seven kinds have no way to say so (M calls an eighth kind a code change — flagged, not assumed). |
+| Teleport legs | — | not checked | never first/last, never two in a row, never on air | enforced by the validator. |
+| `field` | — | default 110×80 when absent | "fixed, see §3" | required; the validator checks it equals the terrain file's `bounds.playable`. |
+| `$schema` | — | read, unused (`bLegacy` comes from the path) | `deepfield-level/1` | the discriminator: `deepfield-level/1` or `deepfield-level/legacy`. |
+
 ## Session log
 <!-- append-only: date · session · what landed · what's next -->
 - 2026-09-26 · session-01Bqjmob-cloud · **claim** — cloud session, no engine, on the user's ask. Taking INT's brief and its corrections as written: JSON, Python and ledger prose only, no C++, no editor commands. Order: `level.schema.json` first and wired into `validate-content-json.py` (with the list of fields where the contract, `FDFLevelFile` and `docs/MAP-AUTHORING.md` disagree), then a fresh `foundry.terrain.json`, then the new `foundry.level.json`, then the hand-over. The session is bound to branch `claude/ws-10a-work-ue4a6i` rather than `ws/10a-map-foundry/<topic>`; PRs go to `unreal/main` titled `[WS-10a] …` as usual.
+- 2026-09-26 · session-01Bqjmob-cloud · **`level.schema.json` landed** — `unreal/content/schema/level.schema.json` (authored `deepfield-level/1` and legacy branches) and `validate-content-json.py` extended to levels and terrain: `$ref`, `oneOf`/`anyOf`, `minimum`/`maximum`, `pattern`, `minLength`, `prefixItems`, plus the cross-file rules (unique ids, teleport legs, gate sockets, condition ids, boss route, waves routeIds, field vs terrain bounds). All five legacy files and WS-30's `foundry.terrain.json` pass; 18 hand-made broken files each fail with the right message. The disagreement table above is the other half of the ask. Next: the Foundry landform.
