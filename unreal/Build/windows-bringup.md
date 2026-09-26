@@ -10,38 +10,67 @@ measured anything on it.
 unreal\Build\machine-inventory.ps1` (from PowerShell or cmd, not Git Bash) writes
 [`machines/windows-gpu.md`](machines/windows-gpu.md). Its readiness table checks the box against this
 file. Re-run it and commit the result after each section, so the next session reads what the box has
-instead of guessing. At the last inventory (2026-09-24), the engine, Visual Studio, the Windows SDK and
-the .NET 8 SDK were not installed yet, the clone was at `C:\Users\Cbhea\deep-field-3d`, and the only
-volume (C:) had 181 GB free. That clone was on `unreal/main`, which is frozen now that `main` is the
-trunk (ADR-0029): before §1, switch it with `git fetch origin`, `git switch main`, `git merge --ff-only
-origin/main`. Its own copy of `deepfield.ps1` predates the move and will not warn; `main`'s copy does.
+instead of guessing. At the last inventory (2026-09-26, `c06c5bb`): UE 5.8.3 at
+`C:\Program Files\Epic Games\UE_5.8` with Editor symbols, VS 2022 with MSVC 14.44 (compiler
+14.44.35229), Windows SDK 10.0.22621, Defender exclusions set, no .NET 8 SDK (optional), the clone at
+`C:\Users\Cbhea\deep-field-3d`, and C: (the only volume) at 359.4 GB free of 923 GB. That clone was
+on `unreal/main`, which is frozen now that `main` is the trunk (ADR-0029): a clone still on it switches
+with `git fetch origin`, `git switch main`, `git merge --ff-only origin/main`.
 
 Tick boxes in a PR as you go, write what you observed into your session log, and if a runbook step or
 the script turned out different, fix it in the same PR.
 
 ## 1. The box builds and tests
 
-- [ ] `unreal\deepfield.cmd setup` ends with `setup: done`: Git and LFS, Python, Visual Studio with an
-      accepted MSVC toolset, a Windows SDK, UE 5.8.2 (tick **Editor symbols for debugging** in the
-      launcher's install options, because crash callstacks are useless without them), the clone with
-      every LFS file, and the first build. The Defender exclusions (runbook §1.4) are done.
+- [x] `unreal\deepfield.cmd setup`: Git and LFS, Python, Visual Studio with an accepted MSVC toolset, a
+      Windows SDK, UE 5.8.3, the clone with every LFS file, and the first build (setup's own build
+      stopped on C2487; `deepfield build` finished it after `b234449`). The Defender exclusions
+      (runbook §1.4) are done, 2026-09-26.
+- [x] **Editor symbols for debugging**, in the launcher's options for the 5.8 install (about 60 GB):
+      installed 2026-09-26, and the inventory's `Editor symbols` row reads them. Before that, the first
+      crash's engine frames all read `UnknownFunction`.
 - [ ] Disk: the drive the clone is on has **≥ 500 GB free** once the art sublevels, Megascans and
-      packages arrive. At the last inventory, C: had 181 GB. Plan the space before the art lanes start.
-- [ ] `machine-inventory.ps1` re-run and committed. Its readiness table shows no `FAIL` except the
-      runner (§5), and has an elevated run behind it so that the Defender row is not `UNKNOWN`.
-- [ ] Runbook §3 checks pass, and §5.1 (`deepfield test`) passes the landing gate. This is the suite's
-      first MSVC verdict, since every earlier run was Apple clang on the retired Mac. Record the count.
-      It is also the first build of PR #51, which has never been compiled (PLAN/NEXT.md).
-- [ ] Runbook §5.2 (map validator) and §5.3 (`deepfield smoke`) pass. Then `deepfield ci-local` runs
-      the whole pre-merge set end to end, which is also what the runner's nightly will run.
+      packages arrive. At the last inventory, C: had 359.4 GB (down 70 GB from the inventory before, mostly the symbols). Plan the
+      space before the art lanes start.
+- [x] `machine-inventory.ps1` re-run elevated and committed (`c06c5bb`, 2026-09-26). Its readiness table shows no `FAIL` except the
+      runner (§5) and the disk (above), and has an elevated run behind it so that the Defender row is
+      not `UNKNOWN`. Optional tools (the .NET 8 SDK for the WavePlan goldens, the GitHub CLI) and an
+      engine patch other than the pinned 5.8.3 are `WARN`.
+- [x] §5.1 (`deepfield test`) passes the landing gate: **155 of 155 on 2026-09-26** (`e859ffb`, UE
+      5.8.3, MSVC 14.44), every registered suite. It was the suite's first MSVC verdict and the first
+      build of PR #51. It took three fixes (`b234449`, `cb820b2`, `e859ffb`; PLAN/NEXT.md).
+- [x] `deepfield ci-local` passes end to end, which is what the runner's nightly will run: **OK on
+      2026-09-26, 45 s** (layering, ownership, schemas, coverage, plan-status, build, the gate, and
+      the smoke with host seat 1 and client seat 2; the client was admitted through the dev-join
+      branch, runbook §5.3). That covers the §3 checks and §5.3.
+- [x] Runbook §5.2 (the map validator) ran on all five maps, 2026-09-26. Foundry passes, with the same
+      numbers WS-10a recorded on the Mac (54 segments, 0 dead, 379 traces). The legacy maps' failures
+      are in their level files, not the platform (toaster's apron distances match the JSON to the
+      decimetre). They are now in `map-validation-baseline.tsv` with measured reasons, so `-all` exits 0
+      and any new failure is still an error.
 
 ## 2. First light with a real RHI
 
-- [ ] `deepfield editor` (runbook §6.1), and load `/Game/DF/Dev/L_Dev_Empty`. Confirm in the output log:
+- [x] `deepfield editor` (runbook §6.1), and load `/Game/DF/Dev/L_Dev_Empty`. Confirm in the output log:
       D3D12 / SM6, Nanite enabled, Lumen with hardware ray tracing available, Virtual Shadow Maps.
       ADR-0012's stack has never been seen rendering, so write what you observe into the session log.
-- [ ] A `DDC` folder beside the clone exists and is filling; nothing appeared under
-      `%LOCALAPPDATA%\UnrealEngine\Common\DerivedDataCache`.
+      **Seen on 2026-09-26** (RTX 5070, driver 610.60, UE 5.8.3). The first open came up D3D12 **SM5**,
+      with ray tracing off by project setting: DefaultEngine.ini named no Windows shader format. It now
+      targets `PCD3D_SM6` on DX12 with `r.RayTracing=True`, and the log reads `Feature Level SM6 is
+      supported and will be used` and `Ray tracing is enabled (dynamic)`. Lumen stays on the software
+      floor (hardware Lumen is for Windows High). The log says nothing about Nanite or VSM, so they were
+      checked in the viewport: an engine cube with Nanite enabled (not saved) turns into coloured
+      triangles under Nanite Visualization > Triangles, and Virtual Shadow Map > Virtual Page shows pages
+      on it.
+- [x] A `DDC` folder beside the clone exists and is filling; nothing appeared under
+      `%LOCALAPPDATA%\UnrealEngine\Common\DerivedDataCache`. At first light that folder was absent, but
+      Unreal Zen Storage (`ZenLocal`, the store the editor writes first) kept its data in
+      `%LOCALAPPDATA%\UnrealEngine\Common\Zen\Data`. Zen ignores the project's DDC path and follows only
+      a per-machine one, so `deepfield setup` now sets `UE-LocalDataCachePath` to the `DDC` folder
+      (runbook §2), and the store config moved from the deprecated `[InstalledDerivedDataBackendGraph]`
+      to `[DerivedDataCacheStores]`. Checked 2026-09-26 with a commandlet: Zen's data dir is
+      `C:\Users\Cbhea\DDC\Zen` and filling, and the deprecation warning is gone. The old
+      `%LOCALAPPDATA%\UnrealEngine\Common\Zen\Data` (0.45 GB) is no longer used and can be deleted.
 
 ## 3. First Windows package
 
@@ -53,8 +82,10 @@ the script turned out different, fix it in the same PR.
 
 ## 4. The floating-point check on a Game target
 
-`BuildSettingsVersion.V7` compiles **Editor** targets FP-precise but leaves **Game / Client / Server**
-targets at Default, which is `/fp:fast` on MSVC (CONTRACTS/ci.md, "GPU-box lane"). Code that must
+`BuildSettingsVersion.V7` compiles **Editor** targets FP-precise (confirmed on the box, 2026-09-26:
+every compile response file reads `/fp:precise`) but leaves **Game / Client / Server** targets at
+Default, which is `/fp:fast` on MSVC (CONTRACTS/ci.md, "GPU-box lane"; re-read the flags after the
+first package, runbook §8). Code that must
 produce the same bits everywhere pins its arithmetic with the `DF_DET_FP_*` pragmas in
 `Source/DFCore/Public/Determinism/` (`DFDetMath.h`, `DFDetRng.h`), used by
 `DFEnemies/Private/Waves/DFWavePlan.cpp`, `DFEnemies/Private/Movement/DFLaneWalker.cpp` and

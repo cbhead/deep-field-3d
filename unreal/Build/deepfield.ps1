@@ -23,7 +23,8 @@
              unless -Strict), build, the landing gate, the smoke. -Skip smoke,plan-status skips steps.
              Stops at the first failure and prints a summary table either way.
     check    The fast repository checks (Python, no engine): layering, content schemas, test coverage.
-    editor   Build, then open the Unreal editor on the project.
+    editor   Build, then open the Unreal editor on the project. -Mcp also starts UE's experimental
+             Unreal MCP server at http://localhost:8000/mcp (-McpPort to move it) for an AI agent.
     play     Build, then run the game in a window. `-Map /Game/DF/Maps/Testlane/L_Testlane` for another map.
     host     Like play, but as a listen host other players can join (port 7777, or -Port).
     join     Join a host: `join 192.168.1.20` (and -Port if the host changed it).
@@ -90,6 +91,10 @@ param(
   [switch]$AllowStale,
   # setup: do not ask before installing what the check found missing.
   [switch]$Yes,
+  # editor: also enable UE's experimental Unreal MCP server (runbook 6.1), on this launch only.
+  [switch]$Mcp,
+  # editor -Mcp: the port the MCP server listens on (localhost only).
+  [int]$McpPort = 8000,
   # Keep the window open at the end (the .cmd passes this when the script was double-clicked).
   [switch]$Pause
 )
@@ -103,8 +108,10 @@ $ProgressPreference = 'SilentlyContinue'   # Invoke-WebRequest is 10x slower wit
 # ---------------------------------------------------------------------------------------------------
 $RepoUrl       = 'https://github.com/cbhead/deep-field-3d.git'
 $RepoBranch    = 'main'
-$EnginePatch   = 2          # UE 5.8.2: a different patch re-saves assets on open (Build/windows-bringup.md 1)
+$EnginePatch   = 3          # UE 5.8.3: a different patch re-saves assets on open (runbook 1.2, "Why a pinned patch")
 $MinFreeGB     = 150
+# editor -Mcp: the Unreal MCP server and the engine toolsets it serves (Engine\Plugins\Experimental\Toolsets).
+$McpPlugins    = @('ModelContextProtocol', 'EditorToolset', 'AutomationTestToolset', 'ConfigSettingsToolset', 'SlateInspectorToolset')
 $MinPython     = [version]'3.9'
 $MinWinBuild   = 19041
 $WinSdkWanted  = '10.0.22621.0'
@@ -426,13 +433,29 @@ function Get-MsvcRules {
   return $rules
 }
 
-function Test-MsvcAccepted([version]$v) {
+function Test-MsvcAccepted([version]$v, [version]$Family = $null) {
   # 'preferred', 'allowed' (UBT warns and builds) or 'banned' (UBT refuses), per Get-MsvcRules.
+  # $v is the compiler's own build (from cl.exe) and $Family the toolset folder's name. They differ once
+  # Visual Studio services the compiler in place: VS 2022 17.14.x keeps VC\Tools\MSVC\14.44.35207 while
+  # cl.exe moves on. The minimum and the refused ranges are about compiler builds (Windows_SDK.json:
+  # "14.44.35207 ... Resolved with 14.44.35211"); the preferred ranges name the family ("Version number
+  # is the MSVC family, which is the version in the Visual Studio folder").
+  if (-not $Family) { $Family = $v }
   $rules = Get-MsvcRules
   if ($rules.Min -and $v -lt $rules.Min) { return 'banned' }
   foreach ($r in $rules.Banned) { if ($v -ge $r.Lo -and $v -le $r.Hi) { return 'banned' } }
-  foreach ($r in $rules.Preferred) { if ($v -ge $r.Lo -and $v -le $r.Hi) { return 'preferred' } }
+  foreach ($r in $rules.Preferred) { if ($Family -ge $r.Lo -and $Family -le $r.Hi) { return 'preferred' } }
   return 'allowed'
+}
+
+function ConvertTo-ClVersion($VersionInfo, [version]$Family) {
+  # The compiler build from cl.exe's version resource. Its product version is the toolset's (14.x); its
+  # file version is the compiler's (19.x) with the same minor and build. Falls back to the folder name.
+  if ($VersionInfo) {
+    if ($VersionInfo.ProductMajorPart -eq 14) { return [version]("14.{0}.{1}" -f $VersionInfo.ProductMinorPart, $VersionInfo.ProductBuildPart) }
+    if ($VersionInfo.FileMajorPart -eq 19) { return [version]("14.{0}.{1}" -f $VersionInfo.FileMinorPart, $VersionInfo.FileBuildPart) }
+  }
+  return $Family
 }
 
 function Get-VsToolsets([string]$InstallPath) {
@@ -440,12 +463,21 @@ function Get-VsToolsets([string]$InstallPath) {
   if (-not (Test-Path $root)) { return @() }
   $out = @()
   foreach ($d in Get-ChildItem $root -Directory) {
-    $v = $null
-    if ([version]::TryParse($d.Name, [ref]$v) -and (Test-Path (Join-Path $d.FullName 'bin\Hostx64\x64\cl.exe'))) {
-      $out += [pscustomobject]@{ Version = $v; Verdict = (Test-MsvcAccepted $v) }
+    $family = $null
+    $cl = Join-Path $d.FullName 'bin\Hostx64\x64\cl.exe'
+    if ([version]::TryParse($d.Name, [ref]$family) -and (Test-Path $cl)) {
+      $vi = $null; try { $vi = (Get-Item $cl).VersionInfo } catch { $vi = $null }
+      $v = ConvertTo-ClVersion $vi $family
+      $out += [pscustomobject]@{ Version = $v; Family = $family; Verdict = (Test-MsvcAccepted $v $family) }
     }
   }
   return $out
+}
+
+function Format-Toolset($T) {
+  # "14.44.35207" when the folder and the compiler agree, "14.44.35207 (compiler 14.44.35217)" when not.
+  if ($T.Family -and $T.Version -ne $T.Family) { return "$($T.Family) (compiler $($T.Version))" }
+  return "$($T.Version)"
 }
 
 function Get-WindowsSdks {
@@ -460,7 +492,7 @@ function Get-WindowsSdks {
 }
 
 function Format-Toolsets($Vs) {
-  $t = @($Vs.Toolsets | Sort-Object Version -Descending | ForEach-Object { "$($_.Version) $($_.Verdict)" })
+  $t = @($Vs.Toolsets | Sort-Object Version -Descending | ForEach-Object { "$(Format-Toolset $_) $($_.Verdict)" })
   if ($t.Count -eq 0) { return 'none (no VC\Tools\MSVC\<version>\bin\Hostx64\x64\cl.exe)' }
   return ($t -join ', ')
 }
@@ -513,9 +545,11 @@ function Assert-VisualStudio {
     if ($script:DoctorOnly) { Fail "$($vs.Name): $($why -join '; ')" 'deepfield setup updates and modifies it.'; return }
     $installer = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\setup.exe'
     $path = $vs.Instance.installationPath
+    $updateRc = 'not run'
     if ($needUpdate) {
       Write-Fix "updating $($vs.Name) to the latest release (brings the current MSVC toolset); approve the UAC prompt"
       $p = Start-Process $installer -Wait -PassThru -ArgumentList @('update', '--installPath', "`"$path`"", '--passive', '--norestart')
+      $updateRc = $p.ExitCode
       Write-Info "Visual Studio Installer exit code $($p.ExitCode)"
     }
     # Only ids every supported Visual Studio knows: the workloads and what was found missing.
@@ -524,6 +558,7 @@ function Assert-VisualStudio {
     if (@(Get-WindowsSdks | Where-Object { $_ -ge $WinSdkMinimum }).Count -eq 0 -and $vs.Major -eq 17) { $addArgs += @('--add', 'Microsoft.VisualStudio.Component.Windows11SDK.22621') }
     Write-Fix "adding the C++ game workloads to $($vs.Name); approve the UAC prompt"
     $p = Start-Process $installer -Wait -PassThru -ArgumentList (@('modify', '--installPath', "`"$path`"", '--passive', '--norestart', '--includeRecommended') + $addArgs)
+    $modifyRc = $p.ExitCode
     Write-Info "Visual Studio Installer exit code $($p.ExitCode) (3010 means a restart is needed later)"
     $vs = Get-VsVerdict
     if (-not $vs -or $vs.Good.Count -eq 0) {
@@ -534,15 +569,28 @@ function Assert-VisualStudio {
       if ($rules.Min) { Write-Info "  minimum $($rules.Min)" }
       foreach ($r in $rules.Banned) { Write-Info "  refused $($r.Text)" }
       foreach ($r in $rules.Preferred) { Write-Info "  preferred $($r.Text)" }
-      Fail 'Visual Studio still has no MSVC toolset the engine accepts' "Open the Visual Studio Installer > Modify > Individual components, tick an 'MSVC ... x64/x86 build tools' entry whose version is in the`npreferred list above (or at least not refused), and 'Windows 11 SDK (10.0.22621.0)'. Then run this again.`nPlease also send the lines above to whoever maintains this script."
+      # Everything needed to diagnose this goes into the failure itself: the red block is what people
+      # copy, and the info lines above it are easy to miss.
+      $foundText = 'no Visual Studio 2022/2026 instance'
+      if ($vs) { $foundText = "$($vs.Name) at $($vs.Instance.installationPath); MSVC toolsets: $(Format-Toolsets $vs)" }
+      $ruleText = @()
+      if ($rules.Min) { $ruleText += "minimum $($rules.Min)" }
+      foreach ($r in $rules.Banned) { $ruleText += "refused $($r.Text)" }
+      foreach ($r in $rules.Preferred) { $ruleText += "preferred $($r.Text)" }
+      if ($ruleText.Count -eq 0) { $ruleText = @('none read') }
+      Fail 'Visual Studio still has no MSVC toolset the engine accepts' ("Found: $foundText`n" +
+        "Engine rules ($($rules.Source)): $($ruleText -join '; ')`n" +
+        "Visual Studio Installer exit codes: update $updateRc, modify $modifyRc (0 = done, 3010 = done but needs a restart; anything else = it did not finish)`n" +
+        "Fix: Visual Studio Installer > Update, then Modify > Individual components: tick an 'MSVC ... x64/x86 build tools' entry whose version`n" +
+        "is preferred above (or at least not refused), and 'Windows 11 SDK (10.0.22621.0)'. Then run this again. Paste this whole block when asking for help.")
       return
     }
   }
   Write-Ok "$($vs.Name) at $($vs.Instance.installationPath)"
   $top = $vs.Good[0]
-  Write-Ok "MSVC $($top.Version) ($($top.Verdict); rules: $(if ($script:Engine) { 'the engine''s Windows_SDK.json' } else { 'built-in minimum until the engine is installed' }))"
+  Write-Ok "MSVC $(Format-Toolset $top) ($($top.Verdict); rules: $(if ($script:Engine) { 'the engine''s Windows_SDK.json' } else { 'built-in minimum until the engine is installed' }))"
   $banned = @($vs.Toolsets | Where-Object { $_.Verdict -eq 'banned' })
-  if ($banned.Count -gt 0) { Write-Info "also present, ignored by UBT: $((@($banned | ForEach-Object { $_.Version.ToString() }) -join ', '))" }
+  if ($banned.Count -gt 0) { Write-Info "also present, ignored by UBT: $((@($banned | ForEach-Object { Format-Toolset $_ }) -join ', '))" }
 
   $sdks = @(Get-WindowsSdks | Sort-Object -Descending)
   $ok = @($sdks | Where-Object { $_ -ge $WinSdkMinimum })
@@ -629,8 +677,8 @@ function Assert-Engine {
     Write-Host '   In the launcher:' -ForegroundColor Yellow
     Write-Host '     1. Sign in (a free Epic account is enough).' -ForegroundColor Yellow
     Write-Host "     2. Unreal Engine (left) > Library > the + next to ENGINE VERSIONS > pick $assoc.$EnginePatch > Install." -ForegroundColor Yellow
-    Write-Host '        Keep the default location. In Options, "Editor symbols for debugging" is only for C++ debugging' -ForegroundColor Yellow
-    Write-Host '        (adds ~60 GB); the rest of the defaults are right.' -ForegroundColor Yellow
+    Write-Host '        Keep the default location. In Options, tick "Editor symbols for debugging" (~60 GB): without it a' -ForegroundColor Yellow
+    Write-Host '        crash callstack shows every engine frame as UnknownFunction. The rest of the defaults are right.' -ForegroundColor Yellow
     Write-Host '     3. Wait for the download to finish (about 40 GB; it can take an hour or more).' -ForegroundColor Yellow
     Start-Process $launcher | Out-Null
     while (-not $engine) {
@@ -820,6 +868,21 @@ function Assert-Repo {
   if ($null -ne $free) {
     if ($free -lt 50) { Write-Warn2 ("{0:N0} GB free on the clone's drive; the first build and the DDC need tens of GB" -f $free) }
     else { Write-Ok ("{0:N0} GB free on the clone's drive" -f $free) }
+  }
+
+  # The DDC beside the clone (DefaultEngine.ini's DDC store). The project config alone does not move
+  # Unreal Zen Storage, which the editor also writes: without a per-machine local DDC path it keeps its
+  # store in %LOCALAPPDATA%\UnrealEngine\Common\Zen\Data. With UE-LocalDataCachePath set, Zen follows
+  # it into <DDC>\Zen, so the whole cache sits in one folder (and under the Defender exclusion, runbook 1.4).
+  $ddc = Join-Path (Split-Path $repo -Parent) 'DDC'
+  $ddcVar = [Environment]::GetEnvironmentVariable('UE-LocalDataCachePath', 'User')
+  if ($ddcVar -eq $ddc) { Write-Ok "UE-LocalDataCachePath=$ddc (the DDC, Zen's store inside it)" }
+  elseif ($script:DoctorOnly) { Write-Warn2 "UE-LocalDataCachePath is $(if ($ddcVar) { $ddcVar } else { 'unset' }), not $ddc; Zen keeps its store in %LOCALAPPDATA%. Run: deepfield setup" }
+  else {
+    if (-not (Test-Path $ddc)) { New-Item -ItemType Directory $ddc | Out-Null }
+    [Environment]::SetEnvironmentVariable('UE-LocalDataCachePath', $ddc, 'User')
+    [Environment]::SetEnvironmentVariable('UE-LocalDataCachePath', $ddc, 'Process')
+    Write-Fix "set UE-LocalDataCachePath=$ddc for your user, so Zen keeps its store in the DDC (new terminals see it)"
   }
 }
 
@@ -1261,8 +1324,17 @@ try {
     'editor'   {
       if (Invoke-Build) {
         $p = Get-Paths
-        Start-Process $p.Editor -ArgumentList @("`"$($script:Project)`"") | Out-Null
+        $editorArgs = @("`"$($script:Project)`"")
+        if ($Mcp) {
+          # Enabled on the command line, not in DeepField.uproject: the plugin is experimental and has a
+          # Runtime module, so CI and packaged builds stay without it. The server has no authentication;
+          # the engine's HTTP server binds to localhost unless [HTTPServer.Listeners] says otherwise.
+          $editorArgs += "-EnablePlugins=$($McpPlugins -join ',')"
+          $editorArgs += "-ExecCmds=`"ModelContextProtocol.StartServer $McpPort`""
+        }
+        Start-Process $p.Editor -ArgumentList $editorArgs | Out-Null
         Write-Ok 'editor starting (the first open compiles shaders: slow once, fast afterwards)'
+        if ($Mcp) { Write-Info "Unreal MCP server: http://localhost:$McpPort/mcp once the editor has loaded (toolsets: $(($McpPlugins | Select-Object -Skip 1) -join ', '))" }
       }
     }
     'play'     { if (Invoke-Build) { Start-Game @($Map) 'play' } }

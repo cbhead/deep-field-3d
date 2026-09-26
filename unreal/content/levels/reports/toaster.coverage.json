@@ -1,0 +1,4105 @@
+{
+	"map": "toaster",
+	"segmentMeters": 4,
+	"required": 3,
+	"segments": [
+		{
+			"edge": "gate-southPad",
+			"t": 0.0088046528398990631,
+			"layer": "ground",
+			"apron": true,
+			"positionMetres": [
+				71.786933752731471,
+				0,
+				22.011381692160381
+			],
+			"coveringSockets": [
+				"g2",
+				"g35",
+				"g57",
+				"g58"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.02641395665705204,
+			"layer": "ground",
+			"apron": true,
+			"positionMetres": [
+				71.3608012581944,
+				0,
+				18.034145076481146
+			],
+			"coveringSockets": [
+				"g1",
+				"g2",
+				"g35",
+				"g57",
+				"g58"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.044023264199495316,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				70.934668763657342,
+				0,
+				14.05690846080191
+			],
+			"coveringSockets": [
+				"g1",
+				"g2",
+				"g35"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.061632566154003143,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				70.508536269120285,
+				0,
+				10.079671845122673
+			],
+			"coveringSockets": [
+				"g1",
+				"g2",
+				"g34",
+				"g35"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.07924187183380127,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				70.082403774583227,
+				0,
+				6.1024352294434401
+			],
+			"coveringSockets": [
+				"g1",
+				"g2",
+				"g3",
+				"g34",
+				"g35"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.096851177513599396,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				69.65627128004617,
+				0,
+				2.1251986137642005
+			],
+			"coveringSockets": [
+				"g1",
+				"g2",
+				"g3",
+				"g34",
+				"g35"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.11446048319339752,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				69.230138785509112,
+				0,
+				-1.8520380019150298
+			],
+			"coveringSockets": [
+				"g1",
+				"g3",
+				"g34",
+				"g35"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.13206978142261505,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				67.301774474453026,
+				0,
+				-4.7075939689779052
+			],
+			"coveringSockets": [
+				"g1",
+				"g3",
+				"g34"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.14967909455299377,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				63.60946678214534,
+				0,
+				-6.2460555074394435
+			],
+			"coveringSockets": [
+				"g1",
+				"g3",
+				"g34"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.1672883927822113,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				59.917159089837639,
+				0,
+				-7.7845170459009818
+			],
+			"coveringSockets": [
+				"g1",
+				"g3",
+				"g34"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.18489770591259003,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				56.164423171986584,
+				0,
+				-9.0835576828013416
+			],
+			"coveringSockets": [
+				"g1",
+				"g3",
+				"g34",
+				"g36"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.20250700414180756,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				52.184274411146625,
+				0,
+				-9.4815725588853361
+			],
+			"coveringSockets": [
+				"g3",
+				"g36"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.22011631727218628,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				48.204125650306672,
+				0,
+				-9.8795874349693324
+			],
+			"coveringSockets": [
+				"g3",
+				"g7",
+				"g36"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.23772561550140381,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				44.223976889466719,
+				0,
+				-10.277602311053329
+			],
+			"coveringSockets": [
+				"g7",
+				"g36"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.25533491373062134,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				40.24382812862676,
+				0,
+				-10.675617187137325
+			],
+			"coveringSockets": [
+				"g6",
+				"g7",
+				"g36"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.27294424176216125,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				36.263679367786807,
+				0,
+				-11.073632063221318
+			],
+			"coveringSockets": [
+				"g5",
+				"g6",
+				"g7"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.29055353999137878,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				32.28353060694684,
+				0,
+				-11.471646939305314
+			],
+			"coveringSockets": [
+				"g5",
+				"g6",
+				"g7"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.30816283822059631,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				28.303381846106891,
+				0,
+				-11.869661815389311
+			],
+			"coveringSockets": [
+				"g4",
+				"g5",
+				"g6",
+				"g7"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.32577213644981384,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				24.323233085266928,
+				0,
+				-12.267676691473307
+			],
+			"coveringSockets": [
+				"g4",
+				"g5",
+				"g6",
+				"g7"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.34338143467903137,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				20.343084324426979,
+				0,
+				-12.665691567557301
+			],
+			"coveringSockets": [
+				"g4",
+				"g5",
+				"g6",
+				"g8"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.36099076271057129,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				16.378874185632267,
+				0,
+				-13.155281453591932
+			],
+			"coveringSockets": [
+				"g4",
+				"g5",
+				"g8",
+				"g44",
+				"g46"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.37860006093978882,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				12.498304185050937,
+				0,
+				-14.125423953737265
+			],
+			"coveringSockets": [
+				"g4",
+				"g8",
+				"g43",
+				"g44",
+				"g46"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.39620935916900635,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				8.6177341844696098,
+				0,
+				-15.095566453882597
+			],
+			"coveringSockets": [
+				"g8",
+				"g43",
+				"g44"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.41381865739822388,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				4.860610259066533,
+				0,
+				-16.232316234889112
+			],
+			"coveringSockets": [
+				"g8",
+				"g43",
+				"g44",
+				"g51"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.43142798542976379,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				2.8026272373564267,
+				0,
+				-19.66228793773929
+			],
+			"coveringSockets": [
+				"g8",
+				"g43",
+				"g44",
+				"g51"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.44903728365898132,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				0.74464421564632066,
+				0,
+				-23.092259640589464
+			],
+			"coveringSockets": [
+				"g8",
+				"g10",
+				"g51"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.46664658188819885,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-1.3133388060637867,
+				0,
+				-26.522231343439643
+			],
+			"coveringSockets": [
+				"g10",
+				"g50",
+				"g51"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.48425588011741638,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-3.371321827773893,
+				0,
+				-29.952203046289824
+			],
+			"coveringSockets": [
+				"g9",
+				"g10",
+				"g50",
+				"g51"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.5018652081489563,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-4.4332748331766947,
+				0,
+				-33.744073943452399
+			],
+			"coveringSockets": [
+				"g9",
+				"g10",
+				"g11"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.51947450637817383,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-5.0571251270687387,
+				0,
+				-37.695125804768679
+			],
+			"coveringSockets": [
+				"g9",
+				"g10",
+				"g11"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.53708380460739136,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-5.6809754209607819,
+				0,
+				-41.646177666084952
+			],
+			"coveringSockets": [
+				"g9",
+				"g10",
+				"g11",
+				"g12"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.55469310283660889,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-6.3048257148528251,
+				0,
+				-45.597229527401232
+			],
+			"coveringSockets": [
+				"g9",
+				"g10",
+				"g11",
+				"g12"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.57230240106582642,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-6.9286760087448691,
+				0,
+				-49.548281388717506
+			],
+			"coveringSockets": [
+				"g9",
+				"g11",
+				"g12"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.58991169929504395,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-4.4949432631277952,
+				0,
+				-52.505056736872206
+			],
+			"coveringSockets": [
+				"g9",
+				"g11",
+				"g12"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.60752099752426147,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-1.6665161383816054,
+				0,
+				-55.333483861618397
+			],
+			"coveringSockets": [
+				"g11",
+				"g12"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.62513035535812378,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				1.6403547419696496,
+				0,
+				-57.096491455409975
+			],
+			"coveringSockets": [
+				"g11",
+				"g12",
+				"g13"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.64273965358734131,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				5.6334522346696341,
+				0,
+				-57.33137954321586
+			],
+			"coveringSockets": [
+				"g11",
+				"g12",
+				"g13"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.66034895181655884,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				9.6265497273696194,
+				0,
+				-57.566267631021745
+			],
+			"coveringSockets": [
+				"g11",
+				"g12",
+				"g13"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.67795825004577637,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				13.6196472200696,
+				0,
+				-57.801155718827623
+			],
+			"coveringSockets": [
+				"g12",
+				"g13"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.6955675482749939,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				17.613567239150004,
+				0,
+				-57.982956465579164
+			],
+			"coveringSockets": [
+				"g12",
+				"g13",
+				"g14"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.71317684650421143,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				21.612024921760877,
+				0,
+				-57.871888196617753
+			],
+			"coveringSockets": [
+				"g13",
+				"g14",
+				"g15"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.73078614473342896,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				25.61048260437175,
+				0,
+				-57.760819927656343
+			],
+			"coveringSockets": [
+				"g13",
+				"g14",
+				"g15",
+				"g16"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.74839544296264648,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				29.608940286982623,
+				0,
+				-57.649751658694932
+			],
+			"coveringSockets": [
+				"g14",
+				"g15",
+				"g16"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.76600474119186401,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				33.607397969593492,
+				0,
+				-57.538683389733514
+			],
+			"coveringSockets": [
+				"g14",
+				"g15",
+				"g16"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.78361409902572632,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				37.605855652204369,
+				0,
+				-57.427615120772096
+			],
+			"coveringSockets": [
+				"g14",
+				"g15",
+				"g16"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.80122339725494385,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				41.604313334815252,
+				0,
+				-57.316546851810692
+			],
+			"coveringSockets": [
+				"g14",
+				"g15",
+				"g16"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.81883269548416138,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				45.602771017426114,
+				0,
+				-57.205478582849274
+			],
+			"coveringSockets": [
+				"g15",
+				"g16"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.83644199371337891,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				49.601228700036991,
+				0,
+				-57.094410313887863
+			],
+			"coveringSockets": [
+				"g15",
+				"g16",
+				"g17"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.85405129194259644,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				53.583603665422409,
+				0,
+				-56.861046746328
+			],
+			"coveringSockets": [
+				"g16",
+				"g17",
+				"g18",
+				"g19"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.87166059017181396,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				57.474828524163875,
+				0,
+				-55.93456463710384
+			],
+			"coveringSockets": [
+				"g17",
+				"g18",
+				"g19"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.88926988840103149,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				61.366053382905335,
+				0,
+				-55.008082527879679
+			],
+			"coveringSockets": [
+				"g17",
+				"g18",
+				"g19"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.90687918663024902,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				65.257278241646816,
+				0,
+				-54.081600418655526
+			],
+			"coveringSockets": [
+				"g17",
+				"g18",
+				"g19"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.92448848485946655,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				69.148503100388282,
+				0,
+				-53.155118309431366
+			],
+			"coveringSockets": [
+				"g17",
+				"g18",
+				"g19"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.94209784269332886,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				73.039727959129735,
+				0,
+				-52.228636200207205
+			],
+			"coveringSockets": [
+				"g17",
+				"g18",
+				"g19"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.95970714092254639,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				73.504684830520276,
+				0,
+				-49.028108983121655
+			],
+			"coveringSockets": [
+				"g17",
+				"g18",
+				"g19",
+				"w_grnmchn"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.97731643915176392,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				72.847088881298845,
+				0,
+				-45.082533287793076
+			],
+			"coveringSockets": [
+				"g17",
+				"g18",
+				"g19",
+				"w_grnmchn"
+			]
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.99492573738098145,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				72.189492932077414,
+				0,
+				-41.136957592464505
+			],
+			"coveringSockets": [
+				"g17",
+				"g18",
+				"g19",
+				"w_grnmchn"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.018093718215823174,
+			"layer": "ground",
+			"apron": true,
+			"positionMetres": [
+				-135.10263340389898,
+				0,
+				11.632455532033676
+			],
+			"coveringSockets": [
+				"g20",
+				"w_buggy"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.05428115651011467,
+			"layer": "ground",
+			"apron": true,
+			"positionMetres": [
+				-131.30790021169693,
+				0,
+				12.897366596101028
+			],
+			"coveringSockets": [
+				"g20",
+				"g21",
+				"g59",
+				"w_buggy"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.090468592941761017,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-127.51316701949487,
+				0,
+				14.162277660168378
+			],
+			"coveringSockets": [
+				"g20",
+				"g21",
+				"g59"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.12665602564811707,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-123.71843382729281,
+				0,
+				15.427188724235732
+			],
+			"coveringSockets": [
+				"g20",
+				"g21",
+				"g22",
+				"g59"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.16284346580505371,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-119.92370063509075,
+				0,
+				16.692099788303082
+			],
+			"coveringSockets": [
+				"g21",
+				"g22",
+				"g59"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.19903090596199036,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-116.12896744288869,
+				0,
+				17.957010852370434
+			],
+			"coveringSockets": [
+				"g21",
+				"g22",
+				"g23",
+				"g59"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.235218346118927,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-112.33423425068663,
+				0,
+				19.221921916437786
+			],
+			"coveringSockets": [
+				"g21",
+				"g22",
+				"g23",
+				"g24",
+				"g59"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.27140578627586365,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-109.14603846076965,
+				0,
+				21.280942308845525
+			],
+			"coveringSockets": [
+				"g21",
+				"g22",
+				"g23",
+				"g24"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.30759322643280029,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-106.92723767586872,
+				0,
+				24.609143486196899
+			],
+			"coveringSockets": [
+				"g21",
+				"g22",
+				"g23",
+				"g24"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.34378063678741455,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-104.70843689096782,
+				0,
+				27.937344663548274
+			],
+			"coveringSockets": [
+				"g21",
+				"g22",
+				"g23",
+				"g24",
+				"g25"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.3799680769443512,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-102.4896361060669,
+				0,
+				31.265545840899648
+			],
+			"coveringSockets": [
+				"g23",
+				"g24",
+				"g25",
+				"g26"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.41615551710128784,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-100.27083532116598,
+				0,
+				34.593747018251022
+			],
+			"coveringSockets": [
+				"g23",
+				"g25",
+				"g26",
+				"w_barn"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.45234295725822449,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-98.052034536265069,
+				0,
+				37.921948195602397
+			],
+			"coveringSockets": [
+				"g23",
+				"g25",
+				"g26",
+				"w_barn"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.48853039741516113,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-94.294259557056733,
+				0,
+				39.235246814314422
+			],
+			"coveringSockets": [
+				"g25",
+				"g26",
+				"w_barn"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.52471780776977539,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-90.499526364854688,
+				0,
+				40.500157878381771
+			],
+			"coveringSockets": [
+				"g25",
+				"g26",
+				"g27",
+				"w_barn"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.56090527772903442,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-86.704793172652629,
+				0,
+				41.765068942449126
+			],
+			"coveringSockets": [
+				"g25",
+				"g26",
+				"g27",
+				"w_barn"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.59709268808364868,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-82.910059980450569,
+				0,
+				43.029980006516482
+			],
+			"coveringSockets": [
+				"g25",
+				"g26",
+				"g27",
+				"w_barn"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.63328015804290771,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-79.11532678824851,
+				0,
+				44.294891070583823
+			],
+			"coveringSockets": [
+				"g26",
+				"g27"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.66946756839752197,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-75.282605448162087,
+				0,
+				45.429348637959471
+			],
+			"coveringSockets": [
+				"g27",
+				"g28"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.70565503835678101,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-71.402035447580772,
+				0,
+				46.399491138104814
+			],
+			"coveringSockets": [
+				"g27",
+				"g28",
+				"g29"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.74184244871139526,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-67.521465446999443,
+				0,
+				47.369633638250143
+			],
+			"coveringSockets": [
+				"g27",
+				"g28",
+				"g29",
+				"g30",
+				"g31"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.7780299186706543,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-63.640895446418106,
+				0,
+				48.339776138395472
+			],
+			"coveringSockets": [
+				"g28",
+				"g29",
+				"g30",
+				"g31"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.81421732902526855,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-59.96018917017367,
+				0,
+				49.742722021304516
+			],
+			"coveringSockets": [
+				"g28",
+				"g29",
+				"g30",
+				"g31",
+				"g32"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.85040473937988281,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-56.705255285346738,
+				0,
+				52.06767479618091
+			],
+			"coveringSockets": [
+				"g28",
+				"g29",
+				"g30",
+				"g31",
+				"g32"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.88659220933914185,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-53.625298899724122,
+				0,
+				54.562051650413821
+			],
+			"coveringSockets": [
+				"g28",
+				"g29",
+				"g30",
+				"g31",
+				"g32"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.9227796196937561,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-51.406498114823201,
+				0,
+				57.890252827765195
+			],
+			"coveringSockets": [
+				"g28",
+				"g29",
+				"g30",
+				"g31",
+				"g32"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.95896708965301514,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-48.535600535919237,
+				0,
+				60
+			],
+			"coveringSockets": [
+				"g30",
+				"g31",
+				"g32"
+			]
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.99515450000762939,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-44.535600535919237,
+				0,
+				60
+			],
+			"coveringSockets": [
+				"g30",
+				"g31",
+				"g32"
+			]
+		},
+		{
+			"edge": "housePad-drive",
+			"t": 0.18079492449760437,
+			"layer": "ground",
+			"apron": true,
+			"positionMetres": [
+				52.992277876713672,
+				0,
+				27.263513715751081
+			],
+			"coveringSockets": [
+				"g33",
+				"g37",
+				"g57",
+				"g58",
+				"w_vehickle"
+			]
+		},
+		{
+			"edge": "housePad-drive",
+			"t": 0.54238474369049072,
+			"layer": "ground",
+			"apron": true,
+			"positionMetres": [
+				54.976833630141002,
+				0,
+				23.790541147253244
+			],
+			"coveringSockets": [
+				"g2",
+				"g33",
+				"g35",
+				"g37",
+				"g57",
+				"g58",
+				"w_vehickle"
+			]
+		},
+		{
+			"edge": "housePad-drive",
+			"t": 0.90397459268569946,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				56,
+				0,
+				20.062257748298549
+			],
+			"coveringSockets": [
+				"g1",
+				"g2",
+				"g33",
+				"g34",
+				"g35",
+				"g37",
+				"g57",
+				"g58",
+				"w_vehickle"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.016322946175932884,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				55.105572809000087,
+				0,
+				17.21114561800017
+			],
+			"coveringSockets": [
+				"g1",
+				"g2",
+				"g33",
+				"g34",
+				"g35",
+				"g37",
+				"g57",
+				"w_vehickle"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.048968836665153503,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				53.316718427000254,
+				0,
+				13.633436854000506
+			],
+			"coveringSockets": [
+				"g1",
+				"g2",
+				"g3",
+				"g33",
+				"g34",
+				"g35",
+				"g36",
+				"g37",
+				"g57",
+				"w_vehickle"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.08161473274230957,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				49.716569374402894,
+				0,
+				12.765469241028777
+			],
+			"coveringSockets": [
+				"g1",
+				"g3",
+				"g33",
+				"g34",
+				"g35",
+				"g36",
+				"g37",
+				"g41",
+				"w_vehickle"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.11426062136888504,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				45.726734575079952,
+				0,
+				12.480481041077139
+			],
+			"coveringSockets": [
+				"g33",
+				"g34",
+				"g35",
+				"g36",
+				"g37",
+				"g41",
+				"w_vehickle"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.14690650999546051,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				41.73689977575701,
+				0,
+				12.195492841125501
+			],
+			"coveringSockets": [
+				"g7",
+				"g33",
+				"g36",
+				"g37",
+				"g40",
+				"g41",
+				"g65",
+				"w_vehickle"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.17955240607261658,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				37.746849389087636,
+				0,
+				11.913575819937078
+			],
+			"coveringSockets": [
+				"g6",
+				"g7",
+				"g36",
+				"g37",
+				"g40",
+				"g41",
+				"g65",
+				"w_vehickle"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.21219830214977264,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				33.756328075395707,
+				0,
+				11.638367453475567
+			],
+			"coveringSockets": [
+				"g5",
+				"g6",
+				"g7",
+				"g36",
+				"g39",
+				"g40",
+				"g41",
+				"g65",
+				"w_vehickle"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.24484419822692871,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				29.765806761703775,
+				0,
+				11.363159087014052
+			],
+			"coveringSockets": [
+				"g5",
+				"g6",
+				"g7",
+				"g39",
+				"g40",
+				"g41",
+				"g65"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.27749007940292358,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				25.775285448011847,
+				0,
+				11.087950720552541
+			],
+			"coveringSockets": [
+				"g4",
+				"g5",
+				"g6",
+				"g38",
+				"g39",
+				"g40",
+				"g41",
+				"g65"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.31013596057891846,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				21.784764134319911,
+				0,
+				10.812742354091029
+			],
+			"coveringSockets": [
+				"g4",
+				"g5",
+				"g6",
+				"g38",
+				"g39",
+				"g40",
+				"g41",
+				"g46",
+				"g65"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.34278187155723572,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				17.794242820627979,
+				0,
+				10.537533987629516
+			],
+			"coveringSockets": [
+				"g4",
+				"g5",
+				"g38",
+				"g39",
+				"g40",
+				"g45",
+				"g46",
+				"g65"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.37542775273323059,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				13.803721506936045,
+				0,
+				10.262325621168005
+			],
+			"coveringSockets": [
+				"g4",
+				"g5",
+				"g38",
+				"g39",
+				"g45",
+				"g46"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.40807366371154785,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				9.8512616492626801,
+				0,
+				9.8862589082596966
+			],
+			"coveringSockets": [
+				"g4",
+				"g38",
+				"g39",
+				"g42",
+				"g44",
+				"g45",
+				"g46"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.44071954488754272,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				6.6738303173538949,
+				0,
+				7.4564584779765086
+			],
+			"coveringSockets": [
+				"g4",
+				"g38",
+				"g39",
+				"g42",
+				"g43",
+				"g44",
+				"g45",
+				"g46"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.4733654260635376,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				3.4963989854451119,
+				0,
+				5.0266580476933207
+			],
+			"coveringSockets": [
+				"g8",
+				"g38",
+				"g42",
+				"g43",
+				"g44",
+				"g45",
+				"g46"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.50601130723953247,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				0.31896765353632761,
+				0,
+				2.5968576174101328
+			],
+			"coveringSockets": [
+				"g8",
+				"g42",
+				"g43",
+				"g44",
+				"g45",
+				"g46"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.53865724802017212,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-2.8584636783724569,
+				0,
+				0.1670571871269442
+			],
+			"coveringSockets": [
+				"g8",
+				"g42",
+				"g43",
+				"g44",
+				"g45",
+				"g46",
+				"g49"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.57130312919616699,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-6.0358950102812425,
+				0,
+				-2.2627432431562444
+			],
+			"coveringSockets": [
+				"g8",
+				"g42",
+				"g43",
+				"g44",
+				"g48",
+				"g49",
+				"g51"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.60394901037216187,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-9.5968529608818418,
+				0,
+				-4.0098872625651616
+			],
+			"coveringSockets": [
+				"g42",
+				"g43",
+				"g44",
+				"g47",
+				"g48",
+				"g49",
+				"g51"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.63659489154815674,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-13.324871647047027,
+				0,
+				-5.459672307184956
+			],
+			"coveringSockets": [
+				"g42",
+				"g43",
+				"g47",
+				"g48",
+				"g49",
+				"g50",
+				"g51"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.66924077272415161,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-17.052890333212211,
+				0,
+				-6.9094573518047495
+			],
+			"coveringSockets": [
+				"g47",
+				"g48",
+				"g49",
+				"g50",
+				"g51",
+				"g54"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.70188665390014648,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-20.780909019377397,
+				0,
+				-8.359242396424543
+			],
+			"coveringSockets": [
+				"g47",
+				"g48",
+				"g49",
+				"g50",
+				"g51",
+				"g54"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.73453259468078613,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-24.508927705542579,
+				0,
+				-9.8090274410443357
+			],
+			"coveringSockets": [
+				"g47",
+				"g48",
+				"g49",
+				"g50",
+				"g51",
+				"g53",
+				"g54"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.76717847585678101,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-28.473101037524501,
+				0,
+				-10
+			],
+			"coveringSockets": [
+				"g47",
+				"g48",
+				"g49",
+				"g52",
+				"g53",
+				"g54"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.79982435703277588,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-32.473101037524501,
+				0,
+				-10
+			],
+			"coveringSockets": [
+				"g47",
+				"g48",
+				"g52",
+				"g53",
+				"g54"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.83247023820877075,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-36.473101037524501,
+				0,
+				-10
+			],
+			"coveringSockets": [
+				"g47",
+				"g52",
+				"g53",
+				"g54",
+				"g55",
+				"g56"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.86511611938476562,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-40.473101037524501,
+				0,
+				-10
+			],
+			"coveringSockets": [
+				"g52",
+				"g53",
+				"g54",
+				"g55",
+				"g56"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.89776206016540527,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-44.473101037524501,
+				0,
+				-10
+			],
+			"coveringSockets": [
+				"g52",
+				"g53",
+				"g54",
+				"g55",
+				"g56"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.93040794134140015,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-48.473101037524501,
+				0,
+				-10
+			],
+			"coveringSockets": [
+				"g52",
+				"g53",
+				"g55",
+				"g56"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.96305382251739502,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-52.473101037524501,
+				0,
+				-10
+			],
+			"coveringSockets": [
+				"g52",
+				"g53",
+				"g55",
+				"g56",
+				"g64"
+			]
+		},
+		{
+			"edge": "drive-core",
+			"t": 0.99569970369338989,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-56.473101037524501,
+				0,
+				-10
+			],
+			"coveringSockets": [
+				"g52",
+				"g55",
+				"g56",
+				"g63",
+				"g64"
+			]
+		},
+		{
+			"edge": "gate-drive",
+			"t": 0.11930999904870987,
+			"layer": "ground",
+			"apron": true,
+			"positionMetres": [
+				70.091040043929937,
+				0,
+				23.403450013728108
+			],
+			"coveringSockets": [
+				"g2",
+				"g35",
+				"g57",
+				"g58"
+			]
+		},
+		{
+			"edge": "gate-drive",
+			"t": 0.35793000459671021,
+			"layer": "ground",
+			"apron": true,
+			"positionMetres": [
+				66.273120131789824,
+				0,
+				22.21035004118432
+			],
+			"coveringSockets": [
+				"g2",
+				"g35",
+				"g57",
+				"g58"
+			]
+		},
+		{
+			"edge": "gate-drive",
+			"t": 0.59654998779296875,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				62.455200219649704,
+				0,
+				21.017250068640532
+			],
+			"coveringSockets": [
+				"g1",
+				"g2",
+				"g33",
+				"g35",
+				"g37",
+				"g57",
+				"g58"
+			]
+		},
+		{
+			"edge": "gate-drive",
+			"t": 0.83517003059387207,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				58.637280307509585,
+				0,
+				19.824150096096744
+			],
+			"coveringSockets": [
+				"g1",
+				"g2",
+				"g33",
+				"g34",
+				"g35",
+				"g37",
+				"g57",
+				"g58",
+				"w_vehickle"
+			]
+		},
+		{
+			"edge": "gate-drive",
+			"t": 1,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				56.000000687413852,
+				0,
+				19.000000214816829
+			],
+			"coveringSockets": [
+				"g1",
+				"g2",
+				"g33",
+				"g34",
+				"g35",
+				"g37",
+				"g57",
+				"g58",
+				"w_vehickle"
+			]
+		},
+		{
+			"edge": "westPad-core",
+			"t": 0.023321026936173439,
+			"layer": "ground",
+			"apron": true,
+			"positionMetres": [
+				-135.05121760861076,
+				0,
+				11.449719013397516
+			],
+			"coveringSockets": [
+				"g20",
+				"w_buggy"
+			]
+		},
+		{
+			"edge": "westPad-core",
+			"t": 0.069963082671165466,
+			"layer": "ground",
+			"apron": true,
+			"positionMetres": [
+				-131.1536528258323,
+				0,
+				12.349157040192551
+			],
+			"coveringSockets": [
+				"g20",
+				"g21",
+				"g59",
+				"w_buggy"
+			]
+		},
+		{
+			"edge": "westPad-core",
+			"t": 0.11660514026880264,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-127.25608804305381,
+				0,
+				13.248595066987583
+			],
+			"coveringSockets": [
+				"g20",
+				"g21",
+				"g59"
+			]
+		},
+		{
+			"edge": "westPad-core",
+			"t": 0.16324719786643982,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-123.44173224291353,
+				0,
+				13.651082651820957
+			],
+			"coveringSockets": [
+				"g20",
+				"g21",
+				"g22",
+				"g59"
+			]
+		},
+		{
+			"edge": "westPad-core",
+			"t": 0.2098892480134964,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-120.04973902689318,
+				0,
+				11.531086891808236
+			],
+			"coveringSockets": [
+				"g21",
+				"g22",
+				"g59"
+			]
+		},
+		{
+			"edge": "westPad-core",
+			"t": 0.25653129816055298,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-116.65774581087283,
+				0,
+				9.4110911317955157
+			],
+			"coveringSockets": [
+				"g21",
+				"g22",
+				"g59"
+			]
+		},
+		{
+			"edge": "westPad-core",
+			"t": 0.30317336320877075,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-113.26575259485247,
+				0,
+				7.2910953717827969
+			],
+			"coveringSockets": [
+				"g22",
+				"g59"
+			]
+		},
+		{
+			"edge": "westPad-core",
+			"t": 0.34981542825698853,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-109.87375937883213,
+				0,
+				5.1710996117700754
+			],
+			"coveringSockets": [
+				"g22",
+				"g24",
+				"g59",
+				"g60"
+			]
+		},
+		{
+			"edge": "westPad-core",
+			"t": 0.39645746350288391,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-106.35438693772619,
+				0,
+				3.2947372590255117
+			],
+			"coveringSockets": [
+				"g22",
+				"g24",
+				"g59",
+				"g60"
+			]
+		},
+		{
+			"edge": "westPad-core",
+			"t": 0.44309952855110168,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-102.67780681765396,
+				0,
+				1.7190600647088408
+			],
+			"coveringSockets": [
+				"g22",
+				"g24",
+				"g60"
+			]
+		},
+		{
+			"edge": "westPad-core",
+			"t": 0.48974159359931946,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-99.001226697581728,
+				0,
+				0.14338287039217051
+			],
+			"coveringSockets": [
+				"g24",
+				"g60",
+				"g61"
+			]
+		},
+		{
+			"edge": "westPad-core",
+			"t": 0.53638362884521484,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-95.324646577509498,
+				0,
+				-1.4322943239245012
+			],
+			"coveringSockets": [
+				"g60",
+				"g61",
+				"g62"
+			]
+		},
+		{
+			"edge": "westPad-core",
+			"t": 0.58302569389343262,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-91.648066457437267,
+				0,
+				-3.0079715182411713
+			],
+			"coveringSockets": [
+				"g60",
+				"g61",
+				"g62"
+			]
+		},
+		{
+			"edge": "westPad-core",
+			"t": 0.62966775894165039,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-87.971486337365036,
+				0,
+				-4.5836487125578422
+			],
+			"coveringSockets": [
+				"g60",
+				"g61",
+				"g62"
+			]
+		},
+		{
+			"edge": "westPad-core",
+			"t": 0.67630982398986816,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-84.294906217292805,
+				0,
+				-6.1593259068745132
+			],
+			"coveringSockets": [
+				"g60",
+				"g61",
+				"g62",
+				"g63"
+			]
+		},
+		{
+			"edge": "westPad-core",
+			"t": 0.72295188903808594,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-80.618326097220574,
+				0,
+				-7.7350031011911851
+			],
+			"coveringSockets": [
+				"g61",
+				"g62",
+				"g63",
+				"g64"
+			]
+		},
+		{
+			"edge": "westPad-core",
+			"t": 0.76959389448165894,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-76.685227372096335,
+				0,
+				-8.2882410980785792
+			],
+			"coveringSockets": [
+				"g61",
+				"g62",
+				"g63",
+				"g64"
+			]
+		},
+		{
+			"edge": "westPad-core",
+			"t": 0.81623595952987671,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-72.700265019313605,
+				0,
+				-8.6347595635379477
+			],
+			"coveringSockets": [
+				"g61",
+				"g62",
+				"g63",
+				"g64"
+			]
+		},
+		{
+			"edge": "westPad-core",
+			"t": 0.86287802457809448,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-68.715302666530874,
+				0,
+				-8.9812780289973162
+			],
+			"coveringSockets": [
+				"g62",
+				"g63",
+				"g64"
+			]
+		},
+		{
+			"edge": "westPad-core",
+			"t": 0.90952008962631226,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-64.730340313748144,
+				0,
+				-9.3277964944566847
+			],
+			"coveringSockets": [
+				"g55",
+				"g56",
+				"g63",
+				"g64"
+			]
+		},
+		{
+			"edge": "westPad-core",
+			"t": 0.95616215467453003,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-60.745377960965406,
+				0,
+				-9.6743149599160514
+			],
+			"coveringSockets": [
+				"g55",
+				"g56",
+				"g63",
+				"g64"
+			]
+		},
+		{
+			"edge": "westPad-core",
+			"t": 1,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-57,
+				0,
+				-10
+			],
+			"coveringSockets": [
+				"g52",
+				"g55",
+				"g56",
+				"g63",
+				"g64"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.014358538202941418,
+			"layer": "air",
+			"apron": true,
+			"positionMetres": [
+				70.091040043929937,
+				9,
+				23.403450013728108
+			],
+			"coveringSockets": [
+				"g2",
+				"g57",
+				"g58"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.043075613677501678,
+			"layer": "air",
+			"apron": true,
+			"positionMetres": [
+				66.273120131789824,
+				9,
+				22.21035004118432
+			],
+			"coveringSockets": [
+				"g2",
+				"g57",
+				"g58"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.071792691946029663,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				62.455200219649704,
+				9,
+				21.017250068640532
+			],
+			"coveringSockets": [
+				"g2",
+				"g35",
+				"g57",
+				"g58"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.10050976276397705,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				58.637280307509585,
+				9,
+				19.824150096096744
+			],
+			"coveringSockets": [
+				"g2",
+				"g33",
+				"g35",
+				"g37",
+				"g57",
+				"w_vehickle"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.12922684848308563,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				55.446821206597278,
+				9,
+				17.893642413194563
+			],
+			"coveringSockets": [
+				"g2",
+				"g33",
+				"g35",
+				"g37",
+				"g57",
+				"w_vehickle"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.15794391930103302,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				53.657966824597452,
+				9,
+				14.315933649194898
+			],
+			"coveringSockets": [
+				"g33",
+				"g34",
+				"g35",
+				"g37",
+				"w_vehickle"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.18666099011898041,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				50.477684837822771,
+				9,
+				12.819834631273057
+			],
+			"coveringSockets": [
+				"g34",
+				"g35",
+				"g36",
+				"g37",
+				"w_vehickle"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.21537807583808899,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				46.487850038499836,
+				9,
+				12.534846431321416
+			],
+			"coveringSockets": [
+				"g36",
+				"g37",
+				"g41",
+				"w_vehickle"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.24409514665603638,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				42.498015239176894,
+				9,
+				12.249858231369778
+			],
+			"coveringSockets": [
+				"g36",
+				"g37",
+				"g41",
+				"w_vehickle"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.27281221747398376,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				38.508095814496777,
+				9,
+				11.966075573413571
+			],
+			"coveringSockets": [
+				"g40",
+				"g41",
+				"g65",
+				"w_vehickle"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.30152928829193115,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				34.517574500804841,
+				9,
+				11.690867206952056
+			],
+			"coveringSockets": [
+				"g40",
+				"g41",
+				"g65",
+				"w_vehickle"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.33024635910987854,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				30.527053187112905,
+				9,
+				11.415658840490545
+			],
+			"coveringSockets": [
+				"g40",
+				"g41",
+				"g65"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.35896345973014832,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				26.536531873420973,
+				9,
+				11.140450474029032
+			],
+			"coveringSockets": [
+				"g39",
+				"g40",
+				"g41",
+				"g65"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.3876805305480957,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				22.546010559729048,
+				9,
+				10.86524210756752
+			],
+			"coveringSockets": [
+				"g38",
+				"g39",
+				"g40",
+				"g65"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.41639760136604309,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				18.555489246037112,
+				9,
+				10.590033741106009
+			],
+			"coveringSockets": [
+				"g38",
+				"g39",
+				"g46"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.44511467218399048,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				14.56496793234518,
+				9,
+				10.314825374644494
+			],
+			"coveringSockets": [
+				"g38",
+				"g39",
+				"g45",
+				"g46"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.47383174300193787,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				10.574446618653246,
+				9,
+				10.039617008182983
+			],
+			"coveringSockets": [
+				"g38",
+				"g39",
+				"g45",
+				"g46"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.50254881381988525,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				7.2799687271649987,
+				9,
+				7.9199760854791172
+			],
+			"coveringSockets": [
+				"g38",
+				"g42",
+				"g45",
+				"g46"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.53126591444015503,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				4.1025373952562143,
+				9,
+				5.4901756551959284
+			],
+			"coveringSockets": [
+				"g42",
+				"g44",
+				"g45",
+				"g46"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.55998295545578003,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				0.92510606334742984,
+				9,
+				3.0603752249127409
+			],
+			"coveringSockets": [
+				"g42",
+				"g43",
+				"g44",
+				"g45",
+				"g46"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.5887000560760498,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-2.2523252685613557,
+				9,
+				0.63057479462955257
+			],
+			"coveringSockets": [
+				"g42",
+				"g43",
+				"g44"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.61741715669631958,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-5.4297566004701387,
+				9,
+				-1.7992256356536358
+			],
+			"coveringSockets": [
+				"g42",
+				"g43",
+				"g44",
+				"g49"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.64613419771194458,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-8.8856824957688261,
+				9,
+				-3.733320970576766
+			],
+			"coveringSockets": [
+				"g42",
+				"g43",
+				"g48",
+				"g49"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.67485129833221436,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-12.613701181934012,
+				9,
+				-5.18310601519656
+			],
+			"coveringSockets": [
+				"g43",
+				"g48",
+				"g49",
+				"g51"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.70356833934783936,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-16.341719868099194,
+				9,
+				-6.6328910598163535
+			],
+			"coveringSockets": [
+				"g47",
+				"g48",
+				"g49",
+				"g51"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.73228543996810913,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-20.069738554264376,
+				9,
+				-8.0826761044361461
+			],
+			"coveringSockets": [
+				"g47",
+				"g48",
+				"g49",
+				"g54"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.76100254058837891,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-23.797757240429565,
+				9,
+				-9.5324611490559406
+			],
+			"coveringSockets": [
+				"g47",
+				"g48",
+				"g49",
+				"g54"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.78971958160400391,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-27.710046423284293,
+				9,
+				-10
+			],
+			"coveringSockets": [
+				"g47",
+				"g48",
+				"g53",
+				"g54"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.81843668222427368,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-31.710046423284293,
+				9,
+				-10
+			],
+			"coveringSockets": [
+				"g47",
+				"g52",
+				"g53",
+				"g54"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.84715372323989868,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-35.710046423284297,
+				9,
+				-10
+			],
+			"coveringSockets": [
+				"g52",
+				"g53",
+				"g54"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.87587082386016846,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-39.710046423284297,
+				9,
+				-10
+			],
+			"coveringSockets": [
+				"g52",
+				"g53",
+				"g54"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.90458786487579346,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-43.710046423284297,
+				9,
+				-10
+			],
+			"coveringSockets": [
+				"g52",
+				"g53",
+				"g55",
+				"g56"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.93330496549606323,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-47.710046423284297,
+				9,
+				-10
+			],
+			"coveringSockets": [
+				"g52",
+				"g53",
+				"g55",
+				"g56"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.96202206611633301,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-51.710046423284297,
+				9,
+				-10
+			],
+			"coveringSockets": [
+				"g52",
+				"g55",
+				"g56"
+			]
+		},
+		{
+			"edge": "airGate-airCore@air",
+			"t": 0.99073910713195801,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-55.710046423284297,
+				9,
+				-10
+			],
+			"coveringSockets": [
+				"g55",
+				"g56",
+				"g64"
+			]
+		}
+	],
+	"deadSegments": [
+		{
+			"edge": "gate-southPad",
+			"t": 0.20250700414180756,
+			"count": 2
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.23772561550140381,
+			"count": 2
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.60752099752426147,
+			"count": 2
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.67795825004577637,
+			"count": 2
+		},
+		{
+			"edge": "gate-southPad",
+			"t": 0.81883269548416138,
+			"count": 2
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.63328015804290771,
+			"count": 2
+		},
+		{
+			"edge": "westPad-northPad",
+			"t": 0.66946756839752197,
+			"count": 2
+		},
+		{
+			"edge": "westPad-core",
+			"t": 0.30317336320877075,
+			"count": 2
+		}
+	],
+	"perSocket":
+	{
+		"g1": [
+			"gate-southPad@0.026",
+			"gate-southPad@0.044",
+			"gate-southPad@0.062",
+			"gate-southPad@0.079",
+			"gate-southPad@0.097",
+			"gate-southPad@0.114",
+			"gate-southPad@0.132",
+			"gate-southPad@0.150",
+			"gate-southPad@0.167",
+			"gate-southPad@0.185",
+			"housePad-drive@0.904",
+			"drive-core@0.016",
+			"drive-core@0.049",
+			"drive-core@0.082",
+			"gate-drive@0.597",
+			"gate-drive@0.835",
+			"gate-drive@1.000"
+		],
+		"g2": [
+			"gate-southPad@0.009",
+			"gate-southPad@0.026",
+			"gate-southPad@0.044",
+			"gate-southPad@0.062",
+			"gate-southPad@0.079",
+			"gate-southPad@0.097",
+			"housePad-drive@0.542",
+			"housePad-drive@0.904",
+			"drive-core@0.016",
+			"drive-core@0.049",
+			"gate-drive@0.119",
+			"gate-drive@0.358",
+			"gate-drive@0.597",
+			"gate-drive@0.835",
+			"gate-drive@1.000",
+			"airGate-airCore@air@0.014",
+			"airGate-airCore@air@0.043",
+			"airGate-airCore@air@0.072",
+			"airGate-airCore@air@0.101",
+			"airGate-airCore@air@0.129"
+		],
+		"g3": [
+			"gate-southPad@0.079",
+			"gate-southPad@0.097",
+			"gate-southPad@0.114",
+			"gate-southPad@0.132",
+			"gate-southPad@0.150",
+			"gate-southPad@0.167",
+			"gate-southPad@0.185",
+			"gate-southPad@0.203",
+			"gate-southPad@0.220",
+			"drive-core@0.049",
+			"drive-core@0.082"
+		],
+		"g4": [
+			"gate-southPad@0.308",
+			"gate-southPad@0.326",
+			"gate-southPad@0.343",
+			"gate-southPad@0.361",
+			"gate-southPad@0.379",
+			"drive-core@0.277",
+			"drive-core@0.310",
+			"drive-core@0.343",
+			"drive-core@0.375",
+			"drive-core@0.408",
+			"drive-core@0.441"
+		],
+		"g5": [
+			"gate-southPad@0.273",
+			"gate-southPad@0.291",
+			"gate-southPad@0.308",
+			"gate-southPad@0.326",
+			"gate-southPad@0.343",
+			"gate-southPad@0.361",
+			"drive-core@0.212",
+			"drive-core@0.245",
+			"drive-core@0.277",
+			"drive-core@0.310",
+			"drive-core@0.343",
+			"drive-core@0.375"
+		],
+		"g6": [
+			"gate-southPad@0.255",
+			"gate-southPad@0.273",
+			"gate-southPad@0.291",
+			"gate-southPad@0.308",
+			"gate-southPad@0.326",
+			"gate-southPad@0.343",
+			"drive-core@0.180",
+			"drive-core@0.212",
+			"drive-core@0.245",
+			"drive-core@0.277",
+			"drive-core@0.310"
+		],
+		"g7": [
+			"gate-southPad@0.220",
+			"gate-southPad@0.238",
+			"gate-southPad@0.255",
+			"gate-southPad@0.273",
+			"gate-southPad@0.291",
+			"gate-southPad@0.308",
+			"gate-southPad@0.326",
+			"drive-core@0.147",
+			"drive-core@0.180",
+			"drive-core@0.212",
+			"drive-core@0.245"
+		],
+		"g8": [
+			"gate-southPad@0.343",
+			"gate-southPad@0.361",
+			"gate-southPad@0.379",
+			"gate-southPad@0.396",
+			"gate-southPad@0.414",
+			"gate-southPad@0.431",
+			"gate-southPad@0.449",
+			"drive-core@0.473",
+			"drive-core@0.506",
+			"drive-core@0.539",
+			"drive-core@0.571"
+		],
+		"g9": [
+			"gate-southPad@0.484",
+			"gate-southPad@0.502",
+			"gate-southPad@0.519",
+			"gate-southPad@0.537",
+			"gate-southPad@0.555",
+			"gate-southPad@0.572",
+			"gate-southPad@0.590"
+		],
+		"g10": [
+			"gate-southPad@0.449",
+			"gate-southPad@0.467",
+			"gate-southPad@0.484",
+			"gate-southPad@0.502",
+			"gate-southPad@0.519",
+			"gate-southPad@0.537",
+			"gate-southPad@0.555"
+		],
+		"g11": [
+			"gate-southPad@0.502",
+			"gate-southPad@0.519",
+			"gate-southPad@0.537",
+			"gate-southPad@0.555",
+			"gate-southPad@0.572",
+			"gate-southPad@0.590",
+			"gate-southPad@0.608",
+			"gate-southPad@0.625",
+			"gate-southPad@0.643",
+			"gate-southPad@0.660"
+		],
+		"g12": [
+			"gate-southPad@0.537",
+			"gate-southPad@0.555",
+			"gate-southPad@0.572",
+			"gate-southPad@0.590",
+			"gate-southPad@0.608",
+			"gate-southPad@0.625",
+			"gate-southPad@0.643",
+			"gate-southPad@0.660",
+			"gate-southPad@0.678",
+			"gate-southPad@0.696"
+		],
+		"g13": [
+			"gate-southPad@0.625",
+			"gate-southPad@0.643",
+			"gate-southPad@0.660",
+			"gate-southPad@0.678",
+			"gate-southPad@0.696",
+			"gate-southPad@0.713",
+			"gate-southPad@0.731"
+		],
+		"g14": [
+			"gate-southPad@0.696",
+			"gate-southPad@0.713",
+			"gate-southPad@0.731",
+			"gate-southPad@0.748",
+			"gate-southPad@0.766",
+			"gate-southPad@0.784",
+			"gate-southPad@0.801"
+		],
+		"g15": [
+			"gate-southPad@0.713",
+			"gate-southPad@0.731",
+			"gate-southPad@0.748",
+			"gate-southPad@0.766",
+			"gate-southPad@0.784",
+			"gate-southPad@0.801",
+			"gate-southPad@0.819",
+			"gate-southPad@0.836"
+		],
+		"g16": [
+			"gate-southPad@0.731",
+			"gate-southPad@0.748",
+			"gate-southPad@0.766",
+			"gate-southPad@0.784",
+			"gate-southPad@0.801",
+			"gate-southPad@0.819",
+			"gate-southPad@0.836",
+			"gate-southPad@0.854"
+		],
+		"g17": [
+			"gate-southPad@0.836",
+			"gate-southPad@0.854",
+			"gate-southPad@0.872",
+			"gate-southPad@0.889",
+			"gate-southPad@0.907",
+			"gate-southPad@0.924",
+			"gate-southPad@0.942",
+			"gate-southPad@0.960",
+			"gate-southPad@0.977",
+			"gate-southPad@0.995"
+		],
+		"g18": [
+			"gate-southPad@0.854",
+			"gate-southPad@0.872",
+			"gate-southPad@0.889",
+			"gate-southPad@0.907",
+			"gate-southPad@0.924",
+			"gate-southPad@0.942",
+			"gate-southPad@0.960",
+			"gate-southPad@0.977",
+			"gate-southPad@0.995"
+		],
+		"g19": [
+			"gate-southPad@0.854",
+			"gate-southPad@0.872",
+			"gate-southPad@0.889",
+			"gate-southPad@0.907",
+			"gate-southPad@0.924",
+			"gate-southPad@0.942",
+			"gate-southPad@0.960",
+			"gate-southPad@0.977",
+			"gate-southPad@0.995"
+		],
+		"g20": [
+			"westPad-northPad@0.018",
+			"westPad-northPad@0.054",
+			"westPad-northPad@0.090",
+			"westPad-northPad@0.127",
+			"westPad-core@0.023",
+			"westPad-core@0.070",
+			"westPad-core@0.117",
+			"westPad-core@0.163"
+		],
+		"g21": [
+			"westPad-northPad@0.054",
+			"westPad-northPad@0.090",
+			"westPad-northPad@0.127",
+			"westPad-northPad@0.163",
+			"westPad-northPad@0.199",
+			"westPad-northPad@0.235",
+			"westPad-northPad@0.271",
+			"westPad-northPad@0.308",
+			"westPad-northPad@0.344",
+			"westPad-core@0.070",
+			"westPad-core@0.117",
+			"westPad-core@0.163",
+			"westPad-core@0.210",
+			"westPad-core@0.257"
+		],
+		"g22": [
+			"westPad-northPad@0.127",
+			"westPad-northPad@0.163",
+			"westPad-northPad@0.199",
+			"westPad-northPad@0.235",
+			"westPad-northPad@0.271",
+			"westPad-northPad@0.308",
+			"westPad-northPad@0.344",
+			"westPad-core@0.163",
+			"westPad-core@0.210",
+			"westPad-core@0.257",
+			"westPad-core@0.303",
+			"westPad-core@0.350",
+			"westPad-core@0.396",
+			"westPad-core@0.443"
+		],
+		"g23": [
+			"westPad-northPad@0.199",
+			"westPad-northPad@0.235",
+			"westPad-northPad@0.271",
+			"westPad-northPad@0.308",
+			"westPad-northPad@0.344",
+			"westPad-northPad@0.380",
+			"westPad-northPad@0.416",
+			"westPad-northPad@0.452"
+		],
+		"g24": [
+			"westPad-northPad@0.235",
+			"westPad-northPad@0.271",
+			"westPad-northPad@0.308",
+			"westPad-northPad@0.344",
+			"westPad-northPad@0.380",
+			"westPad-core@0.350",
+			"westPad-core@0.396",
+			"westPad-core@0.443",
+			"westPad-core@0.490"
+		],
+		"g25": [
+			"westPad-northPad@0.344",
+			"westPad-northPad@0.380",
+			"westPad-northPad@0.416",
+			"westPad-northPad@0.452",
+			"westPad-northPad@0.489",
+			"westPad-northPad@0.525",
+			"westPad-northPad@0.561",
+			"westPad-northPad@0.597"
+		],
+		"g26": [
+			"westPad-northPad@0.380",
+			"westPad-northPad@0.416",
+			"westPad-northPad@0.452",
+			"westPad-northPad@0.489",
+			"westPad-northPad@0.525",
+			"westPad-northPad@0.561",
+			"westPad-northPad@0.597",
+			"westPad-northPad@0.633"
+		],
+		"g27": [
+			"westPad-northPad@0.525",
+			"westPad-northPad@0.561",
+			"westPad-northPad@0.597",
+			"westPad-northPad@0.633",
+			"westPad-northPad@0.669",
+			"westPad-northPad@0.706",
+			"westPad-northPad@0.742"
+		],
+		"g28": [
+			"westPad-northPad@0.669",
+			"westPad-northPad@0.706",
+			"westPad-northPad@0.742",
+			"westPad-northPad@0.778",
+			"westPad-northPad@0.814",
+			"westPad-northPad@0.850",
+			"westPad-northPad@0.887",
+			"westPad-northPad@0.923"
+		],
+		"g29": [
+			"westPad-northPad@0.706",
+			"westPad-northPad@0.742",
+			"westPad-northPad@0.778",
+			"westPad-northPad@0.814",
+			"westPad-northPad@0.850",
+			"westPad-northPad@0.887",
+			"westPad-northPad@0.923"
+		],
+		"g30": [
+			"westPad-northPad@0.742",
+			"westPad-northPad@0.778",
+			"westPad-northPad@0.814",
+			"westPad-northPad@0.850",
+			"westPad-northPad@0.887",
+			"westPad-northPad@0.923",
+			"westPad-northPad@0.959",
+			"westPad-northPad@0.995"
+		],
+		"g31": [
+			"westPad-northPad@0.742",
+			"westPad-northPad@0.778",
+			"westPad-northPad@0.814",
+			"westPad-northPad@0.850",
+			"westPad-northPad@0.887",
+			"westPad-northPad@0.923",
+			"westPad-northPad@0.959",
+			"westPad-northPad@0.995"
+		],
+		"g32": [
+			"westPad-northPad@0.814",
+			"westPad-northPad@0.850",
+			"westPad-northPad@0.887",
+			"westPad-northPad@0.923",
+			"westPad-northPad@0.959",
+			"westPad-northPad@0.995"
+		],
+		"g33": [
+			"housePad-drive@0.181",
+			"housePad-drive@0.542",
+			"housePad-drive@0.904",
+			"drive-core@0.016",
+			"drive-core@0.049",
+			"drive-core@0.082",
+			"drive-core@0.114",
+			"drive-core@0.147",
+			"gate-drive@0.597",
+			"gate-drive@0.835",
+			"gate-drive@1.000",
+			"airGate-airCore@air@0.101",
+			"airGate-airCore@air@0.129",
+			"airGate-airCore@air@0.158"
+		],
+		"g34": [
+			"gate-southPad@0.062",
+			"gate-southPad@0.079",
+			"gate-southPad@0.097",
+			"gate-southPad@0.114",
+			"gate-southPad@0.132",
+			"gate-southPad@0.150",
+			"gate-southPad@0.167",
+			"gate-southPad@0.185",
+			"housePad-drive@0.904",
+			"drive-core@0.016",
+			"drive-core@0.049",
+			"drive-core@0.082",
+			"drive-core@0.114",
+			"gate-drive@0.835",
+			"gate-drive@1.000",
+			"airGate-airCore@air@0.158",
+			"airGate-airCore@air@0.187"
+		],
+		"g35": [
+			"gate-southPad@0.009",
+			"gate-southPad@0.026",
+			"gate-southPad@0.044",
+			"gate-southPad@0.062",
+			"gate-southPad@0.079",
+			"gate-southPad@0.097",
+			"gate-southPad@0.114",
+			"housePad-drive@0.542",
+			"housePad-drive@0.904",
+			"drive-core@0.016",
+			"drive-core@0.049",
+			"drive-core@0.082",
+			"drive-core@0.114",
+			"gate-drive@0.119",
+			"gate-drive@0.358",
+			"gate-drive@0.597",
+			"gate-drive@0.835",
+			"gate-drive@1.000",
+			"airGate-airCore@air@0.072",
+			"airGate-airCore@air@0.101",
+			"airGate-airCore@air@0.129",
+			"airGate-airCore@air@0.158",
+			"airGate-airCore@air@0.187"
+		],
+		"g36": [
+			"gate-southPad@0.185",
+			"gate-southPad@0.203",
+			"gate-southPad@0.220",
+			"gate-southPad@0.238",
+			"gate-southPad@0.255",
+			"drive-core@0.049",
+			"drive-core@0.082",
+			"drive-core@0.114",
+			"drive-core@0.147",
+			"drive-core@0.180",
+			"drive-core@0.212",
+			"airGate-airCore@air@0.187",
+			"airGate-airCore@air@0.215",
+			"airGate-airCore@air@0.244"
+		],
+		"g37": [
+			"housePad-drive@0.181",
+			"housePad-drive@0.542",
+			"housePad-drive@0.904",
+			"drive-core@0.016",
+			"drive-core@0.049",
+			"drive-core@0.082",
+			"drive-core@0.114",
+			"drive-core@0.147",
+			"drive-core@0.180",
+			"gate-drive@0.597",
+			"gate-drive@0.835",
+			"gate-drive@1.000",
+			"airGate-airCore@air@0.101",
+			"airGate-airCore@air@0.129",
+			"airGate-airCore@air@0.158",
+			"airGate-airCore@air@0.187",
+			"airGate-airCore@air@0.215",
+			"airGate-airCore@air@0.244"
+		],
+		"g38": [
+			"drive-core@0.277",
+			"drive-core@0.310",
+			"drive-core@0.343",
+			"drive-core@0.375",
+			"drive-core@0.408",
+			"drive-core@0.441",
+			"drive-core@0.473",
+			"airGate-airCore@air@0.388",
+			"airGate-airCore@air@0.416",
+			"airGate-airCore@air@0.445",
+			"airGate-airCore@air@0.474",
+			"airGate-airCore@air@0.503"
+		],
+		"g39": [
+			"drive-core@0.212",
+			"drive-core@0.245",
+			"drive-core@0.277",
+			"drive-core@0.310",
+			"drive-core@0.343",
+			"drive-core@0.375",
+			"drive-core@0.408",
+			"drive-core@0.441",
+			"airGate-airCore@air@0.359",
+			"airGate-airCore@air@0.388",
+			"airGate-airCore@air@0.416",
+			"airGate-airCore@air@0.445",
+			"airGate-airCore@air@0.474"
+		],
+		"g40": [
+			"drive-core@0.147",
+			"drive-core@0.180",
+			"drive-core@0.212",
+			"drive-core@0.245",
+			"drive-core@0.277",
+			"drive-core@0.310",
+			"drive-core@0.343",
+			"airGate-airCore@air@0.273",
+			"airGate-airCore@air@0.302",
+			"airGate-airCore@air@0.330",
+			"airGate-airCore@air@0.359",
+			"airGate-airCore@air@0.388"
+		],
+		"g41": [
+			"drive-core@0.082",
+			"drive-core@0.114",
+			"drive-core@0.147",
+			"drive-core@0.180",
+			"drive-core@0.212",
+			"drive-core@0.245",
+			"drive-core@0.277",
+			"drive-core@0.310",
+			"airGate-airCore@air@0.215",
+			"airGate-airCore@air@0.244",
+			"airGate-airCore@air@0.273",
+			"airGate-airCore@air@0.302",
+			"airGate-airCore@air@0.330",
+			"airGate-airCore@air@0.359"
+		],
+		"g42": [
+			"drive-core@0.408",
+			"drive-core@0.441",
+			"drive-core@0.473",
+			"drive-core@0.506",
+			"drive-core@0.539",
+			"drive-core@0.571",
+			"drive-core@0.604",
+			"drive-core@0.637",
+			"airGate-airCore@air@0.503",
+			"airGate-airCore@air@0.531",
+			"airGate-airCore@air@0.560",
+			"airGate-airCore@air@0.589",
+			"airGate-airCore@air@0.617",
+			"airGate-airCore@air@0.646"
+		],
+		"g43": [
+			"gate-southPad@0.379",
+			"gate-southPad@0.396",
+			"gate-southPad@0.414",
+			"gate-southPad@0.431",
+			"drive-core@0.441",
+			"drive-core@0.473",
+			"drive-core@0.506",
+			"drive-core@0.539",
+			"drive-core@0.571",
+			"drive-core@0.604",
+			"drive-core@0.637",
+			"airGate-airCore@air@0.560",
+			"airGate-airCore@air@0.589",
+			"airGate-airCore@air@0.617",
+			"airGate-airCore@air@0.646",
+			"airGate-airCore@air@0.675"
+		],
+		"g44": [
+			"gate-southPad@0.361",
+			"gate-southPad@0.379",
+			"gate-southPad@0.396",
+			"gate-southPad@0.414",
+			"gate-southPad@0.431",
+			"drive-core@0.408",
+			"drive-core@0.441",
+			"drive-core@0.473",
+			"drive-core@0.506",
+			"drive-core@0.539",
+			"drive-core@0.571",
+			"drive-core@0.604",
+			"airGate-airCore@air@0.531",
+			"airGate-airCore@air@0.560",
+			"airGate-airCore@air@0.589",
+			"airGate-airCore@air@0.617"
+		],
+		"g45": [
+			"drive-core@0.343",
+			"drive-core@0.375",
+			"drive-core@0.408",
+			"drive-core@0.441",
+			"drive-core@0.473",
+			"drive-core@0.506",
+			"drive-core@0.539",
+			"airGate-airCore@air@0.445",
+			"airGate-airCore@air@0.474",
+			"airGate-airCore@air@0.503",
+			"airGate-airCore@air@0.531",
+			"airGate-airCore@air@0.560"
+		],
+		"g46": [
+			"gate-southPad@0.361",
+			"gate-southPad@0.379",
+			"drive-core@0.310",
+			"drive-core@0.343",
+			"drive-core@0.375",
+			"drive-core@0.408",
+			"drive-core@0.441",
+			"drive-core@0.473",
+			"drive-core@0.506",
+			"drive-core@0.539",
+			"airGate-airCore@air@0.416",
+			"airGate-airCore@air@0.445",
+			"airGate-airCore@air@0.474",
+			"airGate-airCore@air@0.503",
+			"airGate-airCore@air@0.531",
+			"airGate-airCore@air@0.560"
+		],
+		"g47": [
+			"drive-core@0.604",
+			"drive-core@0.637",
+			"drive-core@0.669",
+			"drive-core@0.702",
+			"drive-core@0.735",
+			"drive-core@0.767",
+			"drive-core@0.800",
+			"drive-core@0.832",
+			"airGate-airCore@air@0.704",
+			"airGate-airCore@air@0.732",
+			"airGate-airCore@air@0.761",
+			"airGate-airCore@air@0.790",
+			"airGate-airCore@air@0.818"
+		],
+		"g48": [
+			"drive-core@0.571",
+			"drive-core@0.604",
+			"drive-core@0.637",
+			"drive-core@0.669",
+			"drive-core@0.702",
+			"drive-core@0.735",
+			"drive-core@0.767",
+			"drive-core@0.800",
+			"airGate-airCore@air@0.646",
+			"airGate-airCore@air@0.675",
+			"airGate-airCore@air@0.704",
+			"airGate-airCore@air@0.732",
+			"airGate-airCore@air@0.761",
+			"airGate-airCore@air@0.790"
+		],
+		"g49": [
+			"drive-core@0.539",
+			"drive-core@0.571",
+			"drive-core@0.604",
+			"drive-core@0.637",
+			"drive-core@0.669",
+			"drive-core@0.702",
+			"drive-core@0.735",
+			"drive-core@0.767",
+			"airGate-airCore@air@0.617",
+			"airGate-airCore@air@0.646",
+			"airGate-airCore@air@0.675",
+			"airGate-airCore@air@0.704",
+			"airGate-airCore@air@0.732",
+			"airGate-airCore@air@0.761"
+		],
+		"g50": [
+			"gate-southPad@0.467",
+			"gate-southPad@0.484",
+			"drive-core@0.637",
+			"drive-core@0.669",
+			"drive-core@0.702",
+			"drive-core@0.735"
+		],
+		"g51": [
+			"gate-southPad@0.414",
+			"gate-southPad@0.431",
+			"gate-southPad@0.449",
+			"gate-southPad@0.467",
+			"gate-southPad@0.484",
+			"drive-core@0.571",
+			"drive-core@0.604",
+			"drive-core@0.637",
+			"drive-core@0.669",
+			"drive-core@0.702",
+			"drive-core@0.735",
+			"airGate-airCore@air@0.675",
+			"airGate-airCore@air@0.704"
+		],
+		"g52": [
+			"drive-core@0.767",
+			"drive-core@0.800",
+			"drive-core@0.832",
+			"drive-core@0.865",
+			"drive-core@0.898",
+			"drive-core@0.930",
+			"drive-core@0.963",
+			"drive-core@0.996",
+			"westPad-core@1.000",
+			"airGate-airCore@air@0.818",
+			"airGate-airCore@air@0.847",
+			"airGate-airCore@air@0.876",
+			"airGate-airCore@air@0.905",
+			"airGate-airCore@air@0.933",
+			"airGate-airCore@air@0.962"
+		],
+		"g53": [
+			"drive-core@0.735",
+			"drive-core@0.767",
+			"drive-core@0.800",
+			"drive-core@0.832",
+			"drive-core@0.865",
+			"drive-core@0.898",
+			"drive-core@0.930",
+			"drive-core@0.963",
+			"airGate-airCore@air@0.790",
+			"airGate-airCore@air@0.818",
+			"airGate-airCore@air@0.847",
+			"airGate-airCore@air@0.876",
+			"airGate-airCore@air@0.905",
+			"airGate-airCore@air@0.933"
+		],
+		"g54": [
+			"drive-core@0.669",
+			"drive-core@0.702",
+			"drive-core@0.735",
+			"drive-core@0.767",
+			"drive-core@0.800",
+			"drive-core@0.832",
+			"drive-core@0.865",
+			"drive-core@0.898",
+			"airGate-airCore@air@0.732",
+			"airGate-airCore@air@0.761",
+			"airGate-airCore@air@0.790",
+			"airGate-airCore@air@0.818",
+			"airGate-airCore@air@0.847",
+			"airGate-airCore@air@0.876"
+		],
+		"g55": [
+			"drive-core@0.832",
+			"drive-core@0.865",
+			"drive-core@0.898",
+			"drive-core@0.930",
+			"drive-core@0.963",
+			"drive-core@0.996",
+			"westPad-core@0.910",
+			"westPad-core@0.956",
+			"westPad-core@1.000",
+			"airGate-airCore@air@0.905",
+			"airGate-airCore@air@0.933",
+			"airGate-airCore@air@0.962",
+			"airGate-airCore@air@0.991"
+		],
+		"g56": [
+			"drive-core@0.832",
+			"drive-core@0.865",
+			"drive-core@0.898",
+			"drive-core@0.930",
+			"drive-core@0.963",
+			"drive-core@0.996",
+			"westPad-core@0.910",
+			"westPad-core@0.956",
+			"westPad-core@1.000",
+			"airGate-airCore@air@0.905",
+			"airGate-airCore@air@0.933",
+			"airGate-airCore@air@0.962",
+			"airGate-airCore@air@0.991"
+		],
+		"g57": [
+			"gate-southPad@0.009",
+			"gate-southPad@0.026",
+			"housePad-drive@0.181",
+			"housePad-drive@0.542",
+			"housePad-drive@0.904",
+			"drive-core@0.016",
+			"drive-core@0.049",
+			"gate-drive@0.119",
+			"gate-drive@0.358",
+			"gate-drive@0.597",
+			"gate-drive@0.835",
+			"gate-drive@1.000",
+			"airGate-airCore@air@0.014",
+			"airGate-airCore@air@0.043",
+			"airGate-airCore@air@0.072",
+			"airGate-airCore@air@0.101",
+			"airGate-airCore@air@0.129"
+		],
+		"g58": [
+			"gate-southPad@0.009",
+			"gate-southPad@0.026",
+			"housePad-drive@0.181",
+			"housePad-drive@0.542",
+			"housePad-drive@0.904",
+			"gate-drive@0.119",
+			"gate-drive@0.358",
+			"gate-drive@0.597",
+			"gate-drive@0.835",
+			"gate-drive@1.000",
+			"airGate-airCore@air@0.014",
+			"airGate-airCore@air@0.043",
+			"airGate-airCore@air@0.072"
+		],
+		"g59": [
+			"westPad-northPad@0.054",
+			"westPad-northPad@0.090",
+			"westPad-northPad@0.127",
+			"westPad-northPad@0.163",
+			"westPad-northPad@0.199",
+			"westPad-northPad@0.235",
+			"westPad-core@0.070",
+			"westPad-core@0.117",
+			"westPad-core@0.163",
+			"westPad-core@0.210",
+			"westPad-core@0.257",
+			"westPad-core@0.303",
+			"westPad-core@0.350",
+			"westPad-core@0.396"
+		],
+		"g60": [
+			"westPad-core@0.350",
+			"westPad-core@0.396",
+			"westPad-core@0.443",
+			"westPad-core@0.490",
+			"westPad-core@0.536",
+			"westPad-core@0.583",
+			"westPad-core@0.630",
+			"westPad-core@0.676"
+		],
+		"g61": [
+			"westPad-core@0.490",
+			"westPad-core@0.536",
+			"westPad-core@0.583",
+			"westPad-core@0.630",
+			"westPad-core@0.676",
+			"westPad-core@0.723",
+			"westPad-core@0.770",
+			"westPad-core@0.816"
+		],
+		"g62": [
+			"westPad-core@0.536",
+			"westPad-core@0.583",
+			"westPad-core@0.630",
+			"westPad-core@0.676",
+			"westPad-core@0.723",
+			"westPad-core@0.770",
+			"westPad-core@0.816",
+			"westPad-core@0.863"
+		],
+		"g63": [
+			"drive-core@0.996",
+			"westPad-core@0.676",
+			"westPad-core@0.723",
+			"westPad-core@0.770",
+			"westPad-core@0.816",
+			"westPad-core@0.863",
+			"westPad-core@0.910",
+			"westPad-core@0.956",
+			"westPad-core@1.000"
+		],
+		"g64": [
+			"drive-core@0.963",
+			"drive-core@0.996",
+			"westPad-core@0.723",
+			"westPad-core@0.770",
+			"westPad-core@0.816",
+			"westPad-core@0.863",
+			"westPad-core@0.910",
+			"westPad-core@0.956",
+			"westPad-core@1.000",
+			"airGate-airCore@air@0.991"
+		],
+		"g65": [
+			"drive-core@0.147",
+			"drive-core@0.180",
+			"drive-core@0.212",
+			"drive-core@0.245",
+			"drive-core@0.277",
+			"drive-core@0.310",
+			"drive-core@0.343",
+			"airGate-airCore@air@0.273",
+			"airGate-airCore@air@0.302",
+			"airGate-airCore@air@0.330",
+			"airGate-airCore@air@0.359",
+			"airGate-airCore@air@0.388"
+		],
+		"w_barn": [
+			"westPad-northPad@0.416",
+			"westPad-northPad@0.452",
+			"westPad-northPad@0.489",
+			"westPad-northPad@0.525",
+			"westPad-northPad@0.561",
+			"westPad-northPad@0.597"
+		],
+		"w_buggy": [
+			"westPad-northPad@0.018",
+			"westPad-northPad@0.054",
+			"westPad-core@0.023",
+			"westPad-core@0.070"
+		],
+		"w_vehickle": [
+			"housePad-drive@0.181",
+			"housePad-drive@0.542",
+			"housePad-drive@0.904",
+			"drive-core@0.016",
+			"drive-core@0.049",
+			"drive-core@0.082",
+			"drive-core@0.114",
+			"drive-core@0.147",
+			"drive-core@0.180",
+			"drive-core@0.212",
+			"gate-drive@0.835",
+			"gate-drive@1.000",
+			"airGate-airCore@air@0.101",
+			"airGate-airCore@air@0.129",
+			"airGate-airCore@air@0.158",
+			"airGate-airCore@air@0.187",
+			"airGate-airCore@air@0.215",
+			"airGate-airCore@air@0.244",
+			"airGate-airCore@air@0.273",
+			"airGate-airCore@air@0.302"
+		],
+		"w_grnmchn": [
+			"gate-southPad@0.960",
+			"gate-southPad@0.977",
+			"gate-southPad@0.995"
+		]
+	}
+}

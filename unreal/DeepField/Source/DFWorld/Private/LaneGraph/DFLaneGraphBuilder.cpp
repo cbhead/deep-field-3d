@@ -8,9 +8,26 @@ namespace
 {
 	// TMap<FVector> hashes the bytes, and -0.0 == 0.0 but hashes differently; every Z=0 waypoint
 	// arrives as -0.0 (X = -Z*100), so fold signed zeros before a position becomes a key.
+	// On the bits, not as `V.X + 0.0`. The first Windows build (MSVC 14.44, /fp:precise on the
+	// command line, which is documented to keep that addition) did not fold: both zeros survived,
+	// two keys that compare equal merged in one map and not another, and Derive's Layers[At]
+	// asserted (DF.Unit.LaneGraph.FoundryDerivation). Integer operations mean the same thing to
+	// every compiler and floating-point mode.
+	double FoldSignedZero(double D)
+	{
+		uint64 Bits;
+		FMemory::Memcpy(&Bits, &D, sizeof(Bits));
+		if ((Bits << 1) == 0)   // +0.0 or -0.0: every bit but the sign is clear
+		{
+			Bits = 0;
+		}
+		FMemory::Memcpy(&D, &Bits, sizeof(D));
+		return D;
+	}
+
 	FVector Canon(const FVector& V)
 	{
-		return FVector(V.X + 0.0, V.Y + 0.0, V.Z + 0.0);
+		return FVector(FoldSignedZero(V.X), FoldSignedZero(V.Y), FoldSignedZero(V.Z));
 	}
 
 	// Full-precision text of a position: the dedupe key for spans, as the C# "{X:R},{Y:R},{Z:R}".

@@ -28,7 +28,7 @@ The programme was planned against an M1 Mac (8 GB RAM, ~16 GB free disk, no GPU)
 
 | Constraint | Consequence |
 |---|---|
-| **UE 5.8.2 launcher build** (`EngineAssociation: "5.8"`) with `OnlineServicesEOS`, `OnlineSubsystemEOS`, `EOSShared`, `SocketSubsystemEOS`, `CommonUI`, `GameplayAbilities`, `GameplayStateTree`, `ChaosVehicles` present | **No dedicated-server target** (source build only) — fine for L1; the L2 seam is an interface. Every machine stays on exactly 5.8.2. |
+| **UE 5.8.3 launcher build** (`EngineAssociation: "5.8"`; re-pinned from 5.8.2 on 2026-09-26, runbook §1.2) with `OnlineServicesEOS`, `OnlineSubsystemEOS`, `EOSShared`, `SocketSubsystemEOS`, `CommonUI`, `GameplayAbilities`, `GameplayStateTree`, `ChaosVehicles` present | **No dedicated-server target** (source build only) — fine for L1; the L2 seam is an interface. Every machine stays on the pinned patch (`$EnginePatch` in `deepfield.ps1`). |
 | The render, perf and Windows lanes have never produced a result | They stay "unverified" in the ledger until the box has measured them (ADR-0023). |
 | The Claude-Design→Unreal converter lane (WS-30) runs headless Blender | Blender is installed on the box when that lane is built. |
 | Existing `docs/design/` three.js sources + `tools/design-export.sh`; memory note `design-drops-arrive-as-project-zips` | The generator and its export page are extended, not replaced. |

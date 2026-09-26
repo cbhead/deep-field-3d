@@ -76,9 +76,20 @@ onto `origin/main` before its next push.
 | Git | Git for Windows and Git LFS | Installs them with winget |
 | Python | Python 3.9+ (the Store's fake `python.exe` does not count) | Installs Python 3.12 with winget |
 | Repository | An existing clone anywhere on the machine (see pass 1; `-Dir` picks one when there are several) | Clones `main` to `D:\DF\deepfield-3d` (else `C:\DF\deepfield-3d`, or `-Dir`), turns off line-ending conversion, fetches every LFS file |
-| Unreal Engine | The version `DeepField.uproject` names (5.8), ideally patch 5.8.2 | Installs the Epic Games Launcher and opens it. **This is the one manual step:** sign in, then Unreal Engine > Library > **+** next to *Engine versions* > **5.8.2** > Install. Press Enter in the script's window when it has finished. Sets `UE_ROOT` for you. |
+| Unreal Engine | The version `DeepField.uproject` names (5.8), ideally patch 5.8.3 | Installs the Epic Games Launcher and opens it. **This is the one manual step:** sign in, then Unreal Engine > Library > **+** next to *Engine versions* > **5.8** > Install (the launcher offers only the newest hotfix), with **Editor symbols for debugging** ticked in its options. Press Enter in the script's window when it has finished. Sets `UE_ROOT` for you. |
 | Visual Studio | VS 2022 (or 2026, or Build Tools) with an MSVC toolset the installed engine accepts (read from its `Engine\Config\Windows\Windows_SDK.json`; checked after the engine for that reason), and a Windows SDK 10.0.19041+ | Installs VS 2022 Community with the C++ game workloads, or updates and modifies the one you have. If it still has no accepted toolset, it prints the toolsets found and the engine's rules |
 | Build | - | Builds the editor (10-30 minutes the first time) |
+
+**Why a pinned patch, 5.8.3:** a different engine patch version re-saves every asset it opens. On a
+shared LFS repository that shows up as a wall of binary changes nobody meant to make. The script
+accepts any 5.8 the `.uproject` names but warns when the patch is not the pinned one (`$EnginePatch`
+in `Build/deepfield.ps1`). The pin moved from 5.8.2 to 5.8.3 on 2026-09-26: the launcher installs only
+the newest hotfix, and 5.8.3 is what the GPU box, the only engine machine, has. Move it the same way
+when the box takes a new hotfix: the script's `$EnginePatch` and this paragraph (the inventory reads the
+script's value).
+
+**Editor symbols for debugging** (about 60 GB) are what make a crash's callstack name engine
+functions. Without them every engine frame reads `UnknownFunction` (the box's first crash did).
 
 It ends with `setup: done`. From then on, in a terminal in the clone's `unreal\` folder (in PowerShell, type
 `.\deepfield` instead of `deepfield`):
@@ -111,7 +122,7 @@ same command again; everything done so far is kept.
 | `winget is not available` | Microsoft Store > search **App Installer** > Install/Update, then run it again. |
 | `Unreal Engine 5.8 is not installed yet` (after you typed Q) | Finish the install in the Epic Games Launcher, then `deepfield setup`. |
 | `not found yet` although the launcher shows 5.8 installed | It is in an unusual place: `deepfield setup -EngineDir "E:\Epic\UE_5.8"` (the folder that contains `Engine\`). |
-| `no MSVC toolset UE 5.8 accepts` | Visual Studio Installer > Update, then Modify > Individual components > **MSVC v143 - VS 2022 C++ x64/x86 build tools (Latest)**. |
+| `no MSVC toolset the engine accepts` | The block lists each toolset as `<folder> (compiler <build>) <verdict>`, and the engine's rules. Visual Studio updates the compiler inside the existing folder without renaming it (VS 2022 17.14.x keeps `VC\Tools\MSVC\14.44.35207`), so judge by the compiler build, not the folder name. If the compiler build really is refused: Visual Studio Installer > Update, then Modify > Individual components > **MSVC v143 - VS 2022 C++ x64/x86 build tools (Latest)**. If the block shows installer exit code 5007, the installer refused to run ("the computer does not meet the requirements"): open Visual Studio Installer yourself to see why. |
 | `the build failed` | The compiler errors are printed in red above it. Paste them to whoever owns the code, or into a Claude session. |
 | `... is newer than the built modules` (tests) | The source changed after the last build. `deepfield test` builds first, so this only appears when that build failed. |
 | `the clone converts line endings, and there are uncommitted changes` | Commit or stash your changes, then run `deepfield setup` again. |
@@ -120,14 +131,17 @@ same command again; everything done so far is kept.
 ### 1.4 Once per machine, by hand: Defender exclusions
 
 The script does not change antivirus settings. Real-time scanning of the DDC and Intermediate writes is
-the largest avoidable build cost on Windows. In Windows Security → Virus & threat protection →
-Exclusions, add the clone's parent folder (for example `D:\DF\`), the engine folder (`%UE_ROOT%`), and
-the processes `UnrealEditor.exe`, `UnrealEditor-Cmd.exe`, `ShaderCompileWorker.exe`,
-`UnrealBuildTool.exe`, `cl.exe` and `link.exe`.
+the largest avoidable build cost on Windows. Exclude the clone, the `DDC` folder beside it, the engine
+folder (`%UE_ROOT%`), and the processes `UnrealEditor.exe`, `UnrealEditor-Cmd.exe`,
+`ShaderCompileWorker.exe`, `UnrealBuildTool.exe`, `cl.exe` and `link.exe`. Exclude the clone's parent
+only when it holds nothing else (`D:\DF\`); on the box the parent is the user profile, so name the two
+folders. In Windows Security → Virus & threat protection → Exclusions, or from an elevated PowerShell
+(the box's paths shown):
 
-**Why exactly 5.8.2:** a different engine patch version re-saves every asset it opens. On a shared LFS
-repository that shows up as a wall of binary changes nobody meant to make. The script accepts any 5.8
-the `.uproject` names but warns when the patch is not 2.
+```powershell
+Add-MpPreference -ExclusionPath 'C:\Users\Cbhea\deep-field-3d', 'C:\Users\Cbhea\DDC', 'C:\Program Files\Epic Games\UE_5.8'
+Add-MpPreference -ExclusionProcess 'UnrealEditor.exe', 'UnrealEditor-Cmd.exe', 'ShaderCompileWorker.exe', 'UnrealBuildTool.exe', 'cl.exe', 'link.exe'
+```
 
 ---
 
@@ -142,9 +156,13 @@ set UE=%UE_ROOT%\Engine\Binaries\Win64\UnrealEditor-Cmd.exe
 set PROJ=%CD%\unreal\DeepField\DeepField.uproject
 ```
 
-The DDC needs no configuration: `Config/DefaultEngine.ini` puts it at `%GAMEDIR%../../../DDC`, a `DDC`
-folder beside the clone, shared by the clone and every worktree. The `UE-LocalDataCachePath`
-environment variable overrides it if a machine needs another location.
+The DDC is a `DDC` folder beside the clone, shared by the clone and every worktree.
+`Config/DefaultEngine.ini` puts the file-system store there (`%GAMEDIR%../../../DDC`). The editor
+writes first to Unreal Zen Storage, though, and the project config cannot move Zen's store: it follows
+only a per-machine path, the `UE-LocalDataCachePath` environment variable. `deepfield setup` sets that
+to the `DDC` folder for your user, and Zen then keeps its store in `DDC\Zen`. Without it, Zen fills
+`%LOCALAPPDATA%\UnrealEngine\Common\Zen\Data`. Point the variable elsewhere if a machine needs
+another location.
 
 ---
 
@@ -205,8 +223,17 @@ report: `unreal\DeepField\Saved\Automation\Reports\test-<filter>\index.html`.
 "%UE%" "%PROJ%" -run=DFMapValidate -all -nullrhi -unattended -nop4 -nosplash -NoSound
 ```
 
+This is a cmd command (§2). In PowerShell, `"%UE%"` is only a string: start `cmd` first.
+
 **What you should see:** one `DFMapValidate <map>: N pass, 0 fail, …` line per map, and exit code 0.
-Failures listed in `unreal/map-validation-baseline.tsv` show as warnings, not errors.
+Failures listed in `unreal/map-validation-baseline.tsv` show as warnings, not errors; the legacy maps
+(spire, switchyard, toaster) and the `testlane` fixture carry some until their redesigns. `corridor`
+shows `[SKIP]` on every map until a navmesh is baked.
+
+Each map's dead-ground report goes to `unreal/content/levels/reports/<map>.coverage.json`, and all of
+them are committed. The writer is deterministic (no timestamp, LF on every platform), so a run on
+unchanged maps leaves `git status` clean. A diff there is a changed measurement: commit it with the
+change that caused it.
 
 ### 5.3 The network smoke test (a listen host and headless clients)
 
@@ -283,6 +310,22 @@ prints a summary table either way, ending `ci-local: OK`.
 the DDC, which is slow once and fast afterwards. The editor starts on `/Game/DF/Dev/L_Dev_Empty`, an
 empty test level.
 
+**For an AI agent: `unreal\deepfield editor -Mcp`** also starts UE 5.8's experimental Unreal MCP
+server (`Engine\Plugins\Experimental\ModelContextProtocol`) at `http://127.0.0.1:8000/mcp` (`-McpPort`
+to move it), with the Editor, AutomationTest, ConfigSettings and SlateInspector toolsets. An agent can
+then read the output log, inspect and change actors, assets and Blueprints, set console variables,
+drive the viewport and Play-In-Editor, and run automation tests in the live editor. The plugins are
+enabled on the command line for that launch only, not in `DeepField.uproject`: they are experimental,
+and CI and packaged builds stay without them.
+
+- **No authentication.** Anything that can reach the port can edit the project. The engine's HTTP
+  server binds to localhost unless `[HTTPServer.Listeners]` says otherwise (the GPU box: `127.0.0.1:8000`
+  only), and the server rejects browser `Origin`s that are not localhost. Do not add a bind address.
+- **Registering it with Claude Code.** With the CLI: `claude mcp add --transport http --scope local
+  unreal http://127.0.0.1:8000/mcp`. Without it (the desktop app), put that server in a `.mcp.json` at
+  the clone's root and add `/.mcp.json` to `.git/info/exclude`, so the file stays on that machine. A
+  session picks the server up when it starts, and only while an `-Mcp` editor is running.
+
 ### 6.2 Play a map
 
 - **In the editor:** Content Browser → `Content/DF/Maps/<Map>/L_<Map>` (for example `L_Foundry`, or
@@ -344,15 +387,17 @@ changing anything.
 | Symptom | Cause | Fix |
 |---|---|---|
 | `The system cannot find the path specified` for `%UE%` or `Build.bat` | `UE_ROOT` is not set in this terminal | Open a new terminal after `setup`, or `setx UE_ROOT "<engine folder>"` |
-| UBT complains about build settings | The engine is not 5.8 | Install 5.8.2 exactly |
-| Errors about paths longer than 260 characters | The clone is too deep | Keep the clone at a short root (`D:\DF\deepfield-3d`, the script's default) |
+| UBT complains about build settings | The engine is not 5.8 | Install 5.8 from the launcher (§1.2; the pinned patch is 5.8.3) |
+| Errors about paths longer than 260 characters | The clone is too deep | Keep the clone at a short root. The script's default is `D:\DF\deepfield-3d`, or `C:\DF\deepfield-3d` without a D: drive; the box's clone at `C:\Users\Cbhea\deep-field-3d` is short enough. |
 | Builds and the first editor open are very slow | Defender is scanning the DDC and Intermediate writes | [§1.4](#14-once-per-machine-by-hand-defender-exclusions) |
 | `... is newer than the built modules` from `deepfield test` | The build before the tests failed, so the binary is stale | Fix the build; never pass `-AllowStale` to get past it |
 | A test fails once, with an assertion or a crash unrelated to the change | Unproven | **Re-run once and say that you re-ran. Two reds are a real defect** (CONTRACTS/ci.md). |
+| `the editor exited (N) without a test report` from `deepfield test` | The editor crashed mid-run, so no test after that point ran | The callstack names the function. Copy the last tests started and the crash block from the log it prints: `$l = Get-Content <log>; $i = ($l \| Select-String -SimpleMatch 'Critical error' \| Select-Object -First 1).LineNumber; @($l \| Select-String 'Test Started' \| Where-Object LineNumber -lt $i \| Select-Object -Last 2 \| ForEach-Object Line) + $l[($i-1)..($i+60)] \| Set-Clipboard` |
+| A crash or a wrong result on Windows only, in code that relies on signed zeros, NaN or exact comparisons of computed floats | MSVC's optimiser treats IEEE edge cases differently from clang: it dropped a `V.X + 0.0` signed-zero fold even with `/fp:precise` (`e859ffb`, PLAN/NEXT.md hazards), and Game targets build `/fp:fast` | Test on the bits or pin the code with the `DF_DET_FP_*` pragmas. To see which `/fp:` each module was built with (the Editor build: all `/fp:precise`, 2026-09-26): `Get-ChildItem unreal\DeepField\Intermediate\Build\Win64 -Recurse -Filter *.rsp \| Select-String -Pattern '/fp:\w+' -AllMatches \| ForEach-Object { $_.Matches.Value } \| Group-Object \| Select-Object Count, Name` |
 | `Cannot remove … as it is read only` when saving an asset | LFS checks lockable assets out read-only | `git lfs lock <path>`. The importer commandlets clear the flag on exactly the files they write. |
 | `-run=DFTerrainImport … could not find the class` | That commandlet's module loads late | Use `-run=DFEditor.DFTerrainImport` |
 | Hundreds of engine tests run instead of ours | An automation filter is a case-insensitive **substring**, so `DF` matches engine test names | Spell out the roots, as in [§5](#5-test) |
-| The DDC fills `%LOCALAPPDATA%\UnrealEngine\Common\DerivedDataCache` instead of a `DDC` folder beside the clone | `UE-LocalDataCachePath` points elsewhere, or the project is not at `<clone>\unreal\DeepField` | See [§2](#2-commands-by-hand) |
+| The DDC fills `%LOCALAPPDATA%\UnrealEngine\Common\DerivedDataCache` or `...\Common\Zen\Data` instead of a `DDC` folder beside the clone | `UE-LocalDataCachePath` is unset (Zen's store) or points elsewhere, or the project is not at `<clone>\unreal\DeepField` | `deepfield setup`, then restart the editor; see [§2](#2-commands-by-hand) |
 
 Still stuck: the per-script details are in [Build/README.md](Build/README.md), and the hazards known
 to every session are in [PLAN/NEXT.md](PLAN/NEXT.md).

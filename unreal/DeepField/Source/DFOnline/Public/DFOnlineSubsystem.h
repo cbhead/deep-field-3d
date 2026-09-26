@@ -119,13 +119,25 @@ public:
 	FDFOnInviteReceived OnInviteReceived;
 
 	// URL option keys and lobby attribute ids (the schema in DefaultEngine.ini [OnlineServices.Lobbies]).
+	// One static per declaration: MSVC rejects the second and later names of a comma list in a
+	// DFONLINE_API class (C2487), which clang never reported.
 	static const TCHAR* OptBuild;         // "build"
 	static const TCHAR* OptContentHash;   // "contentHash"
 	static const TCHAR* OptOnlineId;      // "onlineId"
-	static const FName AttrMap, AttrTier, AttrEndless, AttrBuild, AttrContentHash, AttrJoinCode, AttrApproved, AttrMemberName;
+	static const FName AttrMap;           // "DFMap"
+	static const FName AttrTier;          // "DFTier"
+	static const FName AttrEndless;       // "DFEndless"
+	static const FName AttrBuild;         // "DFBuild"
+	static const FName AttrContentHash;   // "DFContentHash"
+	static const FName AttrJoinCode;      // "DFJoinCode"
+	static const FName AttrApproved;      // "DFApproved"
+	static const FName AttrMemberName;    // "DFName"
 	static const FName LobbySchemaId;     // "DFLobby"
 	static const FName LobbyLocalName;    // "DFSession"
-	static const FName ReasonVersionMismatch, ReasonContentMismatch, ReasonNotInvited, ReasonBanned;
+	static const FName ReasonVersionMismatch; // "versionMismatch"
+	static const FName ReasonContentMismatch; // "contentMismatch"
+	static const FName ReasonNotInvited;  // "notInvited"
+	static const FName ReasonBanned;      // "banned"
 
 private:
 	// services

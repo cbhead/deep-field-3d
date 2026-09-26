@@ -29,14 +29,18 @@ director, the lane walker, the tower math — is logic with no actor attached. *
 The first thing that will make this project feel real is an `ADFEnemy` that a director spawns and a
 walker moves, and then a Lance that shoots it.
 
-**Every verdict on record so far came from the retired Mac, and the trunk's current state is
-unmeasured.** PR #48 was merged through the GitHub UI unbuilt and broke the build
-(`DFGameMode.cpp:98` called `GetSubsystemArray<T>()`, which UE 5.8 does not have; `fcc1e1d` fixed it
-against the engine headers). PR #51 then merged onto the broken trunk, also unbuilt. The verifying
-build after the fix was interrupted, so **whether the trunk compiles now has not been
-demonstrated** (the trunk is `main` since ADR-0029; the merge added no C++, so `unreal/DeepField/` on
-`main` is exactly the frozen `unreal/main`'s). No build or test result from the GPU box has been
-recorded yet; `unreal/Build/windows-bringup.md` §1 produces the first. Do not assume green.
+**The trunk builds on MSVC and passes the landing gate: 155 of 155, on the GPU box, 2026-09-26**
+(`e859ffb`, UE 5.8.3, MSVC 14.44). The fixes were made on the frozen `unreal/main` after ADR-0029 and
+reached `main` in the merge that followed (2026-09-26), so this is `main`'s verdict too. It is the first verdict from the box and the first since the
+retired Mac. It also covers PR #48 and #51, both merged unbuilt, and the ~9,000 lines of C++ that
+landed after `fcc1e1d` without a compiler. Three fixes were needed: `b234449` (DFOnline: MSVC
+rejects a comma list of statics in an exported class, C2487), `cb820b2` (the match looked up the lane
+graph loudly on `L_Dev_Empty`, and the error failed `DF.Func.Status.ThermalShockInLevel`) and
+`e859ffb` (the lane-graph builder's `+ 0.0` signed-zero fold did not hold on MSVC, so `Derive`
+asserted; see the FP hazard below). The same day, `deepfield ci-local` passed end to end (checks, build, gate, and
+the listen-host smoke with one client), in 45 s, and the map validator ran on all five maps (Foundry
+clean; the legacy maps' content failures baselined, `map-validation-baseline.tsv`). Still unmeasured:
+first light, a package, the Game-target FP check, and the runner (`unreal/Build/windows-bringup.md`).
 
 ## The machine (this changed on 2026-09-25)
 
@@ -73,8 +77,8 @@ recorded yet; `unreal/Build/windows-bringup.md` §1 produces the first. Do not a
 | Online (WS-11) | `UDFOnlineSubsystem` (C14) over OSSv2, `UDFProfileSave` (C13), join codes, content hash — stops at Null services until EOS credentials exist |
 | Art pipeline (WS-30) | `build_heightmap.py`, `terrain.schema.json`, `-run=DFTerrainImport`, the Foundry landform |
 | Enemies (WS-05) | `FDFWavePlan` (what spawns), `ADFWaveDirector` (when), `FDFLaneWalker` (where it goes), `KnockBack` (how it gets moved) — all pure, all tested against the frozen sim |
-| Match flow (WS-28) | The shells from PR #48 (`50dc5af`): phase machine, `ADFMatchState`, `ADFPlayerState`, `ADFPlayerController`, `ADFEventRelay`, 13 `DF.Unit.Match` tests. Merged without a build; `unreal/main` then failed to compile until `fcc1e1d`. WS-28 itself is unclaimed (ADR-0024). |
-| Towers (WS-04) | `DFTowerMath` from PR #51 (`910e51b`): the sim's tower rules as pure functions, 8 `DF.Unit.Tower` tests. **Merged unbuilt**, so build it, then run `DF.Unit.Tower`, before building on it. |
+| Match flow (WS-28) | The shells from PR #48 (`50dc5af`): phase machine, `ADFMatchState`, `ADFPlayerState`, `ADFPlayerController`, `ADFEventRelay`, 13 `DF.Unit.Match` tests. Merged without a build; `unreal/main` then failed to compile until `fcc1e1d`. Built and passing on MSVC since 2026-09-26. WS-28 itself is unclaimed (ADR-0024). |
+| Towers (WS-04) | `DFTowerMath` from PR #51 (`910e51b`): the sim's tower rules as pure functions, 8 `DF.Unit.Tower` tests. Merged unbuilt; first built on MSVC on 2026-09-26, and the tests pass. |
 | Automation (WS-15) | The Python checks, the hosted `unreal-checks` workflow, the gate definition (`DF_GATE_FILTER`, enforced by `check-test-coverage.py`), on Windows `deepfield.ps1` + `machine-inventory.ps1` (PR #52–#55), and the `unreal-win` workflow, written but not armed until a runner exists (`WIN_RUNNER_READY`). Only `int-merge` awaits a port (above). |
 
 ## Branches (2026-09-26, ADR-0029)
@@ -108,9 +112,8 @@ session.
 ## What to do next, in the order I would do it
 
 1. **Commission the box, starting with a build of the trunk** (`windows-bringup.md` §1–3):
-   `deepfield setup`, then `deepfield ci-local` (checks, build, the whole gate and the smoke), then the
-   first package. PR #51 has never been compiled by anyone, and PR #48 compiled only after `fcc1e1d`'s
-   fix, with no test run of it reported.
+   `deepfield setup`, `deepfield test` (155 of 155) and `deepfield ci-local` (OK, with the smoke) are
+   done as of 2026-09-26, and so is the map validator. Next: first light (§2), then the first package.
 2. **Register the runner and port the scripts** (WS-15; `windows-bringup.md` §5, `CONTRACTS/ci.md`).
    Today `unreal-checks` is the only lane that runs, so a green PR check means only that the ledger
    and schemas are consistent. The Windows workflow is written (`.github/workflows/unreal-win.yml`,
@@ -141,9 +144,17 @@ session.
 - **Never test a stale binary.** `deepfield test` builds first and refuses modules older than their
   source; do not pass `-AllowStale` to get past it. If you run the engine's automation by hand, build
   immediately before (runbook §5). The history is in CONTRACTS/ci.md, "A green run on a stale binary".
-- **Unbuilt code has been merged twice** (#48, #51), both through the GitHub merge button. Before
-  building on either, build it. **Never land with the merge button**: it skips the only step that
-  compiles (CONTRACTS/ci.md, 2026-09-25). Land after `deepfield ci-local` passes on the rebased branch.
+- **Unbuilt code has been merged twice** (#48, #51), both through the GitHub merge button. Both
+  build and pass now (2026-09-26), but only because the box finally ran them. **Never land with the
+  merge button**: it skips the only step that compiles (CONTRACTS/ci.md, 2026-09-25). Land after
+  `deepfield ci-local` passes on the rebased branch.
+- **Do not rely on arithmetic for IEEE edge cases.** On the first MSVC build, `V.X + 0.0` (the
+  lane-graph builder's signed-zero fold) did not fold, and `Derive` asserted (`e859ffb`). The Editor
+  build's flags are `/fp:precise` (every response file), under which MSVC documents that it keeps
+  that addition; why it did not is not established. Clang on the Mac kept it. So signed zeros, NaN
+  checks and floats used as map keys need integer bit tests, and bit-identical results need the
+  `DF_DET_FP_*` pragmas. Game targets are expected to build `/fp:fast`; that is unverified until the
+  first package.
 - **The smoke's pass condition was re-derived on 2026-09-25** against #48's join path (runbook §5.3).
   `player joined` is logged in `PostLogin`, after `PreLogin`'s validators, so the count still means
   admitted; a bare IP join to a `?listen` host passes through the online subsystem's dev-join branch.

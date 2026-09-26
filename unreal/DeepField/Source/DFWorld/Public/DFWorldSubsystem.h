@@ -26,6 +26,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DF|World")
 	UDFLaneGraphAsset* GetLaneGraph();
 
+	/** The same, without the error: for a caller to which a level with no lane graph is normal (a
+	 *  dev map such as L_Dev_Empty, where the match idles). An error logged during an automation
+	 *  test fails that test, so asking must not complain. */
+	UDFLaneGraphAsset* FindLaneGraph();
+
 	UFUNCTION(BlueprintCallable, Category = "DF|World")
 	ADFSocket* FindSocket(FName SocketId);
 
