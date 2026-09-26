@@ -49,11 +49,23 @@ the script turned out different, fix it in the same PR.
 
 ## 2. First light with a real RHI
 
-- [ ] `deepfield editor` (runbook §6.1), and load `/Game/DF/Dev/L_Dev_Empty`. Confirm in the output log:
+- [x] `deepfield editor` (runbook §6.1), and load `/Game/DF/Dev/L_Dev_Empty`. Confirm in the output log:
       D3D12 / SM6, Nanite enabled, Lumen with hardware ray tracing available, Virtual Shadow Maps.
       ADR-0012's stack has never been seen rendering, so write what you observe into the session log.
+      **Seen on 2026-09-26** (RTX 5070, driver 610.60, UE 5.8.3). The first open came up D3D12 **SM5**,
+      with ray tracing off by project setting: DefaultEngine.ini named no Windows shader format. It now
+      targets `PCD3D_SM6` on DX12 with `r.RayTracing=True`, and the log reads `Feature Level SM6 is
+      supported and will be used` and `Ray tracing is enabled (dynamic)`. Lumen stays on the software
+      floor (hardware Lumen is for Windows High). The log says nothing about Nanite or VSM, so they were
+      checked in the viewport: an engine cube with Nanite enabled (not saved) turns into coloured
+      triangles under Nanite Visualization > Triangles, and Virtual Shadow Map > Virtual Page shows pages
+      on it.
 - [ ] A `DDC` folder beside the clone exists and is filling; nothing appeared under
-      `%LOCALAPPDATA%\UnrealEngine\Common\DerivedDataCache`.
+      `%LOCALAPPDATA%\UnrealEngine\Common\DerivedDataCache`. At first light, `C:\Users\Cbhea\DDC` is
+      the writable local store and the `DerivedDataCache` folder is absent, but the editor also runs a
+      local Zen server (`ZenLocal`, about 0.25 GB in `%LOCALAPPDATA%\UnrealEngine\Common\Zen\Data`), and
+      warns that the `[InstalledDerivedDataBackendGraph]` section is deprecated in favour of
+      `[DerivedDataCacheStores]`. Open until the DDC config is moved and Zen's place is decided.
 
 ## 3. First Windows package
 
