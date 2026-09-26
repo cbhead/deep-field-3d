@@ -7,7 +7,7 @@ owner:
 claimed_at: 2026-09-19T15:16:34Z
 lease_expires: 
 branch: ws/15-automation-ci/harness
-last_commit: bd9d16a
+last_commit: bd59e2c
 editor_heavy: false
 phase: P1+
 size: M
@@ -131,7 +131,7 @@ the generated `machines/windows-gpu.md:19,28` carries them; `int-merge` is unpor
   this commit.
 
 ### Order I would work it
-1. **Register the runner** (`windows-bringup.md` §8) and make `unreal-win` actually run. Everything else
+1. **Register the runner** (`windows-bringup.md` **§5** — that file has §1–§6 and no §8; arming it afterwards is `CONTRACTS/ci.md`'s runner **step 8**) and make `unreal-win` actually run. Everything else
    in this workstream is worth less until a lane compiles the tree. Then tell the owner, because
    branch protection is theirs to enable and it is sequenced **after** the runner.
 2. **Port `int-merge` onto `deepfield.ps1`**, guard by guard from the list above, and state in the PR

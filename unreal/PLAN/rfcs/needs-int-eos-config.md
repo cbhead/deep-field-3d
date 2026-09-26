@@ -126,9 +126,12 @@ application permissions) and `bAutoLinkAccount=true` (link a new Epic account on
 `[OnlineServices.EOS.Auth.Login] EASAuthEnabled=true` keeps Epic Account Services (friends, overlay,
 presence) on top of Connect; Level 1 needs it for invites.
 
-## 6. What the Mac editor needs
+## 6. What the editor needs
 
-The EOS SDK dylib ships inside the launcher engine (`Engine/Binaries/ThirdParty/EOSSDK/Mac`).
+The EOS SDK ships inside the launcher engine, under `Engine/Binaries/ThirdParty/EOSSDK/` — for the
+Win64 engine that is the Win64 subtree, and the exact filename is **unconfirmed**: verify it on the box
+when this checklist is run. (It was verified as the `Mac` dylib on the retired Mac; ADR-0028,
+2026-09-25, dropped macOS and made the Windows GPU box the only engine machine.)
 `[EOSSDK] bDllLoadFailureIsFatal=false` keeps a broken SDK install from killing the editor.
 Nothing else: no source build required.
 
@@ -137,6 +140,6 @@ Nothing else: no source build required.
 - [ ] Product / sandbox / deployment / client created in the portal (Game Client credential; Application with BasicProfile + FriendsList + Presence).
 - [ ] Ids into `[EOSSDK.Platform.DeepField]`; `PlatformConfigName` into `[OnlineServices.EOS]`; `DefaultServices=Epic`.
 - [ ] Secret via the gitignored platform ini and the CI secret; confirm `git grep ClientSecret=` finds only the placeholder comment.
-- [ ] Net driver block (§4) applied; `smoke-listen.sh` still green (Ip passthrough).
-- [ ] Run `unreal/Build/test.sh DF.Online` — `DF.Online.NullLogin` will now run against Epic and needs a Dev Auth Tool session (`-DFDevAuth`), or keep the tests on Null with `-ini:Engine:[OnlineServices]:DefaultServices=Null`.
+- [ ] Net driver block (§4) applied; the listen-host smoke still green (Ip passthrough) — `unreal\deepfield smoke` on Windows; `smoke-listen.sh` was the Mac wrapper and has no machine (ADR-0028).
+- [ ] Run `unreal\deepfield test DF.Online` — `DF.Online.NullLogin` will now run against Epic and needs a Dev Auth Tool session (`-DFDevAuth`), or keep the tests on Null with `-ini:Engine:[OnlineServices]:DefaultServices=Null`. `deepfield test` passes no extra engine args, so for either of those run `UnrealEditor-Cmd` directly (`unreal/README.md` §5.1 shows the full line).
 - [ ] Then the WS-11 EOS checklist in `workstreams/ws-11-online.md` (two machines, relay, join-in-progress).

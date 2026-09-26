@@ -1,6 +1,6 @@
 # C7 — Naming
 
-**Canonical:** this document + the `DFEditor` asset validator and `tools/ue-bridge/ue/validate_content.py` (regex below). **Owner:** WS-00. **Rule:** A (a new prefix is appended here and to the validator in one `contract-append` PR).
+**Canonical:** this document (the regex below) — **it is the only enforcement today**. The `DFEditor` asset validator and `tools/ue-bridge/ue/validate_content.py` are both still to build (WS-30; `DFEditor` currently holds only the DFLevelImport / DFMapValidate / DFTerrainImport commandlets), so nothing mechanically checks a prefix yet. **Owner:** WS-00. **Rule:** A (a new prefix is appended here, and to the validator once it exists, in one `contract-append` PR).
 
 **Asset names:** `^(SM|SK|SKEL|PHYS|ABP|AS|AM|BS|CR|IKR|M|MI|MF|ML|MPC|T|NS|NE|BP|DT|DA|WBP|ST|S|MS|SC|ATT|L|DL|PCG|GC|RT|C|F|IP|IMC|IA)_[A-Z][A-Za-z0-9]*(_[A-Z0-9][A-Za-z0-9]*)*$`
 

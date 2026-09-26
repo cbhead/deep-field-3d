@@ -1,6 +1,6 @@
 # C10 — Niagara parameter contract
 
-**Canonical:** every `NS_*` under `Content/DF/VFX/Niagara/<Category>/`, `DT_VFX` (per-cue rows), and `unreal/DeepField/Source/DFVfx/Public/UDFVfxSubsystem.h`. **Owner:** WS-14. **Rule:** R.
+**Canonical:** every `NS_*` under `Content/DF/VFX/Niagara/<Category>/`, `DT_VFX` (per-cue rows), and `unreal/DeepField/Source/DFVfx/Public/DFVfxSubsystem.h` (no `U` in the filename; the name WS-14's implementation must use — it does not exist yet). **Owner:** WS-14. **Rule:** R.
 
 **User parameters** (every DF system exposes exactly these, unused ones ignored): `User.Hue` (LinearColor from `DA_Palette`), `User.Intensity` (0–2), `User.Scale` (metres; status/reaction systems receive the target's `BodyHeight` and scale to it), `User.Held` (bool: loop vs burst), `User.Progress` (0–1 gauge), `User.Tier` (1–3), `User.Heat` (0–1), `User.Direction` (vector), `User.Target` (vector; beam end), `User.HopTarget` (vector), `User.Surface` (enum: Metal Concrete Dirt Grass Wood Water Enemy Snow Ice), `User.Wind` (from `MPC_Conditions`).
 

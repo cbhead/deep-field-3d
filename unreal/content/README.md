@@ -58,7 +58,7 @@ the JSON change; an unchanged table saves byte-identically, so a re-run on uncha
 
 ## What the tests guarantee
 
-Run them as in the runbook (`unreal/README.md` §5.1) with `FILTER=DF.Content+DF.Unit.Content`, after a build.
+Run them after a build, filter as a positional argument: `unreal\deepfield test DF.Content+DF.Unit.Content` (`unreal/README.md` §5.1). There is no `FILTER` environment variable — setting one is silently ignored.
 
 | Test | Guarantee |
 |---|---|

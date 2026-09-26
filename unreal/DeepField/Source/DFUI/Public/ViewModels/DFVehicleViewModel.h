@@ -17,7 +17,8 @@ private:
 	DF_VM_ACCESSORS(FName, VehicleId)
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "DF|Vehicle", meta = (AllowPrivateAccess = "true")) FGameplayTag DefTag;   // DF.Vehicle.*
 	DF_VM_ACCESSORS(FGameplayTag, DefTag)
-	/** Content id ("buggy"). C1 has no DF.Vehicle.* root yet, so until WS-08 adds one this is the usable key. */
+	/** Content id ("buggy"). The DF.Vehicle.* root landed 2026-09-25 (ruling R10), so DefTag resolves too;
+	    this stays the UDFContentSubsystem key. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "DF|Vehicle", meta = (AllowPrivateAccess = "true")) FName DefId;
 	DF_VM_ACCESSORS(FName, DefId)
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "DF|Vehicle", meta = (AllowPrivateAccess = "true")) FVector Position = FVector::ZeroVector;

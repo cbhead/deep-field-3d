@@ -3,7 +3,7 @@ sun, sky and fog. Run inside the editor:
 
   UnrealEditor-Cmd DeepField.uproject -run=pythonscript -script=tools/ue-bridge/ue/make_dev_level.py -nullrhi -unattended
 
-Idempotent: re-running overwrites the level. Real maps are built by build_level.py from
+Idempotent: re-running overwrites the level. Real maps are built by the -run=DFLevelImport / -run=DFTerrainImport commandlets from
 level.json + terrain.json (CONTRACTS/map-authoring-3d.md), not by hand.
 """
 import unreal

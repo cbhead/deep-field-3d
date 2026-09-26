@@ -7,7 +7,7 @@ owner:
 claimed_at: 2026-09-19T15:16:34Z
 lease_expires: 
 branch: ws/09-world/lanegraph-importer
-last_commit: 75ed8f4
+last_commit: b98c25c
 editor_heavy: true
 phase: P1-P4
 size: L
@@ -17,7 +17,7 @@ blocked_on:
 # WS-09 — World: lanes, sockets, traversal, conditions, terrain import
 
 ## Scope / DoD
-**Scope.** UDFLaneGraphAsset (3D, AGL air), level.json/terrain.json importer (build_level.py → L_<Map>_Gameplay + L_<Map>_Terrain), sockets/gates/core/portal, traversal set + mantle/vault volumes, teleporters, warp gates, UDFConditionSubsystem, physmats, mutables actor API, DF.Map.Validate 3D with LOS coverage + dead-ground report.
+**Scope.** UDFLaneGraphAsset (3D, AGL air), level.json/terrain.json importer (landed as commandlets, not python: `-run=DFLevelImport` → L_<Map>_Gameplay, WS-30's `-run=DFTerrainImport` → L_<Map>_Terrain; RFC-0003 §4 / ruling R7), sockets/gates/core/portal, traversal set + mantle/vault volumes, teleporters, warp gates, UDFConditionSubsystem, physmats, mutables actor API, DF.Map.Validate 3D with LOS coverage + dead-ground report.
 
 **Definition of done.** Importer round-trips all level + terrain files; validator green on Foundry with real relief; Traversal/Teleport/LosBlockedByTerrain tests.
 

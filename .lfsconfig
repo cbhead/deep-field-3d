@@ -1,6 +1,13 @@
 # Git LFS repository config (ADR-0010). `git lfs install` picks this up per clone.
-# Mac sessions clone light: Megascans and the art/lighting sublevels are GPU-box work.
-# The GPU box overrides with `git config lfs.fetchexclude ""` (or fetches them explicitly).
+#
+# The fetchexclude below is a LEFTOVER. It existed so the retired 8 GB Mac could clone light;
+# ADR-0028 (2026-09-25) made the Windows GPU box the only machine, and ADR-0028's follow-up list
+# asks WS-15/INT to drop it. It is harmless today: as of 2026-09-26 none of the 47 LFS-tracked
+# files matches any of these globs, and `git lfs fsck --pointers` on `main` is clean. Until it
+# goes, every clone overrides it with `git config lfs.fetchexclude ""` -- which is what the
+# readiness table's "LFS light-clone undone" row checks. Keep it empty on any clone that pushes
+# binaries: ADR-0030 limit 1 is that a revert restores a pointer, and restores the file only if
+# the object reached the server.
 [lfs]
 	fetchexclude = unreal/DeepField/Content/Megascans/**,unreal/DeepField/Content/DF/Maps/*/L_*_Art*,unreal/DeepField/Content/DF/Maps/*/L_*_Lighting*,unreal/DeepField/Content/DF/Env/**
 	locksverify = true

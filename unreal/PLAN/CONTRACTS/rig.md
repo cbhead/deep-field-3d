@@ -1,6 +1,6 @@
 # C9 — Tower rig (ADR-0007)
 
-**Canonical:** `unreal/DeepField/Source/DFTowers/Public/Rig/UDFTowerRigComponent.h`, `DA_Tower_<id>.Rig`, the socket names in `naming.md`. **Owner:** WS-04. **Rule:** R.
+**Canonical:** `unreal/DeepField/Source/DFTowers/Public/Rig/DFTowerRigComponent.h` (no `U` in the filename; in flight on WS-04's branch, not yet on `main`), `DA_Tower_<id>.Rig`, the socket names in `naming.md`. **Owner:** WS-04. **Rule:** R.
 
 A tower is a **static-mesh component chain** on `ADFTower`:
 

@@ -1,6 +1,6 @@
 # C11 — Audio event contract (ADR-0014)
 
-**Canonical:** `Content/DF/Audio/MetaSounds/MS_*`, `Content/DF/Core/DA_AudioCueMap`, `unreal/DeepField/Source/DFAudio/Public/UDFAudioSubsystem.h`, `Content/DF/Audio/LICENSES.md`. **Owner:** WS-13. **Rule:** A for new cue→sound mappings; R for input names and states.
+**Canonical:** `Content/DF/Audio/MetaSounds/MS_*`, `Content/DF/Core/DA_AudioCueMap`, `unreal/DeepField/Source/DFAudio/Public/DFAudioSubsystem.h` (no `U` in the filename; the name WS-13's implementation must use — it does not exist yet), `Content/DF/Audio/LICENSES.md`. **Owner:** WS-13. **Rule:** A for new cue→sound mappings; R for input names and states.
 
 - **Sources:** MetaSound sources `MS_<Category>_<Id>_<Verb>` (e.g. `MS_Tower_Lance_Fire`, `MS_Status_Burn_Loop`, `MS_Enemy_Drifter_Death`, `MS_UI_Wheel_Open`, `MS_Weather_Fog_Bed`). Exposed inputs (all optional): `Intensity` (0–1), `Heat` (0–1), `Distance` (cm), `Variant` (int), `Tier` (1–3), `Threat` (endless multiplier).
 - **Cue map:** every `GameplayCue.DF.*` tag and every `DF.Message.*` that has a sound has a row in `DA_AudioCueMap { CueTag → MetaSound, Attenuation, SoundClass, bLoop, MaxConcurrent }`. `DF.Audio.EveryCueHasSound` fails on a cue with no row (a silent event is a bug, like a placeholder mesh).

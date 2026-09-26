@@ -85,7 +85,7 @@ There are no open PRs.
 | Branch | State | Holds beyond `main` | Next |
 |---|---|---|---|
 | `main` | **the trunk** | — | everything targets it: PRs, ledger pushes, worktrees, rebases, CI |
-| `unreal/main` | **frozen at `d6a1ce0`** (the WS-15 prep; it and the WS-07 prep reached the branch after PR #62, while ADR-0029 was being written), merged into `main` | nothing: every commit is on `main` | nobody pushes or branches from it. **Not yet locked**: the owner adds a rule restricting updates to it as soon as ADR-0029 lands; until then INT runs `git log origin/main..origin/unreal/main` each cycle and merges anything found. Kept so old clones and links find a stale branch, not a missing one; deleting it is the owner's call |
+| `unreal/main` | **frozen at `d6a1ce0`** (the WS-15 prep; it and the WS-07 prep reached the branch after PR #62, while ADR-0029 was being written), merged into `main` | nothing: every commit is on `main` | nobody pushes or branches from it. **Not locked, and will not be** (ADR-0030, 2026-09-26): the owner declined the update restriction. The "Protect Trunks" ruleset already blocks `deletion` and `non_fast_forward` on both trunks, so history cannot be rewritten and every commit stays revertable — that is the guarantee, not a lock. INT's `git log origin/main..origin/unreal/main` sweep each cycle, merging anything found onto `main` with a merge commit, is therefore **permanent, not interim** (0 strays at 2026-09-26T06:14Z). Kept so old clones and links find a stale branch, not a missing one; deleting it is the owner's call |
 | `claude/happy-babbage-t6qrhw` | **WS-04, in flight, NOT BUILT**; owner session-01HszbJQ-cloud, lease to 2026-09-26T02:29Z | ten `[WS-04]` commits, ~4,200 lines across `DFTowers`, `DFCore` and `DFMatch`: the tower actor half (`UDFTargetingComponent` over a DFCore targetable registry, `ADFTower`'s fire loop, team sends), `UDFBuildSubsystem` (place/upgrade/sell through a team-wallet seam), structures (siege damage, frame-end destruction, melee repair), the C9 rig (`UDFTowerRigComponent`, `DA_Tower`), traps (`ADFTrap`), the wave's condition reaching every tower, and the pre-build review fixes. Its two `deepfield.ps1` commits are earlier drafts of what landed as #52–#55 | its owner (or the next claimant once the lease lapses) merges `origin/main` — not `origin/unreal/main` — and opens the PR against `main`. Build it and run `DF.Unit.Tower` first: it sits on `DFTowerMath`, which #51 merged unbuilt. Expect three ledger conflicts, the same ones merging `origin/unreal/main` would give: regenerate `STATUS.md`, union `ws-03-player.md`'s session log by date, and in `CONTRACTS/README.md` keep `main`'s `ci.md` row plus WS-04's three new rows |
 | `ws/05-enemies-ai/waveplan` | **fully landed** | nothing: every commit is on `main` | may be deleted once WS-05's owner moves its frontmatter `branch:` off it (it still names this branch) |
 
@@ -234,3 +234,29 @@ and the real bottleneck, which is **knowing what to revert** — ~9,100 lines of
 nothing has compiled. `fcc1e1d` is the bisect marker, and it is a substitute for a gate rather than a
 replacement for one.
 
+
+## 2026-09-26: the docs were audited; three things a session should still know
+
+Every tracked `.md` file (114 of them) was swept for staleness that would misdirect a working session,
+and 26 distinct defects were fixed — the full list is in `digests/2026-09-26.md` ("Cycle 5 addendum").
+The three that change what you should *do*:
+
+1. **`int-merge.sh` is not a landing route.** ADR-0028 left it without a machine and WS-15 has not
+   ported it. WS-07's brief mandated it and forbade the merge button, which left no runnable path at
+   all; that is fixed. Until the port lands, a landing is by hand on the box: rebase the branch on
+   `origin/main` in a throwaway worktree, `unreal\deepfield ci-local`, regenerate `STATUS.md` with
+   `plan-status.py`, push. The merge button is still not the answer (`CONTRACTS/ci.md`).
+2. **There is no `build_level.py`, and there never was.** The level and terrain importers are
+   `-run=DFLevelImport` and `-run=DFTerrainImport` (prefix `DFEditor.` if the class is not found). Ten
+   live references said otherwise, including PROGRAMME §3.2 and the Scope lines of WS-09 and WS-30.
+   Five other `tools/ue-bridge/ue/` python tools named in §3 are still to build; the tree now says so.
+3. **Seven workstreams' `last_commit` shas were unusable** — two were not objects in the repository at
+   all — and they feed generated `STATUS.md`. All seven are repointed at that workstream's tip
+   `[WS-NN]` commit on `main`. If you cite a sha in a ledger file, check it with `git merge-base
+   --is-ancestor <sha> origin/main` before you write it.
+
+Open, and not INT's to close: WS-04, WS-05 and WS-12 have **lapsed leases** while still `state:
+active` (logged, deliberately not reassigned — renew rather than assume the workstream is free), and
+`unreal/content/terrain/out/foundry_height.json` is **stale against its spec**, so
+`-run=DFTerrainImport` would import the wrong landform until someone re-runs `build_heightmap.py
+foundry` (WS-10a/WS-30).

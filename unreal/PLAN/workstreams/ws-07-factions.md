@@ -56,8 +56,12 @@ rulings below settle the blocking ones so you do not stall; argue back on any of
 ### This needs a machine with the engine
 It is GAS C++ and it must be compiled and tested. Since `fcc1e1d` — the last commit anything compiled —
 **43+ commits and ~9,100 lines of C++ have landed unverified**, zero runners are registered, and
-`unreal-win` reports *skipped*. Land through `unreal/Build/int-merge.sh`, never the merge button
-(`CONTRACTS/ci.md`); it refuses at the build step, which is the only step that would have caught the
+`unreal-win` reports *skipped*. Never the merge button (`CONTRACTS/ci.md`). **And not `int-merge.sh` either** — ADR-0028 left that
+script without a machine (it hard-codes the Mac verify worktree and `BatchFiles/Mac/Build.sh`), and
+WS-15 has not ported it onto `deepfield.ps1` yet. Until it does, land by hand on the box: rebase the
+branch on `origin/main` in a throwaway worktree, run `unreal\deepfield ci-local`, regenerate
+`STATUS.md` with `plan-status.py`, then push (`unreal/README.md` §5.4, `CONTRACTS/ci.md`). Do not skip
+the build step, which is the only step that would have caught the
 one error that broke the trunk. If you have no engine, take a content-and-schema slice (the two
 contract fixes below are pure JSON) and leave the abilities.
 

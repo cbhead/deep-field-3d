@@ -67,6 +67,6 @@ and are shown and hidden by it, never pushed to a layer. `DF.UI.Screens.LayersAn
   is what `L_Test_UI` asserts first.
 
 ## Tests
-`unreal/Build/test.sh DF.UI` — `ViewModel.*`, `NoNetBranching`, `Tokens.NamesMatchDesignSystem`,
+`unreal\deepfield test DF.UI` (`unreal/README.md` §5.1; `Build/test.sh` was the Mac wrapper and has no machine — ADR-0028) — `ViewModel.*`, `NoNetBranching`, `Tokens.NamesMatchDesignSystem`,
 `Tokens.ParserAndFallbacks`, `Screens.TagsResolve`, `Screens.LayersAndInput`. All run with `-nullrhi`
 and need no asset. Pushing real widgets through the stacks is `L_Test_UI`'s job.
