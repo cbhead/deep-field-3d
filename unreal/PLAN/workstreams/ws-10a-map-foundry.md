@@ -5,9 +5,9 @@ title: Map redesign: Foundry
 state: active
 owner: session-01Bqjmob-cloud
 claimed_at: 2026-09-26T00:24:17Z
-lease_expires: 2026-09-27T00:24:17Z
+lease_expires: 2026-09-27T01:01:55Z
 branch: claude/ws-10a-work-ue4a6i
-last_commit: 
+last_commit: 788db74
 editor_heavy: true
 phase: P2
 size: L
@@ -32,11 +32,26 @@ blocked_on:
 
 ## Interfaces I changed
 <!-- dated list: what, RFC #, dependents notified -->
+- 2026-09-26 · `unreal/content/schema/level.schema.json` **added** (the contract already names it canonical; no RFC). Two readings in it are mine and are the ones a WS-09 reader must follow: air routes declare `"agl": true` and carry `[x, agl, z]`; `bossRoute` is `{routeId}` naming a ground route. `areas.kind` gains `controlPoint` (see Needs INT). Dependents: WS-09 (loader/importer), WS-10b–f (their level files), WS-01 (owns `schema/`).
+- 2026-09-26 · `unreal/Build/validate-content-json.py` (WS-15's) now validates levels and terrain, as INT asked; same CLI, a map id selects that map's files; prints a non-failing `warn` when `terrain/out/<map>_height.json` was built from a different spec.
+- 2026-09-26 · `tools/ue-bridge/terrain/predict_level.py` **added** in WS-30's directory: offline prediction of DF.Map.Validate against a terrain spec. Reads only; imports `build_heightmap.build`.
 
 ## Needs INT
 <!-- e.g. "add plugin X to .uproject" -->
+- **WS-09, before Foundry is imported:** `FDFLevelFile` must read an air route's `agl` and `DFLevelImport` must place each air waypoint at ground + y when it is set (today air y is kept as absolute, so Foundry's air lane, authored 9–13 m AGL, would run inside T1 at +16). Lifting the authored waypoints is enough: they are dense enough that straight lines between them stay within 0.9 m of the authored AGL (rule 3 allows 2).
+- **WS-09:** read `bossRoute` into `UDFLaneGraphAsset::BossRoutes` (Via = the edges of the named route's itinerary). Until then rule 13 has no subject.
+- **WS-09 / graybox:** nothing builds `volumes[]`, so the deck (+14) does not exist after import and the 11 wall pads float; the deck station projects to T2 below it. A graybox deck (box `[-4, 13.8, -14]`, size `[16, 0.4, 10]`) is needed before a playtest.
+- **WS-09:** the importer reads `pad` and cuts nothing. The layout does not depend on it (every ground pad stands on ≤ 22.7 % ground, predicted), but rule 4's ≤ 5 % pad does.
+- **WS-30 / INT:** `unreal/content/terrain/out/` is **stale**: it is WS-30's glob and git-lfs, which this session has neither, so the outputs were not regenerated. The validator warns about it. Regenerate and commit them on the GPU box (first command of the hand-over) under WS-30 or with `cross-owner-ok`.
+- **OWNERSHIP.md row 28:** swap `L_Foundry.umap` to WS-10a now that it is claimed (the row says INT does this at claim time).
+- **MAP-AUTHORING §2.5:** `controlPoint` is not one of the seven area kinds, and A1 gives Foundry a control point. The schema accepts it; whether it is a new kind or a mutable (C6 has no control-point kind either) is INT's call.
+- **WS-27:** the ground lane is 169.5 m against the legacy 126 m (the user chose a lane the boss can walk over a shorter one; see Session log). Every Foundry wave walks ~35 % further; wave spacing and bounty pacing were tuned on the flat map.
 
 ## Open questions
+- **Rule 14 (spawn shadow) is predicted to fail on terrain alone:** 10 ground pads can see the portal at (-50, 13, 28) down the notches the climb and the haul ramp cut in the pit rim (`predict_level.py` lists them under `spawnShadowTerrainOnly`). DF.Map.Validate does not implement rule 14. A portal mesh with side walls may supply the 2 m shadow; if not, the fix is a deeper pit (every metre deeper is 4 m more climb at 25 %) or a gate in an alcove. A dog-leg apron was tried and did not help (8 pads still saw it).
+- **g3 (-31, 21) is load-bearing:** it sits on the island inside the haul loop and removing it leaves 19 segments dead (the climb, the landing, the ramp head). 37 of 84 live segments are covered by exactly 3 pads, so anything the terrain-only prediction cannot see (the deck, dressing, the portal) can open dead ground; the engine report decides.
+- **Nova's projectile gravity** is not in `towers.json`; the predictor assumes 9.81 m/s² at 14 m/s. The G2 pair's 36.8° launch depends on it.
+- `maps.json` has `lesson: ""` for Foundry while the level file carries `brief.lesson`; one of them should be the source (WS-09).
 
 ## Assignment from INT (2026-09-25) — written for a session with no engine
 
@@ -216,7 +231,30 @@ a WS-09 change before an authored 3D file imports correctly; the rest are settle
 | `field` | — | default 110×80 when absent | "fixed, see §3" | required; the validator checks it equals the terrain file's `bounds.playable`. |
 | `$schema` | — | read, unused (`bLegacy` comes from the path) | `deepfield-level/1` | the discriminator: `deepfield-level/1` or `deepfield-level/legacy`. |
 
+## Hand-over (session-01Bqjmob-cloud, 2026-09-26)
+
+**What landed** (branch `claude/ws-10a-work-ue4a6i`; the session was bound to that name): `level.schema.json` and the validator (above); a fresh `unreal/content/terrain/foundry.terrain.json`; the first authored `unreal/content/levels/foundry.level.json` (`deepfield-level/1`); `tools/ue-bridge/terrain/predict_level.py`; its report `unreal/content/levels/reports/foundry.predicted.json`. No C++, no editor commands, no binaries.
+
+**The design in one paragraph.** T1 +16 (west: the tapping pit round the spawn gate, a spur tongue and a north shoulder), T2 +8 (middle: the deck and the hero yard south of the spur, the control point north of it), T3 0 (the south shelf and the east), basin −2.5 at the core (43, 0). The lane is one haul road: an 8 m apron on the pit floor, **one climb** (3 m over 12 m, 25 %), a level landing, then a constant **13.5 % descent** for 137 m through the shoulder and the spur, round the deck's corner, along a bench under T2's south lip and into the basin. The boss walks the same road but goes round the climb on the pit's haul ramp (10 %); `DFLaneGraphBuilder` step 2b promotes `climbTop` and `haulBend` to nodes, so the ground itinerary is pinned to the climb and the boss's to the ramp. Every number and its reason is in the level file's `brief.decisions` and each terrain feature's `note`.
+
+**Predicted, from the terrain alone** (`python3 tools/ue-bridge/terrain/predict_level.py foundry`): 88 segments (4 apron), **0 dead**; socketOffset, spawnApron, routeIds clean; lane max 25 % (the climb), everything else ≤ 13.6 %; boss route 13.57 %, no warps, `deckRoof` overlooks 83 %; every ground pad on ≤ 22.7 % ground; air lane 9 m minimum AGL, ≤ 0.9 m off the authored AGL; relief along the lane 18.5 m; ground:air 169.5:124.3 = 1.36 (legacy 1.48, allowed 1.19–1.78).
+
+**Commands for a machine with the engine, in order, with what each should print.** Do the WS-09 air-AGL item in Needs INT first, or step 3's air coverage is measuring a lane inside the hill.
+1. `python tools\ue-bridge\terrain\build_heightmap.py foundry` → `foundry: 191x161 @ 1.0 m, y in [-2.5, 30.5175] m, origin (-95.0, -80.0), sculpt delta none`, `roadbed bossHaul: 43.849 m, max grade 10.09 %`, `roadbed laneBed: 167.929 m, max grade 25.0 %`. Run it twice: `out\` must be byte-identical. Commit `out\` (LFS). `python unreal\Build\validate-content-json.py foundry` then stops printing the `warn` line.
+2. `git lfs lock` both Foundry umaps, then `"%UE%" "%PROJ%" -run=DFEditor.DFTerrainImport -map=foundry -nullrhi -unattended -nop4 -nosplash -NoSound` → bounds Z [−250.0, 3051.8] cm (= y [−2.5, 30.5175] m, as `foundry_height.json`), X/Y unchanged from WS-30's run (same 191×161 grid); probes sim (0, 0) = 8.007 m, (30, 10) = 1.928 m, (−40, −4) = 15.875 m.
+3. `"%UE%" "%PROJ%" -run=DFLevelImport -map=foundry -nullrhi -unattended -nop4 -nosplash -NoSound` (no `-legacy`: the primary file now exists and wins) → `foundry: projected N points onto DF_LaneSurface (0 had nothing below them)`. A non-zero second number means the Landscape is not on the LaneSurface channel.
+4. `"%UE%" "%PROJ%" -run=DFMapValidate -map=foundry -nullrhi -unattended -nop4 -nosplash -NoSound` → sealing PASS, spawnApron PASS, socketOffset PASS (closest pad g3 at 4.0 m), corridor SKIP (no navmesh), coverage PASS with about 88 segments (4 apron) and 0 dead, routeIds PASS. Commit `reports/foundry.coverage.json`. **Any dead segment: diff it against `foundry.predicted.json`** (same segment keys, `edge@t`), and `predict_level.py foundry --suggest 10` lists where a pad would fix it. A difference there is either static world the prediction cannot see or a difference in how the engine segments an edge; both are worth writing down here.
+5. G2, as the vertical-slice checks will run them:
+   - **Relief ≥ 8 m on the lane:** the lane graph's westGate node is at 13 m, climbTop and landing at 16 m, core at −2.5 m (18.5 m).
+   - **Lance loses LOS behind a terrace, Nova lobs over it:** build a Lance on **g14** (16, 0, −37), on the south shelf below the bench. For an enemy on the bench at about (8.2, 4.9, −29) the Lance is 11.2 m away and within its pitch (24.5°), but the bench edge blocks its sight line, so it does not fire; a Nova on g14 hits the same enemy with a ~37° lob. Predicted, g14 has no direct sight of any lane segment at all, so a Lance there should stay silent all wave.
+   - **Drifters slow on the climb:** edge `pitFloor-climbTop`, 12 m at +25 %, the only stretch above +15 %: a drifter takes 12 / (2.5 × 0.85) = 5.6 s instead of 4.8 s. Nothing else on the map is outside the ±15 % band, so no stretch is sped up.
+   - **The coverage report drives the layout:** the 24 ground pads were placed greedily against the predicted dead-ground report and pruned to A1's count while every segment kept ≥ 3; step 4's report is the first real measurement of that.
+6. Playtest (DoD: `DF.Match.Solo.Foundry` to victory) needs the deck graybox, the pad cut and the rest of Needs INT; not attempted.
+
+**Not verified by anything:** rule 2 (the corridor; navmesh), rule 7 (reachability on foot: the stations are on T1, T2, the deck and T3, all joined by the lane itself), rule 8 (containment: the cinder ridge's inner foot is the playable edge), rules 10–12 and 15, and everything a terrain-only trace cannot see.
+
 ## Session log
 <!-- append-only: date · session · what landed · what's next -->
 - 2026-09-26 · session-01Bqjmob-cloud · **claim** — cloud session, no engine, on the user's ask. Taking INT's brief and its corrections as written: JSON, Python and ledger prose only, no C++, no editor commands. Order: `level.schema.json` first and wired into `validate-content-json.py` (with the list of fields where the contract, `FDFLevelFile` and `docs/MAP-AUTHORING.md` disagree), then a fresh `foundry.terrain.json`, then the new `foundry.level.json`, then the hand-over. The session is bound to branch `claude/ws-10a-work-ue4a6i` rather than `ws/10a-map-foundry/<topic>`; PRs go to `unreal/main` titled `[WS-10a] …` as usual.
 - 2026-09-26 · session-01Bqjmob-cloud · **`level.schema.json` landed** — `unreal/content/schema/level.schema.json` (authored `deepfield-level/1` and legacy branches) and `validate-content-json.py` extended to levels and terrain: `$ref`, `oneOf`/`anyOf`, `minimum`/`maximum`, `pattern`, `minLength`, `prefixItems`, plus the cross-file rules (unique ids, teleport legs, gate sockets, condition ids, boss route, waves routeIds, field vs terrain bounds). All five legacy files and WS-30's `foundry.terrain.json` pass; 18 hand-made broken files each fail with the right message. The disagreement table above is the other half of the ask. Next: the Foundry landform.
+- 2026-09-26 · session-01Bqjmob-cloud · **Foundry landform and level landed** — the user chose the long gentle lane with the boss on it over a legacy-length lane with no boss route (asked: the boss rule and 18.5 m of drop cannot both be met by a 126 m lane). WS-30's `foundry.terrain.json` replaced (kept/replaced list in its `note`); first `deepfield-level/1` file; `predict_level.py` built to iterate the socket layout against the terrain, since nothing else here can; its report committed. `build_heightmap.py` twice byte-identical; `test_build_heightmap.py` 9/9; validator green; layering OK; ownership 0 violations. Not done: `terrain/out/` (LFS, WS-30's glob), rule 14, everything engine-side. Next: the Hand-over's commands on the GPU box, after WS-09's air-AGL change.
