@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-09-24T23:37:01-04:00",
+    "generated":  "2026-09-26T15:53:43-04:00",
     "generator":  "unreal/Build/machine-inventory.ps1",
     "system":  {
                    "hostname":  "CHANDLER-ALIEN",
@@ -13,7 +13,7 @@
                "build":  "26200.9457",
                "architecture":  "64-bit",
                "installed":  "2026-09-19",
-               "last_boot":  "2026-09-20 10:22",
+               "last_boot":  "2026-09-26 14:51",
                "latest_hotfix":  "KB5124007 (2026-09-19)",
                "powershell":  "5.1.26100.9444",
                "elevated":  false
@@ -43,57 +43,33 @@
                                    }
                                ],
                    "pagefile":  [
-                                    "C:\\pagefile.sys 5968 MB"
+                                    "C:\\pagefile.sys 9216 MB"
                                 ]
                },
     "gpus":  [
                  {
-                     "name":  "DisplayLink USB Device",
-                     "wmi_driver":  "9.3.3324.0",
-                     "driver_date":  "2020-04-15",
-                     "resolution":  "1920x1080 @ 60 Hz"
-                 },
-                 {
-                     "name":  "DisplayLink USB Device",
-                     "wmi_driver":  "9.3.3324.0",
-                     "driver_date":  "2020-04-15",
-                     "resolution":  "1920x1080 @ 60 Hz"
-                 },
-                 {
-                     "name":  "DisplayLink USB Device",
-                     "wmi_driver":  "9.3.3324.0",
-                     "driver_date":  "2020-04-15",
-                     "resolution":  null
-                 },
-                 {
                      "name":  "NVIDIA GeForce RTX 5070",
-                     "wmi_driver":  "32.0.15.8104",
-                     "driver_date":  "2025-08-13",
-                     "resolution":  "1920x1080 @ 60 Hz"
-                 },
-                 {
-                     "name":  "DisplayLink USB Device",
-                     "wmi_driver":  "9.3.3324.0",
-                     "driver_date":  "2020-04-15",
-                     "resolution":  null
+                     "wmi_driver":  "32.0.16.1060",
+                     "driver_date":  "2026-06-08",
+                     "resolution":  "2560x1440 @ 59 Hz"
                  }
              ],
     "nvidia":  {
                    "name":  "NVIDIA GeForce RTX 5070",
-                   "driver":  "581.04",
+                   "driver":  "610.60",
                    "vram":  "12227 MiB",
                    "compute_capability":  "12.0",
                    "pcie":  "Gen5 x16",
                    "vbios":  "98.05.36.40.30",
                    "power_limit":  "250.00 W",
-                   "cuda":  "13.0"
+                   "cuda":  null
                },
     "dxdiag":  {
                    "directx":  "DirectX 12",
                    "feature_levels":  "12_2,12_1,12_0,11_1,11_0,10_1,10_0,9_3,9_2,9_1,1_0_CORE",
                    "driver_model":  "WDDM 3.2",
                    "hybrid_graphics_gpu":  "Discrete",
-                   "dedicated_memory":  "11855 MB",
+                   "dedicated_memory":  "11943 MB",
                    "shared_memory":  "16233 MB"
                },
     "gpu_settings":  {
@@ -124,7 +100,7 @@
                         "label":  "OS",
                         "fs":  "NTFS",
                         "size_gb":  923.3,
-                        "free_gb":  181.2
+                        "free_gb":  274.7
                     }
                 ],
     "network":  [
@@ -148,14 +124,14 @@
     "tools":  {
                   "git":  {
                               "found":  true,
-                              "on_path":  false,
+                              "on_path":  true,
                               "path":  "C:\\Program Files\\Git\\cmd\\git.exe",
                               "version":  "git version 2.55.0.windows.5"
                           },
                   "git_lfs":  {
                                   "found":  true,
-                                  "on_path":  false,
-                                  "path":  "C:\\Program Files\\Git\\mingw64\\bin\\git-lfs.exe",
+                                  "on_path":  true,
+                                  "path":  "C:\\Program Files\\Git\\cmd\\git-lfs.exe",
                                   "version":  "git-lfs/3.7.1 (GitHub; windows amd64; go 1.25.1; git b84b3384)"
                               },
                   "gh":  {
@@ -163,7 +139,7 @@
                          },
                   "python":  {
                                  "found":  true,
-                                 "on_path":  false,
+                                 "on_path":  true,
                                  "path":  "C:\\Users\\Cbhea\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
                                  "version":  "Python 3.12.10"
                              },
@@ -171,14 +147,16 @@
                                  "found":  true,
                                  "on_path":  true,
                                  "path":  "C:\\Program Files\\dotnet\\dotnet.exe",
-                                 "version":  "runtimes only (no SDK): 8.0.21, 8.0.26, 10.0.11",
+                                 "version":  "SDK 9.0.318",
                                  "runtimes":  [
                                                   "8.0.21",
                                                   "8.0.26",
+                                                  "8.0.31",
+                                                  "9.0.20",
                                                   "10.0.11"
                                               ],
                                  "sdks":  [
-
+                                              "9.0.318"
                                           ]
                              },
                   "node":  {
@@ -198,7 +176,7 @@
                              },
                   "vscode":  {
                                  "found":  true,
-                                 "on_path":  false,
+                                 "on_path":  true,
                                  "path":  "C:\\Users\\Cbhea\\AppData\\Local\\Programs\\Microsoft VS Code\\bin\\code.cmd",
                                  "version":  "1.138.0"
                              },
@@ -207,28 +185,129 @@
                            }
               },
     "git":  {
-                "core.longpaths":  null,
-                "core.autocrlf":  "true",
+                "core.longpaths":  "true",
+                "core.autocrlf":  "false",
                 "filter.lfs.process":  "git-lfs filter-process",
                 "user.name":  "cbhead",
-                "lfs.fetchexclude (this clone)":  null
+                "lfs.fetchexclude (this clone)":  ""
             },
     "visual_studio":  [
-
+                          {
+                              "name":  "Visual Studio Community 2022",
+                              "version":  "17.14.37710.0",
+                              "path":  "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community",
+                              "msvc":  [
+                                           "14.44.35207"
+                                       ],
+                              "msvc_compiler":  [
+                                                    "14.44.35229"
+                                                ]
+                          }
                       ],
     "windows_sdks":  [
-
+                         "10.0.22621.0",
+                         "10.0.26100.0"
                      ],
     "epic":  {
                  "launcher":  false,
                  "engines":  [
+                                 {
+                                     "root":  "C:\\Program Files\\Epic Games\\4.0",
+                                     "version":  "no Build.version",
+                                     "editor":  false,
+                                     "windows_sdk_json":  {
 
+                                                          }
+                                 },
+                                 {
+                                     "root":  "C:\\Program Files\\Epic Games\\UE_5.8",
+                                     "version":  "5.8.3 (CL 58210709)",
+                                     "editor":  true,
+                                     "windows_sdk_json":  {
+                                                              "MainVersion":  "10.0.22621.0",
+                                                              "MinVersion":  "10.0.19041.0",
+                                                              "MaxVersion":  "10.9.99999.0",
+                                                              "MinSoftwareVersion":  "10.0.19041.0",
+                                                              "PreferredClangVersions":  [
+                                                                                             "20.1.8-20.999",
+                                                                                             "20.1.0-20.1.7",
+                                                                                             "19.1.0-19.999",
+                                                                                             "18.1.8-18.999"
+                                                                                         ],
+                                                              "MinimumClangVersion":  "18.1.8",
+                                                              "//01.1":  "this is a strange format, but instead of a version range, this maps min clang version for each MSVC version",
+                                                              "//01.2":  "14.44 = VS2022 17.14.x -\u003e clang 19",
+                                                              "//01.3":  "14.42 = VS2022 17.12.x -\u003e clang 18",
+                                                              "//01.4":  "14.40 = VS2022 17.10.x -\u003e clang 17",
+                                                              "//01.5":  "14.37 = VS2022 17.7.x-17.9.x -\u003e clang 16",
+                                                              "MinimumRequiredClangVersion":  [
+                                                                                                  "14.44-19",
+                                                                                                  "14.42-18",
+                                                                                                  "14.40-17",
+                                                                                                  "14.37-16"
+                                                                                              ],
+                                                              "//02.1":  "Version number is the MSVC family, which is the version in the Visual Studio folder",
+                                                              "//02.2":  "14.50.35717-14.50.99999 = VS2026 18.0",
+                                                              "//02.3":  "14.44.35207-14.44.99999 = VS2022 17.14",
+                                                              "PreferredVisualCppVersions":  [
+                                                                                                 "14.50.35717-14.50.99999",
+                                                                                                 "14.44.35207-14.44.99999"
+                                                                                             ],
+                                                              "//03.1":  "14.50.35717 -- VS2026 18.0.0 - 18.2.0: Internal compiler errors. Resolved with 14.50.35723",
+                                                              "//03.2":  "14.44.35207 -- VS2022 17.14.0 - 17.4.3: Template compile error. Resolved with 14.44.35211",
+                                                              "//03.3":  "14.40.x -- VS2022 17.10.0: Codegen issue causes runtime crash for AVX/2/512. 17.10.x: PGO optimize issue causes runtime crash",
+                                                              "//03.4":  "14.39.x -- VS2022 17.9.0 - 17.9.3: Internal compiler errors. 17.9.x: Codegen issue causes runtime crash for AVX/2/512",
+                                                              "BannedVisualCppVersions":  [
+                                                                                              "14.50.0-14.50.35722",
+                                                                                              "14.44.0-14.44.35210",
+                                                                                              "14.40.0-14.43.99999",
+                                                                                              "14.39.0-14.39.99999"
+                                                                                          ],
+                                                              "MinimumVisualCppVersion":  "14.38.33130",
+                                                              "PreferredIntelOneApiVersions":  [
+                                                                                                   "2026.0.0-2026.0.9999"
+                                                                                               ],
+                                                              "MinimumIntelOneApiVersion":  "2026.0.0",
+                                                              "VisualStudioSuggestedComponents":  [
+                                                                                                      "Microsoft.Net.Component.4.6.2.TargetingPack",
+                                                                                                      "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
+                                                                                                      "Microsoft.VisualStudio.Component.Windows11SDK.22621",
+                                                                                                      "Microsoft.VisualStudio.Component.VC.Llvm.Clang",
+                                                                                                      "Microsoft.VisualStudio.Workload.CoreEditor",
+                                                                                                      "Microsoft.VisualStudio.Workload.ManagedDesktop",
+                                                                                                      "Microsoft.VisualStudio.Workload.NativeDesktop",
+                                                                                                      "Microsoft.VisualStudio.Workload.NativeGame",
+                                                                                                      "Component.Unreal.Ide",
+                                                                                                      "Component.Unreal.Debugger"
+                                                                                                  ],
+                                                              "VisualStudioSuggestedLinuxComponents":  [
+                                                                                                           "Microsoft.VisualStudio.Workload.NativeCrossPlat"
+                                                                                                       ],
+                                                              "//04.1":  "Microsoft.VisualStudio.Component.VC.14.44.17.14.x86.x64 -- Only LTSC versions of MSVC should be suggested",
+                                                              "//04.2":  "Microsoft.VisualStudio.Component.VC.14.44.17.14.ATL -- Match version of MSVC",
+                                                              "VisualStudio2022SuggestedComponents":  [
+                                                                                                          "Microsoft.VisualStudio.Component.VC.14.44.17.14.x86.x64",
+                                                                                                          "Microsoft.VisualStudio.Component.VC.14.44.17.14.ATL"
+                                                                                                      ],
+                                                              "//05.1":  "Microsoft.VisualStudio.Component.VC.14.50.18.0.x86.x64 -- Only LTSC versions of MSVC should be suggested",
+                                                              "//05.2":  "Microsoft.VisualStudio.Component.VC.14.50.18.0.ATL -- Match version of MSVC",
+                                                              "VisualStudio2026SuggestedComponents":  [
+                                                                                                          "Microsoft.VisualStudio.Component.VC.14.50.18.0.x86.x64",
+                                                                                                          "Microsoft.VisualStudio.Component.VC.14.50.18.0.ATL"
+                                                                                                      ],
+                                                              "MinimumVisualStudio2022Version":  "17.8",
+                                                              "MinimumVisualStudio2026Version":  "18.0",
+                                                              "//06.1":  "X64 -- 0xA00 = Win10",
+                                                              "//06.2":  "Arm64 -- 0xA00 = Win10",
+                                                              "MinimumWindowsX64TargetVersion":  "0xA00",
+                                                              "MinimumWindowsArm64TargetVersion":  "0xA00",
+                                                              "IncludeSDKFile":  "$(EngineDir)/Config/Microsoft/GDK_SDK.json"
+                                                          }
+                                 }
                              ]
              },
     "env":  {
-                "UE_ROOT":  {
-
-                            },
+                "UE_ROOT":  "C:\\Program Files\\Epic Games\\UE_5.8",
                 "UE-LocalDataCachePath":  {
 
                                           },
@@ -243,9 +322,9 @@
                   "path":  "C:\\Users\\Cbhea\\deep-field-3d",
                   "path_length":  28,
                   "branch":  "unreal/main",
-                  "head":  "6365ae1 2026-09-24 Merge branch \u0027unreal/main\u0027 of https://github.com/cbhead/deep-field-3d into unreal/main",
+                  "head":  "b2645b4 2026-09-26 machine-inventory: readiness rows match what the box actually needs",
                   "worktrees":  1,
-                  "ddc_sibling":  false
+                  "ddc_sibling":  true
               },
     "runner":  {
                    "services":  [
@@ -261,133 +340,133 @@
                        "need":  "Windows 11, or 10 \u003e= 19041",
                        "have":  "Microsoft Windows 11 Home build 26200.9457",
                        "status":  "OK",
-                       "runbook":  "0"
+                       "runbook":  "runbook 1.1"
                    },
                    {
                        "item":  "NVIDIA GPU + current driver",
                        "need":  "current Studio / Game Ready driver",
-                       "have":  "NVIDIA GeForce RTX 5070, driver 581.04, 12227 MiB",
+                       "have":  "NVIDIA GeForce RTX 5070, driver 610.60, 12227 MiB",
                        "status":  "OK",
-                       "runbook":  "0"
+                       "runbook":  "runbook 1.1"
                    },
                    {
                        "item":  "Free NVMe space",
                        "need":  "\u003e= 500 GB free on one volume",
-                       "have":  "C: 181.2 GB free of 923.3 GB",
+                       "have":  "C: 274.7 GB free of 923.3 GB",
                        "status":  "FAIL",
-                       "runbook":  "0"
+                       "runbook":  "windows-bringup 1"
                    },
                    {
                        "item":  "Short clone root",
-                       "need":  "D:\\DF\\deepfield-3d (short path)",
+                       "need":  "\u003c= 24 chars: D:\\DF\\deepfield-3d, or C:\\DF\\deepfield-3d without a D: drive (packaging is where long paths bite)",
                        "have":  "C:\\Users\\Cbhea\\deep-field-3d (28 chars)",
                        "status":  "WARN",
-                       "runbook":  "0, 3"
+                       "runbook":  "runbook 8"
                    },
                    {
                        "item":  "Long paths enabled",
                        "need":  "LongPathsEnabled = 1",
                        "have":  "True",
                        "status":  "OK",
-                       "runbook":  "0"
+                       "runbook":  "runbook 1.2"
                    },
                    {
                        "item":  "Defender exclusions",
                        "need":  "clone, engine, UnrealEditor/cl/link/... processes",
                        "have":  "unknown (run elevated to read)",
                        "status":  "UNKNOWN",
-                       "runbook":  "0"
+                       "runbook":  "runbook 1.4"
                    },
                    {
                        "item":  "Unreal Engine 5.8.2",
-                       "need":  "UE 5.8.2 from the launcher (same patch as the Mac)",
-                       "have":  "none installed",
-                       "status":  "FAIL",
-                       "runbook":  "1"
+                       "need":  "UE 5.8 from the launcher, patch 2: another patch re-saves assets on open",
+                       "have":  "no Build.version at C:\\Program Files\\Epic Games\\4.0; 5.8.3 (CL 58210709) at C:\\Program Files\\Epic Games\\UE_5.8",
+                       "status":  "WARN",
+                       "runbook":  "runbook 1.2"
                    },
                    {
                        "item":  "UE_ROOT",
-                       "need":  "set to the 5.8 install",
-                       "have":  "unset",
-                       "status":  "FAIL",
-                       "runbook":  "1"
+                       "need":  "set to the 5.8 install (deepfield finds the engine without it; the by-hand commands in runbook 2 use it)",
+                       "have":  "C:\\Program Files\\Epic Games\\UE_5.8",
+                       "status":  "OK",
+                       "runbook":  "runbook 2"
                    },
                    {
                        "item":  "MSVC toolset",
-                       "need":  "14.44 \u003e= 35211 (VS 2022 17.14) or 14.50 \u003e= 35723",
-                       "have":  "no Visual Studio / MSVC",
-                       "status":  "FAIL",
-                       "runbook":  "2"
+                       "need":  "14.44 \u003e= 35211 (VS 2022 17.14) or 14.50 \u003e= 35723, judged by the compiler build (cl.exe), not the folder name",
+                       "have":  "14.44.35207 (compiler 14.44.35229) (preferred)",
+                       "status":  "OK",
+                       "runbook":  "runbook 1.2"
                    },
                    {
                        "item":  "Windows SDK",
                        "need":  "10.0.22621.0 (10.0.19041.0 minimum)",
-                       "have":  "none",
-                       "status":  "FAIL",
-                       "runbook":  "2"
+                       "have":  "10.0.22621.0, 10.0.26100.0",
+                       "status":  "OK",
+                       "runbook":  "runbook 1.2"
                    },
                    {
                        "item":  ".NET 8 SDK",
-                       "need":  "for tools/content-export, waveplan-golden",
-                       "have":  "no SDK",
-                       "status":  "FAIL",
-                       "runbook":  "2"
+                       "need":  "optional: only to regenerate the WavePlan goldens or re-export content from the sim (UBT uses its own bundled .NET)",
+                       "have":  "9.0.318",
+                       "status":  "WARN",
+                       "runbook":  "tools/waveplan-golden"
                    },
                    {
                        "item":  "Git for Windows",
                        "need":  "installed, on PATH",
-                       "have":  "git version 2.55.0.windows.5 - NOT on PATH",
-                       "status":  "WARN",
-                       "runbook":  "3"
+                       "have":  "git version 2.55.0.windows.5",
+                       "status":  "OK",
+                       "runbook":  "runbook 1.2; ci.md runner 4"
                    },
                    {
                        "item":  "Git LFS",
                        "need":  "git lfs install done",
                        "have":  "git-lfs/3.7.1 (GitHub; windows amd64; go 1.25.1; git b84b3384); filter.lfs.process=git-lfs filter-process",
                        "status":  "OK",
-                       "runbook":  "3"
+                       "runbook":  "runbook 1.2"
                    },
                    {
                        "item":  "core.longpaths",
                        "need":  "true",
-                       "have":  "-",
-                       "status":  "FAIL",
-                       "runbook":  "3"
+                       "have":  "true",
+                       "status":  "OK",
+                       "runbook":  "runbook 1.2"
                    },
                    {
                        "item":  "core.autocrlf",
                        "need":  "false",
-                       "have":  "true",
-                       "status":  "FAIL",
-                       "runbook":  "3"
+                       "have":  "false",
+                       "status":  "OK",
+                       "runbook":  "runbook 1.2"
                    },
                    {
                        "item":  "LFS light-clone undone",
                        "need":  "lfs.fetchexclude = \"\" in this clone",
-                       "have":  "unset (the .lfsconfig Mac excludes apply)",
-                       "status":  "FAIL",
-                       "runbook":  "3"
+                       "have":  "\u0027\u0027",
+                       "status":  "OK",
+                       "runbook":  "runbook 1.2"
                    },
                    {
                        "item":  "GitHub CLI",
-                       "need":  "installed, gh auth login",
+                       "need":  "optional: gh auth login, to open PRs from the box (deepfield and the runner do not use it)",
                        "have":  "not installed",
-                       "status":  "FAIL",
-                       "runbook":  "3"
+                       "status":  "WARN",
+                       "runbook":  "-"
                    },
                    {
                        "item":  "Python 3.9+",
                        "need":  "for the unreal\\Build\\*.py checks",
                        "have":  "Python 3.12.10",
                        "status":  "OK",
-                       "runbook":  "5"
+                       "runbook":  "runbook 3"
                    },
                    {
                        "item":  "Self-hosted runner",
-                       "need":  "deepfield-gpu, labels deepfield,gpu",
+                       "need":  "registered as deepfield-gpu with --labels deepfield",
                        "have":  "none",
                        "status":  "FAIL",
-                       "runbook":  "8"
+                       "runbook":  "ci.md runner 1-8"
                    }
                ]
 }
