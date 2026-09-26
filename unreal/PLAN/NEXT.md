@@ -29,8 +29,8 @@ retired Mac. It also covers PR #48 and #51, both merged unbuilt, and the ~9,000 
 landed after `fcc1e1d` without a compiler. Three fixes were needed: `b234449` (DFOnline: MSVC
 rejects a comma list of statics in an exported class, C2487), `cb820b2` (the match looked up the lane
 graph loudly on `L_Dev_Empty`, and the error failed `DF.Func.Status.ThermalShockInLevel`) and
-`e859ffb` (the lane-graph builder's signed-zero fold was optimised away, so `Derive` asserted; see
-the FP hazard below). The same day, `deepfield ci-local` passed end to end (checks, build, gate, and
+`e859ffb` (the lane-graph builder's `+ 0.0` signed-zero fold did not hold on MSVC, so `Derive`
+asserted; see the FP hazard below). The same day, `deepfield ci-local` passed end to end (checks, build, gate, and
 the listen-host smoke with one client), in 45 s, and the map validator ran on all five maps (Foundry
 clean; the legacy maps' content failures baselined, `map-validation-baseline.tsv`). Still unmeasured:
 first light, a package, the Game-target FP check, and the runner (`unreal/Build/windows-bringup.md`).
@@ -118,12 +118,13 @@ first light, a package, the Game-target FP check, and the runner (`unreal/Build/
   build and pass now (2026-09-26), but only because the box finally ran them. **Never land with the
   merge button**: it skips the only step that compiles (CONTRACTS/ci.md, 2026-09-25). Land after
   `deepfield ci-local` passes on the rebased branch.
-- **Do not write floating-point code that relies on IEEE edge cases unless it is pinned.** On the
-  first MSVC build, `V.X + 0.0` (the lane-graph builder's signed-zero fold) was optimised away in an
-  **Editor** module, which `/fp:precise` does not allow (`e859ffb`). So CONTRACTS/ci.md's reading
-  that `BuildSettingsVersion.V7` builds Editor targets FP-precise is in doubt until someone reads
-  the `/fp:` flag in the build's `.rsp` files (runbook §8 has the command). Signed zeros, NaN checks
-  and exact comparisons of computed values need integer bit tests or the `DF_DET_FP_*` pragmas.
+- **Do not rely on arithmetic for IEEE edge cases.** On the first MSVC build, `V.X + 0.0` (the
+  lane-graph builder's signed-zero fold) did not fold, and `Derive` asserted (`e859ffb`). The Editor
+  build's flags are `/fp:precise` (every response file), under which MSVC documents that it keeps
+  that addition; why it did not is not established. Clang on the Mac kept it. So signed zeros, NaN
+  checks and floats used as map keys need integer bit tests, and bit-identical results need the
+  `DF_DET_FP_*` pragmas. Game targets are expected to build `/fp:fast`; that is unverified until the
+  first package.
 - **The smoke's pass condition was re-derived on 2026-09-25** against #48's join path (runbook §5.3).
   `player joined` is logged in `PostLogin`, after `PreLogin`'s validators, so the count still means
   admitted; a bare IP join to a `?listen` host passes through the online subsystem's dev-join branch.

@@ -58,12 +58,10 @@ the script turned out different, fix it in the same PR.
 
 ## 4. The floating-point check on a Game target
 
-`BuildSettingsVersion.V7` is read as compiling **Editor** targets FP-precise but leaving **Game / Client
-/ Server** targets at Default, which is `/fp:fast` on MSVC (CONTRACTS/ci.md, "GPU-box lane"). The
-first MSVC build casts doubt on the Editor half: an Editor module lost a signed-zero fold that
-`/fp:precise` must keep (`e859ffb`). Read the `/fp:` flags from the build's `.rsp` files (runbook §8)
-and correct this paragraph and ci.md. If Editor targets are fast too, the Editor-target run below
-proves the pragmas, not the target's defaults. Code that must
+`BuildSettingsVersion.V7` compiles **Editor** targets FP-precise (confirmed on the box, 2026-09-26:
+every compile response file reads `/fp:precise`) but leaves **Game / Client / Server** targets at
+Default, which is `/fp:fast` on MSVC (CONTRACTS/ci.md, "GPU-box lane"; re-read the flags after the
+first package, runbook §8). Code that must
 produce the same bits everywhere pins its arithmetic with the `DF_DET_FP_*` pragmas in
 `Source/DFCore/Public/Determinism/` (`DFDetMath.h`, `DFDetRng.h`), used by
 `DFEnemies/Private/Waves/DFWavePlan.cpp`, `DFEnemies/Private/Movement/DFLaneWalker.cpp` and

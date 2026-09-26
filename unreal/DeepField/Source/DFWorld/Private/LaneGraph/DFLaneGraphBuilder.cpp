@@ -8,10 +8,11 @@ namespace
 {
 	// TMap<FVector> hashes the bytes, and -0.0 == 0.0 but hashes differently; every Z=0 waypoint
 	// arrives as -0.0 (X = -Z*100), so fold signed zeros before a position becomes a key.
-	// On the bits, not as `V.X + 0.0`: under /fp:fast MSVC may drop an addition of zero, and did.
-	// The first Windows run kept both zeros, two keys that compare equal merged in one map and not
-	// another, and Derive's Layers[At] asserted (DF.Unit.LaneGraph.FoundryDerivation). Integer
-	// operations mean the same thing in every floating-point mode.
+	// On the bits, not as `V.X + 0.0`. The first Windows build (MSVC 14.44, /fp:precise on the
+	// command line, which is documented to keep that addition) did not fold: both zeros survived,
+	// two keys that compare equal merged in one map and not another, and Derive's Layers[At]
+	// asserted (DF.Unit.LaneGraph.FoundryDerivation). Integer operations mean the same thing to
+	// every compiler and floating-point mode.
 	double FoldSignedZero(double D)
 	{
 		uint64 Bits;
