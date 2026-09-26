@@ -4,6 +4,8 @@ Intermediate/
 DerivedDataCache/
 Saved/
 Build/Receipts/
+# BuildCookRun's -fileopenlog writes these on every cook
+Build/*/FileOpenOrder/
 .vs/
 .vscode/
 *.xcworkspace/

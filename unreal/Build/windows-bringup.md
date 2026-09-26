@@ -77,8 +77,12 @@ the script turned out different, fix it in the same PR.
 
 ## 3. First Windows package
 
-- [ ] Package a Development build (runbook §6.3) and run it. It should reach `L_Dev_Empty` (or
-      whatever `GameDefaultMap` is by then).
+- [x] Package a Development build (runbook §6.3) and run it. It should reach `L_Dev_Empty` (or
+      whatever `GameDefaultMap` is by then). *(2026-09-26, `8e90809` on `main`: the runbook's
+      `BuildCookRun` command as written, `BUILD SUCCESSFUL` in 5 min, 0 errors, 0 warnings; 1.1 GB in
+      `C:\Users\Cbhea\packages\dev`. It also built the Editor target first, so close an editor
+      on this clone before packaging. `packages\dev\Windows\DeepField.exe -nullrhi` reached
+      `L_Dev_Empty` under `DFGameMode` with no errors. Not yet seen with a real RHI.)*
 - [ ] EOS on Windows (overlay, login, an invite-only session over relay) is WS-11's verification. It
       needs the portal credentials the human P0 list still shows as open. The EGS upload
       (BuildPatchTool) is WS-15's packaging lane and comes after a package exists.
@@ -94,7 +98,7 @@ produce the same bits everywhere pins its arithmetic with the `DF_DET_FP_*` prag
 `DFEnemies/Private/Waves/DFWavePlan.cpp`, `DFEnemies/Private/Movement/DFLaneWalker.cpp` and
 `DFTowers/Private/Towers/DFTowerMath.cpp`. Those pragmas have only ever been compiled by clang.
 
-- [ ] Use the **packaged** Development build from §3. That is a Game target, and unlike a bare
+- [x] Use the **packaged** Development build from §3. That is a Game target, and unlike a bare
       `Binaries\Win64\DeepField.exe` it has cooked content to start on. Run the golden tests in it,
       from the folder the package landed in (`packages\dev` beside the clone):
       ```bat
@@ -111,8 +115,13 @@ produce the same bits everywhere pins its arithmetic with the `DF_DET_FP_*` prag
       `/fp:fast` got through the pragmas: file it against WS-05, and do not loosen the test.
       Tower math (`DF.Unit.Tower`, WS-04) is pinned the same way; add `+DF.Unit.Tower` to the filter
       once that suite has passed an Editor-target run.
-- [ ] Compare with the Editor-target run of the same filter (`deepfield test DF.Unit.WavePlan.`) and
-      record both in the session log.
+      *(2026-09-26: the command worked as written, from `packages\dev`. `DF.Unit.WavePlan.`: 13 of 13,
+      `PlansMatchSim` included. `DF.Unit.Tower+DF.Unit.LaneWalker`: 18 of 18. The Game target's
+      response files read `/fp:fast` for every DF module, so the pragmas were what held. The lane
+      walker is not actually pinned: CONTRACTS/ci.md, "GPU-box lane".)*
+- [x] Compare with the Editor-target run of the same filter (`deepfield test DF.Unit.WavePlan.`) and
+      record both in the session log. *(2026-09-26: Editor target 13 of 13, the same tests, so no
+      difference; WS-15 log.)*
 
 ## 5. The self-hosted runner
 
