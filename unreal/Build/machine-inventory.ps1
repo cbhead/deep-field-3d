@@ -217,8 +217,10 @@ $tools.dotnet.sdks = $dotnetSdks
 
 $gitCfg = [ordered]@{}
 if ($tools.git.found) {
+    # Read as this clone sees them (its .git/config over the global one), not from wherever the script
+    # was started: an elevated PowerShell starts in System32 and sees only Git for Windows' defaults.
     foreach ($k in 'core.longpaths', 'core.autocrlf', 'filter.lfs.process', 'user.name') {
-        $v = Run $tools.git.path @('config', '--get', $k); $gitCfg[$k] = if ($LASTEXITCODE -eq 0) { $v } else { $null }
+        $v = Run $tools.git.path @('-C', $Repo, 'config', '--get', $k); $gitCfg[$k] = if ($LASTEXITCODE -eq 0) { $v } else { $null }
     }
     $v = Run $tools.git.path @('-C', $Repo, 'config', '--local', '--get', 'lfs.fetchexclude')
     $gitCfg['lfs.fetchexclude (this clone)'] = if ($LASTEXITCODE -eq 0) { $v } else { $null }
