@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- One-time bootstrap of the Unreal content JSON from the C# sim's tables
+       (ADR-0005). References Sim.Core directly so the numbers come from the
+       records themselves, not from a transcription. After the bootstrap the
+       JSON is the source of truth; this tool's -\-diff mode only reports drift. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>DeepField.Tools.ContentExport</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../sim/Sim.Core/Sim.Core.csproj" />
+  </ItemGroup>
+
+</Project>

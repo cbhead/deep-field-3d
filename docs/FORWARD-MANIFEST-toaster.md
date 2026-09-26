@@ -1,7 +1,8 @@
 # The Toaster — commission for Claude Design
 
-**Status:** commission, written 2026-09-11 against `main` at the M4 map pass.
-Nothing here exists yet: no kit, no level file, and until this drop no
+**Status:** delivered 2026-09-12 — the kit landed and the map runs on it; kept
+as the record of what was asked and why. Written 2026-09-11 against `main` at
+the M4 map pass, when none of it existed yet: no kit, no level file, and no
 `toaster_` or `vehicle_` name resolved to anything.
 **Audience:** Claude Design. This is a request list.
 **Read first:** [docs/MAP-AUTHORING.md](MAP-AUTHORING.md) — how maps should be

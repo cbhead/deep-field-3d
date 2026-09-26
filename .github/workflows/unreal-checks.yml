@@ -1,0 +1,85 @@
+# Cheap, always-on checks for the Unreal rebuild (WS-15; unreal/PLAN/CONTRACTS/ci.md).
+# GitHub-hosted ubuntu, no engine: the pure-python ledger/layout checks and the sim→JSON drift
+# check. The same scripts developers run from unreal/Build (deepfield check / pr-check). The engine
+# build and the automation tests are unreal-win.yml's, on the self-hosted GPU box (CONTRACTS/ci.md).
+name: unreal-checks
+
+on:
+  pull_request:
+    paths:
+      - 'unreal/**'
+      - 'tools/**'
+      - 'sim/**'
+      - '.github/workflows/unreal-*.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'unreal/**'
+      - 'tools/**'
+      - 'sim/**'
+      - '.github/workflows/unreal-*.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unreal-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # ownership-check diffs against the base branch; the LFS objects are not needed
+          # (every check here reads file names or text files only).
+          fetch-depth: 0
+          lfs: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Module layering (unreal/Build/modules.json)
+        run: python3 unreal/Build/layering-check.py
+
+      # The PR's workstream comes from its title ("[WS-04] ..."); anything else is checked as
+      # INT, which lists every file and fails nothing. A PR that adds a binary outside its
+      # workstream's globs (unreal/PLAN/OWNERSHIP.md) fails here.
+      - name: Ownership (PR title -> workstream, vs the base branch)
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          WS=$(printf '%s' "$PR_TITLE" | sed -nE 's/^\[WS-([0-9]+[a-z]?)\].*/\1/p')
+          if [ -z "$WS" ]; then echo "no [WS-NN] in the PR title; checking as INT (lists, never fails)"; WS=INT; fi
+          python3 unreal/Build/ownership-check.py --ws "$WS" --base "origin/$BASE_REF"
+
+      - name: Content JSON against the schemas
+        run: python3 unreal/Build/validate-content-json.py
+
+      - name: Every registered DF suite is in the landing gate or excluded with a reason
+        run: python3 unreal/Build/check-test-coverage.py
+
+      # Warning-only on PRs: workstream branches legitimately carry frontmatter changes (lease
+      # renewals, last_commit) that INT regenerates STATUS.md from at merge time (PROGRAMME.md §6.8).
+      - name: STATUS.md matches the workstream frontmatter
+        id: plan_status
+        continue-on-error: true
+        run: python3 unreal/Build/plan-status.py --check
+
+      - name: Annotate a stale STATUS.md
+        if: steps.plan_status.outcome == 'failure'
+        run: echo "::warning title=STATUS.md is stale::run python3 unreal/Build/plan-status.py and commit unreal/PLAN/STATUS.md (INT does this each cycle)"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # ADR-0005: the JSON is the source of truth, the C# content files are the frozen spec.
+      # --diff reports where they disagree and exits 1 if they do.
+      - name: Content JSON vs the frozen sim (content-export --diff)
+        run: dotnet run --project tools/content-export --configuration Release -- --diff

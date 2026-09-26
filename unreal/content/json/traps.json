@@ -1,0 +1,47 @@
+{
+  "$schema": "deepfield-content/1",
+  "table": "traps",
+  "generated": "2026-09-17T07:21:16Z",
+  "sourceSha": "b44eea1",
+  "rows": [
+    {
+      "id": "spike",
+      "cost": 45,
+      "triggerRadius": 1.8,
+      "charges": 3,
+      "rearmSeconds": 6,
+      "damage": 18,
+      "applies": "shred",
+      "knockbackMeters": 0,
+      "scrapCost": {
+        "Alloy": 3
+      }
+    },
+    {
+      "id": "tar",
+      "cost": 35,
+      "triggerRadius": 2.2,
+      "charges": 6,
+      "rearmSeconds": 4,
+      "damage": 0,
+      "applies": "chill",
+      "knockbackMeters": 0,
+      "scrapCost": {
+        "Flux": 2
+      }
+    },
+    {
+      "id": "launcher",
+      "cost": 55,
+      "triggerRadius": 1.8,
+      "charges": 2,
+      "rearmSeconds": 8,
+      "damage": 4,
+      "knockbackMeters": 8,
+      "scrapCost": {
+        "Alloy": 2,
+        "Plating": 1
+      }
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "axes": "column = +x (right), row = +z; sample (col,row) at (originX + col*metresPerSample, originZ + row*metresPerSample)",
+  "baseElevation": 0.0,
+  "belt": 40.0,
+  "centre": [
+    0.0,
+    0.0
+  ],
+  "frame": "sim-metres",
+  "height": 161,
+  "heightEncoding": "16-bit: value = round((y - minZ) / (maxZ - minZ) * 65535)",
+  "map": "foundry",
+  "masks": [
+    "basin",
+    "flat",
+    "plateau",
+    "ridge",
+    "roadbed",
+    "steep",
+    "terrace"
+  ],
+  "maxZ": 35.7664,
+  "metresPerSample": 1.0,
+  "minZ": -2.7925,
+  "originX": -95.0,
+  "originZ": -80.0,
+  "playable": [
+    110.0,
+    80.0
+  ],
+  "sculptDeltaApplied": false,
+  "sculptDeltaUnitMetres": 0.01,
+  "seed": 30,
+  "sourceSha256": "1c9da7072c852389900d9dc7685314c457d1e2d6b2e16cb41c05a1da89491e76",
+  "stats": {
+    "roadbeds": [
+      {
+        "endY": -2.5,
+        "id": "laneBed",
+        "lengthMetres": 126.0,
+        "maxGradePercent": 30.0,
+        "startY": 16.0
+      }
+    ]
+  },
+  "unrealMapping": "Unreal.X = -z*100, Unreal.Y = x*100, Unreal.Z = y*100 (cm); applied by DFTerrainImport, not here",
+  "water": [],
+  "width": 191
+}

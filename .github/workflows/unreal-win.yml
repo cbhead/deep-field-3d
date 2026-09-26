@@ -4,7 +4,7 @@
 #
 #   pull_request      the checks and the editor build (no tests: the box is shared with the agent
 #                     sessions, and a PR's own tests run before it opens, with `deepfield pr-check`)
-#   schedule          the whole INT pre-merge set on unreal/main: checks, build, the landing gate, smoke
+#   schedule          the whole INT pre-merge set on main: checks, build, the landing gate, smoke
 #   workflow_dispatch either, on any ref (Actions -> unreal-win -> Run workflow)
 #
 # ARMING. Until a runner exists, a job for these labels would sit "queued" on every PR and fail after
@@ -12,10 +12,10 @@
 # 'true'; until then they show as skipped. A manual dispatch always runs, so the runner can be proven
 # with one dispatch before the lane is armed (CONTRACTS/ci.md, "The GPU box as the self-hosted runner").
 #
-# SCHEDULE. GitHub fires `schedule` only for workflow files on the default branch (main, the Godot
-# game), so this file must also be copied to main for the nightly to run (ci.md step 0). A
-# pull_request run uses the workflow file in the PR's merge commit, so the PR lane works from
-# unreal/main alone.
+# SCHEDULE. GitHub fires `schedule`, and offers Run workflow, only for workflow files on the default
+# branch. That is main, which is also the trunk for the Unreal work (ADR-0029; `unreal/main` is
+# frozen), so this one copy serves every trigger. A pull_request run uses the workflow file in the
+# PR's merge commit.
 name: unreal-win
 
 on:
@@ -26,9 +26,9 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: 'Branch, tag or sha to build (the Unreal integration branch, not the repository default)'
+        description: 'Branch, tag or sha to build (the trunk is main)'
         type: string
-        default: 'unreal/main'
+        default: 'main'
       full:
         description: 'Run the full pre-merge set (checks, build, landing gate, smoke) instead of checks + build'
         type: boolean
@@ -42,7 +42,7 @@ on:
         type: boolean
         default: false
   pull_request:
-    branches: [unreal/main]
+    branches: [main]
     paths:
       - 'unreal/**'
       - 'tools/**'
@@ -77,8 +77,8 @@ jobs:
       # variable so INT can change it without editing this file.
       CI_LOCAL_ARGS: ${{ vars.CI_LOCAL_ARGS }}
       DF_CLIENTS: ${{ inputs.client_count || 1 }}
-      # What the ownership check diffs against: the PR's base, or unreal/main.
-      DF_BASE: origin/${{ github.event.pull_request.base.ref || 'unreal/main' }}
+      # What the ownership check diffs against: the PR's base, or main.
+      DF_BASE: origin/${{ github.event.pull_request.base.ref || 'main' }}
     steps:
       # clean: false (below) keeps the workspace between runs, so last run's logs, reports and ci-local
       # transcript would otherwise be uploaded and summarised as this run's. Forget them first, before
@@ -90,13 +90,13 @@ jobs:
           if exist "%LOCALAPPDATA%\DeepField\deepfield-ci-local.log" del /q "%LOCALAPPDATA%\DeepField\deepfield-ci-local.log"
           exit /b 0
 
-      # A schedule run would check out main (the Godot game), so the nightly names unreal/main and a
-      # dispatch takes its ref input; a PR checks out its merge commit (empty ref). fetch-depth 0 so
-      # the ownership check can diff against the base. clean: false keeps Intermediate\ and Binaries\
-      # between runs, so builds are incremental; the `clean` input forces a full rebuild.
+      # The nightly names main, the trunk, and a dispatch takes its ref input; a PR checks out its
+      # merge commit (empty ref). fetch-depth 0 so the ownership check can diff against the base.
+      # clean: false keeps Intermediate\ and Binaries\ between runs, so builds are incremental; the
+      # `clean` input forces a full rebuild.
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'schedule' && 'unreal/main' || github.event_name == 'workflow_dispatch' && inputs.ref || '' }}
+          ref: ${{ github.event_name == 'schedule' && 'main' || github.event_name == 'workflow_dispatch' && inputs.ref || '' }}
           fetch-depth: 0
           lfs: true
           clean: ${{ inputs.clean || false }}

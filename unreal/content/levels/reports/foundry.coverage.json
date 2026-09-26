@@ -1,0 +1,1539 @@
+{
+	"map": "foundry",
+	"segmentMeters": 4,
+	"required": 3,
+	"segments": [
+		{
+			"edge": "westGate-core",
+			"t": 0.01587301678955555,
+			"layer": "ground",
+			"apron": true,
+			"positionMetres": [
+				-38,
+				0,
+				-0
+			],
+			"coveringSockets": [
+				"g7",
+				"g8",
+				"g9",
+				"g1",
+				"g23"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.0476190485060215,
+			"layer": "ground",
+			"apron": true,
+			"positionMetres": [
+				-34,
+				0,
+				-0
+			],
+			"coveringSockets": [
+				"g7",
+				"g8",
+				"g9",
+				"g1",
+				"g23"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.079365082085132599,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-30,
+				0,
+				-0
+			],
+			"coveringSockets": [
+				"g7",
+				"g8",
+				"g9",
+				"g1",
+				"g11",
+				"g23"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.1111111119389534,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-26,
+				0,
+				-0
+			],
+			"coveringSockets": [
+				"g7",
+				"g8",
+				"g9",
+				"g1",
+				"g11",
+				"g10",
+				"g2",
+				"g23"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.1428571492433548,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-22,
+				0,
+				-0
+			],
+			"coveringSockets": [
+				"g7",
+				"g8",
+				"g9",
+				"g1",
+				"g11",
+				"g10",
+				"g2",
+				"g23"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.1746031790971756,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-20,
+				0,
+				2
+			],
+			"coveringSockets": [
+				"g8",
+				"g9",
+				"g1",
+				"g11",
+				"g10",
+				"g2",
+				"g23"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.2063492089509964,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-20,
+				0,
+				6
+			],
+			"coveringSockets": [
+				"g8",
+				"g9",
+				"g1",
+				"g11",
+				"g10",
+				"g2",
+				"g12"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.2380952388048172,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-20,
+				0,
+				10
+			],
+			"coveringSockets": [
+				"g8",
+				"g1",
+				"g11",
+				"g10",
+				"g2",
+				"g12"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.26984128355979919,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-20,
+				0,
+				14
+			],
+			"coveringSockets": [
+				"g8",
+				"g1",
+				"g11",
+				"g2",
+				"g12",
+				"g13"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.30158731341362,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-16,
+				0,
+				14
+			],
+			"coveringSockets": [
+				"g1",
+				"g11",
+				"g2",
+				"g12",
+				"g13",
+				"g3"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.3333333432674408,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-12,
+				0,
+				14
+			],
+			"coveringSockets": [
+				"g1",
+				"g11",
+				"g2",
+				"g12",
+				"g13",
+				"g3"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.3650793731212616,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-8,
+				0,
+				14
+			],
+			"coveringSockets": [
+				"g2",
+				"g12",
+				"g13",
+				"g3",
+				"g14"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.3968254029750824,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-4,
+				0,
+				14
+			],
+			"coveringSockets": [
+				"g2",
+				"g12",
+				"g13",
+				"g3",
+				"g14"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.4285714328289032,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				0,
+				0,
+				14
+			],
+			"coveringSockets": [
+				"g2",
+				"g13",
+				"g3",
+				"g14",
+				"g4",
+				"g15",
+				"g21"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.460317462682724,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				0,
+				0,
+				10
+			],
+			"coveringSockets": [
+				"g2",
+				"g13",
+				"g3",
+				"g14",
+				"g4",
+				"g15",
+				"g16",
+				"g21",
+				"w11"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.4920634925365448,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				0,
+				0,
+				6
+			],
+			"coveringSockets": [
+				"g2",
+				"g13",
+				"g3",
+				"g14",
+				"g4",
+				"g15",
+				"g16",
+				"g5",
+				"g21",
+				"w11"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.52380955219268799,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				0,
+				0,
+				2
+			],
+			"coveringSockets": [
+				"g10",
+				"g2",
+				"g3",
+				"g14",
+				"g4",
+				"g15",
+				"g16",
+				"g5",
+				"g17",
+				"w10",
+				"w11"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.55555558204650879,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				0,
+				0,
+				-2
+			],
+			"coveringSockets": [
+				"g10",
+				"g3",
+				"g14",
+				"g4",
+				"g15",
+				"g16",
+				"g5",
+				"g17",
+				"w2",
+				"w5",
+				"w6",
+				"w10",
+				"w11"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.58730161190032959,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				0,
+				0,
+				-6
+			],
+			"coveringSockets": [
+				"g10",
+				"g3",
+				"g4",
+				"g15",
+				"g16",
+				"g5",
+				"g17",
+				"w1",
+				"w2",
+				"w3",
+				"w4",
+				"w5",
+				"w6",
+				"w9",
+				"w10",
+				"w11"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.61904764175415039,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				2,
+				0,
+				-8
+			],
+			"coveringSockets": [
+				"g4",
+				"g15",
+				"g16",
+				"g5",
+				"g17",
+				"w1",
+				"w2",
+				"w3",
+				"w4",
+				"w5",
+				"w6",
+				"w7",
+				"w9",
+				"w10",
+				"w11"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.65079367160797119,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				6,
+				0,
+				-8
+			],
+			"coveringSockets": [
+				"g4",
+				"g15",
+				"g16",
+				"g5",
+				"g17",
+				"w1",
+				"w2",
+				"w3",
+				"w5",
+				"w6",
+				"w7",
+				"w9",
+				"w10",
+				"w11"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.68253970146179199,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				10,
+				0,
+				-8
+			],
+			"coveringSockets": [
+				"g4",
+				"g15",
+				"g16",
+				"g5",
+				"g17",
+				"g18",
+				"w2",
+				"w3",
+				"w5",
+				"w6",
+				"w7",
+				"w9",
+				"w10",
+				"w11"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.71428573131561279,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				14,
+				0,
+				-8
+			],
+			"coveringSockets": [
+				"g4",
+				"g15",
+				"g5",
+				"g17",
+				"g18",
+				"g6",
+				"w2",
+				"w3",
+				"w6",
+				"w7",
+				"w9",
+				"w10",
+				"w11"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.74603176116943359,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				18,
+				0,
+				-8
+			],
+			"coveringSockets": [
+				"g15",
+				"g5",
+				"g18",
+				"g6",
+				"g19",
+				"w3",
+				"w6",
+				"w7",
+				"w10",
+				"w11"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.77777779102325439,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				18,
+				0,
+				-4
+			],
+			"coveringSockets": [
+				"g4",
+				"g15",
+				"g5",
+				"g18",
+				"g6",
+				"g19",
+				"g21",
+				"w3",
+				"w7",
+				"w10",
+				"w11"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.8095238208770752,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				18,
+				0,
+				-0
+			],
+			"coveringSockets": [
+				"g4",
+				"g15",
+				"g5",
+				"g18",
+				"g6",
+				"g19",
+				"g21",
+				"w7",
+				"w10",
+				"w11"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.841269850730896,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				18,
+				0,
+				4
+			],
+			"coveringSockets": [
+				"g14",
+				"g4",
+				"g15",
+				"g5",
+				"g6",
+				"g19",
+				"g20",
+				"g21",
+				"w10",
+				"w11"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.8730158805847168,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				20,
+				0,
+				6
+			],
+			"coveringSockets": [
+				"g14",
+				"g15",
+				"g5",
+				"g6",
+				"g19",
+				"g20",
+				"g21",
+				"w11"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.9047619104385376,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				24,
+				0,
+				6
+			],
+			"coveringSockets": [
+				"g15",
+				"g5",
+				"g6",
+				"g19",
+				"g20",
+				"g21",
+				"g22"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.9365079402923584,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				28,
+				0,
+				6
+			],
+			"coveringSockets": [
+				"g6",
+				"g19",
+				"g20",
+				"g21",
+				"g22"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 0.9682539701461792,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				32,
+				0,
+				6
+			],
+			"coveringSockets": [
+				"g6",
+				"g19",
+				"g20",
+				"g22"
+			]
+		},
+		{
+			"edge": "westGate-core",
+			"t": 1,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				36,
+				0,
+				6
+			],
+			"coveringSockets": [
+				"g6",
+				"g19",
+				"g20",
+				"g22"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.023564279079437256,
+			"layer": "air",
+			"apron": true,
+			"positionMetres": [
+				-38.152260458251376,
+				9.28426762180748,
+				-4.7106690545187018
+			],
+			"coveringSockets": [
+				"g7",
+				"g23"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.070692837238311768,
+			"layer": "air",
+			"apron": true,
+			"positionMetres": [
+				-34.456781374754129,
+				9.8528028654224418,
+				-6.1320071635561044
+			],
+			"coveringSockets": [
+				"g7",
+				"g9",
+				"g23"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.11782139539718628,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-30.761302291256879,
+				10.421338109037404,
+				-7.553345272593508
+			],
+			"coveringSockets": [
+				"g7",
+				"g9",
+				"g23"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.16494995355606079,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-27.065823207759632,
+				10.989873352652364,
+				-8.9746833816309106
+			],
+			"coveringSockets": [
+				"g7",
+				"g9",
+				"g23"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.2120785117149353,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-23.370344124262385,
+				11.558408596267325,
+				-10.396021490668312
+			],
+			"coveringSockets": [
+				"g9",
+				"g23",
+				"w4"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.25920706987380981,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-19.674865040765138,
+				12.126943839882287,
+				-11.817359599705718
+			],
+			"coveringSockets": [
+				"g9",
+				"w4",
+				"w8"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.30633562803268433,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-15.979385957267887,
+				12.695479083497249,
+				-13.238697708743121
+			],
+			"coveringSockets": [
+				"w1",
+				"w4",
+				"w8"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.35346418619155884,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-12.150122950272124,
+				13,
+				-14.168170640884352
+			],
+			"coveringSockets": [
+				"w1",
+				"w4",
+				"w5",
+				"w8"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.40059274435043335,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-8.1665501244013079,
+				13,
+				-14.530313625054427
+			],
+			"coveringSockets": [
+				"w1",
+				"w2",
+				"w4",
+				"w5",
+				"w8"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.44772130250930786,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-4.182977298530492,
+				13,
+				-14.892456609224501
+			],
+			"coveringSockets": [
+				"g17",
+				"w1",
+				"w2",
+				"w4",
+				"w5",
+				"w6",
+				"w8",
+				"w9"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.49484986066818237,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-0.19940447265967579,
+				13,
+				-15.254599593394575
+			],
+			"coveringSockets": [
+				"g17",
+				"w1",
+				"w2",
+				"w3",
+				"w4",
+				"w5",
+				"w6",
+				"w8",
+				"w9",
+				"w10"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.54197841882705688,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				3.784168353211137,
+				13,
+				-15.616742577564649
+			],
+			"coveringSockets": [
+				"g17",
+				"w1",
+				"w2",
+				"w3",
+				"w5",
+				"w6",
+				"w7",
+				"w9",
+				"w10"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.5891069769859314,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				7.7677411790819546,
+				13,
+				-15.978885561734723
+			],
+			"coveringSockets": [
+				"w2",
+				"w3",
+				"w5",
+				"w6",
+				"w7",
+				"w9",
+				"w10"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.63623553514480591,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				11.044654779359959,
+				12.565049317234291,
+				-13.825246586171458
+			],
+			"coveringSockets": [
+				"w2",
+				"w3",
+				"w5",
+				"w6",
+				"w7",
+				"w9",
+				"w10",
+				"w11"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.68336409330368042,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				14.277816286821862,
+				12.103169101882591,
+				-11.515845509412955
+			],
+			"coveringSockets": [
+				"g18",
+				"w2",
+				"w3",
+				"w6",
+				"w7",
+				"w9",
+				"w10",
+				"w11"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.73049265146255493,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				17.510977794283768,
+				11.641288886530891,
+				-9.2064444326544521
+			],
+			"coveringSockets": [
+				"g5",
+				"g18",
+				"w3",
+				"w6",
+				"w7",
+				"w10",
+				"w11"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.77762120962142944,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				20.744139301745673,
+				11.179408671179189,
+				-6.8970433558959474
+			],
+			"coveringSockets": [
+				"g18",
+				"g6",
+				"w7",
+				"w10",
+				"w11"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.82474976778030396,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				23.977300809207581,
+				10.717528455827489,
+				-4.5876422791374445
+			],
+			"coveringSockets": [
+				"g18",
+				"g6",
+				"g19",
+				"w7"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.87187832593917847,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				27.210462316669481,
+				10.255648240475789,
+				-2.2782412023789425
+			],
+			"coveringSockets": [
+				"g6",
+				"g19",
+				"g22"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.91900688409805298,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				30.443623824131386,
+				9.7937680251240877,
+				0.031159874379561643
+			],
+			"coveringSockets": [
+				"g6",
+				"g19",
+				"g22"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.96613544225692749,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				33.676785331593294,
+				9.3318878097723879,
+				2.3405609511380656
+			],
+			"coveringSockets": [
+				"g6",
+				"g19",
+				"g20",
+				"g22"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 1,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				35.999997321697258,
+				9.0000003826146777,
+				3.9999980869266163
+			],
+			"coveringSockets": [
+				"g19",
+				"g20",
+				"g22"
+			]
+		}
+	],
+	"deadSegments": [],
+	"perSocket":
+	{
+		"g7": [
+			"westGate-core@0.016",
+			"westGate-core@0.048",
+			"westGate-core@0.079",
+			"westGate-core@0.111",
+			"westGate-core@0.143",
+			"airWest-airCore@air@0.024",
+			"airWest-airCore@air@0.071",
+			"airWest-airCore@air@0.118",
+			"airWest-airCore@air@0.165"
+		],
+		"g8": [
+			"westGate-core@0.016",
+			"westGate-core@0.048",
+			"westGate-core@0.079",
+			"westGate-core@0.111",
+			"westGate-core@0.143",
+			"westGate-core@0.175",
+			"westGate-core@0.206",
+			"westGate-core@0.238",
+			"westGate-core@0.270"
+		],
+		"g9": [
+			"westGate-core@0.016",
+			"westGate-core@0.048",
+			"westGate-core@0.079",
+			"westGate-core@0.111",
+			"westGate-core@0.143",
+			"westGate-core@0.175",
+			"westGate-core@0.206",
+			"airWest-airCore@air@0.071",
+			"airWest-airCore@air@0.118",
+			"airWest-airCore@air@0.165",
+			"airWest-airCore@air@0.212",
+			"airWest-airCore@air@0.259"
+		],
+		"g1": [
+			"westGate-core@0.016",
+			"westGate-core@0.048",
+			"westGate-core@0.079",
+			"westGate-core@0.111",
+			"westGate-core@0.143",
+			"westGate-core@0.175",
+			"westGate-core@0.206",
+			"westGate-core@0.238",
+			"westGate-core@0.270",
+			"westGate-core@0.302",
+			"westGate-core@0.333"
+		],
+		"g11": [
+			"westGate-core@0.079",
+			"westGate-core@0.111",
+			"westGate-core@0.143",
+			"westGate-core@0.175",
+			"westGate-core@0.206",
+			"westGate-core@0.238",
+			"westGate-core@0.270",
+			"westGate-core@0.302",
+			"westGate-core@0.333"
+		],
+		"g10": [
+			"westGate-core@0.111",
+			"westGate-core@0.143",
+			"westGate-core@0.175",
+			"westGate-core@0.206",
+			"westGate-core@0.238",
+			"westGate-core@0.524",
+			"westGate-core@0.556",
+			"westGate-core@0.587"
+		],
+		"g2": [
+			"westGate-core@0.111",
+			"westGate-core@0.143",
+			"westGate-core@0.175",
+			"westGate-core@0.206",
+			"westGate-core@0.238",
+			"westGate-core@0.270",
+			"westGate-core@0.302",
+			"westGate-core@0.333",
+			"westGate-core@0.365",
+			"westGate-core@0.397",
+			"westGate-core@0.429",
+			"westGate-core@0.460",
+			"westGate-core@0.492",
+			"westGate-core@0.524"
+		],
+		"g12": [
+			"westGate-core@0.206",
+			"westGate-core@0.238",
+			"westGate-core@0.270",
+			"westGate-core@0.302",
+			"westGate-core@0.333",
+			"westGate-core@0.365",
+			"westGate-core@0.397"
+		],
+		"g13": [
+			"westGate-core@0.270",
+			"westGate-core@0.302",
+			"westGate-core@0.333",
+			"westGate-core@0.365",
+			"westGate-core@0.397",
+			"westGate-core@0.429",
+			"westGate-core@0.460",
+			"westGate-core@0.492"
+		],
+		"g3": [
+			"westGate-core@0.302",
+			"westGate-core@0.333",
+			"westGate-core@0.365",
+			"westGate-core@0.397",
+			"westGate-core@0.429",
+			"westGate-core@0.460",
+			"westGate-core@0.492",
+			"westGate-core@0.524",
+			"westGate-core@0.556",
+			"westGate-core@0.587"
+		],
+		"g14": [
+			"westGate-core@0.365",
+			"westGate-core@0.397",
+			"westGate-core@0.429",
+			"westGate-core@0.460",
+			"westGate-core@0.492",
+			"westGate-core@0.524",
+			"westGate-core@0.556",
+			"westGate-core@0.841",
+			"westGate-core@0.873"
+		],
+		"g4": [
+			"westGate-core@0.429",
+			"westGate-core@0.460",
+			"westGate-core@0.492",
+			"westGate-core@0.524",
+			"westGate-core@0.556",
+			"westGate-core@0.587",
+			"westGate-core@0.619",
+			"westGate-core@0.651",
+			"westGate-core@0.683",
+			"westGate-core@0.714",
+			"westGate-core@0.778",
+			"westGate-core@0.810",
+			"westGate-core@0.841"
+		],
+		"g15": [
+			"westGate-core@0.429",
+			"westGate-core@0.460",
+			"westGate-core@0.492",
+			"westGate-core@0.524",
+			"westGate-core@0.556",
+			"westGate-core@0.587",
+			"westGate-core@0.619",
+			"westGate-core@0.651",
+			"westGate-core@0.683",
+			"westGate-core@0.714",
+			"westGate-core@0.746",
+			"westGate-core@0.778",
+			"westGate-core@0.810",
+			"westGate-core@0.841",
+			"westGate-core@0.873",
+			"westGate-core@0.905"
+		],
+		"g16": [
+			"westGate-core@0.460",
+			"westGate-core@0.492",
+			"westGate-core@0.524",
+			"westGate-core@0.556",
+			"westGate-core@0.587",
+			"westGate-core@0.619",
+			"westGate-core@0.651",
+			"westGate-core@0.683"
+		],
+		"g5": [
+			"westGate-core@0.492",
+			"westGate-core@0.524",
+			"westGate-core@0.556",
+			"westGate-core@0.587",
+			"westGate-core@0.619",
+			"westGate-core@0.651",
+			"westGate-core@0.683",
+			"westGate-core@0.714",
+			"westGate-core@0.746",
+			"westGate-core@0.778",
+			"westGate-core@0.810",
+			"westGate-core@0.841",
+			"westGate-core@0.873",
+			"westGate-core@0.905",
+			"airWest-airCore@air@0.730"
+		],
+		"g17": [
+			"westGate-core@0.524",
+			"westGate-core@0.556",
+			"westGate-core@0.587",
+			"westGate-core@0.619",
+			"westGate-core@0.651",
+			"westGate-core@0.683",
+			"westGate-core@0.714",
+			"airWest-airCore@air@0.448",
+			"airWest-airCore@air@0.495",
+			"airWest-airCore@air@0.542"
+		],
+		"g18": [
+			"westGate-core@0.683",
+			"westGate-core@0.714",
+			"westGate-core@0.746",
+			"westGate-core@0.778",
+			"westGate-core@0.810",
+			"airWest-airCore@air@0.683",
+			"airWest-airCore@air@0.730",
+			"airWest-airCore@air@0.778",
+			"airWest-airCore@air@0.825"
+		],
+		"g6": [
+			"westGate-core@0.714",
+			"westGate-core@0.746",
+			"westGate-core@0.778",
+			"westGate-core@0.810",
+			"westGate-core@0.841",
+			"westGate-core@0.873",
+			"westGate-core@0.905",
+			"westGate-core@0.937",
+			"westGate-core@0.968",
+			"westGate-core@1.000",
+			"airWest-airCore@air@0.778",
+			"airWest-airCore@air@0.825",
+			"airWest-airCore@air@0.872",
+			"airWest-airCore@air@0.919",
+			"airWest-airCore@air@0.966"
+		],
+		"g19": [
+			"westGate-core@0.746",
+			"westGate-core@0.778",
+			"westGate-core@0.810",
+			"westGate-core@0.841",
+			"westGate-core@0.873",
+			"westGate-core@0.905",
+			"westGate-core@0.937",
+			"westGate-core@0.968",
+			"westGate-core@1.000",
+			"airWest-airCore@air@0.825",
+			"airWest-airCore@air@0.872",
+			"airWest-airCore@air@0.919",
+			"airWest-airCore@air@0.966",
+			"airWest-airCore@air@1.000"
+		],
+		"g20": [
+			"westGate-core@0.841",
+			"westGate-core@0.873",
+			"westGate-core@0.905",
+			"westGate-core@0.937",
+			"westGate-core@0.968",
+			"westGate-core@1.000",
+			"airWest-airCore@air@0.966",
+			"airWest-airCore@air@1.000"
+		],
+		"g21": [
+			"westGate-core@0.429",
+			"westGate-core@0.460",
+			"westGate-core@0.492",
+			"westGate-core@0.778",
+			"westGate-core@0.810",
+			"westGate-core@0.841",
+			"westGate-core@0.873",
+			"westGate-core@0.905",
+			"westGate-core@0.937"
+		],
+		"g22": [
+			"westGate-core@0.905",
+			"westGate-core@0.937",
+			"westGate-core@0.968",
+			"westGate-core@1.000",
+			"airWest-airCore@air@0.872",
+			"airWest-airCore@air@0.919",
+			"airWest-airCore@air@0.966",
+			"airWest-airCore@air@1.000"
+		],
+		"w1": [
+			"westGate-core@0.587",
+			"westGate-core@0.619",
+			"westGate-core@0.651",
+			"airWest-airCore@air@0.306",
+			"airWest-airCore@air@0.353",
+			"airWest-airCore@air@0.401",
+			"airWest-airCore@air@0.448",
+			"airWest-airCore@air@0.495",
+			"airWest-airCore@air@0.542"
+		],
+		"w2": [
+			"westGate-core@0.556",
+			"westGate-core@0.587",
+			"westGate-core@0.619",
+			"westGate-core@0.651",
+			"westGate-core@0.683",
+			"westGate-core@0.714",
+			"airWest-airCore@air@0.401",
+			"airWest-airCore@air@0.448",
+			"airWest-airCore@air@0.495",
+			"airWest-airCore@air@0.542",
+			"airWest-airCore@air@0.589",
+			"airWest-airCore@air@0.636",
+			"airWest-airCore@air@0.683"
+		],
+		"w3": [
+			"westGate-core@0.587",
+			"westGate-core@0.619",
+			"westGate-core@0.651",
+			"westGate-core@0.683",
+			"westGate-core@0.714",
+			"westGate-core@0.746",
+			"westGate-core@0.778",
+			"airWest-airCore@air@0.495",
+			"airWest-airCore@air@0.542",
+			"airWest-airCore@air@0.589",
+			"airWest-airCore@air@0.636",
+			"airWest-airCore@air@0.683",
+			"airWest-airCore@air@0.730"
+		],
+		"g23": [
+			"westGate-core@0.016",
+			"westGate-core@0.048",
+			"westGate-core@0.079",
+			"westGate-core@0.111",
+			"westGate-core@0.143",
+			"westGate-core@0.175",
+			"airWest-airCore@air@0.024",
+			"airWest-airCore@air@0.071",
+			"airWest-airCore@air@0.118",
+			"airWest-airCore@air@0.165",
+			"airWest-airCore@air@0.212"
+		],
+		"w4": [
+			"westGate-core@0.587",
+			"westGate-core@0.619",
+			"airWest-airCore@air@0.212",
+			"airWest-airCore@air@0.259",
+			"airWest-airCore@air@0.306",
+			"airWest-airCore@air@0.353",
+			"airWest-airCore@air@0.401",
+			"airWest-airCore@air@0.448",
+			"airWest-airCore@air@0.495"
+		],
+		"w5": [
+			"westGate-core@0.556",
+			"westGate-core@0.587",
+			"westGate-core@0.619",
+			"westGate-core@0.651",
+			"westGate-core@0.683",
+			"airWest-airCore@air@0.353",
+			"airWest-airCore@air@0.401",
+			"airWest-airCore@air@0.448",
+			"airWest-airCore@air@0.495",
+			"airWest-airCore@air@0.542",
+			"airWest-airCore@air@0.589",
+			"airWest-airCore@air@0.636"
+		],
+		"w6": [
+			"westGate-core@0.556",
+			"westGate-core@0.587",
+			"westGate-core@0.619",
+			"westGate-core@0.651",
+			"westGate-core@0.683",
+			"westGate-core@0.714",
+			"westGate-core@0.746",
+			"airWest-airCore@air@0.448",
+			"airWest-airCore@air@0.495",
+			"airWest-airCore@air@0.542",
+			"airWest-airCore@air@0.589",
+			"airWest-airCore@air@0.636",
+			"airWest-airCore@air@0.683",
+			"airWest-airCore@air@0.730"
+		],
+		"w7": [
+			"westGate-core@0.619",
+			"westGate-core@0.651",
+			"westGate-core@0.683",
+			"westGate-core@0.714",
+			"westGate-core@0.746",
+			"westGate-core@0.778",
+			"westGate-core@0.810",
+			"airWest-airCore@air@0.542",
+			"airWest-airCore@air@0.589",
+			"airWest-airCore@air@0.636",
+			"airWest-airCore@air@0.683",
+			"airWest-airCore@air@0.730",
+			"airWest-airCore@air@0.778",
+			"airWest-airCore@air@0.825"
+		],
+		"w8": [
+			"airWest-airCore@air@0.259",
+			"airWest-airCore@air@0.306",
+			"airWest-airCore@air@0.353",
+			"airWest-airCore@air@0.401",
+			"airWest-airCore@air@0.448",
+			"airWest-airCore@air@0.495"
+		],
+		"w9": [
+			"westGate-core@0.587",
+			"westGate-core@0.619",
+			"westGate-core@0.651",
+			"westGate-core@0.683",
+			"westGate-core@0.714",
+			"airWest-airCore@air@0.448",
+			"airWest-airCore@air@0.495",
+			"airWest-airCore@air@0.542",
+			"airWest-airCore@air@0.589",
+			"airWest-airCore@air@0.636",
+			"airWest-airCore@air@0.683"
+		],
+		"w10": [
+			"westGate-core@0.524",
+			"westGate-core@0.556",
+			"westGate-core@0.587",
+			"westGate-core@0.619",
+			"westGate-core@0.651",
+			"westGate-core@0.683",
+			"westGate-core@0.714",
+			"westGate-core@0.746",
+			"westGate-core@0.778",
+			"westGate-core@0.810",
+			"westGate-core@0.841",
+			"airWest-airCore@air@0.495",
+			"airWest-airCore@air@0.542",
+			"airWest-airCore@air@0.589",
+			"airWest-airCore@air@0.636",
+			"airWest-airCore@air@0.683",
+			"airWest-airCore@air@0.730",
+			"airWest-airCore@air@0.778"
+		],
+		"w11": [
+			"westGate-core@0.460",
+			"westGate-core@0.492",
+			"westGate-core@0.524",
+			"westGate-core@0.556",
+			"westGate-core@0.587",
+			"westGate-core@0.619",
+			"westGate-core@0.651",
+			"westGate-core@0.683",
+			"westGate-core@0.714",
+			"westGate-core@0.746",
+			"westGate-core@0.778",
+			"westGate-core@0.810",
+			"westGate-core@0.841",
+			"westGate-core@0.873",
+			"airWest-airCore@air@0.636",
+			"airWest-airCore@air@0.683",
+			"airWest-airCore@air@0.730",
+			"airWest-airCore@air@0.778"
+		]
+	}
+}

@@ -1,0 +1,323 @@
+{
+  "$comment": "Module layering (PROGRAMME.md \u00a73): 0 DFCore \u00b7 1 DFGameplay \u00b7 2 DFWorld (lanes/sockets/terrain are what towers, enemies, players and vehicles stand on) \u00b7 3 DFPlayer DFTowers DFEnemies DFVehicles \u00b7 4 DFMatch \u00b7 5 DFUI DFOnline DFAudio DFVfx \u00b7 6 DFEditor DFTests. A module may only depend on LOWER layers; layering-check.py enforces it. Adding a DF module is an INT change (uproject + targets + this file).",
+  "modules": {
+    "DFCore": {
+      "layer": 0,
+      "type": "Runtime",
+      "primary": true,
+      "df": [],
+      "public": [
+        "Core",
+        "CoreUObject",
+        "Engine",
+        "GameplayTags",
+        "DeveloperSettings",
+        "NetCore",
+        "Json",
+        "JsonUtilities"
+      ],
+      "private": []
+    },
+    "DFGameplay": {
+      "layer": 1,
+      "type": "Runtime",
+      "df": [
+        "DFCore"
+      ],
+      "public": [
+        "Core",
+        "CoreUObject",
+        "Engine",
+        "GameplayTags",
+        "GameplayAbilities",
+        "GameplayTasks",
+        "ModularGameplay",
+        "NetCore"
+      ],
+      "private": []
+    },
+    "DFPlayer": {
+      "layer": 3,
+      "type": "Runtime",
+      "df": [
+        "DFCore",
+        "DFGameplay",
+        "DFWorld"
+      ],
+      "public": [
+        "Core",
+        "CoreUObject",
+        "Engine",
+        "GameplayTags",
+        "GameplayAbilities",
+        "EnhancedInput",
+        "InputCore"
+      ],
+      "private": [
+        "ModularGameplay"
+      ]
+    },
+    "DFTowers": {
+      "layer": 3,
+      "type": "Runtime",
+      "df": [
+        "DFCore",
+        "DFGameplay",
+        "DFWorld"
+      ],
+      "public": [
+        "Core",
+        "CoreUObject",
+        "Engine",
+        "GameplayTags",
+        "GameplayAbilities"
+      ],
+      "private": [
+        "GeometryCollectionEngine"
+      ]
+    },
+    "DFEnemies": {
+      "layer": 3,
+      "type": "Runtime",
+      "df": [
+        "DFCore",
+        "DFGameplay",
+        "DFWorld"
+      ],
+      "public": [
+        "Core",
+        "CoreUObject",
+        "Engine",
+        "GameplayTags",
+        "GameplayAbilities",
+        "AIModule",
+        "NavigationSystem",
+        "StateTreeModule",
+        "GameplayStateTreeModule"
+      ],
+      "private": []
+    },
+    "DFWorld": {
+      "layer": 2,
+      "type": "Runtime",
+      "df": [
+        "DFCore",
+        "DFGameplay"
+      ],
+      "public": [
+        "Core",
+        "CoreUObject",
+        "Engine",
+        "GameplayTags",
+        "NavigationSystem",
+        "Landscape",
+        "PhysicsCore"
+      ],
+      "private": [
+        "Json",
+        "JsonUtilities"
+      ]
+    },
+    "DFVehicles": {
+      "layer": 3,
+      "type": "Runtime",
+      "df": [
+        "DFCore",
+        "DFGameplay",
+        "DFWorld"
+      ],
+      "public": [
+        "Core",
+        "CoreUObject",
+        "Engine",
+        "GameplayTags",
+        "ChaosVehicles",
+        "PhysicsCore"
+      ],
+      "private": []
+    },
+    "DFMatch": {
+      "layer": 4,
+      "type": "Runtime",
+      "df": [
+        "DFCore",
+        "DFGameplay",
+        "DFPlayer",
+        "DFTowers",
+        "DFEnemies",
+        "DFWorld",
+        "DFVehicles"
+      ],
+      "public": [
+        "Core",
+        "CoreUObject",
+        "Engine",
+        "GameplayTags",
+        "GameplayAbilities",
+        "NetCore"
+      ],
+      "private": []
+    },
+    "DFUI": {
+      "layer": 5,
+      "type": "Runtime",
+      "df": [
+        "DFCore",
+        "DFMatch"
+      ],
+      "public": [
+        "Core",
+        "CoreUObject",
+        "Engine",
+        "GameplayTags",
+        "UMG",
+        "Slate",
+        "SlateCore",
+        "CommonUI",
+        "CommonInput",
+        "ModelViewViewModel",
+        "EnhancedInput",
+        "InputCore"
+      ],
+      "private": []
+    },
+    "DFOnline": {
+      "layer": 5,
+      "type": "Runtime",
+      "df": [
+        "DFCore",
+        "DFMatch"
+      ],
+      "public": [
+        "Core",
+        "CoreUObject",
+        "Engine",
+        "GameplayTags",
+        "CoreOnline",
+        "OnlineServicesInterface",
+        "OnlineServicesCommon"
+      ],
+      "private": [
+        "Json",
+        "JsonUtilities"
+      ]
+    },
+    "DFAudio": {
+      "layer": 5,
+      "type": "Runtime",
+      "df": [
+        "DFCore",
+        "DFGameplay"
+      ],
+      "public": [
+        "Core",
+        "CoreUObject",
+        "Engine",
+        "GameplayTags",
+        "GameplayAbilities",
+        "AudioMixer",
+        "MetasoundEngine",
+        "MetasoundFrontend"
+      ],
+      "private": []
+    },
+    "DFVfx": {
+      "layer": 5,
+      "type": "Runtime",
+      "df": [
+        "DFCore",
+        "DFGameplay"
+      ],
+      "public": [
+        "Core",
+        "CoreUObject",
+        "Engine",
+        "GameplayTags",
+        "GameplayAbilities",
+        "Niagara"
+      ],
+      "private": []
+    },
+    "DFEditor": {
+      "layer": 6,
+      "type": "Editor",
+      "df": [
+        "DFCore",
+        "DFGameplay",
+        "DFWorld",
+        "DFTowers",
+        "DFEnemies"
+      ],
+      "public": [
+        "Core",
+        "CoreUObject",
+        "Engine",
+        "GameplayTags"
+      ],
+      "private": [
+        "UnrealEd",
+        "AssetRegistry",
+        "EditorSubsystem",
+        "Json",
+        "JsonUtilities",
+        "DataValidation",
+        "Landscape",
+        "LandscapeEditor",
+        "Foliage",
+        "EditorFramework",
+        "AssetTools",
+        "ContentBrowser",
+        "Projects",
+        "ImageWrapper",
+        "PhysicsCore"
+      ]
+    },
+    "DFTests": {
+      "layer": 6,
+      "type": "UncookedOnly",
+      "df": [
+        "DFCore",
+        "DFGameplay",
+        "DFPlayer",
+        "DFTowers",
+        "DFEnemies",
+        "DFWorld",
+        "DFVehicles",
+        "DFMatch",
+        "DFUI",
+        "DFOnline"
+      ],
+      "public": [
+        "Core",
+        "CoreUObject",
+        "Engine",
+        "GameplayTags"
+      ],
+      "private": [
+        "FunctionalTesting",
+        "AutomationController",
+        "GameplayAbilities"
+      ]
+    },
+    "DFContentPipeline": {
+      "layer": 6,
+      "type": "Editor",
+      "df": [
+        "DFCore"
+      ],
+      "public": [
+        "Core",
+        "CoreUObject",
+        "Engine",
+        "GameplayTags"
+      ],
+      "private": [
+        "UnrealEd",
+        "AssetTools",
+        "AssetRegistry",
+        "Json",
+        "JsonUtilities"
+      ]
+    }
+  }
+}

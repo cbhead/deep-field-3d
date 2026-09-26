@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deepfield.dev/content/weapons.schema.json",
+  "title": "weapons",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "table",
+    "generated",
+    "rows"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "deepfield-content/1"
+    },
+    "table": {
+      "type": "string"
+    },
+    "generated": {
+      "type": "string"
+    },
+    "sourceSha": {
+      "type": "string"
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "recipe",
+          "damage",
+          "shotsPerSecond",
+          "rangeMeters",
+          "applies"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "recipe": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "enum": [
+                "Alloy",
+                "Flux",
+                "Plating",
+                "Gravium"
+              ]
+            }
+          },
+          "damage": {
+            "type": "number"
+          },
+          "shotsPerSecond": {
+            "type": "number"
+          },
+          "rangeMeters": {
+            "type": "number"
+          },
+          "applies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "magazineSize": {
+            "type": "integer"
+          },
+          "reloadSeconds": {
+            "type": "number"
+          },
+          "automatic": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

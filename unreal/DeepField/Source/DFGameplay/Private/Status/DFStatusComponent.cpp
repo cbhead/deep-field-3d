@@ -1,0 +1,711 @@
+#include "Status/DFStatusComponent.h"
+
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemGlobals.h"
+#include "Attributes/DFControlSet.h"
+#include "Attributes/DFHealthSet.h"
+#include "Content/DFContentSubsystem.h"
+#include "Cues/DFGameplayCueNotify_Base.h"
+#include "DFBalanceDial.h"
+#include "DFGameplayLocalTags.h"
+#include "DFGameplayTags.h"
+#include "Damage/DFDamageContext.h"
+#include "Effects/DFGE_Damage.h"
+#include "Effects/DFGE_StatusBase.h"
+#include "Engine/World.h"
+#include "GameFramework/Actor.h"
+#include "GameFramework/GameStateBase.h"
+#include "Messages/DFMessageBus.h"
+#include "Messages/DFMessages.h"
+#include "Net/Core/PushModel/PushModel.h"
+#include "Net/UnrealNetwork.h"
+#include "Tint/DFTintComponent.h"
+
+DEFINE_LOG_CATEGORY_STATIC(LogDFStatus, Log, All);
+
+UDFStatusComponent::UDFStatusComponent()
+{
+	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bStartWithTickEnabled = true;
+	SetIsReplicatedByDefault(true);
+
+	Slots.SetNum(FDFStatusResolver::NumChannels);
+	ChannelContexts.SetNum(FDFStatusResolver::NumChannels);
+	ImmunityTags.AddTag(DFTags::Enemy_State_Phased);
+	ImmunityTags.AddTag(DFTags::Enemy_BossFrame01);
+}
+
+void UDFStatusComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	FDoRepLifetimeParams Params;
+	Params.bIsPushBased = true;
+	DOREPLIFETIME_WITH_PARAMS_FAST(UDFStatusComponent, Slots, Params);
+	DOREPLIFETIME_WITH_PARAMS_FAST(UDFStatusComponent, Mass, Params);
+}
+
+void UDFStatusComponent::BeginPlay()
+{
+	Super::BeginPlay();
+	UDFGameplayCueNotify_Base::RegisterNativeCues();   // the cues this component fires have a handler even with no asset in Content
+	Resolver.FindStatusRow = [this](FName Id) { return FindStatusRow(Id); };
+	if (HasAuthority())
+	{
+		ReadRates();
+		LoadReactions();
+	}
+	UpdateTintFromSlots();
+}
+
+void UDFStatusComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (HasAuthority())
+	{
+		for (int32 I = 0; I < FDFStatusResolver::NumChannels; ++I)
+		{
+			RemoveChannelEffect(static_cast<EDFStatusChannel>(I));
+		}
+	}
+	Super::EndPlay(EndPlayReason);
+}
+
+bool UDFStatusComponent::HasAuthority() const
+{
+	const AActor* Owner = GetOwner();
+	return !Owner || Owner->HasAuthority();
+}
+
+float UDFStatusComponent::Now() const
+{
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return 0.f;
+	}
+	// Every slot timestamp is a SERVER timestamp: FDFStatusSlotRep::EndTimeServer is written here
+	// and replicated verbatim, and TimeRemaining() subtracts this clock from it on whichever
+	// machine asks. A client's own GetTimeSeconds() is seconds since ITS level load and has no
+	// relation to the server's — a client that joined 120 s into a match would read a 1.5 s chill
+	// as 121.5 s. AGameStateBase::GetServerWorldTimeSeconds() is the one clock both sides share:
+	// the server's own world time on the server (delta 0, so a listen host is unchanged) and the
+	// client's replicated estimate of it on a client. DF.Unit.Status.TimeRemainingUsesServerClock.
+	if (const AGameStateBase* GameState = World->GetGameState())
+	{
+		return static_cast<float>(GameState->GetServerWorldTimeSeconds());
+	}
+	// No game state (a dev map, a unit-test world): there is only one clock, so it is the one.
+	return World->GetTimeSeconds();
+}
+
+UAbilitySystemComponent* UDFStatusComponent::GetASC() const
+{
+	return UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner(), /*LookForComponent*/ true);
+}
+
+bool UDFStatusComponent::IsAlive() const
+{
+	const UAbilitySystemComponent* ASC = GetASC();
+	if (ASC && ASC->HasAttributeSetForAttribute(UDFHealthSet::GetHealthAttribute()))
+	{
+		return ASC->GetNumericAttribute(UDFHealthSet::GetHealthAttribute()) > 0.f;
+	}
+	return true;
+}
+
+bool UDFStatusComponent::IsEmberApplier(const AActor* Source)
+{
+	// Step.cs: `playerId is int pid && w.Players[pid].FactionId == Factions.Ember.Id` — only a
+	// player applier, never a tower or trap. The faction tag (or the granted UDFGE_Passive_Ember tag,
+	// DF.Ability.Passive.BurnDuration) sits on the hero's ASC; a weapon or projectile actor reaches
+	// it through its owner or instigator.
+	const AActor* Candidates[] = { Source, Source ? Source->GetOwner() : nullptr, Source ? Source->GetInstigator() : nullptr };
+	for (const AActor* Actor : Candidates)
+	{
+		if (!Actor)
+		{
+			continue;
+		}
+		const UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Actor, /*LookForComponent*/ true);
+		if (ASC && (ASC->HasMatchingGameplayTag(DFTags::Faction_Ember) || ASC->HasMatchingGameplayTag(DFTags::Ability_Passive_BurnDuration)))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+UDFTintComponent* UDFStatusComponent::GetTint() const
+{
+	const AActor* Owner = GetOwner();
+	return Owner ? Owner->FindComponentByClass<UDFTintComponent>() : nullptr;
+}
+
+void UDFStatusComponent::ReadRates()
+{
+	// Content first, then the control set (an actor initialised from rows), then Balance.cs defaults.
+	const UDFContentSubsystem* Content = UDFContentSubsystem::Get(this);
+	if (Content && Content->IsReady())
+	{
+		// DFBalance::Dial: a dial the table lacks (tetherImmuneMass, RFC'd) is a one-time warning and the sim's number.
+		Resolver.CcResistFillPerSecond = DFBalance::Dial(this, TEXT("ccResistFillPerSecond"), Resolver.CcResistFillPerSecond);
+		Resolver.CcResistDecayPerSecond = DFBalance::Dial(this, TEXT("ccResistDecayPerSecond"), Resolver.CcResistDecayPerSecond);
+		Resolver.TetherImmuneMass = DFBalance::Dial(this, TEXT("tetherImmuneMass"), Resolver.TetherImmuneMass);
+		EmberBurnDurationFactor = DFBalance::Dial(this, TEXT("emberBurnDurationFactor"), EmberBurnDurationFactor);
+		StatusTickHz = FMath::Max(1.f, DFBalance::Dial(this, TEXT("tickHz"), StatusTickHz));
+		return;
+	}
+	if (const UAbilitySystemComponent* ASC = GetASC())
+	{
+		if (ASC->HasAttributeSetForAttribute(UDFControlSet::GetCcResistFillAttribute()))
+		{
+			const float Fill = ASC->GetNumericAttribute(UDFControlSet::GetCcResistFillAttribute());
+			const float Decay = ASC->GetNumericAttribute(UDFControlSet::GetCcResistDecayAttribute());
+			if (Fill > 0.f) { Resolver.CcResistFillPerSecond = Fill; }
+			if (Decay > 0.f) { Resolver.CcResistDecayPerSecond = Decay; }
+		}
+	}
+}
+
+void UDFStatusComponent::LoadReactions()
+{
+	if (bReactionsLoaded)
+	{
+		return;
+	}
+	bReactionsLoaded = true;
+	Resolver.Reactions.Reset();
+	// Ids() is silent on a missing table (an un-imported project is a normal state); the
+	// overrides win over content so a fixture can shadow a row.
+	if (const UDFContentSubsystem* Content = UDFContentSubsystem::Get(this))
+	{
+		for (const FName& Id : Content->Ids(TEXT("reactions")))
+		{
+			if (const FDFReactionRow* Row = Content->Reaction(Id))
+			{
+				Resolver.Reactions.Add(Id, *Row);
+			}
+		}
+	}
+	for (const TPair<FName, FDFReactionRow>& Pair : ReactionRowOverrides)
+	{
+		Resolver.Reactions.Add(Pair.Key, Pair.Value);
+	}
+}
+
+void UDFStatusComponent::AddStatusRowOverride(FName StatusId, const FDFStatusRow& Row)
+{
+	StatusRowOverrides.Add(StatusId, Row);
+}
+
+void UDFStatusComponent::AddReactionRowOverride(FName ReactionId, const FDFReactionRow& Row)
+{
+	ReactionRowOverrides.Add(ReactionId, Row);
+	if (bReactionsLoaded)
+	{
+		Resolver.Reactions.Add(ReactionId, Row);
+	}
+}
+
+const FDFStatusRow* UDFStatusComponent::FindStatusRow(FName StatusId) const
+{
+	if (const FDFStatusRow* Row = StatusRowOverrides.Find(StatusId))
+	{
+		return Row;
+	}
+	// Only ask content when it is loaded: a missing table would log an error per call, and an
+	// un-imported project is not a fault of the caller.
+	const UDFContentSubsystem* Content = UDFContentSubsystem::Get(this);
+	return (Content && Content->IsReady()) ? Content->Status(StatusId) : nullptr;
+}
+
+void UDFStatusComponent::InitFromEnemyRow(const FDFEnemyRow& Row)
+{
+	Mass = Row.Mass;
+	bHero = false;
+	MARK_PROPERTY_DIRTY_FROM_NAME(UDFStatusComponent, Mass, this);
+}
+
+FDFStatusTargetState UDFStatusComponent::ReadTargetState() const
+{
+	FDFStatusTargetState State;
+	State.Mass = Mass;
+	State.bTetherImmune = bTetherImmune;
+	State.bHero = bHero;
+	if (const UAbilitySystemComponent* ASC = GetASC())
+	{
+		if (ASC->HasAttributeSetForAttribute(UDFHealthSet::GetShieldAttribute()))
+		{
+			State.Shield = ASC->GetNumericAttribute(UDFHealthSet::GetShieldAttribute());
+		}
+		if (!State.bTetherImmune && ImmunityTags.Num() > 0)
+		{
+			State.bTetherImmune = ASC->HasAnyMatchingGameplayTags(ImmunityTags);
+		}
+	}
+	return State;
+}
+
+// ---- C5 API ----
+
+EDFStatusApplyResult UDFStatusComponent::Apply(FGameplayTag StatusTag, AActor* Source, float MagnitudeOverride)
+{
+	return ApplyById(DFGameplayLocalTags::ContentIdFromTag(StatusTag), Source, MagnitudeOverride, 1.f);
+}
+
+EDFStatusApplyResult UDFStatusComponent::ApplyById(FName StatusId, AActor* Source, float MagnitudeOverride, float DurationFactor)
+{
+	LastOutcome = FDFStatusApplyOutcome();
+	LastOutcome.StatusId = StatusId;
+	if (!HasAuthority())
+	{
+		UE_LOG(LogDFStatus, Warning, TEXT("%s: Apply(%s) called without authority; statuses are server-only"), *GetNameSafe(GetOwner()), *StatusId.ToString());
+		return EDFStatusApplyResult::NoRow;
+	}
+	const FDFStatusRow* Row = FindStatusRow(StatusId);
+	if (!Row)
+	{
+		UE_LOG(LogDFStatus, Warning, TEXT("%s: no status row '%s'"), *GetNameSafe(GetOwner()), *StatusId.ToString());
+		return EDFStatusApplyResult::NoRow;
+	}
+	if (!Resolver.FindStatusRow)
+	{
+		Resolver.FindStatusRow = [this](FName Id) { return FindStatusRow(Id); };
+	}
+	LoadReactions();
+
+	float Factor = DurationFactor;
+	if (const float* ConditionFactor = ChannelDurationFactors.Find(Row->Channel))
+	{
+		Factor *= *ConditionFactor;
+	}
+	// Ember's passive, by applier faction, before the resolver's refresh / strongest-wins branch
+	// (Step.cs ApplyStatus applies it to `duration` ahead of the slot logic, so a refresh gets it).
+	if (StatusId == DFGameplayLocalTags::ContentIdFromTag(DFTags::Status_Burn) && IsEmberApplier(Source))
+	{
+		Factor *= EmberBurnDurationFactor;
+	}
+
+	// The burst runs inside Resolver.Apply, between consuming the partner and writing the emit,
+	// so the consumed status's effect (e.g. shred's armor delta) is gone before the burst lands
+	// and a lethal burst suppresses the emit — the Step.cs order.
+	Resolver.OnReaction = [this, Source](const FDFStatusApplyOutcome& Partial) -> bool
+	{
+		OnSlotLeft(Partial.ConsumedChannel, Partial.ConsumedStatusId, /*bExpired*/ false);
+		ApplyBurst(Partial, Source);
+		return IsAlive();
+	};
+
+	const int32 SourceId = Source ? static_cast<int32>(Source->GetUniqueID()) : 0;
+	LastOutcome = Resolver.Apply(StatusId, *Row, Now(), SourceId, ReadTargetState(), MagnitudeOverride, Factor);
+	Resolver.OnReaction = nullptr;
+
+	switch (LastOutcome.Result)
+	{
+	case EDFStatusApplyResult::Applied:
+		if (!LastOutcome.ReplacedStatusId.IsNone())
+		{
+			OnSlotLeft(LastOutcome.Channel, LastOutcome.ReplacedStatusId, /*bExpired*/ false);
+		}
+		OnSlotWritten(LastOutcome.Channel, Source, /*bFromReaction*/ false);
+		break;
+
+	case EDFStatusApplyResult::Refreshed:
+		// Silent: duration and source moved in the resolver; no cue, no StatusApplied message. The
+		// channel effect keeps running untouched (re-applying it would fire an extra on-application
+		// tick) but from here its ticks are the refresher's, as Step.cs UpdateStatuses credits slot.Source.
+		ChannelSources[static_cast<int32>(LastOutcome.Channel)] = Source;
+		RetargetChannelEffect(LastOutcome.Channel, Source);
+		SyncSlots();
+		break;
+
+	case EDFStatusApplyResult::Reacted:
+		// The consumed slot and the burst were handled in OnReaction; only the emit is left.
+		if (!LastOutcome.EmittedStatusId.IsNone())
+		{
+			if (!LastOutcome.EmitReplacedStatusId.IsNone())
+			{
+				OnSlotLeft(LastOutcome.EmittedChannel, LastOutcome.EmitReplacedStatusId, /*bExpired*/ false);
+			}
+			OnSlotWritten(LastOutcome.EmittedChannel, Source, /*bFromReaction*/ true);
+		}
+		SyncSlots();
+		break;
+
+	default:
+		break;
+	}
+	return LastOutcome.Result;
+}
+
+void UDFStatusComponent::ClearChannel(EDFStatusChannel Channel)
+{
+	if (!HasAuthority() || !Resolver.IsActive(Channel))
+	{
+		return;
+	}
+	const FName Id = Resolver.Slot(Channel).StatusId;
+	Resolver.ClearChannel(Channel);
+	OnSlotLeft(Channel, Id, /*bExpired*/ false);
+	SyncSlots();
+}
+
+void UDFStatusComponent::ClearAll()
+{
+	for (int32 I = 0; I < FDFStatusResolver::NumChannels; ++I)
+	{
+		ClearChannel(static_cast<EDFStatusChannel>(I));
+	}
+}
+
+bool UDFStatusComponent::IsChannelActive(EDFStatusChannel Channel) const
+{
+	return Slots.IsValidIndex(static_cast<int32>(Channel)) && Slots[static_cast<int32>(Channel)].IsActive();
+}
+
+FGameplayTag UDFStatusComponent::ActiveStatus(EDFStatusChannel Channel) const
+{
+	return Slots.IsValidIndex(static_cast<int32>(Channel)) ? Slots[static_cast<int32>(Channel)].StatusTag : FGameplayTag();
+}
+
+float UDFStatusComponent::ActiveMagnitude(EDFStatusChannel Channel) const
+{
+	return Slots.IsValidIndex(static_cast<int32>(Channel)) ? Slots[static_cast<int32>(Channel)].Magnitude : 0.f;
+}
+
+float UDFStatusComponent::TimeRemaining(EDFStatusChannel Channel) const
+{
+	if (!IsChannelActive(Channel))
+	{
+		return 0.f;
+	}
+	return FMath::Max(0.f, Slots[static_cast<int32>(Channel)].EndTimeServer - Now());
+}
+
+bool UDFStatusComponent::TryGetTimeRemaining(EDFStatusChannel Channel, float& OutSeconds) const
+{
+	OutSeconds = 0.f;
+	if (!IsChannelActive(Channel))
+	{
+		return true;
+	}
+	// Now() falls back to the local clock when the world has no game state. That is the right clock
+	// on a dev map or in a unit-test world (there is only one), and the wrong one on a joining client
+	// before its game state's channel opens — so there, the answer is "unknown", not a number.
+	const UWorld* World = GetWorld();
+	if (!World || !IsServerClockKnown(World->GetGameState() != nullptr, World->GetNetMode()))
+	{
+		return false;
+	}
+	OutSeconds = TimeRemaining(Channel);
+	return true;
+}
+
+bool UDFStatusComponent::IsControlled() const
+{
+	return IsChannelActive(EDFStatusChannel::Control);
+}
+
+// ---- server mirroring ----
+
+void UDFStatusComponent::OnSlotWritten(EDFStatusChannel Channel, AActor* Source, bool bFromReaction)
+{
+	const FDFStatusSlot& Slot = Resolver.Slot(Channel);
+	const FDFStatusRow* Row = FindStatusRow(Slot.StatusId);
+	ChannelSources[static_cast<int32>(Channel)] = Source;
+	if (Row)
+	{
+		ApplyChannelEffect(Channel, Slot, *Row, Source);
+	}
+	FireCue(Slot.StatusId, TEXT("Applied"), Slot.Magnitude, Source);
+	BroadcastStatus(DFTags::Message_StatusApplied, DFTags::ForContentId(TEXT("DF.Status"), Slot.StatusId), Channel, Slot.Magnitude, Slot.EndTime - Now());
+	UpdateTintFromResolver(Channel);
+	OnStatusApplied.Broadcast(Slot);
+	if (!bFromReaction)
+	{
+		SyncSlots();
+	}
+}
+
+void UDFStatusComponent::OnSlotLeft(EDFStatusChannel Channel, FName StatusId, bool bExpired)
+{
+	RemoveChannelEffect(Channel);
+	AActor* Source = ChannelSources[static_cast<int32>(Channel)].Get();
+	ChannelSources[static_cast<int32>(Channel)] = nullptr;
+	FireCue(StatusId, TEXT("Removed"), 0.f, Source);
+	if (bExpired)
+	{
+		BroadcastStatus(DFTags::Message_StatusExpired, DFTags::ForContentId(TEXT("DF.Status"), StatusId), Channel, 0.f, 0.f);
+	}
+	UpdateTintFromResolver(Channel);
+	FDFStatusSlot Gone;
+	Gone.StatusId = StatusId;
+	Gone.Channel = Channel;
+	OnStatusRemoved.Broadcast(Gone);
+}
+
+void UDFStatusComponent::ApplyChannelEffect(EDFStatusChannel Channel, const FDFStatusSlot& Slot, const FDFStatusRow& Row, AActor* Source)
+{
+	UAbilitySystemComponent* ASC = GetASC();
+	if (!ASC)
+	{
+		return;
+	}
+	RemoveChannelEffect(Channel);
+
+	const TSubclassOf<UDFGE_StatusBase> EffectClass = UDFGE_StatusBase::ClassForChannel(Channel);
+	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+	Context.AddInstigator(Source, Source);
+
+	const FGameplayTag StatusTag = DFTags::ForContentId(TEXT("DF.Status"), Slot.StatusId);
+
+	// The slot's magnitude is the number strongest-wins compared; the effect gets it back in
+	// the attribute's own terms so a MagnitudeOverride (Swift: Movement x0.5) really halves the slow.
+	float EffectMagnitude = Slot.Magnitude;
+	switch (Channel)
+	{
+	case EDFStatusChannel::Movement:      EffectMagnitude = FMath::Clamp(1.f - Slot.Magnitude, 0.f, 1.f); break;   // SpeedFactor
+	case EDFStatusChannel::Defense:       EffectMagnitude = -Slot.Magnitude; break;                                // ArmorDelta
+	case EDFStatusChannel::Vulnerability: EffectMagnitude = 1.f + Slot.Magnitude; break;                           // DamageTakenFactor
+	case EDFStatusChannel::Thermal:
+	case EDFStatusChannel::Toxin:
+	{
+		UDFDamageContext* Damage = UDFDamageContext::Make(this,
+			Channel == EDFStatusChannel::Thermal ? DFTags::Damage_Type_Thermal : DFTags::Damage_Type_Toxin, FGameplayTag());
+		Damage->SetStatus(Row, StatusTag);
+		Damage->AttachTo(Context);
+		ChannelContexts[static_cast<int32>(Channel)] = Damage;
+		break;
+	}
+	default:
+		break;
+	}
+
+	FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(EffectClass, 1.f, Context);
+	if (!Spec.IsValid())
+	{
+		return;
+	}
+	Spec.Data->SetSetByCallerMagnitude(DFTags::SetByCaller_Magnitude, EffectMagnitude);
+	if (Channel == EDFStatusChannel::Thermal || Channel == EDFStatusChannel::Toxin)
+	{
+		// A fixed sim tick (Balance tickHz, 30): the period on the spec, and dps / tickHz as the
+		// base of each tick (the execution reads DF.SetByCaller.Damage, then the full order).
+		const float Period = 1.f / StatusTickHz;
+		Spec.Data->Period = Period;
+		Spec.Data->SetSetByCallerMagnitude(DFTags::SetByCaller_Damage, Slot.Magnitude * Period);
+	}
+	if (StatusTag.IsValid())
+	{
+		Spec.Data->DynamicGrantedTags.AddTag(StatusTag);
+	}
+	ChannelEffects[static_cast<int32>(Channel)] = ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data);
+}
+
+void UDFStatusComponent::RemoveChannelEffect(EDFStatusChannel Channel)
+{
+	FActiveGameplayEffectHandle& Handle = ChannelEffects[static_cast<int32>(Channel)];
+	if (Handle.IsValid())
+	{
+		if (UAbilitySystemComponent* ASC = GetASC())
+		{
+			ASC->RemoveActiveGameplayEffect(Handle);
+		}
+		Handle.Invalidate();
+	}
+	ChannelContexts[static_cast<int32>(Channel)] = nullptr;
+}
+
+void UDFStatusComponent::RetargetChannelEffect(EDFStatusChannel Channel, AActor* Source)
+{
+	const FActiveGameplayEffectHandle& Handle = ChannelEffects[static_cast<int32>(Channel)];
+	UAbilitySystemComponent* ASC = GetASC();
+	if (!Handle.IsValid() || !ASC)
+	{
+		return;
+	}
+	if (const FActiveGameplayEffect* Active = ASC->GetActiveGameplayEffect(Handle))
+	{
+		// Context handles share their FGameplayEffectContext: writing through a copy reaches the
+		// spec the periodic execution runs, so the next tick's instigator is the refresher.
+		FGameplayEffectContextHandle Context = Active->Spec.GetContext();
+		Context.AddInstigator(Source, Source);
+	}
+}
+
+void UDFStatusComponent::ApplyBurst(const FDFStatusApplyOutcome& Outcome, AActor* Source)
+{
+	UAbilitySystemComponent* ASC = GetASC();
+	float Burst = 0.f;
+	if (ASC && Outcome.BurstFraction > 0.f && ASC->HasAttributeSetForAttribute(UDFHealthSet::GetMaxHealthAttribute()))
+	{
+		Burst = ASC->GetNumericAttribute(UDFHealthSet::GetMaxHealthAttribute()) * Outcome.BurstFraction;
+		FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+		Context.AddInstigator(Source, Source);
+		// A burst has no aspect (it happens on the target) and goes through armor and shield
+		// like any other hit, as Step.cs Damage() did for reactions.
+		UDFDamageContext* Damage = UDFDamageContext::Make(this, FGameplayTag(), DFTags::Damage_Source_Reaction);
+		Damage->ReactionTag = DFTags::ForContentId(TEXT("DF.Reaction"), Outcome.ReactionId);
+		// Step.cs:1086 bursts `enemy.MaxHp * reaction.BurstFraction` — the reaction's own number.
+		// The reactor is the instigator (xp and credit), but none of its factors scale the burst.
+		Damage->bAppliesSourceFactors = false;
+		Damage->AttachTo(Context);
+		FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(UDFGE_Damage::StaticClass(), 1.f, Context);
+		if (Spec.IsValid())
+		{
+			Spec.Data->SetSetByCallerMagnitude(DFTags::SetByCaller_Damage, Burst);
+			ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data);
+		}
+	}
+
+	if (ASC)
+	{
+		const FGameplayTag Cue = DFGameplayLocalTags::ReactionCue(Outcome.ReactionId);
+		if (Cue.IsValid())
+		{
+			FGameplayCueParameters Params;
+			Params.Instigator = Source;
+			Params.RawMagnitude = Burst;
+			Params.NormalizedMagnitude = Outcome.BurstFraction;
+			UDFGameplayCueNotify_Base::RegisterNativeCues();   // heals a cue set the manager rebuilt (it Empty()s on re-init)
+			ASC->ExecuteGameplayCue(Cue, Params);
+		}
+	}
+	BroadcastStatus(DFTags::Message_ReactionTriggered, DFTags::ForContentId(TEXT("DF.Reaction"), Outcome.ReactionId), Outcome.ConsumedChannel, Burst, 0.f);
+	OnReactionTriggered.Broadcast(Outcome.ReactionId, Burst, Outcome);
+}
+
+void UDFStatusComponent::FireCue(FName StatusId, const TCHAR* Verb, float Magnitude, AActor* Source)
+{
+	UAbilitySystemComponent* ASC = GetASC();
+	if (!ASC)
+	{
+		return;
+	}
+	const FGameplayTag Cue = DFGameplayLocalTags::StatusCue(StatusId, Verb);
+	if (!Cue.IsValid())
+	{
+		return;
+	}
+	FGameplayCueParameters Params;
+	Params.Instigator = Source;
+	Params.RawMagnitude = Magnitude;
+	// Two O(1) map lookups when the families are registered (the common case); it re-adds them when
+	// the GameplayCueManager rebuilt its runtime library, which empties the set.
+	UDFGameplayCueNotify_Base::RegisterNativeCues();
+	ASC->ExecuteGameplayCue(Cue, Params);
+}
+
+void UDFStatusComponent::BroadcastStatus(const FGameplayTag& MessageTag, const FGameplayTag& StatusTag, EDFStatusChannel Channel, float Magnitude, float Duration)
+{
+	UDFMessageBus* Bus = UDFMessageBus::Get(this);
+	if (!Bus)
+	{
+		return;
+	}
+	FDFMsg_Status Msg;
+	Msg.TargetId = TargetId;
+	Msg.Status = StatusTag;
+	Msg.Channel = UDFGE_StatusBase::ChannelTag(Channel);
+	Msg.Magnitude = Magnitude;
+	Msg.Duration = Duration;
+	Bus->Broadcast(MessageTag, Msg);
+}
+
+void UDFStatusComponent::UpdateTintFromResolver(EDFStatusChannel Channel)
+{
+	UDFTintComponent* Tint = GetTint();
+	if (!Tint)
+	{
+		return;
+	}
+	const FDFStatusSlot& Slot = Resolver.Slot(Channel);
+	if (Slot.IsActive())
+	{
+		Tint->SetStatus(Channel, DFTags::ForContentId(TEXT("DF.Status"), Slot.StatusId), Slot.Magnitude);
+	}
+	else
+	{
+		Tint->ClearStatus(Channel);
+	}
+}
+
+void UDFStatusComponent::UpdateTintFromSlots()
+{
+	UDFTintComponent* Tint = GetTint();
+	if (!Tint)
+	{
+		return;
+	}
+	for (int32 I = 0; I < Slots.Num() && I < FDFStatusResolver::NumChannels; ++I)
+	{
+		const EDFStatusChannel Channel = static_cast<EDFStatusChannel>(I);
+		if (Slots[I].IsActive())
+		{
+			Tint->SetStatus(Channel, Slots[I].StatusTag, Slots[I].Magnitude);
+		}
+		else
+		{
+			Tint->ClearStatus(Channel);
+		}
+	}
+}
+
+void UDFStatusComponent::SyncSlots()
+{
+	bool bChanged = false;
+	for (int32 I = 0; I < FDFStatusResolver::NumChannels; ++I)
+	{
+		const FDFStatusSlot& S = Resolver.Slots[I];
+		FDFStatusSlotRep Rep;
+		if (S.IsActive())
+		{
+			Rep.StatusTag = DFTags::ForContentId(TEXT("DF.Status"), S.StatusId);
+			Rep.EndTimeServer = S.EndTime;
+			Rep.Magnitude = S.Magnitude;
+		}
+		if (!(Slots[I] == Rep))
+		{
+			Slots[I] = Rep;
+			bChanged = true;
+		}
+	}
+	if (bChanged)
+	{
+		MARK_PROPERTY_DIRTY_FROM_NAME(UDFStatusComponent, Slots, this);
+		OnSlotsChanged.Broadcast();
+	}
+}
+
+void UDFStatusComponent::OnRep_Slots()
+{
+	UpdateTintFromSlots();
+	OnSlotsChanged.Broadcast();
+}
+
+void UDFStatusComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	TArray<FDFStatusSlot> Expired;
+	Resolver.Tick(Now(), DeltaTime, &Expired);
+	for (const FDFStatusSlot& Gone : Expired)
+	{
+		OnSlotLeft(Gone.Channel, Gone.StatusId, /*bExpired*/ true);
+	}
+	if (Expired.Num() > 0)
+	{
+		SyncSlots();
+	}
+
+	if (UAbilitySystemComponent* ASC = GetASC())
+	{
+		if (ASC->HasAttributeSetForAttribute(UDFControlSet::GetCcResistAttribute()))
+		{
+			ASC->SetNumericAttributeBase(UDFControlSet::GetCcResistAttribute(), Resolver.CcResist);
+		}
+	}
+}

@@ -1,0 +1,32 @@
+{
+  "$schema": "deepfield-content/1",
+  "table": "vehicles",
+  "generated": "2026-09-17T07:21:16Z",
+  "sourceSha": "b44eea1",
+  "rows": [
+    {
+      "id": "buggy",
+      "seats": 2,
+      "boardRadiusMeters": 4,
+      "maxSpeedMetersPerSec": 16
+    },
+    {
+      "id": "dagator",
+      "seats": 2,
+      "boardRadiusMeters": 4,
+      "maxSpeedMetersPerSec": 15
+    },
+    {
+      "id": "grnmchn",
+      "seats": 1,
+      "boardRadiusMeters": 4,
+      "maxSpeedMetersPerSec": 11
+    },
+    {
+      "id": "vehickle",
+      "seats": 1,
+      "boardRadiusMeters": 4,
+      "maxSpeedMetersPerSec": 22
+    }
+  ]
+}

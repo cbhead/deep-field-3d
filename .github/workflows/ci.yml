@@ -3,7 +3,37 @@ name: ci
 on:
   push:
     branches: [main]
+    # The same paths as pull_request's below, for the reason given there. ADR-0029 made main the
+    # trunk for the Unreal work too, so every Unreal landing and ledger push now lands here; without
+    # the filter each one would run these frozen lanes, flaky smoke and all. Keep the two lists
+    # identical.
+    paths:
+      - 'game/**'
+      - 'sim/**'
+      - 'docs/**'
+      - 'tools/model-validate.py'
+      - 'tools/design-export.sh'
+      - 'tools/asset-report.sh'
+      - 'tools/map-validate.sh'
+      - '.github/workflows/ci.yml'
   pull_request:
+    # These lanes gate the Godot client and the C# sim, which are FROZEN (ADR-0005; `game/` is deleted
+    # at G3). They used to run on every pull request, including Unreal-only ones, where they can only
+    # report on code the PR did not touch — and the `smoke` lane is flaky there: the retired client
+    # SIGABRTs (exit 134) at Mono teardown with "Leaked unsafe reference" spam, so identical content
+    # failed at 04:52 and passed at 05:44 on 2026-09-21. A flaky gate over frozen code blocking work on
+    # the live code is pure tax, so the lanes now run only when something they actually cover changes.
+    # They are not disabled: touch game/, sim/ or the art contract and they run exactly as before.
+    # The flake itself is not worth fixing — G3 retires the client that produces it.
+    paths:
+      - 'game/**'
+      - 'sim/**'
+      - 'docs/**'
+      - 'tools/model-validate.py'
+      - 'tools/design-export.sh'
+      - 'tools/asset-report.sh'
+      - 'tools/map-validate.sh'
+      - '.github/workflows/ci.yml'
 
 jobs:
   # Fast lane: no engine. Sim.Core compiles standalone (a Godot type leaking

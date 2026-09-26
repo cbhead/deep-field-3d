@@ -1,0 +1,95 @@
+#include "Damage/DFDamageContext.h"
+
+#include "Content/DFContentRows.h"
+#include "Content/DFContentSubsystem.h"
+#include "DFBalanceDial.h"
+
+UDFDamageContext* UDFDamageContext::Make(UObject* Outer, const FGameplayTag& InDamageType, const FGameplayTag& InDamageSource)
+{
+	UDFDamageContext* Context = NewObject<UDFDamageContext>(Outer ? Outer : GetTransientPackage());
+	Context->DamageType = InDamageType;
+	Context->DamageSource = InDamageSource;
+	Context->ReadBalance(Outer);
+	return Context;
+}
+
+const UDFDamageContext* UDFDamageContext::FromContext(const FGameplayEffectContextHandle& Handle)
+{
+	return Handle.IsValid() ? Cast<UDFDamageContext>(Handle.GetSourceObject()) : nullptr;
+}
+
+void UDFDamageContext::AttachTo(FGameplayEffectContextHandle& Handle) const
+{
+	if (Handle.IsValid())
+	{
+		Handle.AddSourceObject(this);
+	}
+}
+
+void UDFDamageContext::SetSourceLocation(const FVector& InSourceLocation)
+{
+	bHasSourceLocation = true;
+	SourceLocation = InSourceLocation;
+}
+
+void UDFDamageContext::SetTargetArmor(const FDFEnemyRow& Row, const FVector& TargetForward)
+{
+	bHasTargetArmor = true;
+	TargetArmor.FrontArmorArcDegrees = Row.FrontArmorArcDegrees;
+	TargetArmor.FrontArmorFactor = Row.FrontArmorFactor;
+	TargetArmor.RearWeakFactor = Row.RearWeakFactor;
+	TargetArmor.Forward = TargetForward.GetSafeNormal();
+}
+
+void UDFDamageContext::SetAmmo(const FDFAmmoRow& Row)
+{
+	AmmoFactor = Row.DamageFactor;
+	UnarmoredBonusFactor = Row.UnarmoredBonusFactor;
+	bIgnoresFlatArmor = Row.bIgnoresFlatArmor;
+}
+
+void UDFDamageContext::SetStatus(const FDFStatusRow& Row, const FGameplayTag& InStatusTag)
+{
+	StatusTag = InStatusTag;
+	bIgnoresFlatArmor = Row.bIgnoresArmor;
+	bIgnoresShield = Row.bIgnoresShield;
+	// Step.cs UpdateStatuses damages with `def.DamagePerSecond * Balance.Dt` and nothing else —
+	// a tick is not a weapon hit, so the applier's build factors never reach it.
+	bAppliesSourceFactors = false;
+}
+
+void UDFDamageContext::ReadBalance(const UObject* WorldContext)
+{
+	// Only when every table is loaded: an un-imported project is a normal state, and the defaults
+	// are the sim's own numbers (ContentTypes.cs:64, Step.cs Damage()). DFBalance::Dial warns once
+	// per process for a dial the table lacks and returns the default — the RFC asks for the three.
+	RearThresholdDegrees = DFBalance::Dial(WorldContext, TEXT("rearThresholdDegrees"), RearThresholdDegrees);
+	ShredFrontArcLeakFactor = DFBalance::Dial(WorldContext, TEXT("shredFrontArcLeakFactor"), ShredFrontArcLeakFactor);
+	PostArmorDamageFloor = DFBalance::Dial(WorldContext, TEXT("postArmorDamageFloor"), PostArmorDamageFloor);
+}
+
+void UDFDamageContext::FillInput(FDFDamageInput& In, const FVector& TargetLocation, const FDFArmorProfile* TargetProfile) const
+{
+	In.AmmoFactor = AmmoFactor;
+	In.UnarmoredBonusFactor = UnarmoredBonusFactor;
+	In.WeakPointFactor = WeakPointFactor;
+	In.PackAPunchFactor = PackAPunchFactor;
+	In.bIgnoresFlatArmor = bIgnoresFlatArmor;
+	In.bIgnoresShield = bIgnoresShield;
+	In.RearThresholdDegrees = RearThresholdDegrees;
+	In.ShredFrontArcLeakFactor = ShredFrontArcLeakFactor;
+	In.PostArmorDamageFloor = PostArmorDamageFloor;
+
+	const FDFArmorProfile* Profile = bHasTargetArmor ? &TargetArmor : TargetProfile;
+	if (Profile)
+	{
+		In.FrontArmorArcDegrees = Profile->FrontArmorArcDegrees;
+		In.FrontArmorFactor = Profile->FrontArmorFactor;
+		In.RearWeakFactor = Profile->RearWeakFactor;
+		if (bHasSourceLocation)
+		{
+			In.bHasHitDirection = true;
+			In.HitDot = FDFDamageMath::HitDot(SourceLocation, TargetLocation, Profile->Forward);
+		}
+	}
+}

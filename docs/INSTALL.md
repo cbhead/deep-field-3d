@@ -4,20 +4,31 @@
 
 ## Players (friends joining a match)
 
-1. Download the latest release for your OS from the Releases page
+1. Download the latest release for your OS from the
+   [Releases page](https://github.com/cbhead/deep-field-3d/releases)
    (`DeepField3D-mac.zip` or `DeepField3D-windows.zip`).
 2. Unzip. On macOS the app is unsigned: **right-click → Open** the first time
    (Gatekeeper), then it opens normally.
 3. Launch → enter your name → pick a faction (one per player — coordinate) →
    paste the host's Tailscale IP into JOIN.
 4. You need to be on the host's tailnet. They'll send you a Tailscale invite if
-   you aren't; install Tailscale, accept, done.
+   you aren't; install Tailscale ([tailscale.com/download](https://tailscale.com/download)),
+   accept, done.
 
 If you see "version mismatch" the host has a newer/older release — both grab
 the latest and rejoin. Mid-match joining is fine; you'll drop in at the next
 intermission with catch-up scrap.
 
 ## Developer setup (macOS)
+
+Download pages for everything below:
+[.NET 8 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) ·
+[Godot 4.7.2 mono (C#)](https://github.com/godotengine/godot/releases/tag/4.7.2-stable)
+(other versions: [godotengine.org/download](https://godotengine.org/download/)) ·
+[Node.js](https://nodejs.org/en/download) ·
+[Homebrew](https://brew.sh) ·
+[GNU make formula](https://formulae.brew.sh/formula/make) ·
+[Git](https://git-scm.com/downloads).
 
 1. **.NET 8 SDK** (user-local, no sudo):
    ```sh
@@ -31,7 +42,7 @@ intermission with catch-up scrap.
    unzip -o /tmp/godot-mono.zip -d ~/Applications/
    ```
    (Or `brew install --cask godot-mono dotnet-sdk` if you're fine with sudo.)
-3. **Node 22+** — only for `make design-export`, which rebuilds the models from
+3. **[Node 22+](https://nodejs.org/en/download)** — only for `make design-export`, which rebuilds the models from
    Claude Design's sources in `docs/design/` (see docs/ART-INTEGRATION.md). Not
    needed to build or play.
 4. **GNU make** (this machine's Xcode CLT shim is broken; brew's make sidesteps it):
@@ -41,8 +52,8 @@ intermission with catch-up scrap.
    ```
 5. Clone and verify:
    ```sh
-   git clone <repo> deepfield-3d && cd deepfield-3d
-   make check           # sim build + unit tests + harness gates + game build
+   git clone https://github.com/cbhead/deep-field-3d.git deepfield-3d && cd deepfield-3d
+   make check           # sim build, unit tests, harness gates, model validation, game build, asset audit
    ./play               # windowed game (controls in the README)
    ./play --headless -- --solo foundry   # headless match, for smoke-testing
    ```
@@ -53,6 +64,15 @@ intermission with catch-up scrap.
 refusal of engine flags placed after `--`. They look for the tools where the
 steps below put them, fall back to whatever is on PATH, and take
 `$env:DOTNET` / `$env:GODOT` overrides.
+
+Download pages for everything below:
+[.NET 8 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) ·
+[Godot 4.7.2 mono (C#)](https://github.com/godotengine/godot/releases/tag/4.7.2-stable)
+(other versions: [godotengine.org/download](https://godotengine.org/download/)) ·
+[Node.js](https://nodejs.org/en/download) ·
+[Git for Windows](https://git-scm.com/downloads/win) (includes Git Bash) ·
+[WSL](https://learn.microsoft.com/en-us/windows/wsl/install) ·
+[winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/).
 
 1. **.NET 8 SDK**:
    ```powershell
@@ -68,10 +88,10 @@ steps below put them, fall back to whatever is on PATH, and take
    ```
    (The zip unpacks into a `Godot_v4.7.2-stable_mono_win64\` folder; move the
    `.exe` and its `GodotSharp\` folder up one level, or point `$env:GODOT` at it.)
-3. **Node 22+** — optional, for `make design-export` only.
+3. **[Node 22+](https://nodejs.org/en/download)** — optional, for `make design-export` only.
 4. Clone and verify:
    ```powershell
-   git clone <repo> deepfield-3d; cd deepfield-3d
+   git clone https://github.com/cbhead/deep-field-3d.git deepfield-3d; cd deepfield-3d
    dotnet build sim\Sim.Core; dotnet test; dotnet run --project sim\Sim.Harness
    .\play.cmd                                  # windowed game
    .\play.cmd --headless -- --solo foundry     # headless match
@@ -89,8 +109,8 @@ shell regardless of PATH; `make run` does the same but needs the PATH line above
 | `sim/Sim.Core` | The pure headless sim — no Godot references, ever |
 | `sim/Sim.Harness` | Gate suite + PlayerBot + match runner (`make gates`) |
 | `sim/Sim.Core.Tests` | xUnit unit tests |
-| `game/` | Godot 4 client (graybox M0) |
+| `game/` | Godot 4 client (frozen; retires at G3 — see the README) |
 
 ## Server hosting
 
-Arrives at M1 (dedicated server export + Tailscale invite links + runbook).
+See [RUNBOOK-match-night.md](RUNBOOK-match-night.md).

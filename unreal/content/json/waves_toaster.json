@@ -1,0 +1,323 @@
+{
+  "$schema": "deepfield-content/1",
+  "table": "waves_toaster",
+  "generated": "2026-09-17T07:21:16Z",
+  "sourceSha": "b44eea1",
+  "rows": [
+    {
+      "id": "w01g01",
+      "waveIndex": 0,
+      "enemyId": "drifter",
+      "count": 6,
+      "spacingTicks": 26,
+      "startDelayTicks": 0,
+      "routeId": "direct"
+    },
+    {
+      "id": "w02g01",
+      "waveIndex": 1,
+      "enemyId": "drifter",
+      "count": 8,
+      "spacingTicks": 22,
+      "startDelayTicks": 0,
+      "routeId": "direct"
+    },
+    {
+      "id": "w02g02",
+      "waveIndex": 1,
+      "enemyId": "mote",
+      "count": 8,
+      "spacingTicks": 8,
+      "startDelayTicks": 130,
+      "routeId": "direct"
+    },
+    {
+      "id": "w03g01",
+      "waveIndex": 2,
+      "enemyId": "drifter",
+      "count": 5,
+      "spacingTicks": 26,
+      "startDelayTicks": 0,
+      "routeId": "long"
+    },
+    {
+      "id": "w03g02",
+      "waveIndex": 2,
+      "enemyId": "drifter",
+      "count": 4,
+      "spacingTicks": 24,
+      "startDelayTicks": 200,
+      "routeId": "direct"
+    },
+    {
+      "id": "w04g01",
+      "waveIndex": 3,
+      "enemyId": "skiff",
+      "count": 4,
+      "spacingTicks": 40,
+      "startDelayTicks": 0,
+      "routeId": "air"
+    },
+    {
+      "id": "w04g02",
+      "waveIndex": 3,
+      "enemyId": "drifter",
+      "count": 6,
+      "spacingTicks": 24,
+      "startDelayTicks": 60,
+      "routeId": "direct"
+    },
+    {
+      "id": "w05g01",
+      "waveIndex": 4,
+      "enemyId": "aegis",
+      "count": 2,
+      "spacingTicks": 90,
+      "startDelayTicks": 0,
+      "routeId": "west"
+    },
+    {
+      "id": "w05g02",
+      "waveIndex": 4,
+      "enemyId": "drifter",
+      "count": 6,
+      "spacingTicks": 22,
+      "startDelayTicks": 40,
+      "routeId": "direct"
+    },
+    {
+      "id": "w06g01",
+      "waveIndex": 5,
+      "enemyId": "monolith",
+      "count": 1,
+      "spacingTicks": 0,
+      "startDelayTicks": 0,
+      "routeId": "direct"
+    },
+    {
+      "id": "w06g02",
+      "waveIndex": 5,
+      "enemyId": "mote",
+      "count": 10,
+      "spacingTicks": 10,
+      "startDelayTicks": 30,
+      "routeId": "direct"
+    },
+    {
+      "id": "w06g03",
+      "waveIndex": 5,
+      "enemyId": "drifter",
+      "count": 5,
+      "spacingTicks": 24,
+      "startDelayTicks": 90,
+      "routeId": "long"
+    },
+    {
+      "id": "w07g01",
+      "waveIndex": 6,
+      "enemyId": "warden",
+      "count": 2,
+      "spacingTicks": 80,
+      "startDelayTicks": 0,
+      "routeId": "west"
+    },
+    {
+      "id": "w07g02",
+      "waveIndex": 6,
+      "enemyId": "mole",
+      "count": 3,
+      "spacingTicks": 50,
+      "startDelayTicks": 60,
+      "routeId": "direct"
+    },
+    {
+      "id": "w08g01",
+      "waveIndex": 7,
+      "enemyId": "shade",
+      "count": 2,
+      "spacingTicks": 70,
+      "startDelayTicks": 0,
+      "routeId": "west"
+    },
+    {
+      "id": "w08g02",
+      "waveIndex": 7,
+      "enemyId": "drifter",
+      "count": 6,
+      "spacingTicks": 22,
+      "startDelayTicks": 60,
+      "routeId": "long"
+    },
+    {
+      "id": "w08g03",
+      "waveIndex": 7,
+      "enemyId": "mote",
+      "count": 6,
+      "spacingTicks": 9,
+      "startDelayTicks": 140,
+      "routeId": "direct"
+    },
+    {
+      "id": "w09g01",
+      "waveIndex": 8,
+      "enemyId": "cluster",
+      "count": 3,
+      "spacingTicks": 60,
+      "startDelayTicks": 0,
+      "routeId": "long"
+    },
+    {
+      "id": "w09g02",
+      "waveIndex": 8,
+      "enemyId": "skiff",
+      "count": 4,
+      "spacingTicks": 34,
+      "startDelayTicks": 40,
+      "routeId": "air"
+    },
+    {
+      "id": "w09g03",
+      "waveIndex": 8,
+      "enemyId": "drifter",
+      "count": 6,
+      "spacingTicks": 20,
+      "startDelayTicks": 120,
+      "routeId": "direct"
+    },
+    {
+      "id": "w10g01",
+      "waveIndex": 9,
+      "enemyId": "mender",
+      "count": 1,
+      "spacingTicks": 0,
+      "startDelayTicks": 0,
+      "routeId": "direct"
+    },
+    {
+      "id": "w10g02",
+      "waveIndex": 9,
+      "enemyId": "warden",
+      "count": 2,
+      "spacingTicks": 80,
+      "startDelayTicks": 40,
+      "routeId": "direct"
+    },
+    {
+      "id": "w10g03",
+      "waveIndex": 9,
+      "enemyId": "aegis",
+      "count": 2,
+      "spacingTicks": 90,
+      "startDelayTicks": 120,
+      "routeId": "west"
+    },
+    {
+      "id": "w11g01",
+      "waveIndex": 10,
+      "enemyId": "ram",
+      "count": 1,
+      "spacingTicks": 0,
+      "startDelayTicks": 0,
+      "routeId": "direct"
+    },
+    {
+      "id": "w11g02",
+      "waveIndex": 10,
+      "enemyId": "cluster",
+      "count": 2,
+      "spacingTicks": 60,
+      "startDelayTicks": 80,
+      "routeId": "west"
+    },
+    {
+      "id": "w11g03",
+      "waveIndex": 10,
+      "enemyId": "drifter",
+      "count": 8,
+      "spacingTicks": 16,
+      "startDelayTicks": 120,
+      "routeId": "long"
+    },
+    {
+      "id": "w11g04",
+      "waveIndex": 10,
+      "enemyId": "skiff",
+      "count": 4,
+      "spacingTicks": 30,
+      "startDelayTicks": 200,
+      "routeId": "air"
+    },
+    {
+      "id": "w12g01",
+      "waveIndex": 11,
+      "enemyId": "monolith",
+      "count": 2,
+      "spacingTicks": 180,
+      "startDelayTicks": 0,
+      "routeId": "direct"
+    },
+    {
+      "id": "w12g02",
+      "waveIndex": 11,
+      "enemyId": "aegis",
+      "count": 2,
+      "spacingTicks": 90,
+      "startDelayTicks": 60,
+      "routeId": "west"
+    },
+    {
+      "id": "w12g03",
+      "waveIndex": 11,
+      "enemyId": "cluster",
+      "count": 3,
+      "spacingTicks": 55,
+      "startDelayTicks": 100,
+      "routeId": "long"
+    },
+    {
+      "id": "w12g04",
+      "waveIndex": 11,
+      "enemyId": "warden",
+      "count": 2,
+      "spacingTicks": 80,
+      "startDelayTicks": 140,
+      "routeId": "direct"
+    },
+    {
+      "id": "w12g05",
+      "waveIndex": 11,
+      "enemyId": "shade",
+      "count": 2,
+      "spacingTicks": 70,
+      "startDelayTicks": 180,
+      "routeId": "west"
+    },
+    {
+      "id": "w12g06",
+      "waveIndex": 11,
+      "enemyId": "mender",
+      "count": 1,
+      "spacingTicks": 0,
+      "startDelayTicks": 220,
+      "routeId": "direct"
+    },
+    {
+      "id": "w12g07",
+      "waveIndex": 11,
+      "enemyId": "skiff",
+      "count": 4,
+      "spacingTicks": 28,
+      "startDelayTicks": 240,
+      "routeId": "air"
+    },
+    {
+      "id": "w12g08",
+      "waveIndex": 11,
+      "enemyId": "mote",
+      "count": 8,
+      "spacingTicks": 9,
+      "startDelayTicks": 300,
+      "routeId": "direct"
+    }
+  ]
+}

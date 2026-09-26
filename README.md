@@ -1,69 +1,64 @@
 # Deep Field 3D
 
-First-person co-op tower defense (1–4 players, self-hosted over Tailscale).
-The 3D rebuild of [deep-field-td](https://github.com/cbhead/deep-field-td):
-Bloons-depth counters and machine-swept balance, Sanctum-style build-and-shoot.
+First-person co-op tower defense for 1–4 players: Bloons-depth counters and machine-swept balance,
+with Sanctum-style build-and-shoot. It is the 3D rebuild of
+[deep-field-td](https://github.com/cbhead/deep-field-td).
 
-**Status: M4 in progress.** Four maps, ten enemies, eight towers, five factions,
-and the full design system worn across all sixteen UI surfaces — Claude Design's
-547 models and 65 icons replacing the graybox everywhere the code reaches,
-turrets driven on design's yaw/pitch rigs.
-Information warfare has landed: stealth and healing enemies, the Detector and
-Filament towers, poison and detection channels, and Night/Fog conditions.
-The Toaster adds the three things a farm three fields wide needs: routes with
-warp gates that throw a wave across the property mid-walk, four drivable
-vehicles whose handling is read off the road under them, and a network of
-teleport pads for the player — and its kit has landed: instanced terrain,
-roads and treeline, four enterable houses, the four vehicle rigs, the warp
-gate. The weapons were rebuilt to the hero standard in the same drop, and
-reloads now play on the delivered magazines and off-hand poses.
-The effects layer landed with it: every status, reaction, ability, wave beat
-and tower moment in design's VFX set is drawn now, on the enemy or the pad or
-the portal it belongs to, and the only two files left on the shelf are waiting
-on a tower and a map element that do not exist yet.
-61 harness gates + 112 unit tests green.
+This branch, `main`, holds two things:
 
-Design's spec is the source of truth for colour ([docs/PALETTE.md](docs/PALETTE.md));
-the delivery contract and its gotchas are in
-[docs/ART-INTEGRATION.md](docs/ART-INTEGRATION.md).
+- **The Unreal Engine 5.8 rebuild (active).** It targets the Epic Games Store with Epic Online
+  Services, is built on the Windows GPU workstation, and Windows is its only platform (ADR-0028).
+  It moved onto `main` on 2026-09-26 (ADR-0029); `unreal/main`, where it was built until then, is
+  frozen.
+- **The Godot 4 client it replaces (frozen).** It retires at gate G3, when `game/` is deleted.
+
+## The Unreal rebuild
+
+| To… | Read |
+|---|---|
+| set up the machine, build, test, play or package | **[unreal/README.md](unreal/README.md)**, the runbook. On Windows it is one script: `unreal\deepfield.cmd setup`, or the one-line bootstrap in the runbook on a machine with nothing on it yet. |
+| see where it stands and what to pick up | [unreal/PLAN/NEXT.md](unreal/PLAN/NEXT.md), then [STATUS.md](unreal/PLAN/STATUS.md) |
+| claim work and coordinate with other sessions | [unreal/PLAN/README.md](unreal/PLAN/README.md) |
+| understand the plan, the architecture and the specs | [unreal/PLAN/PROGRAMME.md](unreal/PLAN/PROGRAMME.md), with the decisions in [DECISIONS.md](unreal/PLAN/DECISIONS.md) |
+
+| Path | What |
+|---|---|
+| `unreal/` | the Unreal project (`DeepField/`), its text content source (`content/`), build scripts and CI checks (`Build/`), and the programme ledger (`PLAN/`) |
+| `sim/` | the C# sim: the Godot client's engine, and now the frozen written spec for the rebuild's rules |
+| `tools/` | the content export from the sim, the terrain tooling, and the Claude Design export |
+| `docs/` | the Godot-era design and art documents, plus data the rebuild reads (`palette.json`, `gate-baseline.tsv`) |
+| `game/` | the frozen Godot client |
+
+## The Godot client (frozen)
+
+The client that shipped M0–M4: four maps, ten enemies, eight towers and five factions over ENet,
+self-hosted on [Tailscale](https://tailscale.com/download), wearing Claude Design's models and full design system. It is frozen: its CI
+lane still runs when `game/`, `sim/` or `docs/` change, but no new work goes into it.
+
+- **Install, play and verify:** [docs/INSTALL.md](docs/INSTALL.md) (prerequisites with download links, `./play`, `.\play.cmd`, `make check`).
+- **Hosting a match night:** [docs/RUNBOOK-match-night.md](docs/RUNBOOK-match-night.md).
+- **Colour** follows design's spec ([docs/PALETTE.md](docs/PALETTE.md)); the art delivery contract and
+  its gotchas are in [docs/ART-INTEGRATION.md](docs/ART-INTEGRATION.md). Design's models are generated,
+  not hand-delivered: `make design-export` rebuilds them from the three.js sources in `docs/design/`.
 
 ### For Claude Design — read this first
 
-**What to build next is always the open forward manifest.** One per outstanding
-piece of work, each a request list rather than a change log, each written
-against a thing that already runs so its numbers are measured rather than
-proposed:
+**What to build next is always the open forward manifest.** There is one per outstanding piece of
+work. Each is a request list rather than a change log, and each is written against something that
+already runs, so its numbers are measured rather than proposed:
 
 | | |
 |---|---|
-| **[docs/FORWARD-MANIFEST-hero.md](docs/FORWARD-MANIFEST-hero.md)** | **open — after the 2026-09-12 drop.** Share the hero texture set instead of embedding it twenty-four times, a world model that is not the viewmodel, rifle and tool hands to the hero standard, and the Toaster's lane module. |
-| [docs/FORWARD-MANIFEST-toaster.md](docs/FORWARD-MANIFEST-toaster.md) | **delivered 2026-09-12** — the whole kit for sector 4 landed and the map runs on it; kept as the record of what was asked and why |
-| [docs/FORWARD-MANIFEST-switchyard.md](docs/FORWARD-MANIFEST-switchyard.md) | open — separating what repeats from what punctuates, and the turnout, headwall, overbridge and portal that map still grayboxes |
-| [docs/FORWARD-MANIFEST-reload.md](docs/FORWARD-MANIFEST-reload.md) | open — magazines that exist off the gun, off-hand poses, and turret elevation |
+| **[docs/FORWARD-MANIFEST-hero.md](docs/FORWARD-MANIFEST-hero.md)** | **open — after the 2026-09-12 drop.** Share the hero texture set instead of embedding it twenty-four times, a world model that is not the viewmodel, and rifle and tool hands to the hero standard. (Its fifth ask, the Toaster's lane module, was delivered 2026-09-13.) |
+| [docs/FORWARD-MANIFEST-switchyard.md](docs/FORWARD-MANIFEST-switchyard.md) | open — separating what repeats from what punctuates, and the turnout, headwall, overbridge and portal that the map still grayboxes |
 | [docs/FORWARD-MANIFEST-vfx.md](docs/FORWARD-MANIFEST-vfx.md) | open — three effects the code calls by name and gets nothing back for: the third reaction, and the two factions whose abilities were never drawn |
+| [docs/FORWARD-MANIFEST-reload.md](docs/FORWARD-MANIFEST-reload.md) | **mostly delivered 2026-09-11** — magazines off the gun, off-hand poses and turret elevation landed. Still open: Ask D, the `poisonStream` and `cryoSprayer` viewmodels. |
+| [docs/FORWARD-MANIFEST-toaster.md](docs/FORWARD-MANIFEST-toaster.md) | **delivered 2026-09-12** — the whole kit for sector 4 landed and the map runs on it; kept as the record of what was asked and why |
 
-Before any of them, [docs/MAP-AUTHORING.md](docs/MAP-AUTHORING.md): what a map
-is allowed to be, what the sim can and cannot model, and the rules every map is
-measured against. `docs/DESIGN-BRIEF.md` §3 is the standing name list — a model
-is requested by the exact name it carries there, and a wrong name is a silent
-graybox rather than an error.
-
-## Play
-
-```sh
-./play                                   # windowed
-./play --headless -- --server            # dedicated server (add --map switchyard)
-```
-
-`./play` is self-contained (absolute paths to dotnet + Godot) and works from any
-shell; on Windows, `.\play.cmd` takes the same flags. `make run` does the same
-if your PATH is set up — see [docs/INSTALL.md](docs/INSTALL.md).
-
-**Host** opens a party: the lobby stays up with a seats row while friends join
-and pick factions, and the match starts on **Launch**. **Endless** is a toggle
-on the sector — the authored waves cycle with hp and numbers still climbing,
-the HUD shows the threat multiplier and your best wave, and the run ends when
-the core does.
+Before any of them, read [docs/MAP-AUTHORING.md](docs/MAP-AUTHORING.md): what a map is allowed to be,
+what the sim can and cannot model, and the rules every map is measured against. `docs/DESIGN-BRIEF.md`
+§3 is the standing name list. A model is requested by the exact name it carries there, and a wrong
+name is a silent graybox rather than an error.
 
 ### Controls
 
@@ -80,35 +75,6 @@ the core does.
 | **E** at a vehicle · **hold E** to take the passenger seat | drive with WASD or the arrows, **Space** handbrake, **E** to get out |
 | **hold E** on a teleport pad | pick a destination from the network; stand still for the charge |
 
-## What's in it
-
-- **Sim** (`sim/Sim.Core`) — pure C#, zero Godot references (CI enforces it):
-  deterministic 30 Hz tick, seeded wave plans, status channels with reactions,
-  scrap economy, faction abilities, full-world serialization.
-- **Harness** (`sim/Sim.Harness`) — the gate suite and PlayerBot sweeps. No
-  engine boot, so a full campaign runs in milliseconds.
-- **Client** (`game/`) — Godot 4.7 + C#: FPS controller, four run modes
-  (solo/host/dedicated/client), ENet netcode with drop-in join, and the UI in
-  `game/scripts/ui/`.
-
-## Verify
-
-```sh
-make check    # sim build + unit tests + harness gates + game build
-make assets   # art delivered vs what the design brief names
-make usage    # what the game actually consumes (docs/ASSET-USAGE.md)
-```
-
-Design's models are generated, not hand-delivered: the three.js sources live in
-`docs/design/` and `make design-export` rebuilds every GLB, icon and manifest
-from them (see [docs/ART-INTEGRATION.md](docs/ART-INTEGRATION.md)).
-
-```sh
-./play -- --shot foundry /tmp/shot.png   # render a frame, for reviewing art
-```
-
-CI additionally exports the game headless and runs two smoke lanes: a dedicated
-server with a client joining it, and a real solo match on each map.
-
-The full build plan (architecture, netcode, milestones M0–M5) lives in the
-project plan; `docs/RUNBOOK-match-night.md` covers hosting.
+**Host** opens a party: the lobby stays up with a seats row while friends join and pick factions, and
+the match starts on **Launch**. **Endless** is a toggle on the sector: the authored waves cycle with hp
+and numbers still climbing, and the run ends when the core does.
