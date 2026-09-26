@@ -22,6 +22,7 @@ $ref ("#/$defs/<name>").
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sys
@@ -344,6 +345,16 @@ def validate_terrain(only: set) -> int:
             elif prio[ref] >= layer.get("priority", 50):
                 errors.append(f"{name}: noise {layer.get('id')!r} masks by {ref!r}, whose priority {prio[ref]} is not below the layer's {layer.get('priority', 50)}")
         failed += report(name, errors, f"{len(features)} features")
+        # The generated heightmap is what DFTerrainImport reads. It is LFS and WS-30's lane, so a
+        # spec change can land before it is regenerated; say so loudly, but it is not a schema error.
+        built = TERRAIN_DIR / "out" / f"{map_id}_height.json"
+        if built.exists():
+            want = hashlib.sha256(path.read_bytes()).hexdigest()
+            have = json.loads(built.read_text()).get("sourceSha256")
+            if have != want:
+                print(f"warn {built.relative_to(CONTENT).as_posix()} was built from another {path.name} "
+                      f"(sourceSha256 {str(have)[:12]}…, spec is {want[:12]}…): the outputs are stale; "
+                      f"run python3 tools/ue-bridge/terrain/build_heightmap.py {map_id} before -run=DFTerrainImport")
     return failed
 
 

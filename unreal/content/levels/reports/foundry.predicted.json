@@ -1,0 +1,2403 @@
+{
+ "air": [
+  {
+   "edge": "airGate-airCore",
+   "ifStraightBetweenWaypoints": {
+    "minClearanceMetres": 8.4,
+    "worstAglDeviationMetres": 0.88
+   },
+   "lengthMetres": 124.27,
+   "minAglMetres": 9.0
+  }
+ ],
+ "boss": {
+  "maxGradePercent": 13.57,
+  "nests": [
+   {
+    "id": "deckRoof",
+    "overlookFraction": 0.827
+   }
+  ],
+  "routeId": "boss",
+  "via": [
+   "westGate-pitFloor",
+   "pitFloor-haulBend",
+   "haulBend-landing",
+   "landing-core"
+  ],
+  "warpLegs": []
+ },
+ "deadSegments": [],
+ "grades": [
+  {
+   "edge": "westGate-pitFloor",
+   "hastenedMetres": 0.0,
+   "lengthMetres": 8.0,
+   "maxGradePercent": 0.0,
+   "rise": 0.0,
+   "slowedMetres": 0.0
+  },
+  {
+   "edge": "pitFloor-climbTop",
+   "hastenedMetres": 0.0,
+   "lengthMetres": 12.37,
+   "maxGradePercent": 25.0,
+   "rise": 3.0,
+   "slowedMetres": 12.0
+  },
+  {
+   "edge": "climbTop-landing",
+   "hastenedMetres": 0.0,
+   "lengthMetres": 3.0,
+   "maxGradePercent": 0.0,
+   "rise": 0.0,
+   "slowedMetres": 0.0
+  },
+  {
+   "edge": "landing-core",
+   "hastenedMetres": 0.0,
+   "lengthMetres": 146.17,
+   "maxGradePercent": 13.57,
+   "rise": -18.5,
+   "slowedMetres": 0.0
+  },
+  {
+   "edge": "pitFloor-haulBend",
+   "hastenedMetres": 0.0,
+   "lengthMetres": 16.9,
+   "maxGradePercent": 10.05,
+   "rise": 0.99,
+   "slowedMetres": 0.0
+  },
+  {
+   "edge": "haulBend-landing",
+   "hastenedMetres": 0.0,
+   "lengthMetres": 27.1,
+   "maxGradePercent": 10.09,
+   "rise": 2.01,
+   "slowedMetres": 0.0
+  }
+ ],
+ "inputs": {
+  "assumed": {
+   "novaGravity": 9.81,
+   "novaSpeed": 14.0
+  },
+  "levelSha256": "d6c04dd85ac222ef9106c1d15ae77d721628be3465d64a4cd04a75ff50fabc90",
+  "terrainSha256": "b3fa46aa3dd4fda7b2d57c107de5fdfd37e9254eeea6a455f75cd1a9d2331f64"
+ },
+ "map": "foundry",
+ "note": "PREDICTED by tools/ue-bridge/terrain/predict_level.py from the terrain spec alone (no decks, no dressing, no pad cut, no navmesh). The engine's reports/<map>.coverage.json is the measurement; this is the design target it should reproduce.",
+ "rules": {
+  "padGroundSlope": [],
+  "socketOffset": [],
+  "spawnApron": [],
+  "spawnShadowTerrainOnly": [
+   "g1 sees spawn westGate (12.3 m)",
+   "g2 sees spawn westGate (17.4 m)",
+   "g3 sees spawn westGate (20.5 m)",
+   "g4 sees spawn westGate (22.6 m)",
+   "g5 sees spawn westGate (26.5 m)",
+   "g7 sees spawn westGate (26.2 m)",
+   "g8 sees spawn westGate (29.6 m)",
+   "g9 sees spawn westGate (34.2 m)",
+   "g10 sees spawn westGate (48.4 m)",
+   "g11 sees spawn westGate (31.9 m)"
+  ]
+ },
+ "segments": [
+  {
+   "apron": true,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g1"
+   ],
+   "edge": "westGate-pitFloor",
+   "layer": "ground",
+   "positionMetres": [
+    -48.0,
+    13.0,
+    28.0
+   ],
+   "t": 0.25
+  },
+  {
+   "apron": true,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g1",
+    "g3"
+   ],
+   "edge": "westGate-pitFloor",
+   "layer": "ground",
+   "positionMetres": [
+    -44.0,
+    13.0,
+    28.0
+   ],
+   "t": 0.75
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g1",
+    "g3",
+    "g4"
+   ],
+   "edge": "pitFloor-climbTop",
+   "layer": "ground",
+   "positionMetres": [
+    -40.06,
+    13.49,
+    28.0
+   ],
+   "t": 0.1617
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g3",
+    "g4",
+    "g5"
+   ],
+   "edge": "pitFloor-climbTop",
+   "layer": "ground",
+   "positionMetres": [
+    -36.18,
+    14.46,
+    28.0
+   ],
+   "t": 0.4851
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g3",
+    "g4",
+    "g5"
+   ],
+   "edge": "pitFloor-climbTop",
+   "layer": "ground",
+   "positionMetres": [
+    -32.3,
+    15.43,
+    28.0
+   ],
+   "t": 0.8085
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g3",
+    "g4",
+    "g5"
+   ],
+   "edge": "pitFloor-climbTop",
+   "layer": "ground",
+   "positionMetres": [
+    -30.0,
+    16.0,
+    28.0
+   ],
+   "t": 1.0
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g3",
+    "g4",
+    "g5"
+   ],
+   "edge": "climbTop-landing",
+   "layer": "ground",
+   "positionMetres": [
+    -28.0,
+    16.0,
+    28.0
+   ],
+   "t": 0.6667
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g3",
+    "g4",
+    "g5"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    -25.0,
+    16.0,
+    28.0
+   ],
+   "t": 0.0137
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g3",
+    "g4",
+    "g5"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    -22.1,
+    15.6,
+    25.72
+   ],
+   "t": 0.041
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g3",
+    "g4",
+    "g5"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    -19.56,
+    15.06,
+    22.67
+   ],
+   "t": 0.0684
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g3",
+    "g4",
+    "g5"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    -19.0,
+    14.52,
+    18.91
+   ],
+   "t": 0.0958
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g3",
+    "g6",
+    "g9"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    -19.0,
+    13.99,
+    14.95
+   ],
+   "t": 0.1231
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g3",
+    "g6",
+    "g8",
+    "g9",
+    "g10"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    -19.0,
+    13.45,
+    10.98
+   ],
+   "t": 0.1505
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [
+    "g8"
+   ],
+   "coveringSockets": [
+    "g6",
+    "g9",
+    "g10"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    -19.0,
+    12.92,
+    7.02
+   ],
+   "t": 0.1779
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [
+    "g8"
+   ],
+   "coveringSockets": [
+    "g6",
+    "g9",
+    "g10",
+    "w9"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    -19.0,
+    12.38,
+    3.05
+   ],
+   "t": 0.2052
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [
+    "g8"
+   ],
+   "coveringSockets": [
+    "g6",
+    "g9",
+    "g10",
+    "w8",
+    "w9",
+    "w10"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    -19.0,
+    11.85,
+    -0.91
+   ],
+   "t": 0.2326
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g6",
+    "g9",
+    "g10",
+    "w1",
+    "w8",
+    "w9",
+    "w10"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    -19.0,
+    11.31,
+    -4.87
+   ],
+   "t": 0.26
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [
+    "g9",
+    "g10"
+   ],
+   "coveringSockets": [
+    "w1",
+    "w2",
+    "w8",
+    "w9",
+    "w10"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    -19.0,
+    10.78,
+    -8.84
+   ],
+   "t": 0.2873
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "w1",
+    "w2",
+    "w8",
+    "w9",
+    "w10"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    -19.0,
+    10.25,
+    -12.8
+   ],
+   "t": 0.3147
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "w1",
+    "w2",
+    "w8",
+    "w9",
+    "w10"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    -19.0,
+    9.71,
+    -16.77
+   ],
+   "t": 0.3421
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "w1",
+    "w2",
+    "w9",
+    "w10"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    -19.0,
+    9.18,
+    -20.73
+   ],
+   "t": 0.3694
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "w1",
+    "w2",
+    "w10"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    -17.71,
+    8.64,
+    -24.1
+   ],
+   "t": 0.3968
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g12",
+    "w1",
+    "w2",
+    "w3",
+    "w10"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    -14.7,
+    8.1,
+    -26.68
+   ],
+   "t": 0.4242
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g12",
+    "w1",
+    "w2",
+    "w3"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    -11.6,
+    7.57,
+    -29.0
+   ],
+   "t": 0.4515
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g12",
+    "w1",
+    "w2",
+    "w3",
+    "w4"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    -7.63,
+    7.03,
+    -29.0
+   ],
+   "t": 0.4789
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g12",
+    "g13",
+    "w1",
+    "w2",
+    "w3",
+    "w4"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    -3.67,
+    6.49,
+    -29.0
+   ],
+   "t": 0.5062
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g12",
+    "g13",
+    "w2",
+    "w3",
+    "w4"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    0.29,
+    5.96,
+    -29.0
+   ],
+   "t": 0.5336
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [
+    "g14"
+   ],
+   "coveringSockets": [
+    "g12",
+    "g13",
+    "w3",
+    "w4"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    4.26,
+    5.42,
+    -29.0
+   ],
+   "t": 0.561
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [
+    "g14"
+   ],
+   "coveringSockets": [
+    "g12",
+    "g13",
+    "g15"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    8.22,
+    4.89,
+    -29.0
+   ],
+   "t": 0.5883
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [
+    "g14"
+   ],
+   "coveringSockets": [
+    "g12",
+    "g13",
+    "g15"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    12.19,
+    4.35,
+    -29.0
+   ],
+   "t": 0.6157
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [
+    "g14"
+   ],
+   "coveringSockets": [
+    "g13",
+    "g15",
+    "g17",
+    "g18"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    16.15,
+    3.81,
+    -29.0
+   ],
+   "t": 0.6431
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [
+    "g14"
+   ],
+   "coveringSockets": [
+    "g13",
+    "g15",
+    "g17",
+    "g18"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    20.11,
+    3.28,
+    -29.0
+   ],
+   "t": 0.6704
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [
+    "g14",
+    "g20"
+   ],
+   "coveringSockets": [
+    "g15",
+    "g17",
+    "g18"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    24.08,
+    2.74,
+    -29.0
+   ],
+   "t": 0.6978
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [
+    "g14"
+   ],
+   "coveringSockets": [
+    "g15",
+    "g17",
+    "g18",
+    "g20"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    28.04,
+    2.21,
+    -29.0
+   ],
+   "t": 0.7252
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g15",
+    "g17",
+    "g18",
+    "g19",
+    "g20"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    32.01,
+    1.67,
+    -29.0
+   ],
+   "t": 0.7525
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g17",
+    "g18",
+    "g19",
+    "g20"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    35.97,
+    1.13,
+    -29.0
+   ],
+   "t": 0.7799
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g17",
+    "g18",
+    "g19",
+    "g20",
+    "g21"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    38.78,
+    0.6,
+    -26.22
+   ],
+   "t": 0.8073
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g19",
+    "g20",
+    "g21"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    41.59,
+    0.07,
+    -23.41
+   ],
+   "t": 0.8346
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g19",
+    "g20",
+    "g21"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    43.0,
+    -0.47,
+    -20.04
+   ],
+   "t": 0.862
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g20",
+    "g21",
+    "g22",
+    "g23"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    43.0,
+    -1.0,
+    -16.07
+   ],
+   "t": 0.8894
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g20",
+    "g21",
+    "g22",
+    "g23"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    43.0,
+    -1.54,
+    -12.11
+   ],
+   "t": 0.9167
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g20",
+    "g21",
+    "g22",
+    "g23",
+    "g24"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    43.0,
+    -2.07,
+    -8.14
+   ],
+   "t": 0.9441
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g21",
+    "g22",
+    "g23",
+    "g24"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    43.0,
+    -2.5,
+    -4.17
+   ],
+   "t": 0.9714
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g22",
+    "g23",
+    "g24"
+   ],
+   "edge": "landing-core",
+   "layer": "ground",
+   "positionMetres": [
+    43.0,
+    -2.5,
+    -0.17
+   ],
+   "t": 0.9988
+  },
+  {
+   "apron": true,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g1",
+    "g2"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    -48.18,
+    23.01,
+    21.48
+   ],
+   "t": 0.0161
+  },
+  {
+   "apron": true,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g1",
+    "g2",
+    "g3"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    -44.56,
+    22.0,
+    20.45
+   ],
+   "t": 0.0483
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g1",
+    "g2",
+    "g3"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    -40.72,
+    22.2,
+    19.35
+   ],
+   "t": 0.0805
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g1",
+    "g2",
+    "g3"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    -36.88,
+    22.49,
+    18.25
+   ],
+   "t": 0.1127
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g3",
+    "g7",
+    "g8"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    -34.54,
+    23.34,
+    15.44
+   ],
+   "t": 0.1449
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g3",
+    "g7",
+    "g8",
+    "g9"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    -32.56,
+    23.54,
+    11.98
+   ],
+   "t": 0.177
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g3",
+    "g7",
+    "g8",
+    "g9",
+    "g11"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    -30.58,
+    23.74,
+    8.51
+   ],
+   "t": 0.2092
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g7",
+    "g8",
+    "g9",
+    "g11"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    -28.71,
+    24.96,
+    5.25
+   ],
+   "t": 0.2414
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g8",
+    "g9",
+    "g11"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    -25.92,
+    25.3,
+    2.55
+   ],
+   "t": 0.2736
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g6",
+    "g8",
+    "g9"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    -23.62,
+    22.93,
+    0.89
+   ],
+   "t": 0.3058
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g6",
+    "g8",
+    "g9",
+    "g10"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    -20.83,
+    21.85,
+    -1.12
+   ],
+   "t": 0.338
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g6",
+    "g9",
+    "g10",
+    "w8",
+    "w9",
+    "w10"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    -17.57,
+    22.0,
+    -3.45
+   ],
+   "t": 0.3702
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g6",
+    "g10",
+    "w7",
+    "w8",
+    "w9",
+    "w10"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    -14.4,
+    21.95,
+    -5.71
+   ],
+   "t": 0.4024
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g6",
+    "g10",
+    "w1",
+    "w2",
+    "w6",
+    "w7",
+    "w8",
+    "w9",
+    "w10"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    -12.02,
+    19.42,
+    -7.29
+   ],
+   "t": 0.4346
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g6",
+    "g10",
+    "w1",
+    "w2",
+    "w3",
+    "w4",
+    "w5",
+    "w6",
+    "w7",
+    "w8",
+    "w9",
+    "w10",
+    "w11"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    -8.72,
+    19.89,
+    -9.5
+   ],
+   "t": 0.4667
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g10",
+    "w1",
+    "w2",
+    "w3",
+    "w4",
+    "w5",
+    "w6",
+    "w7",
+    "w8",
+    "w9",
+    "w10",
+    "w11"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    -5.42,
+    20.43,
+    -11.71
+   ],
+   "t": 0.4989
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g12",
+    "w1",
+    "w2",
+    "w3",
+    "w4",
+    "w5",
+    "w6",
+    "w7",
+    "w8",
+    "w9",
+    "w10",
+    "w11"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    -2.13,
+    20.98,
+    -13.91
+   ],
+   "t": 0.5311
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g12",
+    "w1",
+    "w2",
+    "w3",
+    "w4",
+    "w5",
+    "w6",
+    "w7",
+    "w8",
+    "w10",
+    "w11"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    1.7,
+    20.54,
+    -14.92
+   ],
+   "t": 0.5633
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g12",
+    "g13",
+    "w2",
+    "w3",
+    "w4",
+    "w5",
+    "w6",
+    "w7",
+    "w11"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    5.55,
+    20.1,
+    -15.89
+   ],
+   "t": 0.5955
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g13",
+    "w3",
+    "w4",
+    "w5",
+    "w6",
+    "w11"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    9.4,
+    19.57,
+    -16.85
+   ],
+   "t": 0.6277
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g13",
+    "g15",
+    "w4",
+    "w5",
+    "w11"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    13.25,
+    19.09,
+    -17.81
+   ],
+   "t": 0.6599
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g13",
+    "g15",
+    "g16",
+    "g17"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    17.04,
+    18.65,
+    -16.98
+   ],
+   "t": 0.6921
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g15",
+    "g16",
+    "g17"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    20.81,
+    18.22,
+    -15.71
+   ],
+   "t": 0.7243
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g15",
+    "g16",
+    "g17"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    24.59,
+    17.9,
+    -14.45
+   ],
+   "t": 0.7564
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g15",
+    "g16",
+    "g17"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    28.15,
+    17.15,
+    -13.25
+   ],
+   "t": 0.7886
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g15",
+    "g16",
+    "g17"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    29.47,
+    13.41,
+    -12.81
+   ],
+   "t": 0.8208
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g15",
+    "g16",
+    "g17",
+    "g20",
+    "g22"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    30.76,
+    9.65,
+    -12.38
+   ],
+   "t": 0.853
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g16",
+    "g17",
+    "g20",
+    "g22"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    33.57,
+    8.65,
+    -10.28
+   ],
+   "t": 0.8852
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g16",
+    "g20",
+    "g22"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    36.23,
+    7.88,
+    -7.39
+   ],
+   "t": 0.9174
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g22",
+    "g23",
+    "g24"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    38.78,
+    6.62,
+    -4.61
+   ],
+   "t": 0.9496
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g22",
+    "g23",
+    "g24"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    41.47,
+    6.5,
+    -1.67
+   ],
+   "t": 0.9818
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g22",
+    "g23",
+    "g24"
+   ],
+   "edge": "airGate-airCore",
+   "layer": "air",
+   "positionMetres": [
+    43.0,
+    6.5,
+    0.0
+   ],
+   "t": 1.0
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g1",
+    "g3",
+    "g4"
+   ],
+   "edge": "pitFloor-haulBend",
+   "layer": "ground",
+   "positionMetres": [
+    -42.0,
+    13.0,
+    26.0
+   ],
+   "t": 0.1184
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g1",
+    "g2",
+    "g3"
+   ],
+   "edge": "pitFloor-haulBend",
+   "layer": "ground",
+   "positionMetres": [
+    -42.0,
+    13.0,
+    22.0
+   ],
+   "t": 0.3551
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g1",
+    "g2",
+    "g3",
+    "g7"
+   ],
+   "edge": "pitFloor-haulBend",
+   "layer": "ground",
+   "positionMetres": [
+    -40.79,
+    13.3,
+    18.27
+   ],
+   "t": 0.5918
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g1",
+    "g2",
+    "g3",
+    "g7",
+    "g8",
+    "g11"
+   ],
+   "edge": "pitFloor-haulBend",
+   "layer": "ground",
+   "positionMetres": [
+    -39.17,
+    13.7,
+    14.64
+   ],
+   "t": 0.8285
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g1",
+    "g2",
+    "g3",
+    "g7",
+    "g8",
+    "g9",
+    "g11"
+   ],
+   "edge": "pitFloor-haulBend",
+   "layer": "ground",
+   "positionMetres": [
+    -38.0,
+    13.99,
+    12.0
+   ],
+   "t": 1.0
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g1",
+    "g2",
+    "g3",
+    "g7",
+    "g8",
+    "g9",
+    "g11"
+   ],
+   "edge": "haulBend-landing",
+   "layer": "ground",
+   "positionMetres": [
+    -36.01,
+    14.19,
+    12.0
+   ],
+   "t": 0.0738
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g3",
+    "g7",
+    "g8",
+    "g9",
+    "g11"
+   ],
+   "edge": "haulBend-landing",
+   "layer": "ground",
+   "positionMetres": [
+    -32.03,
+    14.59,
+    12.0
+   ],
+   "t": 0.2214
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g3",
+    "g7",
+    "g8",
+    "g9",
+    "g11"
+   ],
+   "edge": "haulBend-landing",
+   "layer": "ground",
+   "positionMetres": [
+    -28.05,
+    14.99,
+    12.0
+   ],
+   "t": 0.369
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g3",
+    "g8",
+    "g9"
+   ],
+   "edge": "haulBend-landing",
+   "layer": "ground",
+   "positionMetres": [
+    -27.0,
+    15.39,
+    14.93
+   ],
+   "t": 0.5166
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g3",
+    "g4",
+    "g5"
+   ],
+   "edge": "haulBend-landing",
+   "layer": "ground",
+   "positionMetres": [
+    -27.0,
+    15.79,
+    18.91
+   ],
+   "t": 0.6642
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g3",
+    "g4",
+    "g5"
+   ],
+   "edge": "haulBend-landing",
+   "layer": "ground",
+   "positionMetres": [
+    -27.0,
+    16.0,
+    22.9
+   ],
+   "t": 0.8118
+  },
+  {
+   "apron": false,
+   "blockedByTerrain": [],
+   "coveringSockets": [
+    "g3",
+    "g4",
+    "g5"
+   ],
+   "edge": "haulBend-landing",
+   "layer": "ground",
+   "positionMetres": [
+    -27.0,
+    16.0,
+    26.9
+   ],
+   "t": 0.9594
+  }
+ ],
+ "sockets": [
+  {
+   "covers": 13,
+   "groundSlopePercent": 1.24,
+   "id": "g1",
+   "offLaneMetres": 8.9,
+   "positionMetres": [
+    -50,
+    15.82,
+    16
+   ],
+   "tag": "ground"
+  },
+  {
+   "covers": 9,
+   "groundSlopePercent": 4.8,
+   "id": "g2",
+   "offLaneMetres": 9.8,
+   "positionMetres": [
+    -48,
+    15.91,
+    11
+   ],
+   "tag": "ground"
+  },
+  {
+   "covers": 30,
+   "groundSlopePercent": 2.92,
+   "id": "g3",
+   "offLaneMetres": 4.0,
+   "positionMetres": [
+    -31,
+    16.0,
+    21
+   ],
+   "tag": "ground"
+  },
+  {
+   "covers": 13,
+   "groundSlopePercent": 3.46,
+   "id": "g4",
+   "offLaneMetres": 4.0,
+   "positionMetres": [
+    -28,
+    16.0,
+    32
+   ],
+   "tag": "ground"
+  },
+  {
+   "covers": 11,
+   "groundSlopePercent": 3.98,
+   "id": "g5",
+   "offLaneMetres": 4.0,
+   "positionMetres": [
+    -24,
+    16.0,
+    32
+   ],
+   "tag": "ground"
+  },
+  {
+   "covers": 12,
+   "groundSlopePercent": 3.36,
+   "id": "g6",
+   "offLaneMetres": 8.68,
+   "positionMetres": [
+    -11,
+    15.98,
+    4.5
+   ],
+   "tag": "ground"
+  },
+  {
+   "covers": 10,
+   "groundSlopePercent": 3.28,
+   "id": "g7",
+   "offLaneMetres": 8.47,
+   "positionMetres": [
+    -40,
+    15.93,
+    4
+   ],
+   "tag": "ground"
+  },
+  {
+   "covers": 14,
+   "groundSlopePercent": 2.23,
+   "id": "g8",
+   "offLaneMetres": 8.13,
+   "positionMetres": [
+    -33,
+    15.95,
+    4
+   ],
+   "tag": "ground"
+  },
+  {
+   "covers": 18,
+   "groundSlopePercent": 3.89,
+   "id": "g9",
+   "offLaneMetres": 7.8,
+   "positionMetres": [
+    -28,
+    16.05,
+    2
+   ],
+   "tag": "ground"
+  },
+  {
+   "covers": 11,
+   "groundSlopePercent": 2.5,
+   "id": "g10",
+   "offLaneMetres": 9.08,
+   "positionMetres": [
+    -10,
+    15.98,
+    1
+   ],
+   "tag": "ground"
+  },
+  {
+   "covers": 8,
+   "groundSlopePercent": 1.74,
+   "id": "g11",
+   "offLaneMetres": 13.12,
+   "positionMetres": [
+    -37,
+    15.86,
+    -1
+   ],
+   "tag": "ground"
+  },
+  {
+   "covers": 11,
+   "groundSlopePercent": 3.1,
+   "id": "g12",
+   "offLaneMetres": 8.23,
+   "positionMetres": [
+    0,
+    7.96,
+    -21
+   ],
+   "tag": "ground"
+  },
+  {
+   "covers": 11,
+   "groundSlopePercent": 9.14,
+   "id": "g13",
+   "offLaneMetres": 8.63,
+   "positionMetres": [
+    10,
+    7.9,
+    -21
+   ],
+   "tag": "ground"
+  },
+  {
+   "covers": 0,
+   "groundSlopePercent": 2.35,
+   "id": "g14",
+   "offLaneMetres": 8.94,
+   "positionMetres": [
+    16,
+    -0.2,
+    -37
+   ],
+   "tag": "ground"
+  },
+  {
+   "covers": 14,
+   "groundSlopePercent": 0.49,
+   "id": "g15",
+   "offLaneMetres": 9.26,
+   "positionMetres": [
+    20,
+    8.0,
+    -21
+   ],
+   "tag": "ground"
+  },
+  {
+   "covers": 8,
+   "groundSlopePercent": 5.14,
+   "id": "g16",
+   "offLaneMetres": 8.15,
+   "positionMetres": [
+    23,
+    8.05,
+    -10
+   ],
+   "tag": "ground"
+  },
+  {
+   "covers": 14,
+   "groundSlopePercent": 1.51,
+   "id": "g17",
+   "offLaneMetres": 9.74,
+   "positionMetres": [
+    26,
+    8.08,
+    -21
+   ],
+   "tag": "ground"
+  },
+  {
+   "covers": 7,
+   "groundSlopePercent": 3.52,
+   "id": "g18",
+   "offLaneMetres": 8.36,
+   "positionMetres": [
+    27,
+    -0.1,
+    -37
+   ],
+   "tag": "ground"
+  },
+  {
+   "covers": 5,
+   "groundSlopePercent": 2.41,
+   "id": "g19",
+   "offLaneMetres": 10.61,
+   "positionMetres": [
+    47,
+    0.08,
+    -33
+   ],
+   "tag": "ground"
+  },
+  {
+   "covers": 12,
+   "groundSlopePercent": 3.79,
+   "id": "g20",
+   "offLaneMetres": 8.02,
+   "positionMetres": [
+    35,
+    -0.15,
+    -18
+   ],
+   "tag": "ground"
+  },
+  {
+   "covers": 7,
+   "groundSlopePercent": 7.83,
+   "id": "g21",
+   "offLaneMetres": 7.05,
+   "positionMetres": [
+    50,
+    -0.14,
+    -16
+   ],
+   "tag": "ground"
+  },
+  {
+   "covers": 11,
+   "groundSlopePercent": 16.65,
+   "id": "g22",
+   "offLaneMetres": 8.08,
+   "positionMetres": [
+    35,
+    -1.21,
+    -6
+   ],
+   "tag": "ground"
+  },
+  {
+   "covers": 8,
+   "groundSlopePercent": 22.72,
+   "id": "g23",
+   "offLaneMetres": 7.04,
+   "positionMetres": [
+    50,
+    -1.75,
+    -2
+   ],
+   "tag": "ground"
+  },
+  {
+   "covers": 6,
+   "groundSlopePercent": 19.05,
+   "id": "g24",
+   "offLaneMetres": 10.38,
+   "positionMetres": [
+    34,
+    -1.16,
+    5
+   ],
+   "tag": "ground"
+  },
+  {
+   "covers": 15,
+   "groundSlopePercent": null,
+   "id": "w1",
+   "offLaneMetres": 9.14,
+   "positionMetres": [
+    -11,
+    14,
+    -18
+   ],
+   "tag": "wall"
+  },
+  {
+   "covers": 16,
+   "groundSlopePercent": null,
+   "id": "w2",
+   "offLaneMetres": 9.05,
+   "positionMetres": [
+    -7,
+    14,
+    -18
+   ],
+   "tag": "wall"
+  },
+  {
+   "covers": 12,
+   "groundSlopePercent": null,
+   "id": "w3",
+   "offLaneMetres": 8.08,
+   "positionMetres": [
+    -3,
+    14,
+    -18
+   ],
+   "tag": "wall"
+  },
+  {
+   "covers": 11,
+   "groundSlopePercent": null,
+   "id": "w4",
+   "offLaneMetres": 7.21,
+   "positionMetres": [
+    1,
+    14,
+    -18
+   ],
+   "tag": "wall"
+  },
+  {
+   "covers": 7,
+   "groundSlopePercent": null,
+   "id": "w5",
+   "offLaneMetres": 6.48,
+   "positionMetres": [
+    3,
+    14,
+    -14
+   ],
+   "tag": "wall"
+  },
+  {
+   "covers": 7,
+   "groundSlopePercent": null,
+   "id": "w6",
+   "offLaneMetres": 8.14,
+   "positionMetres": [
+    1,
+    14,
+    -10
+   ],
+   "tag": "wall"
+  },
+  {
+   "covers": 7,
+   "groundSlopePercent": null,
+   "id": "w7",
+   "offLaneMetres": 7.08,
+   "positionMetres": [
+    -3,
+    14,
+    -10
+   ],
+   "tag": "wall"
+  },
+  {
+   "covers": 12,
+   "groundSlopePercent": null,
+   "id": "w8",
+   "offLaneMetres": 6.09,
+   "positionMetres": [
+    -7,
+    14,
+    -10
+   ],
+   "tag": "wall"
+  },
+  {
+   "covers": 13,
+   "groundSlopePercent": null,
+   "id": "w9",
+   "offLaneMetres": 5.9,
+   "positionMetres": [
+    -11,
+    14,
+    -10
+   ],
+   "tag": "wall"
+  },
+  {
+   "covers": 15,
+   "groundSlopePercent": null,
+   "id": "w10",
+   "offLaneMetres": 7.75,
+   "positionMetres": [
+    -11,
+    14,
+    -14
+   ],
+   "tag": "wall"
+  },
+  {
+   "covers": 7,
+   "groundSlopePercent": null,
+   "id": "w11",
+   "offLaneMetres": 8.24,
+   "positionMetres": [
+    3,
+    14,
+    -10
+   ],
+   "tag": "wall"
+  },
+  {
+   "covers": 0,
+   "groundSlopePercent": 25.0,
+   "id": "t1",
+   "offLaneMetres": null,
+   "positionMetres": [
+    -38,
+    14.0,
+    28
+   ],
+   "tag": "trap"
+  },
+  {
+   "covers": 0,
+   "groundSlopePercent": 25.0,
+   "id": "t2",
+   "offLaneMetres": null,
+   "positionMetres": [
+    -33,
+    15.25,
+    28
+   ],
+   "tag": "trap"
+  },
+  {
+   "covers": 0,
+   "groundSlopePercent": 13.49,
+   "id": "t3",
+   "offLaneMetres": null,
+   "positionMetres": [
+    -19,
+    13.86,
+    14
+   ],
+   "tag": "trap"
+  },
+  {
+   "covers": 0,
+   "groundSlopePercent": 13.49,
+   "id": "t4",
+   "offLaneMetres": null,
+   "positionMetres": [
+    -19,
+    12.24,
+    2
+   ],
+   "tag": "trap"
+  },
+  {
+   "covers": 0,
+   "groundSlopePercent": 13.49,
+   "id": "t5",
+   "offLaneMetres": null,
+   "positionMetres": [
+    -19,
+    10.62,
+    -10
+   ],
+   "tag": "trap"
+  },
+  {
+   "covers": 0,
+   "groundSlopePercent": 13.52,
+   "id": "t6",
+   "offLaneMetres": null,
+   "positionMetres": [
+    -15.5,
+    8.24,
+    -26
+   ],
+   "tag": "trap"
+  },
+  {
+   "covers": 0,
+   "groundSlopePercent": 13.52,
+   "id": "t7",
+   "offLaneMetres": null,
+   "positionMetres": [
+    -2,
+    6.27,
+    -29
+   ],
+   "tag": "trap"
+  },
+  {
+   "covers": 0,
+   "groundSlopePercent": 13.52,
+   "id": "t8",
+   "offLaneMetres": null,
+   "positionMetres": [
+    10,
+    4.65,
+    -29
+   ],
+   "tag": "trap"
+  },
+  {
+   "covers": 0,
+   "groundSlopePercent": 13.52,
+   "id": "t9",
+   "offLaneMetres": null,
+   "positionMetres": [
+    22,
+    3.02,
+    -29
+   ],
+   "tag": "trap"
+  },
+  {
+   "covers": 0,
+   "groundSlopePercent": 13.44,
+   "id": "t10",
+   "offLaneMetres": null,
+   "positionMetres": [
+    39.5,
+    0.47,
+    -25.5
+   ],
+   "tag": "trap"
+  },
+  {
+   "covers": 0,
+   "groundSlopePercent": 13.53,
+   "id": "t11",
+   "offLaneMetres": null,
+   "positionMetres": [
+    43,
+    -1.55,
+    -12
+   ],
+   "tag": "trap"
+  }
+ ],
+ "summary": {
+  "apron": 4,
+  "dead": 0,
+  "idlePads": [
+   "g14"
+  ],
+  "itineraries": {
+   "air": [
+    "airGate-airCore"
+   ],
+   "boss": [
+    "westGate-pitFloor",
+    "pitFloor-haulBend",
+    "haulBend-landing",
+    "landing-core"
+   ],
+   "ground": [
+    "westGate-pitFloor",
+    "pitFloor-climbTop",
+    "climbTop-landing",
+    "landing-core"
+   ]
+  },
+  "reliefOnLaneMetres": 18.5,
+  "routeIdsInWaves": [
+   "air",
+   "ground"
+  ],
+  "routeLengthsMetres": {
+   "air": 124.27,
+   "boss": 198.17,
+   "ground": 169.54
+  },
+  "segments": 88,
+  "socketCounts": {
+   "ground": 24,
+   "trap": 11,
+   "wall": 11
+  },
+  "socketsNearEdge": [],
+  "trapsOffLane": []
+ },
+ "terrainProof": {
+  "g2LanceBlockedNovaClears": [
+   {
+    "distanceMetres": 11.16,
+    "edge": "landing-core",
+    "lancePitchDeg": 24.5,
+    "novaLaunchDeg": 36.79,
+    "socket": "g14",
+    "t": 0.5883
+   }
+  ],
+  "note": "rule16: a pad whose sight line (pad + 1.6 m to segment + 1.6 m) is blocked by terrain and whose Nova arc (5-16 m, launch 22-70 deg) clears it. g2: the subset where a Lance on that pad would be in range (12 m) and inside its pitch limits (-8..26 deg), so LOS is the only reason it cannot fire.",
+  "rule16": [
+   {
+    "distanceMetres": 14.84,
+    "edge": "landing-core",
+    "lancePitchDeg": -15.44,
+    "novaLaunchDeg": 69.72,
+    "socket": "g8",
+    "t": 0.2326
+   },
+   {
+    "distanceMetres": 14.21,
+    "edge": "landing-core",
+    "lancePitchDeg": 21.57,
+    "novaLaunchDeg": 61.4,
+    "socket": "g14",
+    "t": 0.561
+   },
+   {
+    "distanceMetres": 11.16,
+    "edge": "landing-core",
+    "lancePitchDeg": 24.5,
+    "novaLaunchDeg": 36.79,
+    "socket": "g14",
+    "t": 0.5883
+   },
+   {
+    "distanceMetres": 15.5,
+    "edge": "landing-core",
+    "lancePitchDeg": 10.55,
+    "novaLaunchDeg": 62.94,
+    "socket": "g20",
+    "t": 0.6978
+   },
+   {
+    "distanceMetres": 14.46,
+    "edge": "landing-core",
+    "lancePitchDeg": 9.45,
+    "novaLaunchDeg": 66.05,
+    "socket": "g14",
+    "t": 0.7252
+   }
+  ],
+  "rule16Count": 5
+ }
+}

@@ -1,7 +1,7 @@
 {
   "$schema": "deepfield-terrain/1",
   "id": "foundry",
-  "note": "Foundry landform (PROGRAMME.md Appendix C§1, ADR-0018): a works cut into a hillside. Three slag terraces step ~8 m each from the spawn gate (west, x=-40) down to the core basin (east, x=36): T1 at +16 m holds westGate and the g7..g11/g23 sockets, T2 at +8 m holds the spawn yard, the deck (an overlook off the middle terrace) and the mid-lane sockets, T3 at 0 m holds the core-side sockets and the basin the core pools in. The terrace edges are placed from the legacy level file (unreal/content/levels/legacy/foundry.level.json): each is >= 3 m from every ground socket so the sockets sit on terrace tops, and the legacy 'ground' route crosses each edge on a leg with room for a <= 30 % ramp (edge 1 on the z=14 leg, edge 2 on the z=-8 leg). A spur at T1 level runs east off the high terrace on the north side for WS-37's vent tunnel; a cinder ridge loops the belt beyond containment with slag heaps behind it. Frame: sim metres, x right, +z toward the spawn yard, y up.",
+  "note": "Foundry landform, WS-10a (C§1, ADR-0018; replaces WS-30's legacy-pinned reference). A works cut into a hillside, stepping down west to east-and-south: T1 +16 (the west, with the tapping pit the spawn gate sits in, the spur tongue and the north shoulder), T2 +8 (the middle terrace: the deck overlook and the hero yard on its south half, the control point on its north half), T3 0 (the south shelf and the east), and the core basin at -2.5 where the fog pools. The lane is one haul road (laneBed): out of the pit up a 25 % climb (the kill zone G2 needs), across a level landing, then down at a constant 13.5 % (the boss rule is <= 15 %) through the shoulder and the spur, round the deck's corner, along a bench below T2's south lip and into the basin. The boss goes round the climb on the pit's haul ramp (bossHaul, 10 %). Pair: unreal/content/levels/foundry.level.json; predicted validator results: levels/reports/foundry.predicted.json. KEPT from WS-30's file: the structure (plateau/terrace/basin/ridge/roadbed/noise/flats with a note on each), the seed, the cinder-ridge belt, the two noise layers, the core plinth and hero-yard flats. REPLACED: every position (WS-30's were pinned to the legacy socket and route positions), the terrace edges (now plateau polygons, because T2 has a south lip as well as a west face), the spur (now a tongue of T1 the lane cuts through), and the single legacy-route roadbed (now two, at explicit bed elevations, applied after the noise). Frame: sim metres, x right (east), z as the legacy maps (the hero yard is at -z), y up.",
   "bounds": {
     "playable": [110, 80],
     "belt": 40
@@ -11,114 +11,126 @@
   "seed": 30,
   "features": [
     {
-      "id": "terraceHigh",
-      "kind": "terrace",
-      "note": "T1/T2 edge: west of it is +8 on top of T2 (= +16). Travels +z, so 'left' = west = the high side. The jog north of z=16 keeps g12 (-16,20) on T2 and g11 (-26,14) on T1.",
-      "spline": [[-17, -80], [-17, 16], [-19, 19], [-19, 80]],
-      "height": 8,
-      "width": 4,
-      "profile": "smooth",
-      "side": "left",
-      "priority": 0
-    },
-    {
-      "id": "terraceMid",
-      "kind": "terrace",
-      "note": "T2/T3 edge: west of it is +8 (T2). The jog at z=4..8 keeps g5 (12,-2) and g15 (9,4) on T2 and g21 (14,10) on T3; the lane's x=18 leg runs 3 m east of it on T3.",
-      "spline": [[15, -80], [15, 4], [11, 8], [11, 80]],
-      "height": 8,
-      "width": 4,
-      "profile": "smooth",
-      "side": "left",
-      "priority": 0
-    },
-    {
-      "id": "ventSpur",
+      "id": "t2Terrace",
       "kind": "plateau",
-      "note": "The spur between T1 and T2 on the north side, flat at T1 level (16 m) so the vent tunnel (3 m bore, WS-37) can be bored through it east-west. 3 m flanks.",
-      "spline": [[-22, 25], [-4, 27], [-2, 31], [-6, 35], [-22, 33]],
+      "note": "T2, the middle terrace, +8. Everything north of its south lip (z = -23) and west of its east face (x = 28); T1 overrides its west part. Along the lip the lane's ramp2 bed takes over the face, so from the lane the lip reads as a bank that grows from nothing (west) to 7 m (east).",
+      "spline": [[-200, -23], [28, -23], [28, 200], [-200, 200]],
+      "elevation": 8,
+      "falloff": 3,
+      "profile": "smooth",
+      "priority": 0
+    },
+    {
+      "id": "t1Terrace",
+      "kind": "plateau",
+      "note": "T1, the high terrace, +16: everything west of x = -24, plus two arms reaching east to x = -8: the spur tongue (z -4..6), which the lane's ramp cuts through, and the north shoulder (z > 18), which the ramp's head is cut into, so the head of the ramp has level ground on both sides for sockets. The spur splits T2 into north and south halves and is the LOS wall between them; the vent tunnel (WS-37: a 3 m bore, a hero passage, not a lane) runs through it north-south at x = -12, from T2 north (-12, 8) to T2 south (-12, -6), at T2 level.",
+      "spline": [[-200, -200], [-24, -200], [-24, -4], [-8, -4], [-6, 1], [-8, 6], [-24, 6], [-24, 18], [-8, 18], [-8, 200], [-200, 200]],
       "elevation": 16,
       "falloff": 3,
       "profile": "smooth",
       "priority": 1
     },
     {
+      "id": "tappingPit",
+      "kind": "basin",
+      "note": "The pit the spawn gate stands in: 3 m below T1, floor radius 5 m round the gate (-50, 28). On terrain alone the portal is NOT shadowed: the climb and the haul ramp notch the rim, and pads to the south-east see down them into the pit (predict_level.py lists them). Rule 14 is open; see the ws file.",
+      "centre": [-49, 28],
+      "radius": 9,
+      "depth": 3,
+      "falloff": 4,
+      "profile": "smooth",
+      "priority": 2
+    },
+    {
       "id": "coreBasin",
       "kind": "basin",
-      "note": "The core pools 2.5 m below T3; the bowl's steepest slope is ~23 % so g19/g20/g22 stay buildable (< 25 % ungraded). Fog pools here (C§1).",
-      "centre": [40, 6],
-      "radius": 20,
+      "note": "The core basin on T3: 2.5 m down at the core (43, 0), 16 m rim radius, a linear bowl (19 %) so a socket on its slope is under the 25 % pad rule. Fog pools here (C§1); the lane's last 22 m descend into it.",
+      "centre": [43, 0],
+      "radius": 16,
       "depth": 2.5,
-      "falloff": 16,
-      "profile": "smooth",
-      "priority": 1
+      "falloff": 13,
+      "profile": "sharp",
+      "priority": 2
     },
     {
       "id": "cinderRidge",
       "kind": "ridge",
-      "note": "The belt beyond containment: a cinder ridge whose inner foot sits at the playable edge (|x|=55, |z|=40). Additive, so it rides the terraces (crest ~30 m in the west, ~14 m in the east).",
-      "spline": [[-64, -57], [64, -57], [72, -49], [72, 49], [64, 57], [-64, 57], [-72, 49], [-72, -49], [-64, -57]],
-      "height": 14,
+      "note": "The belt: a cinder ridge whose inner foot is the playable edge (crest 13 m outside it = half-width 3 + falloff 10), additive, so it rides the terraces (crest ~28 m behind T1, ~12 m behind T3). Containment is an invisible wall at the playable edge with the ridge as the visible reason.",
+      "spline": [[-60, -53], [60, -53], [68, -45], [68, 45], [60, 53], [-60, 53], [-68, 45], [-68, -45], [-60, -53]],
+      "height": 12,
       "width": 6,
-      "falloff": 14,
+      "falloff": 10,
       "profile": "smooth",
-      "priority": 2
+      "priority": 3
     },
     {
-      "id": "slagHeapWest",
+      "id": "slagHeapNorth",
       "kind": "ridge",
-      "spline": [[-82, -22], [-76, -6]],
-      "height": 6,
-      "width": 5,
-      "falloff": 8,
+      "note": "Slag heaps behind the ridge, in the belt (count and placement are this workstream's choice: three, one behind each terrace).",
+      "spline": [[-10, 66], [8, 72]],
+      "height": 7,
+      "width": 6,
+      "falloff": 9,
       "profile": "smooth",
-      "priority": 2
+      "priority": 3
     },
     {
       "id": "slagHeapEast",
       "kind": "ridge",
-      "spline": [[80, 24], [88, 40]],
+      "spline": [[80, -18], [86, 6]],
       "height": 8,
       "width": 6,
       "falloff": 9,
       "profile": "smooth",
-      "priority": 2
+      "priority": 3
     },
     {
       "id": "slagHeapSouth",
       "kind": "ridge",
-      "spline": [[28, -68], [52, -72]],
-      "height": 5,
+      "spline": [[-30, -70], [-8, -76]],
+      "height": 6,
       "width": 6,
       "falloff": 8,
       "profile": "smooth",
-      "priority": 2
+      "priority": 3
     },
     {
       "id": "laneBed",
       "kind": "roadbed",
-      "note": "The legacy 'ground' route polyline (westGate -> core). Flattened 5 m wide (+2 m shoulders) and re-graded to <= 30 % with balanced cut/fill, so WS-09's projected lane stays walkable across both terrace edges and down into the basin. Applied before the noise, which is masked out of it.",
-      "spline": [[-40, 0], [-20, 0], [-20, 14], [0, 14], [0, -8], [18, -8], [18, 6], [36, 6]],
-      "width": 5,
+      "note": "The ground lane as one haul road, at explicit bed elevations: 13 in the pit (the 8 m spawn apron), 13 -> 16 up the climb (12 m at 25 %: the kill zone, drifters x0.85 on all of it), a 6 m level landing at the top (the boss haul joins its middle, at (-27, 28), level, so the two beds agree where they overlap), then 16 -> -2.5 at a constant 13.5 % over 137 m (inside the +/-15 % band, so walkers keep their authored speed and the boss can use it), level for the last 5 m onto the core plinth. 8 m flat (the boss's clearance) + 2 m shoulders. Applied after the noise and after bossHaul, so its grades are exact everywhere.",
+      "spline": [[-50, 28, 13], [-42, 28, 13], [-30, 28, 16], [-27, 28, 16], [-24, 28, 16], [-19, 22, 14.94], [-19, -23, 8.87], [-12, -29, 7.62], [36, -29, 1.13], [43, -22, -0.2], [43, -5, -2.5], [43, 0, -2.5]],
+      "width": 8,
       "falloff": 2,
-      "maxGrade": 30,
+      "maxGrade": 26,
       "gradeMode": "balanced",
       "profile": "smooth",
-      "priority": 10
+      "priority": 61
+    },
+    {
+      "id": "bossHaul",
+      "kind": "roadbed",
+      "note": "The pit's haul ramp: the boss route's way round the climb. Level for 7 m out of the pit, 13 -> 16 at 10 % south-east and back north across T1, level for the last 7 m into the climb's landing, which it meets at right angles. 43.8 m against the climb's 15 m to the same junction, so walkers take the climb.",
+      "spline": [[-42, 28, 13], [-42, 21, 13], [-38, 12, 13.99], [-27, 12, 15.1], [-27, 21, 16], [-27, 28, 16]],
+      "width": 8,
+      "falloff": 2,
+      "maxGrade": 15,
+      "gradeMode": "balanced",
+      "profile": "smooth",
+      "priority": 60
     }
   ],
   "noise": [
     {
       "id": "slagRoughness",
-      "note": "Surface roughness on the terrace tops and faces; kept off the lane bed so its grade stays exact.",
+      "note": "Surface roughness on the terrace tops and faces. The roadbeds are applied after it (priority 60/61), so the lane grades stay exact; the importer's socket pads cut it away under each pad.",
       "octaves": 4,
-      "amplitude": 0.3,
+      "amplitude": 0.25,
       "frequency": 0.08,
       "persistence": 0.5,
       "lacunarity": 2.0,
       "seed": 3001,
       "priority": 50,
-      "mask": {"feature": "laneBed", "invert": true}
+      "mask": {"region": "playable"}
     },
     {
       "id": "beltUndulation",
@@ -133,18 +145,25 @@
   ],
   "flats": [
     {
-      "id": "spawnYard",
-      "polygon": [[-9, -28], [4, -28], [4, -19], [-9, -19]],
+      "id": "heroYard",
+      "polygon": [[6, -20], [22, -20], [22, -6], [6, -6]],
       "elevation": 8,
       "falloff": 2,
-      "reason": "Hero spawn (0,-24), armory (-6,-24) and the spawnYard station (0,-20): the deck's ground floor is a poured slab."
+      "reason": "Hero spawn (14, -14), armory (14, -8) and the yard station: a poured slab on T2 south, beside the deck."
+    },
+    {
+      "id": "deckFootings",
+      "polygon": [[-12, -19], [4, -19], [4, -9], [-12, -9]],
+      "elevation": 8,
+      "falloff": 1,
+      "reason": "The deck's footprint (the overlook, 6 m above T2): its columns stand on a level slab."
     },
     {
       "id": "corePlinth",
-      "polygon": [[32, 2], [40, 2], [40, 10], [32, 10]],
+      "polygon": [[40, -3], [46, -3], [46, 3], [40, 3]],
       "elevation": -2.5,
       "falloff": 2,
-      "reason": "The core (36,6) stands on a level plinth at the bottom of the basin."
+      "reason": "The core (43, 0) stands on a level plinth at the bottom of the basin."
     }
   ]
 }
