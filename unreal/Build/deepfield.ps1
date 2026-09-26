@@ -426,13 +426,29 @@ function Get-MsvcRules {
   return $rules
 }
 
-function Test-MsvcAccepted([version]$v) {
+function Test-MsvcAccepted([version]$v, [version]$Family = $null) {
   # 'preferred', 'allowed' (UBT warns and builds) or 'banned' (UBT refuses), per Get-MsvcRules.
+  # $v is the compiler's own build (from cl.exe) and $Family the toolset folder's name. They differ once
+  # Visual Studio services the compiler in place: VS 2022 17.14.x keeps VC\Tools\MSVC\14.44.35207 while
+  # cl.exe moves on. The minimum and the refused ranges are about compiler builds (Windows_SDK.json:
+  # "14.44.35207 ... Resolved with 14.44.35211"); the preferred ranges name the family ("Version number
+  # is the MSVC family, which is the version in the Visual Studio folder").
+  if (-not $Family) { $Family = $v }
   $rules = Get-MsvcRules
   if ($rules.Min -and $v -lt $rules.Min) { return 'banned' }
   foreach ($r in $rules.Banned) { if ($v -ge $r.Lo -and $v -le $r.Hi) { return 'banned' } }
-  foreach ($r in $rules.Preferred) { if ($v -ge $r.Lo -and $v -le $r.Hi) { return 'preferred' } }
+  foreach ($r in $rules.Preferred) { if ($Family -ge $r.Lo -and $Family -le $r.Hi) { return 'preferred' } }
   return 'allowed'
+}
+
+function ConvertTo-ClVersion($VersionInfo, [version]$Family) {
+  # The compiler build from cl.exe's version resource. Its product version is the toolset's (14.x); its
+  # file version is the compiler's (19.x) with the same minor and build. Falls back to the folder name.
+  if ($VersionInfo) {
+    if ($VersionInfo.ProductMajorPart -eq 14) { return [version]("14.{0}.{1}" -f $VersionInfo.ProductMinorPart, $VersionInfo.ProductBuildPart) }
+    if ($VersionInfo.FileMajorPart -eq 19) { return [version]("14.{0}.{1}" -f $VersionInfo.FileMinorPart, $VersionInfo.FileBuildPart) }
+  }
+  return $Family
 }
 
 function Get-VsToolsets([string]$InstallPath) {
@@ -440,12 +456,21 @@ function Get-VsToolsets([string]$InstallPath) {
   if (-not (Test-Path $root)) { return @() }
   $out = @()
   foreach ($d in Get-ChildItem $root -Directory) {
-    $v = $null
-    if ([version]::TryParse($d.Name, [ref]$v) -and (Test-Path (Join-Path $d.FullName 'bin\Hostx64\x64\cl.exe'))) {
-      $out += [pscustomobject]@{ Version = $v; Verdict = (Test-MsvcAccepted $v) }
+    $family = $null
+    $cl = Join-Path $d.FullName 'bin\Hostx64\x64\cl.exe'
+    if ([version]::TryParse($d.Name, [ref]$family) -and (Test-Path $cl)) {
+      $vi = $null; try { $vi = (Get-Item $cl).VersionInfo } catch { $vi = $null }
+      $v = ConvertTo-ClVersion $vi $family
+      $out += [pscustomobject]@{ Version = $v; Family = $family; Verdict = (Test-MsvcAccepted $v $family) }
     }
   }
   return $out
+}
+
+function Format-Toolset($T) {
+  # "14.44.35207" when the folder and the compiler agree, "14.44.35207 (compiler 14.44.35217)" when not.
+  if ($T.Family -and $T.Version -ne $T.Family) { return "$($T.Family) (compiler $($T.Version))" }
+  return "$($T.Version)"
 }
 
 function Get-WindowsSdks {
@@ -460,7 +485,7 @@ function Get-WindowsSdks {
 }
 
 function Format-Toolsets($Vs) {
-  $t = @($Vs.Toolsets | Sort-Object Version -Descending | ForEach-Object { "$($_.Version) $($_.Verdict)" })
+  $t = @($Vs.Toolsets | Sort-Object Version -Descending | ForEach-Object { "$(Format-Toolset $_) $($_.Verdict)" })
   if ($t.Count -eq 0) { return 'none (no VC\Tools\MSVC\<version>\bin\Hostx64\x64\cl.exe)' }
   return ($t -join ', ')
 }
@@ -556,9 +581,9 @@ function Assert-VisualStudio {
   }
   Write-Ok "$($vs.Name) at $($vs.Instance.installationPath)"
   $top = $vs.Good[0]
-  Write-Ok "MSVC $($top.Version) ($($top.Verdict); rules: $(if ($script:Engine) { 'the engine''s Windows_SDK.json' } else { 'built-in minimum until the engine is installed' }))"
+  Write-Ok "MSVC $(Format-Toolset $top) ($($top.Verdict); rules: $(if ($script:Engine) { 'the engine''s Windows_SDK.json' } else { 'built-in minimum until the engine is installed' }))"
   $banned = @($vs.Toolsets | Where-Object { $_.Verdict -eq 'banned' })
-  if ($banned.Count -gt 0) { Write-Info "also present, ignored by UBT: $((@($banned | ForEach-Object { $_.Version.ToString() }) -join ', '))" }
+  if ($banned.Count -gt 0) { Write-Info "also present, ignored by UBT: $((@($banned | ForEach-Object { Format-Toolset $_ }) -join ', '))" }
 
   $sdks = @(Get-WindowsSdks | Sort-Object -Descending)
   $ok = @($sdks | Where-Object { $_ -ge $WinSdkMinimum })

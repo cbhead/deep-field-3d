@@ -50,6 +50,14 @@ function Find-Tool([string]$Command, [string[]]$Candidates) {
 
 function GB([double]$Bytes) { [math]::Round($Bytes / 1GB, 1) }
 function Val($v) { if ($null -eq $v -or "$v" -eq '') { '-' } else { "$v" } }
+function ClVersion([string]$ToolsetDir, [string]$Folder) {
+    # The compiler build, from cl.exe's version resource. Visual Studio services the compiler in place,
+    # so the folder keeps its first name (VS 2022 17.14.x: VC\Tools\MSVC\14.44.35207) while cl.exe moves on.
+    $vi = Try-Get { (Get-Item (Join-Path $ToolsetDir 'bin\Hostx64\x64\cl.exe') -ErrorAction Stop).VersionInfo }
+    if ($vi -and $vi.ProductMajorPart -eq 14) { return "14.$($vi.ProductMinorPart).$($vi.ProductBuildPart)" }
+    if ($vi -and $vi.FileMajorPart -eq 19) { return "14.$($vi.FileMinorPart).$($vi.FileBuildPart)" }
+    $Folder
+}
 
 # ---------------------------------------------------------------- hardware and OS
 
@@ -226,11 +234,13 @@ if (Test-Path $vswhere) {
     $json = Run $vswhere @('-all', '-prerelease', '-products', '*', '-format', 'json', '-utf8')
     foreach ($i in @(Try-Get { $json | ConvertFrom-Json })) {
         $msvcDir = Join-Path $i.installationPath 'VC\Tools\MSVC'
+        $msvcDirs = @(Get-ChildItem $msvcDir -Directory -ErrorAction SilentlyContinue)
         $vs += [ordered]@{
             name     = $i.displayName
             version  = $i.installationVersion
             path     = $i.installationPath
-            msvc     = @(Get-ChildItem $msvcDir -Directory -ErrorAction SilentlyContinue | ForEach-Object Name)
+            msvc     = @($msvcDirs | ForEach-Object Name)
+            msvc_compiler = @($msvcDirs | ForEach-Object { ClVersion $_.FullName $_.Name })
         }
     }
 }
@@ -298,6 +308,16 @@ function MsvcVerdict([string]$v) {
     'too old'
 }
 
+function MsvcLabels($v) {
+    # One entry per toolset folder: the folder name, its compiler build, and a label showing both when they differ.
+    $f = @($v.msvc); $c = @($v.msvc_compiler)
+    @(for ($k = 0; $k -lt $f.Count; $k++) {
+        $cv = $f[$k]; if ($k -lt $c.Count -and $c[$k]) { $cv = $c[$k] }
+        $label = $f[$k]; if ($cv -ne $f[$k]) { $label = "$($f[$k]) (compiler $cv)" }
+        [pscustomobject]@{ Folder = $f[$k]; Compiler = $cv; Label = $label }
+    })
+}
+
 $checks = New-Object System.Collections.ArrayList
 function Check([string]$Item, [string]$Need, [string]$Have, [string]$Status, [string]$Where) {
     [void]$checks.Add([ordered]@{ item = $Item; need = $Need; have = $Have; status = $Status; runbook = $Where })
@@ -326,10 +346,10 @@ $ueTxt = if ($ue) { ($ue | ForEach-Object { "$($_.version) at $($_.root)" }) -jo
 Check 'Unreal Engine 5.8.2' 'UE 5.8.2 from the launcher (same patch as the Mac)' $ueTxt $(if ($ue58) { 'OK' } else { 'FAIL' }) '1'
 Check 'UE_ROOT' 'set to the 5.8 install' $(if ($envVars.UE_ROOT) { $envVars.UE_ROOT } else { 'unset' }) $(if ($envVars.UE_ROOT -and (Test-Path $envVars.UE_ROOT)) { 'OK' } else { 'FAIL' }) '1'
 
-$allMsvc = @($vs | ForEach-Object { $_.msvc }) | Where-Object { $_ }
-$msvcTxt = if ($allMsvc) { ($allMsvc | ForEach-Object { "$_ ($(MsvcVerdict $_))" }) -join '; ' } else { 'no Visual Studio / MSVC' }
-$msvcStatus = if ($allMsvc | Where-Object { (MsvcVerdict $_) -eq 'preferred' }) { 'OK' } elseif ($allMsvc | Where-Object { (MsvcVerdict $_) -eq 'allowed' }) { 'WARN' } else { 'FAIL' }
-Check 'MSVC toolset' '14.44 >= 35211 (VS 2022 17.14) or 14.50 >= 35723' $msvcTxt $msvcStatus '2'
+$allMsvc = @($vs | ForEach-Object { MsvcLabels $_ })
+$msvcTxt = if ($allMsvc) { ($allMsvc | ForEach-Object { "$($_.Label) ($(MsvcVerdict $_.Compiler))" }) -join '; ' } else { 'no Visual Studio / MSVC' }
+$msvcStatus = if ($allMsvc | Where-Object { (MsvcVerdict $_.Compiler) -eq 'preferred' }) { 'OK' } elseif ($allMsvc | Where-Object { (MsvcVerdict $_.Compiler) -eq 'allowed' }) { 'WARN' } else { 'FAIL' }
+Check 'MSVC toolset' '14.44 >= 35211 (VS 2022 17.14) or 14.50 >= 35723, judged by the compiler build (cl.exe), not the folder name' $msvcTxt $msvcStatus '2'
 
 $sdkTxt = if ($winSdks) { $winSdks -join ', ' } else { 'none' }
 $sdkStatus = if ($winSdks -contains '10.0.22621.0') { 'OK' } elseif ($winSdks | Where-Object { [version]$_ -ge [version]'10.0.19041.0' }) { 'WARN' } else { 'FAIL' }
@@ -439,7 +459,7 @@ foreach ($k in $tools.Keys) {
 $md.Add('')
 $md.Add((Row '.NET SDKs', (Val ($dotnetSdks -join ', '))))
 $md.Add('|---|---|')
-$md.Add((Row 'Visual Studio', $(if ($vs) { ($vs | ForEach-Object { "$($_.name) $($_.version) - MSVC $(Val ($_.msvc -join ', '))" }) -join '; ' } else { 'not installed' })))
+$md.Add((Row 'Visual Studio', $(if ($vs) { ($vs | ForEach-Object { "$($_.name) $($_.version) - MSVC $(Val ((@(MsvcLabels $_) | ForEach-Object Label) -join ', '))" }) -join '; ' } else { 'not installed' })))
 $md.Add((Row 'Windows SDKs', (Val ($winSdks -join ', '))))
 $md.Add((Row 'Epic Games Launcher', $(if ($epic.launcher) { 'installed' } else { 'not installed' })))
 $md.Add((Row 'Unreal Engine', $ueTxt))

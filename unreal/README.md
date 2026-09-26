@@ -102,7 +102,7 @@ same command again; everything done so far is kept.
 | `winget is not available` | Microsoft Store > search **App Installer** > Install/Update, then run it again. |
 | `Unreal Engine 5.8 is not installed yet` (after you typed Q) | Finish the install in the Epic Games Launcher, then `deepfield setup`. |
 | `not found yet` although the launcher shows 5.8 installed | It is in an unusual place: `deepfield setup -EngineDir "E:\Epic\UE_5.8"` (the folder that contains `Engine\`). |
-| `no MSVC toolset UE 5.8 accepts` | Visual Studio Installer > Update, then Modify > Individual components > **MSVC v143 - VS 2022 C++ x64/x86 build tools (Latest)**. |
+| `no MSVC toolset the engine accepts` | The block lists each toolset as `<folder> (compiler <build>) <verdict>`, and the engine's rules. Visual Studio updates the compiler inside the existing folder without renaming it (VS 2022 17.14.x keeps `VC\Tools\MSVC\14.44.35207`), so judge by the compiler build, not the folder name. If the compiler build really is refused: Visual Studio Installer > Update, then Modify > Individual components > **MSVC v143 - VS 2022 C++ x64/x86 build tools (Latest)**. If the block shows installer exit code 5007, the installer refused to run ("the computer does not meet the requirements"): open Visual Studio Installer yourself to see why. |
 | `the build failed` | The compiler errors are printed in red above it. Paste them to whoever owns the code, or into a Claude session. |
 | `... is newer than the built modules` (tests) | The source changed after the last build. `deepfield test` builds first, so this only appears when that build failed. |
 | `the clone converts line endings, and there are uncommitted changes` | Commit or stash your changes, then run `deepfield setup` again. |
