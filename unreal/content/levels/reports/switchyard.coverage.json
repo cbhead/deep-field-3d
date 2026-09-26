@@ -1,0 +1,2325 @@
+{
+	"map": "switchyard",
+	"segmentMeters": 4,
+	"required": 3,
+	"segments": [
+		{
+			"edge": "westGate-switchbackNorth",
+			"t": 0.032258063554763794,
+			"layer": "ground",
+			"apron": true,
+			"positionMetres": [
+				-43,
+				0,
+				-10
+			],
+			"coveringSockets": [
+				"g8"
+			]
+		},
+		{
+			"edge": "westGate-switchbackNorth",
+			"t": 0.096774190664291382,
+			"layer": "ground",
+			"apron": true,
+			"positionMetres": [
+				-39,
+				0,
+				-10
+			],
+			"coveringSockets": [
+				"g8",
+				"g20",
+				"g1"
+			]
+		},
+		{
+			"edge": "westGate-switchbackNorth",
+			"t": 0.16129031777381897,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-35,
+				0,
+				-10
+			],
+			"coveringSockets": [
+				"g8",
+				"g20",
+				"g1"
+			]
+		},
+		{
+			"edge": "westGate-switchbackNorth",
+			"t": 0.22580644488334656,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-31,
+				0,
+				-10
+			],
+			"coveringSockets": [
+				"g8",
+				"g20",
+				"g1",
+				"g22",
+				"w1",
+				"w5"
+			]
+		},
+		{
+			"edge": "westGate-switchbackNorth",
+			"t": 0.29032257199287415,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-27,
+				0,
+				-10
+			],
+			"coveringSockets": [
+				"g8",
+				"g20",
+				"g1",
+				"g22",
+				"g12",
+				"w1",
+				"w5"
+			]
+		},
+		{
+			"edge": "westGate-switchbackNorth",
+			"t": 0.35483869910240173,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-25,
+				0,
+				-8
+			],
+			"coveringSockets": [
+				"g8",
+				"g20",
+				"g1",
+				"g22",
+				"g12",
+				"w1",
+				"w5",
+				"w6"
+			]
+		},
+		{
+			"edge": "westGate-switchbackNorth",
+			"t": 0.41935482621192932,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-25,
+				0,
+				-4
+			],
+			"coveringSockets": [
+				"g8",
+				"g20",
+				"g1",
+				"g9",
+				"g22",
+				"g2",
+				"g12",
+				"w1",
+				"w5"
+			]
+		},
+		{
+			"edge": "westGate-switchbackNorth",
+			"t": 0.48387095332145691,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-25,
+				0,
+				-0
+			],
+			"coveringSockets": [
+				"g8",
+				"g1",
+				"g9",
+				"g22",
+				"g2",
+				"g3",
+				"g12",
+				"w1",
+				"w10"
+			]
+		},
+		{
+			"edge": "westGate-switchbackNorth",
+			"t": 0.54838711023330688,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-25,
+				0,
+				4
+			],
+			"coveringSockets": [
+				"g8",
+				"g1",
+				"g9",
+				"g22",
+				"g2",
+				"g10",
+				"g3",
+				"g12",
+				"w10"
+			]
+		},
+		{
+			"edge": "westGate-switchbackNorth",
+			"t": 0.61290323734283447,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-25,
+				0,
+				8
+			],
+			"coveringSockets": [
+				"g8",
+				"g1",
+				"g9",
+				"g22",
+				"g2",
+				"g10",
+				"g3",
+				"w10"
+			]
+		},
+		{
+			"edge": "westGate-switchbackNorth",
+			"t": 0.67741936445236206,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-25,
+				0,
+				12
+			],
+			"coveringSockets": [
+				"g1",
+				"g9",
+				"g22",
+				"g2",
+				"g10",
+				"g11",
+				"w10"
+			]
+		},
+		{
+			"edge": "westGate-switchbackNorth",
+			"t": 0.74193549156188965,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-21,
+				0,
+				12
+			],
+			"coveringSockets": [
+				"g1",
+				"g9",
+				"g22",
+				"g2",
+				"g10",
+				"g11",
+				"g3",
+				"w10"
+			]
+		},
+		{
+			"edge": "westGate-switchbackNorth",
+			"t": 0.80645161867141724,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-17,
+				0,
+				12
+			],
+			"coveringSockets": [
+				"g9",
+				"g22",
+				"g2",
+				"g10",
+				"g11",
+				"g3",
+				"w10",
+				"w8"
+			]
+		},
+		{
+			"edge": "westGate-switchbackNorth",
+			"t": 0.87096774578094482,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-13,
+				0,
+				12
+			],
+			"coveringSockets": [
+				"g22",
+				"g2",
+				"g10",
+				"g11",
+				"g3",
+				"g13",
+				"w10",
+				"w3",
+				"w8"
+			]
+		},
+		{
+			"edge": "westGate-switchbackNorth",
+			"t": 0.93548387289047241,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-9,
+				0,
+				12
+			],
+			"coveringSockets": [
+				"g22",
+				"g2",
+				"g10",
+				"g11",
+				"g3",
+				"g13",
+				"w10",
+				"w3",
+				"w8"
+			]
+		},
+		{
+			"edge": "westGate-switchbackNorth",
+			"t": 1,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-5,
+				0,
+				12
+			],
+			"coveringSockets": [
+				"g2",
+				"g10",
+				"g11",
+				"g3",
+				"g13",
+				"g21",
+				"w10",
+				"w3",
+				"w8",
+				"w9"
+			]
+		},
+		{
+			"edge": "switchbackNorth-core",
+			"t": 0.021958747878670692,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-5,
+				0,
+				10
+			],
+			"coveringSockets": [
+				"g2",
+				"g11",
+				"g3",
+				"g13",
+				"g21",
+				"g4",
+				"g5",
+				"w10",
+				"w3",
+				"w8",
+				"w9"
+			]
+		},
+		{
+			"edge": "switchbackNorth-core",
+			"t": 0.065876245498657227,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-5,
+				0,
+				6
+			],
+			"coveringSockets": [
+				"g2",
+				"g11",
+				"g3",
+				"g13",
+				"g12",
+				"g4",
+				"g5",
+				"w10",
+				"w3",
+				"w8",
+				"w9"
+			]
+		},
+		{
+			"edge": "switchbackNorth-core",
+			"t": 0.10979374498128891,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-5,
+				0,
+				2
+			],
+			"coveringSockets": [
+				"g22",
+				"g2",
+				"g11",
+				"g3",
+				"g13",
+				"g12",
+				"g4",
+				"g14",
+				"g5",
+				"w6",
+				"w7",
+				"w10",
+				"w3",
+				"w8",
+				"w9"
+			]
+		},
+		{
+			"edge": "switchbackNorth-core",
+			"t": 0.15371124446392059,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-5,
+				0,
+				-2
+			],
+			"coveringSockets": [
+				"g3",
+				"g13",
+				"g12",
+				"g4",
+				"g14",
+				"g15",
+				"w1",
+				"w2",
+				"w6",
+				"w7",
+				"w10",
+				"w3",
+				"w8",
+				"w9"
+			]
+		},
+		{
+			"edge": "switchbackNorth-core",
+			"t": 0.19762873649597168,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-5,
+				0,
+				-6
+			],
+			"coveringSockets": [
+				"g3",
+				"g13",
+				"g12",
+				"g4",
+				"g14",
+				"g15",
+				"w1",
+				"w2",
+				"w6",
+				"w7",
+				"w3",
+				"w8",
+				"w9"
+			]
+		},
+		{
+			"edge": "switchbackNorth-core",
+			"t": 0.24154622852802277,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-5,
+				0,
+				-10
+			],
+			"coveringSockets": [
+				"g3",
+				"g12",
+				"g4",
+				"g14",
+				"g15",
+				"w1",
+				"w2",
+				"w5",
+				"w6",
+				"w7"
+			]
+		},
+		{
+			"edge": "switchbackNorth-core",
+			"t": 0.28546372056007385,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-3,
+				0,
+				-12
+			],
+			"coveringSockets": [
+				"g12",
+				"g4",
+				"g14",
+				"g15",
+				"w1",
+				"w2",
+				"w6",
+				"w7"
+			]
+		},
+		{
+			"edge": "switchbackNorth-core",
+			"t": 0.32938122749328613,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				1,
+				0,
+				-12
+			],
+			"coveringSockets": [
+				"g4",
+				"g14",
+				"g15",
+				"w2",
+				"w6",
+				"w7"
+			]
+		},
+		{
+			"edge": "switchbackNorth-core",
+			"t": 0.37329873442649841,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				5,
+				0,
+				-12
+			],
+			"coveringSockets": [
+				"g4",
+				"g14",
+				"g15",
+				"w2",
+				"w7"
+			]
+		},
+		{
+			"edge": "switchbackNorth-core",
+			"t": 0.41721621155738831,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				9,
+				0,
+				-12
+			],
+			"coveringSockets": [
+				"g4",
+				"g14",
+				"g15",
+				"g6",
+				"w7",
+				"w4"
+			]
+		},
+		{
+			"edge": "switchbackNorth-core",
+			"t": 0.46113371849060059,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				13,
+				0,
+				-12
+			],
+			"coveringSockets": [
+				"g4",
+				"g14",
+				"g15",
+				"g6",
+				"g17",
+				"w4"
+			]
+		},
+		{
+			"edge": "switchbackNorth-core",
+			"t": 0.50505119562149048,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				15,
+				0,
+				-10
+			],
+			"coveringSockets": [
+				"g14",
+				"g5",
+				"g15",
+				"g6",
+				"g16",
+				"g17",
+				"w4"
+			]
+		},
+		{
+			"edge": "switchbackNorth-core",
+			"t": 0.54896873235702515,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				15,
+				0,
+				-6
+			],
+			"coveringSockets": [
+				"g4",
+				"g14",
+				"g5",
+				"g15",
+				"g6",
+				"g16",
+				"g17",
+				"w11",
+				"w4"
+			]
+		},
+		{
+			"edge": "switchbackNorth-core",
+			"t": 0.59288620948791504,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				15,
+				0,
+				-2
+			],
+			"coveringSockets": [
+				"g4",
+				"g14",
+				"g5",
+				"g15",
+				"g6",
+				"g16",
+				"g17",
+				"g7",
+				"w11",
+				"w4"
+			]
+		},
+		{
+			"edge": "switchbackNorth-core",
+			"t": 0.63680368661880493,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				15,
+				0,
+				2
+			],
+			"coveringSockets": [
+				"g13",
+				"g21",
+				"g14",
+				"g5",
+				"g15",
+				"g6",
+				"g16",
+				"g17",
+				"g7",
+				"w11",
+				"w4"
+			]
+		},
+		{
+			"edge": "switchbackNorth-core",
+			"t": 0.6807212233543396,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				15,
+				0,
+				6
+			],
+			"coveringSockets": [
+				"g13",
+				"g21",
+				"g5",
+				"g15",
+				"g6",
+				"g16",
+				"g7",
+				"w11",
+				"w4"
+			]
+		},
+		{
+			"edge": "switchbackNorth-core",
+			"t": 0.72463870048522949,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				15,
+				0,
+				10
+			],
+			"coveringSockets": [
+				"g13",
+				"g21",
+				"g5",
+				"g6",
+				"g16",
+				"w11",
+				"w4"
+			]
+		},
+		{
+			"edge": "switchbackNorth-core",
+			"t": 0.76855617761611938,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				18.987261114144498,
+				0,
+				9.6810191108684407
+			],
+			"coveringSockets": [
+				"g21",
+				"g5",
+				"g6",
+				"g16",
+				"g7",
+				"w11"
+			]
+		},
+		{
+			"edge": "switchbackNorth-core",
+			"t": 0.81247371435165405,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				22.974522228288997,
+				0,
+				9.3620382217368796
+			],
+			"coveringSockets": [
+				"g5",
+				"g6",
+				"g16",
+				"g17",
+				"g7",
+				"g18",
+				"g19",
+				"w11"
+			]
+		},
+		{
+			"edge": "switchbackNorth-core",
+			"t": 0.85639119148254395,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				26.961783342433499,
+				0,
+				9.0430573326053203
+			],
+			"coveringSockets": [
+				"g6",
+				"g16",
+				"g17",
+				"g7",
+				"g18",
+				"g19"
+			]
+		},
+		{
+			"edge": "switchbackNorth-core",
+			"t": 0.90030866861343384,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				30.949044456577997,
+				0,
+				8.724076443473761
+			],
+			"coveringSockets": [
+				"g16",
+				"g17",
+				"g7",
+				"g18",
+				"g19"
+			]
+		},
+		{
+			"edge": "switchbackNorth-core",
+			"t": 0.94422620534896851,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				34.936305570722496,
+				0,
+				8.4050955543421999
+			],
+			"coveringSockets": [
+				"g16",
+				"g7",
+				"g18",
+				"g19"
+			]
+		},
+		{
+			"edge": "switchbackNorth-core",
+			"t": 0.9881436824798584,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				38.923566684866998,
+				0,
+				8.0861146652106406
+			],
+			"coveringSockets": [
+				"g7",
+				"g18",
+				"g19"
+			]
+		},
+		{
+			"edge": "westGate-cutMouth",
+			"t": 0.076193928718566895,
+			"layer": "ground",
+			"apron": true,
+			"positionMetres": [
+				-43.095151705601346,
+				0,
+				-9.3904485457924327
+			],
+			"coveringSockets": [
+				"g8"
+			]
+		},
+		{
+			"edge": "westGate-cutMouth",
+			"t": 0.22858178615570068,
+			"layer": "ground",
+			"apron": true,
+			"positionMetres": [
+				-39.285455116804059,
+				0,
+				-8.1713456373772981
+			],
+			"coveringSockets": [
+				"g8",
+				"g20",
+				"g1"
+			]
+		},
+		{
+			"edge": "westGate-cutMouth",
+			"t": 0.38096964359283447,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-35.475758528006757,
+				0,
+				-6.9522427289621627
+			],
+			"coveringSockets": [
+				"g8",
+				"g20",
+				"g1",
+				"g9"
+			]
+		},
+		{
+			"edge": "westGate-cutMouth",
+			"t": 0.53335750102996826,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-31.666061939209456,
+				0,
+				-5.7331398205470272
+			],
+			"coveringSockets": [
+				"g8",
+				"g20",
+				"g1",
+				"g9",
+				"g22"
+			]
+		},
+		{
+			"edge": "westGate-cutMouth",
+			"t": 0.68574535846710205,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-27.856365350412162,
+				0,
+				-4.5140369121318926
+			],
+			"coveringSockets": [
+				"g8",
+				"g20",
+				"g1",
+				"g9",
+				"g22",
+				"g2",
+				"g12",
+				"w1",
+				"w5"
+			]
+		},
+		{
+			"edge": "westGate-cutMouth",
+			"t": 0.83813321590423584,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-24.046668761614864,
+				0,
+				-3.2949340037167576
+			],
+			"coveringSockets": [
+				"g8",
+				"g20",
+				"g1",
+				"g9",
+				"g22",
+				"g2",
+				"g3",
+				"g12",
+				"w1",
+				"w5"
+			]
+		},
+		{
+			"edge": "westGate-cutMouth",
+			"t": 0.99052107334136963,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-20.236972172817573,
+				0,
+				-2.0758310953016221
+			],
+			"coveringSockets": [
+				"g1",
+				"g9",
+				"g22",
+				"g2",
+				"g3",
+				"g12",
+				"w1",
+				"w5",
+				"w6",
+				"w10",
+				"w8"
+			]
+		},
+		{
+			"edge": "cutMouth-core",
+			"t": 0.032796286046504974,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-18.006369442927749,
+				0,
+				-1.8405095554342199
+			],
+			"coveringSockets": [
+				"g1",
+				"g22",
+				"g2",
+				"g3",
+				"g12",
+				"w1",
+				"w5",
+				"w6",
+				"w10",
+				"w8"
+			]
+		},
+		{
+			"edge": "cutMouth-core",
+			"t": 0.098388850688934326,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-14.019108328783251,
+				0,
+				-1.5215286663026601
+			],
+			"coveringSockets": [
+				"g22",
+				"g2",
+				"g3",
+				"g12",
+				"g4",
+				"w1",
+				"w2",
+				"w5",
+				"w6",
+				"w10",
+				"w8"
+			]
+		},
+		{
+			"edge": "cutMouth-core",
+			"t": 0.16398142278194427,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-10.031847214638752,
+				0,
+				-1.2025477771711
+			],
+			"coveringSockets": [
+				"g22",
+				"g2",
+				"g3",
+				"g13",
+				"g12",
+				"g4",
+				"g14",
+				"w1",
+				"w2",
+				"w6",
+				"w7",
+				"w10",
+				"w3",
+				"w8"
+			]
+		},
+		{
+			"edge": "cutMouth-core",
+			"t": 0.22957399487495422,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-6.04458610049425,
+				0,
+				-0.88356688803953998
+			],
+			"coveringSockets": [
+				"g22",
+				"g2",
+				"g3",
+				"g13",
+				"g12",
+				"g4",
+				"g14",
+				"w1",
+				"w2",
+				"w6",
+				"w7",
+				"w10",
+				"w3",
+				"w8",
+				"w9"
+			]
+		},
+		{
+			"edge": "cutMouth-core",
+			"t": 0.29516655206680298,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-2.0573249863497494,
+				0,
+				-0.56458599890798011
+			],
+			"coveringSockets": [
+				"g3",
+				"g13",
+				"g12",
+				"g4",
+				"g14",
+				"g5",
+				"g15",
+				"w2",
+				"w6",
+				"w7",
+				"w3",
+				"w4",
+				"w8",
+				"w9"
+			]
+		},
+		{
+			"edge": "cutMouth-core",
+			"t": 0.36075913906097412,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				1.9299361277947491,
+				0,
+				-0.24560510977641997
+			],
+			"coveringSockets": [
+				"g3",
+				"g13",
+				"g4",
+				"g14",
+				"g5",
+				"g15",
+				"w7",
+				"w11",
+				"w3",
+				"w4",
+				"w9"
+			]
+		},
+		{
+			"edge": "cutMouth-core",
+			"t": 0.42635169625282288,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				5.896994210223002,
+				0,
+				0.20502724805097169
+			],
+			"coveringSockets": [
+				"g13",
+				"g21",
+				"g4",
+				"g14",
+				"g5",
+				"g15",
+				"g6",
+				"w11",
+				"w3",
+				"w4",
+				"w9"
+			]
+		},
+		{
+			"edge": "cutMouth-core",
+			"t": 0.49194428324699402,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				9.7964282365104705,
+				0,
+				1.0963264540595361
+			],
+			"coveringSockets": [
+				"g13",
+				"g21",
+				"g4",
+				"g14",
+				"g5",
+				"g15",
+				"g6",
+				"g16",
+				"w11",
+				"w4",
+				"w9"
+			]
+		},
+		{
+			"edge": "cutMouth-core",
+			"t": 0.55753684043884277,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				13.695862262797938,
+				0,
+				1.9876256600681004
+			],
+			"coveringSockets": [
+				"g13",
+				"g21",
+				"g4",
+				"g14",
+				"g5",
+				"g15",
+				"g6",
+				"g16",
+				"g17",
+				"w11",
+				"w4",
+				"w9"
+			]
+		},
+		{
+			"edge": "cutMouth-core",
+			"t": 0.62312942743301392,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				17.595296289085407,
+				0,
+				2.8789248660766646
+			],
+			"coveringSockets": [
+				"g5",
+				"g15",
+				"g6",
+				"g16",
+				"g17",
+				"g7",
+				"w11",
+				"w4"
+			]
+		},
+		{
+			"edge": "cutMouth-core",
+			"t": 0.68872195482254028,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				21.49473031537288,
+				0,
+				3.7702240720852291
+			],
+			"coveringSockets": [
+				"g5",
+				"g15",
+				"g6",
+				"g16",
+				"g17",
+				"g7",
+				"g18",
+				"w11",
+				"w4"
+			]
+		},
+		{
+			"edge": "cutMouth-core",
+			"t": 0.75431454181671143,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				25.394164341660343,
+				0,
+				4.6615232780937932
+			],
+			"coveringSockets": [
+				"g5",
+				"g6",
+				"g16",
+				"g17",
+				"g7",
+				"g18",
+				"g19"
+			]
+		},
+		{
+			"edge": "cutMouth-core",
+			"t": 0.81990712881088257,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				29.293598367947812,
+				0,
+				5.5528224841023572
+			],
+			"coveringSockets": [
+				"g6",
+				"g16",
+				"g17",
+				"g7",
+				"g18",
+				"g19"
+			]
+		},
+		{
+			"edge": "cutMouth-core",
+			"t": 0.88549971580505371,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				33.193032394235281,
+				0,
+				6.4441216901109222
+			],
+			"coveringSockets": [
+				"g16",
+				"g17",
+				"g7",
+				"g18",
+				"g19"
+			]
+		},
+		{
+			"edge": "cutMouth-core",
+			"t": 0.95109224319458008,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				37.092466420522754,
+				0,
+				7.3354208961194862
+			],
+			"coveringSockets": [
+				"g16",
+				"g7",
+				"g18",
+				"g19"
+			]
+		},
+		{
+			"edge": "cutMouth-core",
+			"t": 1,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				39.999998725304508,
+				0,
+				7.9999997086410302
+			],
+			"coveringSockets": [
+				"g7",
+				"g18",
+				"g19"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.022796040400862694,
+			"layer": "air",
+			"apron": true,
+			"positionMetres": [
+				-43.045243350529766,
+				9.3783399966716594,
+				3.8108300016641703
+			],
+			"coveringSockets": [
+				"g8"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.068388119339942932,
+			"layer": "air",
+			"apron": true,
+			"positionMetres": [
+				-39.135730051589285,
+				10.135019990014976,
+				3.4324900049925118
+			],
+			"coveringSockets": [
+				"g8",
+				"g1",
+				"g9"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.11398020386695862,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-35.22621675264881,
+				10.891699983358293,
+				3.0541500083208524
+			],
+			"coveringSockets": [
+				"g8",
+				"g1",
+				"g9"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.1595722883939743,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-31.316703453708332,
+				11.648379976701612,
+				2.6758100116491939
+			],
+			"coveringSockets": [
+				"g8",
+				"g1",
+				"g9"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.2051643580198288,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-27.407190154767861,
+				12.405059970044931,
+				2.2974700149775349
+			],
+			"coveringSockets": [
+				"g1",
+				"g9",
+				"g22",
+				"w10"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.25075644254684448,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-23.497676855827379,
+				13.16173996338825,
+				1.9191300183058757
+			],
+			"coveringSockets": [
+				"g1",
+				"g22",
+				"w10",
+				"w8"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.29634851217269897,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-19.588163556886908,
+				13.918419956731565,
+				1.5407900216342167
+			],
+			"coveringSockets": [
+				"g22",
+				"w10",
+				"w8"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.34194061160087585,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-15.678650257946428,
+				14.675099950074884,
+				1.1624500249625578
+			],
+			"coveringSockets": [
+				"w10",
+				"w3",
+				"w8"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.38753268122673035,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-11.730492393103855,
+				15,
+				0.75683847068969878
+			],
+			"coveringSockets": [
+				"w10",
+				"w3",
+				"w8",
+				"w9"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.43312475085258484,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-7.75325577742462,
+				15,
+				0.3307059761526378
+			],
+			"coveringSockets": [
+				"w10",
+				"w3",
+				"w8",
+				"w9"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.47871685028076172,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-3.7760191617453849,
+				15,
+				-0.095426518384423106
+			],
+			"coveringSockets": [
+				"w10",
+				"w3",
+				"w4",
+				"w8",
+				"w9"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.52430891990661621,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				0.20121745393385254,
+				15,
+				-0.52155901292148399
+			],
+			"coveringSockets": [
+				"w11",
+				"w3",
+				"w4",
+				"w8",
+				"w9"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.5699009895324707,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				4.1784540696130898,
+				15,
+				-0.94769150745854513
+			],
+			"coveringSockets": [
+				"w11",
+				"w3",
+				"w4",
+				"w9"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.6154930591583252,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				8.1556906852923241,
+				15,
+				-1.3738240019956061
+			],
+			"coveringSockets": [
+				"w11",
+				"w4",
+				"w9"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.66108518838882446,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				12.132927300971559,
+				15,
+				-1.7999564965326669
+			],
+			"coveringSockets": [
+				"w11",
+				"w4",
+				"w9"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.70667725801467896,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				15.980784560023366,
+				14.542895870763839,
+				-1.3905278276851178
+			],
+			"coveringSockets": [
+				"w11",
+				"w4"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.75226932764053345,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				19.714166984835607,
+				13.681346080422552,
+				-0.24179477389673679
+			],
+			"coveringSockets": [
+				"g6",
+				"g16",
+				"w11",
+				"w4"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.79786139726638794,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				23.447549409647845,
+				12.819796290081268,
+				0.90693827989164444
+			],
+			"coveringSockets": [
+				"g6",
+				"g16",
+				"g17",
+				"g7",
+				"w11",
+				"w4"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.84345346689224243,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				27.180931834460079,
+				11.95824649973998,
+				2.0556713336800256
+			],
+			"coveringSockets": [
+				"g16",
+				"g17",
+				"g7",
+				"g18"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.8890455961227417,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				30.91431425927232,
+				11.096696709398696,
+				3.2044043874684065
+			],
+			"coveringSockets": [
+				"g16",
+				"g7",
+				"g18"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.93463766574859619,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				34.647696684084558,
+				10.23514691905741,
+				4.3531374412567869
+			],
+			"coveringSockets": [
+				"g7",
+				"g18",
+				"g19"
+			]
+		},
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.98022973537445068,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				38.381079108896799,
+				9.3735971287161242,
+				5.5018704950451687
+			],
+			"coveringSockets": [
+				"g7",
+				"g18",
+				"g19"
+			]
+		}
+	],
+	"deadSegments": [
+		{
+			"edge": "airWest-airCore@air",
+			"t": 0.70667725801467896,
+			"count": 2
+		}
+	],
+	"perSocket":
+	{
+		"g8": [
+			"westGate-switchbackNorth@0.032",
+			"westGate-switchbackNorth@0.097",
+			"westGate-switchbackNorth@0.161",
+			"westGate-switchbackNorth@0.226",
+			"westGate-switchbackNorth@0.290",
+			"westGate-switchbackNorth@0.355",
+			"westGate-switchbackNorth@0.419",
+			"westGate-switchbackNorth@0.484",
+			"westGate-switchbackNorth@0.548",
+			"westGate-switchbackNorth@0.613",
+			"westGate-cutMouth@0.076",
+			"westGate-cutMouth@0.229",
+			"westGate-cutMouth@0.381",
+			"westGate-cutMouth@0.533",
+			"westGate-cutMouth@0.686",
+			"westGate-cutMouth@0.838",
+			"airWest-airCore@air@0.023",
+			"airWest-airCore@air@0.068",
+			"airWest-airCore@air@0.114",
+			"airWest-airCore@air@0.160"
+		],
+		"g20": [
+			"westGate-switchbackNorth@0.097",
+			"westGate-switchbackNorth@0.161",
+			"westGate-switchbackNorth@0.226",
+			"westGate-switchbackNorth@0.290",
+			"westGate-switchbackNorth@0.355",
+			"westGate-switchbackNorth@0.419",
+			"westGate-cutMouth@0.229",
+			"westGate-cutMouth@0.381",
+			"westGate-cutMouth@0.533",
+			"westGate-cutMouth@0.686",
+			"westGate-cutMouth@0.838"
+		],
+		"g1": [
+			"westGate-switchbackNorth@0.097",
+			"westGate-switchbackNorth@0.161",
+			"westGate-switchbackNorth@0.226",
+			"westGate-switchbackNorth@0.290",
+			"westGate-switchbackNorth@0.355",
+			"westGate-switchbackNorth@0.419",
+			"westGate-switchbackNorth@0.484",
+			"westGate-switchbackNorth@0.548",
+			"westGate-switchbackNorth@0.613",
+			"westGate-switchbackNorth@0.677",
+			"westGate-switchbackNorth@0.742",
+			"westGate-cutMouth@0.229",
+			"westGate-cutMouth@0.381",
+			"westGate-cutMouth@0.533",
+			"westGate-cutMouth@0.686",
+			"westGate-cutMouth@0.838",
+			"westGate-cutMouth@0.991",
+			"cutMouth-core@0.033",
+			"airWest-airCore@air@0.068",
+			"airWest-airCore@air@0.114",
+			"airWest-airCore@air@0.160",
+			"airWest-airCore@air@0.205",
+			"airWest-airCore@air@0.251"
+		],
+		"g9": [
+			"westGate-switchbackNorth@0.419",
+			"westGate-switchbackNorth@0.484",
+			"westGate-switchbackNorth@0.548",
+			"westGate-switchbackNorth@0.613",
+			"westGate-switchbackNorth@0.677",
+			"westGate-switchbackNorth@0.742",
+			"westGate-switchbackNorth@0.806",
+			"westGate-cutMouth@0.381",
+			"westGate-cutMouth@0.533",
+			"westGate-cutMouth@0.686",
+			"westGate-cutMouth@0.838",
+			"westGate-cutMouth@0.991",
+			"airWest-airCore@air@0.068",
+			"airWest-airCore@air@0.114",
+			"airWest-airCore@air@0.160",
+			"airWest-airCore@air@0.205"
+		],
+		"g22": [
+			"westGate-switchbackNorth@0.226",
+			"westGate-switchbackNorth@0.290",
+			"westGate-switchbackNorth@0.355",
+			"westGate-switchbackNorth@0.419",
+			"westGate-switchbackNorth@0.484",
+			"westGate-switchbackNorth@0.548",
+			"westGate-switchbackNorth@0.613",
+			"westGate-switchbackNorth@0.677",
+			"westGate-switchbackNorth@0.742",
+			"westGate-switchbackNorth@0.806",
+			"westGate-switchbackNorth@0.871",
+			"westGate-switchbackNorth@0.935",
+			"switchbackNorth-core@0.110",
+			"westGate-cutMouth@0.533",
+			"westGate-cutMouth@0.686",
+			"westGate-cutMouth@0.838",
+			"westGate-cutMouth@0.991",
+			"cutMouth-core@0.033",
+			"cutMouth-core@0.098",
+			"cutMouth-core@0.164",
+			"cutMouth-core@0.230",
+			"airWest-airCore@air@0.205",
+			"airWest-airCore@air@0.251",
+			"airWest-airCore@air@0.296"
+		],
+		"g2": [
+			"westGate-switchbackNorth@0.419",
+			"westGate-switchbackNorth@0.484",
+			"westGate-switchbackNorth@0.548",
+			"westGate-switchbackNorth@0.613",
+			"westGate-switchbackNorth@0.677",
+			"westGate-switchbackNorth@0.742",
+			"westGate-switchbackNorth@0.806",
+			"westGate-switchbackNorth@0.871",
+			"westGate-switchbackNorth@0.935",
+			"westGate-switchbackNorth@1.000",
+			"switchbackNorth-core@0.022",
+			"switchbackNorth-core@0.066",
+			"switchbackNorth-core@0.110",
+			"westGate-cutMouth@0.686",
+			"westGate-cutMouth@0.838",
+			"westGate-cutMouth@0.991",
+			"cutMouth-core@0.033",
+			"cutMouth-core@0.098",
+			"cutMouth-core@0.164",
+			"cutMouth-core@0.230"
+		],
+		"g10": [
+			"westGate-switchbackNorth@0.548",
+			"westGate-switchbackNorth@0.613",
+			"westGate-switchbackNorth@0.677",
+			"westGate-switchbackNorth@0.742",
+			"westGate-switchbackNorth@0.806",
+			"westGate-switchbackNorth@0.871",
+			"westGate-switchbackNorth@0.935",
+			"westGate-switchbackNorth@1.000"
+		],
+		"g11": [
+			"westGate-switchbackNorth@0.677",
+			"westGate-switchbackNorth@0.742",
+			"westGate-switchbackNorth@0.806",
+			"westGate-switchbackNorth@0.871",
+			"westGate-switchbackNorth@0.935",
+			"westGate-switchbackNorth@1.000",
+			"switchbackNorth-core@0.022",
+			"switchbackNorth-core@0.066",
+			"switchbackNorth-core@0.110"
+		],
+		"g3": [
+			"westGate-switchbackNorth@0.484",
+			"westGate-switchbackNorth@0.548",
+			"westGate-switchbackNorth@0.613",
+			"westGate-switchbackNorth@0.742",
+			"westGate-switchbackNorth@0.806",
+			"westGate-switchbackNorth@0.871",
+			"westGate-switchbackNorth@0.935",
+			"westGate-switchbackNorth@1.000",
+			"switchbackNorth-core@0.022",
+			"switchbackNorth-core@0.066",
+			"switchbackNorth-core@0.110",
+			"switchbackNorth-core@0.154",
+			"switchbackNorth-core@0.198",
+			"switchbackNorth-core@0.242",
+			"westGate-cutMouth@0.838",
+			"westGate-cutMouth@0.991",
+			"cutMouth-core@0.033",
+			"cutMouth-core@0.098",
+			"cutMouth-core@0.164",
+			"cutMouth-core@0.230",
+			"cutMouth-core@0.295",
+			"cutMouth-core@0.361"
+		],
+		"g13": [
+			"westGate-switchbackNorth@0.871",
+			"westGate-switchbackNorth@0.935",
+			"westGate-switchbackNorth@1.000",
+			"switchbackNorth-core@0.022",
+			"switchbackNorth-core@0.066",
+			"switchbackNorth-core@0.110",
+			"switchbackNorth-core@0.154",
+			"switchbackNorth-core@0.198",
+			"switchbackNorth-core@0.637",
+			"switchbackNorth-core@0.681",
+			"switchbackNorth-core@0.725",
+			"cutMouth-core@0.164",
+			"cutMouth-core@0.230",
+			"cutMouth-core@0.295",
+			"cutMouth-core@0.361",
+			"cutMouth-core@0.426",
+			"cutMouth-core@0.492",
+			"cutMouth-core@0.558"
+		],
+		"g21": [
+			"westGate-switchbackNorth@1.000",
+			"switchbackNorth-core@0.022",
+			"switchbackNorth-core@0.637",
+			"switchbackNorth-core@0.681",
+			"switchbackNorth-core@0.725",
+			"switchbackNorth-core@0.769",
+			"cutMouth-core@0.426",
+			"cutMouth-core@0.492",
+			"cutMouth-core@0.558"
+		],
+		"g12": [
+			"westGate-switchbackNorth@0.290",
+			"westGate-switchbackNorth@0.355",
+			"westGate-switchbackNorth@0.419",
+			"westGate-switchbackNorth@0.484",
+			"westGate-switchbackNorth@0.548",
+			"switchbackNorth-core@0.066",
+			"switchbackNorth-core@0.110",
+			"switchbackNorth-core@0.154",
+			"switchbackNorth-core@0.198",
+			"switchbackNorth-core@0.242",
+			"switchbackNorth-core@0.285",
+			"westGate-cutMouth@0.686",
+			"westGate-cutMouth@0.838",
+			"westGate-cutMouth@0.991",
+			"cutMouth-core@0.033",
+			"cutMouth-core@0.098",
+			"cutMouth-core@0.164",
+			"cutMouth-core@0.230",
+			"cutMouth-core@0.295"
+		],
+		"g4": [
+			"switchbackNorth-core@0.022",
+			"switchbackNorth-core@0.066",
+			"switchbackNorth-core@0.110",
+			"switchbackNorth-core@0.154",
+			"switchbackNorth-core@0.198",
+			"switchbackNorth-core@0.242",
+			"switchbackNorth-core@0.285",
+			"switchbackNorth-core@0.329",
+			"switchbackNorth-core@0.373",
+			"switchbackNorth-core@0.417",
+			"switchbackNorth-core@0.461",
+			"switchbackNorth-core@0.549",
+			"switchbackNorth-core@0.593",
+			"cutMouth-core@0.098",
+			"cutMouth-core@0.164",
+			"cutMouth-core@0.230",
+			"cutMouth-core@0.295",
+			"cutMouth-core@0.361",
+			"cutMouth-core@0.426",
+			"cutMouth-core@0.492",
+			"cutMouth-core@0.558"
+		],
+		"g14": [
+			"switchbackNorth-core@0.110",
+			"switchbackNorth-core@0.154",
+			"switchbackNorth-core@0.198",
+			"switchbackNorth-core@0.242",
+			"switchbackNorth-core@0.285",
+			"switchbackNorth-core@0.329",
+			"switchbackNorth-core@0.373",
+			"switchbackNorth-core@0.417",
+			"switchbackNorth-core@0.461",
+			"switchbackNorth-core@0.505",
+			"switchbackNorth-core@0.549",
+			"switchbackNorth-core@0.593",
+			"switchbackNorth-core@0.637",
+			"cutMouth-core@0.164",
+			"cutMouth-core@0.230",
+			"cutMouth-core@0.295",
+			"cutMouth-core@0.361",
+			"cutMouth-core@0.426",
+			"cutMouth-core@0.492",
+			"cutMouth-core@0.558"
+		],
+		"g5": [
+			"switchbackNorth-core@0.022",
+			"switchbackNorth-core@0.066",
+			"switchbackNorth-core@0.110",
+			"switchbackNorth-core@0.505",
+			"switchbackNorth-core@0.549",
+			"switchbackNorth-core@0.593",
+			"switchbackNorth-core@0.637",
+			"switchbackNorth-core@0.681",
+			"switchbackNorth-core@0.725",
+			"switchbackNorth-core@0.769",
+			"switchbackNorth-core@0.812",
+			"cutMouth-core@0.295",
+			"cutMouth-core@0.361",
+			"cutMouth-core@0.426",
+			"cutMouth-core@0.492",
+			"cutMouth-core@0.558",
+			"cutMouth-core@0.623",
+			"cutMouth-core@0.689",
+			"cutMouth-core@0.754"
+		],
+		"g15": [
+			"switchbackNorth-core@0.154",
+			"switchbackNorth-core@0.198",
+			"switchbackNorth-core@0.242",
+			"switchbackNorth-core@0.285",
+			"switchbackNorth-core@0.329",
+			"switchbackNorth-core@0.373",
+			"switchbackNorth-core@0.417",
+			"switchbackNorth-core@0.461",
+			"switchbackNorth-core@0.505",
+			"switchbackNorth-core@0.549",
+			"switchbackNorth-core@0.593",
+			"switchbackNorth-core@0.637",
+			"switchbackNorth-core@0.681",
+			"cutMouth-core@0.295",
+			"cutMouth-core@0.361",
+			"cutMouth-core@0.426",
+			"cutMouth-core@0.492",
+			"cutMouth-core@0.558",
+			"cutMouth-core@0.623",
+			"cutMouth-core@0.689"
+		],
+		"g6": [
+			"switchbackNorth-core@0.417",
+			"switchbackNorth-core@0.461",
+			"switchbackNorth-core@0.505",
+			"switchbackNorth-core@0.549",
+			"switchbackNorth-core@0.593",
+			"switchbackNorth-core@0.637",
+			"switchbackNorth-core@0.681",
+			"switchbackNorth-core@0.725",
+			"switchbackNorth-core@0.769",
+			"switchbackNorth-core@0.812",
+			"switchbackNorth-core@0.856",
+			"cutMouth-core@0.426",
+			"cutMouth-core@0.492",
+			"cutMouth-core@0.558",
+			"cutMouth-core@0.623",
+			"cutMouth-core@0.689",
+			"cutMouth-core@0.754",
+			"cutMouth-core@0.820",
+			"airWest-airCore@air@0.752",
+			"airWest-airCore@air@0.798"
+		],
+		"g16": [
+			"switchbackNorth-core@0.505",
+			"switchbackNorth-core@0.549",
+			"switchbackNorth-core@0.593",
+			"switchbackNorth-core@0.637",
+			"switchbackNorth-core@0.681",
+			"switchbackNorth-core@0.725",
+			"switchbackNorth-core@0.769",
+			"switchbackNorth-core@0.812",
+			"switchbackNorth-core@0.856",
+			"switchbackNorth-core@0.900",
+			"switchbackNorth-core@0.944",
+			"cutMouth-core@0.492",
+			"cutMouth-core@0.558",
+			"cutMouth-core@0.623",
+			"cutMouth-core@0.689",
+			"cutMouth-core@0.754",
+			"cutMouth-core@0.820",
+			"cutMouth-core@0.885",
+			"cutMouth-core@0.951",
+			"airWest-airCore@air@0.752",
+			"airWest-airCore@air@0.798",
+			"airWest-airCore@air@0.843",
+			"airWest-airCore@air@0.889"
+		],
+		"g17": [
+			"switchbackNorth-core@0.461",
+			"switchbackNorth-core@0.505",
+			"switchbackNorth-core@0.549",
+			"switchbackNorth-core@0.593",
+			"switchbackNorth-core@0.637",
+			"switchbackNorth-core@0.812",
+			"switchbackNorth-core@0.856",
+			"switchbackNorth-core@0.900",
+			"cutMouth-core@0.558",
+			"cutMouth-core@0.623",
+			"cutMouth-core@0.689",
+			"cutMouth-core@0.754",
+			"cutMouth-core@0.820",
+			"cutMouth-core@0.885",
+			"airWest-airCore@air@0.798",
+			"airWest-airCore@air@0.843"
+		],
+		"g7": [
+			"switchbackNorth-core@0.593",
+			"switchbackNorth-core@0.637",
+			"switchbackNorth-core@0.681",
+			"switchbackNorth-core@0.769",
+			"switchbackNorth-core@0.812",
+			"switchbackNorth-core@0.856",
+			"switchbackNorth-core@0.900",
+			"switchbackNorth-core@0.944",
+			"switchbackNorth-core@0.988",
+			"cutMouth-core@0.623",
+			"cutMouth-core@0.689",
+			"cutMouth-core@0.754",
+			"cutMouth-core@0.820",
+			"cutMouth-core@0.885",
+			"cutMouth-core@0.951",
+			"cutMouth-core@1.000",
+			"airWest-airCore@air@0.798",
+			"airWest-airCore@air@0.843",
+			"airWest-airCore@air@0.889",
+			"airWest-airCore@air@0.935",
+			"airWest-airCore@air@0.980"
+		],
+		"g18": [
+			"switchbackNorth-core@0.812",
+			"switchbackNorth-core@0.856",
+			"switchbackNorth-core@0.900",
+			"switchbackNorth-core@0.944",
+			"switchbackNorth-core@0.988",
+			"cutMouth-core@0.689",
+			"cutMouth-core@0.754",
+			"cutMouth-core@0.820",
+			"cutMouth-core@0.885",
+			"cutMouth-core@0.951",
+			"cutMouth-core@1.000",
+			"airWest-airCore@air@0.843",
+			"airWest-airCore@air@0.889",
+			"airWest-airCore@air@0.935",
+			"airWest-airCore@air@0.980"
+		],
+		"g19": [
+			"switchbackNorth-core@0.812",
+			"switchbackNorth-core@0.856",
+			"switchbackNorth-core@0.900",
+			"switchbackNorth-core@0.944",
+			"switchbackNorth-core@0.988",
+			"cutMouth-core@0.754",
+			"cutMouth-core@0.820",
+			"cutMouth-core@0.885",
+			"cutMouth-core@0.951",
+			"cutMouth-core@1.000",
+			"airWest-airCore@air@0.935",
+			"airWest-airCore@air@0.980"
+		],
+		"w1": [
+			"westGate-switchbackNorth@0.226",
+			"westGate-switchbackNorth@0.290",
+			"westGate-switchbackNorth@0.355",
+			"westGate-switchbackNorth@0.419",
+			"westGate-switchbackNorth@0.484",
+			"switchbackNorth-core@0.154",
+			"switchbackNorth-core@0.198",
+			"switchbackNorth-core@0.242",
+			"switchbackNorth-core@0.285",
+			"westGate-cutMouth@0.686",
+			"westGate-cutMouth@0.838",
+			"westGate-cutMouth@0.991",
+			"cutMouth-core@0.033",
+			"cutMouth-core@0.098",
+			"cutMouth-core@0.164",
+			"cutMouth-core@0.230"
+		],
+		"w2": [
+			"switchbackNorth-core@0.154",
+			"switchbackNorth-core@0.198",
+			"switchbackNorth-core@0.242",
+			"switchbackNorth-core@0.285",
+			"switchbackNorth-core@0.329",
+			"switchbackNorth-core@0.373",
+			"cutMouth-core@0.098",
+			"cutMouth-core@0.164",
+			"cutMouth-core@0.230",
+			"cutMouth-core@0.295"
+		],
+		"w5": [
+			"westGate-switchbackNorth@0.226",
+			"westGate-switchbackNorth@0.290",
+			"westGate-switchbackNorth@0.355",
+			"westGate-switchbackNorth@0.419",
+			"switchbackNorth-core@0.242",
+			"westGate-cutMouth@0.686",
+			"westGate-cutMouth@0.838",
+			"westGate-cutMouth@0.991",
+			"cutMouth-core@0.033",
+			"cutMouth-core@0.098"
+		],
+		"w6": [
+			"westGate-switchbackNorth@0.355",
+			"switchbackNorth-core@0.110",
+			"switchbackNorth-core@0.154",
+			"switchbackNorth-core@0.198",
+			"switchbackNorth-core@0.242",
+			"switchbackNorth-core@0.285",
+			"switchbackNorth-core@0.329",
+			"westGate-cutMouth@0.991",
+			"cutMouth-core@0.033",
+			"cutMouth-core@0.098",
+			"cutMouth-core@0.164",
+			"cutMouth-core@0.230",
+			"cutMouth-core@0.295"
+		],
+		"w7": [
+			"switchbackNorth-core@0.110",
+			"switchbackNorth-core@0.154",
+			"switchbackNorth-core@0.198",
+			"switchbackNorth-core@0.242",
+			"switchbackNorth-core@0.285",
+			"switchbackNorth-core@0.329",
+			"switchbackNorth-core@0.373",
+			"switchbackNorth-core@0.417",
+			"cutMouth-core@0.164",
+			"cutMouth-core@0.230",
+			"cutMouth-core@0.295",
+			"cutMouth-core@0.361"
+		],
+		"w10": [
+			"westGate-switchbackNorth@0.484",
+			"westGate-switchbackNorth@0.548",
+			"westGate-switchbackNorth@0.613",
+			"westGate-switchbackNorth@0.677",
+			"westGate-switchbackNorth@0.742",
+			"westGate-switchbackNorth@0.806",
+			"westGate-switchbackNorth@0.871",
+			"westGate-switchbackNorth@0.935",
+			"westGate-switchbackNorth@1.000",
+			"switchbackNorth-core@0.022",
+			"switchbackNorth-core@0.066",
+			"switchbackNorth-core@0.110",
+			"switchbackNorth-core@0.154",
+			"westGate-cutMouth@0.991",
+			"cutMouth-core@0.033",
+			"cutMouth-core@0.098",
+			"cutMouth-core@0.164",
+			"cutMouth-core@0.230",
+			"airWest-airCore@air@0.205",
+			"airWest-airCore@air@0.251",
+			"airWest-airCore@air@0.296",
+			"airWest-airCore@air@0.342",
+			"airWest-airCore@air@0.388",
+			"airWest-airCore@air@0.433",
+			"airWest-airCore@air@0.479"
+		],
+		"w11": [
+			"switchbackNorth-core@0.549",
+			"switchbackNorth-core@0.593",
+			"switchbackNorth-core@0.637",
+			"switchbackNorth-core@0.681",
+			"switchbackNorth-core@0.725",
+			"switchbackNorth-core@0.769",
+			"switchbackNorth-core@0.812",
+			"cutMouth-core@0.361",
+			"cutMouth-core@0.426",
+			"cutMouth-core@0.492",
+			"cutMouth-core@0.558",
+			"cutMouth-core@0.623",
+			"cutMouth-core@0.689",
+			"airWest-airCore@air@0.524",
+			"airWest-airCore@air@0.570",
+			"airWest-airCore@air@0.615",
+			"airWest-airCore@air@0.661",
+			"airWest-airCore@air@0.707",
+			"airWest-airCore@air@0.752",
+			"airWest-airCore@air@0.798"
+		],
+		"w3": [
+			"westGate-switchbackNorth@0.871",
+			"westGate-switchbackNorth@0.935",
+			"westGate-switchbackNorth@1.000",
+			"switchbackNorth-core@0.022",
+			"switchbackNorth-core@0.066",
+			"switchbackNorth-core@0.110",
+			"switchbackNorth-core@0.154",
+			"switchbackNorth-core@0.198",
+			"cutMouth-core@0.164",
+			"cutMouth-core@0.230",
+			"cutMouth-core@0.295",
+			"cutMouth-core@0.361",
+			"cutMouth-core@0.426",
+			"airWest-airCore@air@0.342",
+			"airWest-airCore@air@0.388",
+			"airWest-airCore@air@0.433",
+			"airWest-airCore@air@0.479",
+			"airWest-airCore@air@0.524",
+			"airWest-airCore@air@0.570"
+		],
+		"w4": [
+			"switchbackNorth-core@0.417",
+			"switchbackNorth-core@0.461",
+			"switchbackNorth-core@0.505",
+			"switchbackNorth-core@0.549",
+			"switchbackNorth-core@0.593",
+			"switchbackNorth-core@0.637",
+			"switchbackNorth-core@0.681",
+			"switchbackNorth-core@0.725",
+			"cutMouth-core@0.295",
+			"cutMouth-core@0.361",
+			"cutMouth-core@0.426",
+			"cutMouth-core@0.492",
+			"cutMouth-core@0.558",
+			"cutMouth-core@0.623",
+			"cutMouth-core@0.689",
+			"airWest-airCore@air@0.479",
+			"airWest-airCore@air@0.524",
+			"airWest-airCore@air@0.570",
+			"airWest-airCore@air@0.615",
+			"airWest-airCore@air@0.661",
+			"airWest-airCore@air@0.707",
+			"airWest-airCore@air@0.752",
+			"airWest-airCore@air@0.798"
+		],
+		"w8": [
+			"westGate-switchbackNorth@0.806",
+			"westGate-switchbackNorth@0.871",
+			"westGate-switchbackNorth@0.935",
+			"westGate-switchbackNorth@1.000",
+			"switchbackNorth-core@0.022",
+			"switchbackNorth-core@0.066",
+			"switchbackNorth-core@0.110",
+			"switchbackNorth-core@0.154",
+			"switchbackNorth-core@0.198",
+			"westGate-cutMouth@0.991",
+			"cutMouth-core@0.033",
+			"cutMouth-core@0.098",
+			"cutMouth-core@0.164",
+			"cutMouth-core@0.230",
+			"cutMouth-core@0.295",
+			"airWest-airCore@air@0.251",
+			"airWest-airCore@air@0.296",
+			"airWest-airCore@air@0.342",
+			"airWest-airCore@air@0.388",
+			"airWest-airCore@air@0.433",
+			"airWest-airCore@air@0.479",
+			"airWest-airCore@air@0.524"
+		],
+		"w9": [
+			"westGate-switchbackNorth@1.000",
+			"switchbackNorth-core@0.022",
+			"switchbackNorth-core@0.066",
+			"switchbackNorth-core@0.110",
+			"switchbackNorth-core@0.154",
+			"switchbackNorth-core@0.198",
+			"cutMouth-core@0.230",
+			"cutMouth-core@0.295",
+			"cutMouth-core@0.361",
+			"cutMouth-core@0.426",
+			"cutMouth-core@0.492",
+			"cutMouth-core@0.558",
+			"airWest-airCore@air@0.388",
+			"airWest-airCore@air@0.433",
+			"airWest-airCore@air@0.479",
+			"airWest-airCore@air@0.524",
+			"airWest-airCore@air@0.570",
+			"airWest-airCore@air@0.615",
+			"airWest-airCore@air@0.661"
+		]
+	}
+}

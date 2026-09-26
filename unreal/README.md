@@ -217,6 +217,11 @@ Failures listed in `unreal/map-validation-baseline.tsv` show as warnings, not er
 (spire, switchyard, toaster) and the `testlane` fixture carry some until their redesigns. `corridor`
 shows `[SKIP]` on every map until a navmesh is baked.
 
+Each map's dead-ground report goes to `unreal/content/levels/reports/<map>.coverage.json`, and all of
+them are committed. The writer is deterministic (no timestamp, LF on every platform), so a run on
+unchanged maps leaves `git status` clean. A diff there is a changed measurement: commit it with the
+change that caused it.
+
 ### 5.3 The network smoke test (a listen host and headless clients)
 
 ```bat

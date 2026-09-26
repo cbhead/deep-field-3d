@@ -1,0 +1,2701 @@
+{
+	"map": "spire",
+	"segmentMeters": 4,
+	"required": 3,
+	"segments": [
+		{
+			"edge": "street-floorTwo",
+			"t": 0.020349135622382164,
+			"layer": "ground",
+			"apron": true,
+			"positionMetres": [
+				-32,
+				0,
+				-0
+			],
+			"coveringSockets": [
+				"g2",
+				"g3",
+				"g5",
+				"g6",
+				"g7"
+			]
+		},
+		{
+			"edge": "street-floorTwo",
+			"t": 0.061047408729791641,
+			"layer": "ground",
+			"apron": true,
+			"positionMetres": [
+				-28,
+				0,
+				-0
+			],
+			"coveringSockets": [
+				"g3",
+				"g4",
+				"g5",
+				"g6",
+				"g7",
+				"g9"
+			]
+		},
+		{
+			"edge": "street-floorTwo",
+			"t": 0.10174567997455597,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-24,
+				0,
+				-0
+			],
+			"coveringSockets": [
+				"g5",
+				"g6",
+				"g7",
+				"g9",
+				"g10",
+				"g12",
+				"w1"
+			]
+		},
+		{
+			"edge": "street-floorTwo",
+			"t": 0.1424439549446106,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-20,
+				0,
+				-0
+			],
+			"coveringSockets": [
+				"g5",
+				"g6",
+				"g7",
+				"g9",
+				"g10",
+				"g12",
+				"w1"
+			]
+		},
+		{
+			"edge": "street-floorTwo",
+			"t": 0.18314222991466522,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-16,
+				0,
+				-0
+			],
+			"coveringSockets": [
+				"g5",
+				"g6",
+				"g7",
+				"g9",
+				"g10",
+				"g12",
+				"w1"
+			]
+		},
+		{
+			"edge": "street-floorTwo",
+			"t": 0.22384048998355865,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-14,
+				0,
+				-2
+			],
+			"coveringSockets": [
+				"g5",
+				"g6",
+				"g7",
+				"g9",
+				"g10",
+				"g12",
+				"w1"
+			]
+		},
+		{
+			"edge": "street-floorTwo",
+			"t": 0.26453876495361328,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-14,
+				0,
+				-6
+			],
+			"coveringSockets": [
+				"g5",
+				"g6",
+				"g9",
+				"g12",
+				"w1",
+				"w2"
+			]
+		},
+		{
+			"edge": "street-floorTwo",
+			"t": 0.30523702502250671,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-14,
+				0,
+				-10
+			],
+			"coveringSockets": [
+				"g4",
+				"g5",
+				"g6",
+				"w1",
+				"w2"
+			]
+		},
+		{
+			"edge": "street-floorTwo",
+			"t": 0.34593531489372253,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-14,
+				0,
+				-14
+			],
+			"coveringSockets": [
+				"g4",
+				"g5",
+				"g6",
+				"g13",
+				"w1",
+				"w2"
+			]
+		},
+		{
+			"edge": "street-floorTwo",
+			"t": 0.38663357496261597,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-11.17157287525381,
+				2.8284271247461903,
+				-14
+			],
+			"coveringSockets": [
+				"g5",
+				"g6",
+				"g13",
+				"w1",
+				"w2"
+			]
+		},
+		{
+			"edge": "street-floorTwo",
+			"t": 0.42733186483383179,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-8.3431457505076203,
+				5.6568542494923806,
+				-14
+			],
+			"coveringSockets": [
+				"g13",
+				"w1",
+				"w2",
+				"w11",
+				"w12"
+			]
+		},
+		{
+			"edge": "street-floorTwo",
+			"t": 0.46803012490272522,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-5.5147186257614296,
+				8.4852813742385713,
+				-14
+			],
+			"coveringSockets": [
+				"g13",
+				"w1",
+				"w2",
+				"w11",
+				"w12",
+				"w13",
+				"w14"
+			]
+		},
+		{
+			"edge": "street-floorTwo",
+			"t": 0.50872838497161865,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-2.1421356237309555,
+				10,
+				-14
+			],
+			"coveringSockets": [
+				"g13",
+				"w2",
+				"w3",
+				"w7",
+				"w12",
+				"w13",
+				"w14"
+			]
+		},
+		{
+			"edge": "street-floorTwo",
+			"t": 0.54942667484283447,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				1.8578643762690445,
+				10,
+				-14
+			],
+			"coveringSockets": [
+				"g13",
+				"w3",
+				"w7",
+				"w12",
+				"w13",
+				"w14",
+				"w15"
+			]
+		},
+		{
+			"edge": "street-floorTwo",
+			"t": 0.59012496471405029,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				5.8578643762690437,
+				10,
+				-14
+			],
+			"coveringSockets": [
+				"g13",
+				"w3",
+				"w7",
+				"w13",
+				"w14",
+				"w15"
+			]
+		},
+		{
+			"edge": "street-floorTwo",
+			"t": 0.63082319498062134,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				9.8578643762690437,
+				10,
+				-14
+			],
+			"coveringSockets": [
+				"g13",
+				"w3",
+				"w7",
+				"w14",
+				"w15",
+				"w16"
+			]
+		},
+		{
+			"edge": "street-floorTwo",
+			"t": 0.67152148485183716,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				13.857864376269044,
+				10,
+				-14
+			],
+			"coveringSockets": [
+				"g13",
+				"w3",
+				"w7",
+				"w14",
+				"w15",
+				"w16"
+			]
+		},
+		{
+			"edge": "street-floorTwo",
+			"t": 0.71221977472305298,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				14,
+				12.727922061357852,
+				-11.272077938642148
+			],
+			"coveringSockets": [
+				"w3",
+				"w7",
+				"w14",
+				"w15",
+				"w16"
+			]
+		},
+		{
+			"edge": "street-floorTwo",
+			"t": 0.75291800498962402,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				14,
+				15.556349186104041,
+				-8.4436508138959585
+			],
+			"coveringSockets": [
+				"w3",
+				"w5",
+				"w7",
+				"w9",
+				"w14",
+				"w15",
+				"w16",
+				"w28",
+				"w29"
+			]
+		},
+		{
+			"edge": "street-floorTwo",
+			"t": 0.79361629486083984,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				14,
+				18.384776310850231,
+				-5.6152236891497687
+			],
+			"coveringSockets": [
+				"w3",
+				"w5",
+				"w7",
+				"w9",
+				"w14",
+				"w15",
+				"w16",
+				"w25",
+				"w26",
+				"w28",
+				"w29"
+			]
+		},
+		{
+			"edge": "street-floorTwo",
+			"t": 0.83431458473205566,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				14,
+				20,
+				-2.2842712474619109
+			],
+			"coveringSockets": [
+				"w3",
+				"w5",
+				"w7",
+				"w9",
+				"w24",
+				"w26",
+				"w28",
+				"w29"
+			]
+		},
+		{
+			"edge": "street-floorTwo",
+			"t": 0.87501287460327148,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				14,
+				20,
+				1.7157287525380889
+			],
+			"coveringSockets": [
+				"w3",
+				"w5",
+				"w6",
+				"w7",
+				"w9",
+				"w24",
+				"w26",
+				"w27",
+				"w29"
+			]
+		},
+		{
+			"edge": "street-floorTwo",
+			"t": 0.91571110486984253,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				14,
+				20,
+				5.7157287525380891
+			],
+			"coveringSockets": [
+				"w3",
+				"w5",
+				"w6",
+				"w8",
+				"w9",
+				"w24",
+				"w26",
+				"w27",
+				"w29"
+			]
+		},
+		{
+			"edge": "street-floorTwo",
+			"t": 0.95640939474105835,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				14,
+				20,
+				9.7157287525380891
+			],
+			"coveringSockets": [
+				"w4",
+				"w5",
+				"w6",
+				"w8",
+				"w9",
+				"w24",
+				"w26",
+				"w27"
+			]
+		},
+		{
+			"edge": "street-floorTwo",
+			"t": 0.99710768461227417,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				14,
+				20,
+				13.715728752538089
+			],
+			"coveringSockets": [
+				"w4",
+				"w5",
+				"w6",
+				"w8",
+				"w9",
+				"w24",
+				"w26",
+				"w27"
+			]
+		},
+		{
+			"edge": "floorTwo-roofCore",
+			"t": 0.032364603132009506,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				12.251685447756925,
+				20.971285862357263,
+				14
+			],
+			"coveringSockets": [
+				"w4",
+				"w5",
+				"w6",
+				"w8",
+				"w9",
+				"w24",
+				"w26",
+				"w27"
+			]
+		},
+		{
+			"edge": "floorTwo-roofCore",
+			"t": 0.09709380567073822,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				8.7550563432707733,
+				22.913857587071792,
+				14
+			],
+			"coveringSockets": [
+				"w4",
+				"w5",
+				"w6",
+				"w8",
+				"w24",
+				"w26",
+				"w27"
+			]
+		},
+		{
+			"edge": "floorTwo-roofCore",
+			"t": 0.16182300448417664,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				5.2584272387846216,
+				24.856429311786325,
+				14
+			],
+			"coveringSockets": [
+				"w4",
+				"w6",
+				"w21",
+				"w24",
+				"w27"
+			]
+		},
+		{
+			"edge": "floorTwo-roofCore",
+			"t": 0.22655221819877625,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				1.7617981342984717,
+				26.799001036500851,
+				14
+			],
+			"coveringSockets": [
+				"w19",
+				"w20",
+				"w21",
+				"w24",
+				"w27",
+				"w31"
+			]
+		},
+		{
+			"edge": "floorTwo-roofCore",
+			"t": 0.29128140211105347,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-1.7348309701876814,
+				28.74157276121538,
+				14
+			],
+			"coveringSockets": [
+				"w19",
+				"w20",
+				"w21",
+				"w24",
+				"w30",
+				"w31",
+				"w32"
+			]
+		},
+		{
+			"edge": "floorTwo-roofCore",
+			"t": 0.35601061582565308,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-5.4087397180259993,
+				30,
+				14
+			],
+			"coveringSockets": [
+				"w19",
+				"w20",
+				"w21",
+				"w24",
+				"w30",
+				"w31",
+				"w32"
+			]
+		},
+		{
+			"edge": "floorTwo-roofCore",
+			"t": 0.42073982954025269,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-9.4087397180260002,
+				30,
+				14
+			],
+			"coveringSockets": [
+				"w18",
+				"w19",
+				"w20",
+				"w21",
+				"w30",
+				"w31",
+				"w32"
+			]
+		},
+		{
+			"edge": "floorTwo-roofCore",
+			"t": 0.48546901345252991,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-13.408739718026,
+				30,
+				14
+			],
+			"coveringSockets": [
+				"w18",
+				"w19",
+				"w20",
+				"w21",
+				"w30",
+				"w31"
+			]
+		},
+		{
+			"edge": "floorTwo-roofCore",
+			"t": 0.55019819736480713,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-14,
+				31.981289716563975,
+				11.226194396810438
+			],
+			"coveringSockets": [
+				"w18",
+				"w19",
+				"w20",
+				"w21",
+				"w30",
+				"w31"
+			]
+		},
+		{
+			"edge": "floorTwo-roofCore",
+			"t": 0.61492741107940674,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-14,
+				34.306242491440365,
+				7.9712605119834965
+			],
+			"coveringSockets": [
+				"w18",
+				"w19",
+				"w20",
+				"w21",
+				"w30",
+				"w31",
+				"w32"
+			]
+		},
+		{
+			"edge": "floorTwo-roofCore",
+			"t": 0.67965662479400635,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-14,
+				36.631195266316745,
+				4.7163266271565565
+			],
+			"coveringSockets": [
+				"w18",
+				"w19",
+				"w20",
+				"w21",
+				"w30",
+				"w31",
+				"w32"
+			]
+		},
+		{
+			"edge": "floorTwo-roofCore",
+			"t": 0.74438583850860596,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-14,
+				38.956148041193131,
+				1.4613927423296174
+			],
+			"coveringSockets": [
+				"w18",
+				"w19",
+				"w20",
+				"w21",
+				"w30",
+				"w31",
+				"w32"
+			]
+		},
+		{
+			"edge": "floorTwo-roofCore",
+			"t": 0.80911505222320557,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-11.795910816059259,
+				40,
+				-0
+			],
+			"coveringSockets": [
+				"w18",
+				"w19",
+				"w20",
+				"w30",
+				"w31",
+				"w32"
+			]
+		},
+		{
+			"edge": "floorTwo-roofCore",
+			"t": 0.87384426593780518,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-7.7959108160592585,
+				40,
+				-0
+			],
+			"coveringSockets": [
+				"w18",
+				"w20",
+				"w21",
+				"w30",
+				"w31",
+				"w32"
+			]
+		},
+		{
+			"edge": "floorTwo-roofCore",
+			"t": 0.93857342004776001,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-3.7959108160592585,
+				40,
+				-0
+			],
+			"coveringSockets": [
+				"w18",
+				"w20",
+				"w21",
+				"w30",
+				"w31",
+				"w32"
+			]
+		},
+		{
+			"edge": "floorTwo-roofCore",
+			"t": 1,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-9.3446746177505699e-07,
+				40,
+				-0
+			],
+			"coveringSockets": [
+				"w20",
+				"w24",
+				"w30",
+				"w31",
+				"w32",
+				"w33",
+				"w34"
+			]
+		},
+		{
+			"edge": "serviceStreet-floorTwo",
+			"t": 0.021087249740958214,
+			"layer": "ground",
+			"apron": true,
+			"positionMetres": [
+				-32,
+				0,
+				16
+			],
+			"coveringSockets": [
+				"g7",
+				"g8"
+			]
+		},
+		{
+			"edge": "serviceStreet-floorTwo",
+			"t": 0.063261747360229492,
+			"layer": "ground",
+			"apron": true,
+			"positionMetres": [
+				-28,
+				0,
+				16
+			],
+			"coveringSockets": [
+				"g7",
+				"g8",
+				"g9",
+				"g10",
+				"g11"
+			]
+		},
+		{
+			"edge": "serviceStreet-floorTwo",
+			"t": 0.10543625056743622,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-24,
+				0,
+				16
+			],
+			"coveringSockets": [
+				"g7",
+				"g8",
+				"g9",
+				"g10",
+				"g11"
+			]
+		},
+		{
+			"edge": "serviceStreet-floorTwo",
+			"t": 0.14761075377464294,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-20,
+				0,
+				16
+			],
+			"coveringSockets": [
+				"g7",
+				"g8",
+				"g9",
+				"g10",
+				"g11",
+				"g12"
+			]
+		},
+		{
+			"edge": "serviceStreet-floorTwo",
+			"t": 0.18978525698184967,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-16,
+				0,
+				16
+			],
+			"coveringSockets": [
+				"g7",
+				"g8",
+				"g9",
+				"g10",
+				"g11",
+				"g12"
+			]
+		},
+		{
+			"edge": "serviceStreet-floorTwo",
+			"t": 0.2319597452878952,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-12,
+				0,
+				16
+			],
+			"coveringSockets": [
+				"g7",
+				"g8",
+				"g9",
+				"g10",
+				"g11",
+				"g12"
+			]
+		},
+		{
+			"edge": "serviceStreet-floorTwo",
+			"t": 0.27413424849510193,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-8,
+				0,
+				16
+			],
+			"coveringSockets": [
+				"g8",
+				"g9",
+				"g10",
+				"g11",
+				"g12"
+			]
+		},
+		{
+			"edge": "serviceStreet-floorTwo",
+			"t": 0.31630876660346985,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				-4,
+				0,
+				16
+			],
+			"coveringSockets": [
+				"g9",
+				"g10",
+				"g11",
+				"g12",
+				"g14",
+				"w4"
+			]
+		},
+		{
+			"edge": "serviceStreet-floorTwo",
+			"t": 0.35848325490951538,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				0,
+				0,
+				16
+			],
+			"coveringSockets": [
+				"g11",
+				"g12",
+				"g14",
+				"w4",
+				"w6"
+			]
+		},
+		{
+			"edge": "serviceStreet-floorTwo",
+			"t": 0.40065774321556091,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				4,
+				0,
+				16
+			],
+			"coveringSockets": [
+				"g14",
+				"g15",
+				"w4",
+				"w5",
+				"w6",
+				"w8"
+			]
+		},
+		{
+			"edge": "serviceStreet-floorTwo",
+			"t": 0.44283226132392883,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				8,
+				0,
+				16
+			],
+			"coveringSockets": [
+				"g14",
+				"g15",
+				"w4",
+				"w5",
+				"w6",
+				"w8"
+			]
+		},
+		{
+			"edge": "serviceStreet-floorTwo",
+			"t": 0.48500674962997437,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				12,
+				0,
+				16
+			],
+			"coveringSockets": [
+				"g14",
+				"g15",
+				"w4",
+				"w5",
+				"w6",
+				"w8"
+			]
+		},
+		{
+			"edge": "serviceStreet-floorTwo",
+			"t": 0.52718126773834229,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				16,
+				0,
+				16
+			],
+			"coveringSockets": [
+				"g14",
+				"g15",
+				"w4",
+				"w5",
+				"w6",
+				"w8",
+				"w9"
+			]
+		},
+		{
+			"edge": "serviceStreet-floorTwo",
+			"t": 0.56935572624206543,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				20,
+				0,
+				16
+			],
+			"coveringSockets": [
+				"g14",
+				"g15",
+				"w4",
+				"w6",
+				"w8",
+				"w9"
+			]
+		},
+		{
+			"edge": "serviceStreet-floorTwo",
+			"t": 0.61153024435043335,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				20,
+				3.1234752377721211,
+				13.501219809782304
+			],
+			"coveringSockets": [
+				"g14",
+				"g15",
+				"w4",
+				"w5",
+				"w6",
+				"w8",
+				"w9"
+			]
+		},
+		{
+			"edge": "serviceStreet-floorTwo",
+			"t": 0.65370476245880127,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				20,
+				6.2469504755442422,
+				11.002439619564607
+			],
+			"coveringSockets": [
+				"g14",
+				"g15",
+				"w4",
+				"w5",
+				"w6",
+				"w8",
+				"w9"
+			]
+		},
+		{
+			"edge": "serviceStreet-floorTwo",
+			"t": 0.69587928056716919,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				20,
+				9.3704257133163633,
+				8.503659429346909
+			],
+			"coveringSockets": [
+				"g14",
+				"g15",
+				"w3",
+				"w4",
+				"w5",
+				"w6",
+				"w8",
+				"w9"
+			]
+		},
+		{
+			"edge": "serviceStreet-floorTwo",
+			"t": 0.73805373907089233,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				20,
+				12.493900951088484,
+				6.0048792391292114
+			],
+			"coveringSockets": [
+				"g15",
+				"w3",
+				"w5",
+				"w6",
+				"w8",
+				"w9"
+			]
+		},
+		{
+			"edge": "serviceStreet-floorTwo",
+			"t": 0.78022825717926025,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				20,
+				15.617376188860607,
+				3.5060990489115147
+			],
+			"coveringSockets": [
+				"w3",
+				"w5",
+				"w6",
+				"w7",
+				"w8",
+				"w9",
+				"w26"
+			]
+		},
+		{
+			"edge": "serviceStreet-floorTwo",
+			"t": 0.82240277528762817,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				20,
+				18.74085142663273,
+				1.0073188586938171
+			],
+			"coveringSockets": [
+				"w3",
+				"w5",
+				"w7",
+				"w9",
+				"w26",
+				"w29"
+			]
+		},
+		{
+			"edge": "serviceStreet-floorTwo",
+			"t": 0.86457723379135132,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				19.059516473082567,
+				20,
+				2.1944615628073425
+			],
+			"coveringSockets": [
+				"w3",
+				"w5",
+				"w7",
+				"w9",
+				"w24",
+				"w26",
+				"w27",
+				"w29"
+			]
+		},
+		{
+			"edge": "serviceStreet-floorTwo",
+			"t": 0.90675175189971924,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				17.483839278765899,
+				20,
+				5.8710416828795733
+			],
+			"coveringSockets": [
+				"w3",
+				"w5",
+				"w6",
+				"w8",
+				"w9",
+				"w24",
+				"w26",
+				"w27",
+				"w29"
+			]
+		},
+		{
+			"edge": "serviceStreet-floorTwo",
+			"t": 0.94892627000808716,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				15.908162084449227,
+				20,
+				9.5476218029518058
+			],
+			"coveringSockets": [
+				"w4",
+				"w5",
+				"w6",
+				"w8",
+				"w9",
+				"w24",
+				"w26",
+				"w27"
+			]
+		},
+		{
+			"edge": "serviceStreet-floorTwo",
+			"t": 0.99110078811645508,
+			"layer": "ground",
+			"apron": false,
+			"positionMetres": [
+				14.332484890132555,
+				20,
+				13.224201923024037
+			],
+			"coveringSockets": [
+				"w4",
+				"w5",
+				"w6",
+				"w8",
+				"w9",
+				"w24",
+				"w26",
+				"w27"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.013776669278740883,
+			"layer": "air",
+			"apron": true,
+			"positionMetres": [
+				-38.989847455447787,
+				6.6060915267313263,
+				-1.6162440712835371
+			],
+			"coveringSockets": [
+				"g2",
+				"g3"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.041330005973577499,
+			"layer": "air",
+			"apron": true,
+			"positionMetres": [
+				-36.969542366343369,
+				7.8182745801939788,
+				-4.848732213850611
+			],
+			"coveringSockets": [
+				"g1",
+				"g2",
+				"g3"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.068883344531059265,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-34.949237277238943,
+				9.0304576336566313,
+				-8.0812203564176865
+			],
+			"coveringSockets": [
+				"g1",
+				"g2",
+				"g3",
+				"g4",
+				"g5",
+				"g6"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.096436679363250732,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-32.928932188134524,
+				10.242640687119286,
+				-11.313708498984759
+			],
+			"coveringSockets": [
+				"g1",
+				"g2",
+				"g3",
+				"g4",
+				"g5",
+				"g6"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.1239900216460228,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-30.908627099030106,
+				11.454823740581936,
+				-14.546196641551836
+			],
+			"coveringSockets": [
+				"g3",
+				"g4",
+				"g5",
+				"w1"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.15154336392879486,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-28.841933636430021,
+				13.323504415508548,
+				-17.323504415508548
+			],
+			"coveringSockets": [
+				"g4",
+				"w1",
+				"w2",
+				"w10"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.17909669876098633,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-26.737324758022101,
+				15.728771705117602,
+				-19.728771705117602
+			],
+			"coveringSockets": [
+				"w2",
+				"w10",
+				"w11"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.2066500335931778,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-24.632715879614178,
+				18.134038994726652,
+				-22.134038994726652
+			],
+			"coveringSockets": [
+				"w2",
+				"w10",
+				"w11"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.23420336842536926,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-22.130115954226167,
+				20.209972011048858,
+				-24.059992003156818
+			],
+			"coveringSockets": [
+				"w2",
+				"w10",
+				"w11",
+				"w17"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.26175671815872192,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-18.250495594100389,
+				21.146432097975765,
+				-24.327552027993079
+			],
+			"coveringSockets": [
+				"w2",
+				"w10",
+				"w11",
+				"w12",
+				"w17"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.2893100380897522,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-14.370875233974612,
+				22.082892184902679,
+				-24.595112052829336
+			],
+			"coveringSockets": [
+				"w2",
+				"w10",
+				"w11",
+				"w12",
+				"w13",
+				"w17"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.31686338782310486,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-10.491254873848835,
+				23.019352271829593,
+				-24.862672077665597
+			],
+			"coveringSockets": [
+				"w10",
+				"w11",
+				"w12",
+				"w13",
+				"w17",
+				"w22"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.34441673755645752,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-6.6116345137230583,
+				23.955812358756503,
+				-25.130232102501861
+			],
+			"coveringSockets": [
+				"w11",
+				"w12",
+				"w13",
+				"w14",
+				"w17",
+				"w22"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.37197005748748779,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				-2.7320141535972788,
+				24.892272445683417,
+				-25.397792127338121
+			],
+			"coveringSockets": [
+				"w11",
+				"w12",
+				"w13",
+				"w14",
+				"w22",
+				"w23"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.39952340722084045,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				1.1476062065284942,
+				25.828732532610328,
+				-25.665352152174378
+			],
+			"coveringSockets": [
+				"w12",
+				"w13",
+				"w14",
+				"w15",
+				"w22",
+				"w23"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.42707672715187073,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				5.0272265666542717,
+				26.765192619537238,
+				-25.932912177010639
+			],
+			"coveringSockets": [
+				"w13",
+				"w14",
+				"w15",
+				"w22",
+				"w23",
+				"w25"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.45463007688522339,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				8.8543263387376143,
+				27.713581584684402,
+				-25.429134732252479
+			],
+			"coveringSockets": [
+				"w14",
+				"w15",
+				"w16",
+				"w23",
+				"w25"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.48218342661857605,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				12.663850148261425,
+				28.665962537065358,
+				-24.667229970347716
+			],
+			"coveringSockets": [
+				"w14",
+				"w15",
+				"w16",
+				"w23",
+				"w25",
+				"w28"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.50973677635192871,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				16.473373957785231,
+				29.618343489446307,
+				-23.905325208442957
+			],
+			"coveringSockets": [
+				"w15",
+				"w16",
+				"w23",
+				"w25",
+				"w28",
+				"w36"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.53729009628295898,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				20.282897767309045,
+				30.570724441827259,
+				-23.143420446538194
+			],
+			"coveringSockets": [
+				"w16",
+				"w23",
+				"w25",
+				"w28",
+				"w36"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.56484341621398926,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				24.092421576832852,
+				31.523105394208216,
+				-22.381515684633428
+			],
+			"coveringSockets": [
+				"w16",
+				"w25",
+				"w28"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.59239673614501953,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				26,
+				32.540690465941012,
+				-20.077545009987517
+			],
+			"coveringSockets": [
+				"w25",
+				"w28"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.61995011568069458,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				26,
+				33.623672773614146,
+				-16.226941249371922
+			],
+			"coveringSockets": [
+				"w25",
+				"w28",
+				"w29",
+				"w36"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.64750343561172485,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				26,
+				34.70665508128728,
+				-12.376337488756326
+			],
+			"coveringSockets": [
+				"w25",
+				"w28",
+				"w29",
+				"w36",
+				"w38"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.67505675554275513,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				26,
+				35.789637388960415,
+				-8.5257337281407306
+			],
+			"coveringSockets": [
+				"w28",
+				"w29",
+				"w33",
+				"w36",
+				"w38"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.70261013507843018,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				26,
+				36.872619696633556,
+				-4.6751299675251339
+			],
+			"coveringSockets": [
+				"w26",
+				"w28",
+				"w29",
+				"w33",
+				"w37",
+				"w38"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.73016345500946045,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				26,
+				37.955602004306691,
+				-0.82452620690954059
+			],
+			"coveringSockets": [
+				"w26",
+				"w29",
+				"w37",
+				"w38",
+				"w39"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.75771677494049072,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				26,
+				39.038584311979832,
+				3.0260775537060542
+			],
+			"coveringSockets": [
+				"w26",
+				"w34",
+				"w37",
+				"w38",
+				"w39"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.78527015447616577,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				26,
+				40.12156661965296,
+				6.8766813143216492
+			],
+			"coveringSockets": [
+				"w34",
+				"w35",
+				"w37",
+				"w38",
+				"w39"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.81282347440719604,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				25.29666556221299,
+				41.054102649060539,
+				9.7294867546973034
+			],
+			"coveringSockets": [
+				"w27",
+				"w34",
+				"w35",
+				"w37",
+				"w39"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.84037679433822632,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				21.572868217207937,
+				41.340548598676314,
+				8.2972570066184375
+			],
+			"coveringSockets": [
+				"w26",
+				"w27",
+				"w34",
+				"w35",
+				"w37",
+				"w38",
+				"w39"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.86793017387390137,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				17.849070872202887,
+				41.626994548292089,
+				6.8650272585395715
+			],
+			"coveringSockets": [
+				"w26",
+				"w27",
+				"w34",
+				"w35",
+				"w37",
+				"w38",
+				"w39"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.89548349380493164,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				14.125273527197836,
+				41.913440497907857,
+				5.4327975104607047
+			],
+			"coveringSockets": [
+				"w24",
+				"w26",
+				"w27",
+				"w33",
+				"w34",
+				"w35",
+				"w37",
+				"w38",
+				"w39"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.92303681373596191,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				10.401476182192784,
+				42.199886447523632,
+				4.0005677623818405
+			],
+			"coveringSockets": [
+				"w24",
+				"w26",
+				"w32",
+				"w33",
+				"w34",
+				"w35",
+				"w37",
+				"w38",
+				"w39"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.95059013366699219,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				6.6776788371877345,
+				42.486332397139407,
+				2.5683380143029741
+			],
+			"coveringSockets": [
+				"w24",
+				"w31",
+				"w32",
+				"w33",
+				"w34",
+				"w35",
+				"w37",
+				"w38",
+				"w39"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.97814351320266724,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				2.9538814921826817,
+				42.772778346755175,
+				1.1361082662241087
+			],
+			"coveringSockets": [
+				"w24",
+				"w30",
+				"w31",
+				"w32",
+				"w33",
+				"w34",
+				"w35",
+				"w37"
+			]
+		},
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 1,
+			"layer": "air",
+			"apron": false,
+			"positionMetres": [
+				3.7947731289023069e-06,
+				42.999999708094371,
+				1.4595281265883386e-06
+			],
+			"coveringSockets": [
+				"w30",
+				"w31",
+				"w32",
+				"w33",
+				"w34"
+			]
+		}
+	],
+	"deadSegments": [
+		{
+			"edge": "airStreet-airCore@air",
+			"t": 0.59239673614501953,
+			"count": 2
+		}
+	],
+	"perSocket":
+	{
+		"g1": [
+			"airStreet-airCore@air@0.041",
+			"airStreet-airCore@air@0.069",
+			"airStreet-airCore@air@0.096"
+		],
+		"g2": [
+			"street-floorTwo@0.020",
+			"airStreet-airCore@air@0.014",
+			"airStreet-airCore@air@0.041",
+			"airStreet-airCore@air@0.069",
+			"airStreet-airCore@air@0.096"
+		],
+		"g3": [
+			"street-floorTwo@0.020",
+			"street-floorTwo@0.061",
+			"airStreet-airCore@air@0.014",
+			"airStreet-airCore@air@0.041",
+			"airStreet-airCore@air@0.069",
+			"airStreet-airCore@air@0.096",
+			"airStreet-airCore@air@0.124"
+		],
+		"g4": [
+			"street-floorTwo@0.061",
+			"street-floorTwo@0.305",
+			"street-floorTwo@0.346",
+			"airStreet-airCore@air@0.069",
+			"airStreet-airCore@air@0.096",
+			"airStreet-airCore@air@0.124",
+			"airStreet-airCore@air@0.152"
+		],
+		"g5": [
+			"street-floorTwo@0.020",
+			"street-floorTwo@0.061",
+			"street-floorTwo@0.102",
+			"street-floorTwo@0.142",
+			"street-floorTwo@0.183",
+			"street-floorTwo@0.224",
+			"street-floorTwo@0.265",
+			"street-floorTwo@0.305",
+			"street-floorTwo@0.346",
+			"street-floorTwo@0.387",
+			"airStreet-airCore@air@0.069",
+			"airStreet-airCore@air@0.096",
+			"airStreet-airCore@air@0.124"
+		],
+		"g6": [
+			"street-floorTwo@0.020",
+			"street-floorTwo@0.061",
+			"street-floorTwo@0.102",
+			"street-floorTwo@0.142",
+			"street-floorTwo@0.183",
+			"street-floorTwo@0.224",
+			"street-floorTwo@0.265",
+			"street-floorTwo@0.305",
+			"street-floorTwo@0.346",
+			"street-floorTwo@0.387",
+			"airStreet-airCore@air@0.069",
+			"airStreet-airCore@air@0.096"
+		],
+		"g7": [
+			"street-floorTwo@0.020",
+			"street-floorTwo@0.061",
+			"street-floorTwo@0.102",
+			"street-floorTwo@0.142",
+			"street-floorTwo@0.183",
+			"street-floorTwo@0.224",
+			"serviceStreet-floorTwo@0.021",
+			"serviceStreet-floorTwo@0.063",
+			"serviceStreet-floorTwo@0.105",
+			"serviceStreet-floorTwo@0.148",
+			"serviceStreet-floorTwo@0.190",
+			"serviceStreet-floorTwo@0.232"
+		],
+		"g8": [
+			"serviceStreet-floorTwo@0.021",
+			"serviceStreet-floorTwo@0.063",
+			"serviceStreet-floorTwo@0.105",
+			"serviceStreet-floorTwo@0.148",
+			"serviceStreet-floorTwo@0.190",
+			"serviceStreet-floorTwo@0.232",
+			"serviceStreet-floorTwo@0.274"
+		],
+		"g9": [
+			"street-floorTwo@0.061",
+			"street-floorTwo@0.102",
+			"street-floorTwo@0.142",
+			"street-floorTwo@0.183",
+			"street-floorTwo@0.224",
+			"street-floorTwo@0.265",
+			"serviceStreet-floorTwo@0.063",
+			"serviceStreet-floorTwo@0.105",
+			"serviceStreet-floorTwo@0.148",
+			"serviceStreet-floorTwo@0.190",
+			"serviceStreet-floorTwo@0.232",
+			"serviceStreet-floorTwo@0.274",
+			"serviceStreet-floorTwo@0.316"
+		],
+		"g10": [
+			"street-floorTwo@0.102",
+			"street-floorTwo@0.142",
+			"street-floorTwo@0.183",
+			"street-floorTwo@0.224",
+			"serviceStreet-floorTwo@0.063",
+			"serviceStreet-floorTwo@0.105",
+			"serviceStreet-floorTwo@0.148",
+			"serviceStreet-floorTwo@0.190",
+			"serviceStreet-floorTwo@0.232",
+			"serviceStreet-floorTwo@0.274",
+			"serviceStreet-floorTwo@0.316"
+		],
+		"g11": [
+			"serviceStreet-floorTwo@0.063",
+			"serviceStreet-floorTwo@0.105",
+			"serviceStreet-floorTwo@0.148",
+			"serviceStreet-floorTwo@0.190",
+			"serviceStreet-floorTwo@0.232",
+			"serviceStreet-floorTwo@0.274",
+			"serviceStreet-floorTwo@0.316",
+			"serviceStreet-floorTwo@0.358"
+		],
+		"g12": [
+			"street-floorTwo@0.102",
+			"street-floorTwo@0.142",
+			"street-floorTwo@0.183",
+			"street-floorTwo@0.224",
+			"street-floorTwo@0.265",
+			"serviceStreet-floorTwo@0.148",
+			"serviceStreet-floorTwo@0.190",
+			"serviceStreet-floorTwo@0.232",
+			"serviceStreet-floorTwo@0.274",
+			"serviceStreet-floorTwo@0.316",
+			"serviceStreet-floorTwo@0.358"
+		],
+		"g13": [
+			"street-floorTwo@0.346",
+			"street-floorTwo@0.387",
+			"street-floorTwo@0.427",
+			"street-floorTwo@0.468",
+			"street-floorTwo@0.509",
+			"street-floorTwo@0.549",
+			"street-floorTwo@0.590",
+			"street-floorTwo@0.631",
+			"street-floorTwo@0.672"
+		],
+		"g14": [
+			"serviceStreet-floorTwo@0.316",
+			"serviceStreet-floorTwo@0.358",
+			"serviceStreet-floorTwo@0.401",
+			"serviceStreet-floorTwo@0.443",
+			"serviceStreet-floorTwo@0.485",
+			"serviceStreet-floorTwo@0.527",
+			"serviceStreet-floorTwo@0.569",
+			"serviceStreet-floorTwo@0.612",
+			"serviceStreet-floorTwo@0.654",
+			"serviceStreet-floorTwo@0.696"
+		],
+		"g15": [
+			"serviceStreet-floorTwo@0.401",
+			"serviceStreet-floorTwo@0.443",
+			"serviceStreet-floorTwo@0.485",
+			"serviceStreet-floorTwo@0.527",
+			"serviceStreet-floorTwo@0.569",
+			"serviceStreet-floorTwo@0.612",
+			"serviceStreet-floorTwo@0.654",
+			"serviceStreet-floorTwo@0.696",
+			"serviceStreet-floorTwo@0.738"
+		],
+		"w1": [
+			"street-floorTwo@0.102",
+			"street-floorTwo@0.142",
+			"street-floorTwo@0.183",
+			"street-floorTwo@0.224",
+			"street-floorTwo@0.265",
+			"street-floorTwo@0.305",
+			"street-floorTwo@0.346",
+			"street-floorTwo@0.387",
+			"street-floorTwo@0.427",
+			"street-floorTwo@0.468",
+			"airStreet-airCore@air@0.124",
+			"airStreet-airCore@air@0.152"
+		],
+		"w2": [
+			"street-floorTwo@0.265",
+			"street-floorTwo@0.305",
+			"street-floorTwo@0.346",
+			"street-floorTwo@0.387",
+			"street-floorTwo@0.427",
+			"street-floorTwo@0.468",
+			"street-floorTwo@0.509",
+			"airStreet-airCore@air@0.152",
+			"airStreet-airCore@air@0.179",
+			"airStreet-airCore@air@0.207",
+			"airStreet-airCore@air@0.234",
+			"airStreet-airCore@air@0.262",
+			"airStreet-airCore@air@0.289"
+		],
+		"w3": [
+			"street-floorTwo@0.509",
+			"street-floorTwo@0.549",
+			"street-floorTwo@0.590",
+			"street-floorTwo@0.631",
+			"street-floorTwo@0.672",
+			"street-floorTwo@0.712",
+			"street-floorTwo@0.753",
+			"street-floorTwo@0.794",
+			"street-floorTwo@0.834",
+			"street-floorTwo@0.875",
+			"street-floorTwo@0.916",
+			"serviceStreet-floorTwo@0.696",
+			"serviceStreet-floorTwo@0.738",
+			"serviceStreet-floorTwo@0.780",
+			"serviceStreet-floorTwo@0.822",
+			"serviceStreet-floorTwo@0.865",
+			"serviceStreet-floorTwo@0.907"
+		],
+		"w4": [
+			"street-floorTwo@0.956",
+			"street-floorTwo@0.997",
+			"floorTwo-roofCore@0.032",
+			"floorTwo-roofCore@0.097",
+			"floorTwo-roofCore@0.162",
+			"serviceStreet-floorTwo@0.316",
+			"serviceStreet-floorTwo@0.358",
+			"serviceStreet-floorTwo@0.401",
+			"serviceStreet-floorTwo@0.443",
+			"serviceStreet-floorTwo@0.485",
+			"serviceStreet-floorTwo@0.527",
+			"serviceStreet-floorTwo@0.569",
+			"serviceStreet-floorTwo@0.612",
+			"serviceStreet-floorTwo@0.654",
+			"serviceStreet-floorTwo@0.696",
+			"serviceStreet-floorTwo@0.949",
+			"serviceStreet-floorTwo@0.991"
+		],
+		"w5": [
+			"street-floorTwo@0.753",
+			"street-floorTwo@0.794",
+			"street-floorTwo@0.834",
+			"street-floorTwo@0.875",
+			"street-floorTwo@0.916",
+			"street-floorTwo@0.956",
+			"street-floorTwo@0.997",
+			"floorTwo-roofCore@0.032",
+			"floorTwo-roofCore@0.097",
+			"serviceStreet-floorTwo@0.401",
+			"serviceStreet-floorTwo@0.443",
+			"serviceStreet-floorTwo@0.485",
+			"serviceStreet-floorTwo@0.527",
+			"serviceStreet-floorTwo@0.612",
+			"serviceStreet-floorTwo@0.654",
+			"serviceStreet-floorTwo@0.696",
+			"serviceStreet-floorTwo@0.738",
+			"serviceStreet-floorTwo@0.780",
+			"serviceStreet-floorTwo@0.822",
+			"serviceStreet-floorTwo@0.865",
+			"serviceStreet-floorTwo@0.907",
+			"serviceStreet-floorTwo@0.949",
+			"serviceStreet-floorTwo@0.991"
+		],
+		"w6": [
+			"street-floorTwo@0.875",
+			"street-floorTwo@0.916",
+			"street-floorTwo@0.956",
+			"street-floorTwo@0.997",
+			"floorTwo-roofCore@0.032",
+			"floorTwo-roofCore@0.097",
+			"floorTwo-roofCore@0.162",
+			"serviceStreet-floorTwo@0.358",
+			"serviceStreet-floorTwo@0.401",
+			"serviceStreet-floorTwo@0.443",
+			"serviceStreet-floorTwo@0.485",
+			"serviceStreet-floorTwo@0.527",
+			"serviceStreet-floorTwo@0.569",
+			"serviceStreet-floorTwo@0.612",
+			"serviceStreet-floorTwo@0.654",
+			"serviceStreet-floorTwo@0.696",
+			"serviceStreet-floorTwo@0.738",
+			"serviceStreet-floorTwo@0.780",
+			"serviceStreet-floorTwo@0.907",
+			"serviceStreet-floorTwo@0.949",
+			"serviceStreet-floorTwo@0.991"
+		],
+		"w7": [
+			"street-floorTwo@0.509",
+			"street-floorTwo@0.549",
+			"street-floorTwo@0.590",
+			"street-floorTwo@0.631",
+			"street-floorTwo@0.672",
+			"street-floorTwo@0.712",
+			"street-floorTwo@0.753",
+			"street-floorTwo@0.794",
+			"street-floorTwo@0.834",
+			"street-floorTwo@0.875",
+			"serviceStreet-floorTwo@0.780",
+			"serviceStreet-floorTwo@0.822",
+			"serviceStreet-floorTwo@0.865"
+		],
+		"w8": [
+			"street-floorTwo@0.916",
+			"street-floorTwo@0.956",
+			"street-floorTwo@0.997",
+			"floorTwo-roofCore@0.032",
+			"floorTwo-roofCore@0.097",
+			"serviceStreet-floorTwo@0.401",
+			"serviceStreet-floorTwo@0.443",
+			"serviceStreet-floorTwo@0.485",
+			"serviceStreet-floorTwo@0.527",
+			"serviceStreet-floorTwo@0.569",
+			"serviceStreet-floorTwo@0.612",
+			"serviceStreet-floorTwo@0.654",
+			"serviceStreet-floorTwo@0.696",
+			"serviceStreet-floorTwo@0.738",
+			"serviceStreet-floorTwo@0.780",
+			"serviceStreet-floorTwo@0.907",
+			"serviceStreet-floorTwo@0.949",
+			"serviceStreet-floorTwo@0.991"
+		],
+		"w9": [
+			"street-floorTwo@0.753",
+			"street-floorTwo@0.794",
+			"street-floorTwo@0.834",
+			"street-floorTwo@0.875",
+			"street-floorTwo@0.916",
+			"street-floorTwo@0.956",
+			"street-floorTwo@0.997",
+			"floorTwo-roofCore@0.032",
+			"serviceStreet-floorTwo@0.527",
+			"serviceStreet-floorTwo@0.569",
+			"serviceStreet-floorTwo@0.612",
+			"serviceStreet-floorTwo@0.654",
+			"serviceStreet-floorTwo@0.696",
+			"serviceStreet-floorTwo@0.738",
+			"serviceStreet-floorTwo@0.780",
+			"serviceStreet-floorTwo@0.822",
+			"serviceStreet-floorTwo@0.865",
+			"serviceStreet-floorTwo@0.907",
+			"serviceStreet-floorTwo@0.949",
+			"serviceStreet-floorTwo@0.991"
+		],
+		"w10": [
+			"airStreet-airCore@air@0.152",
+			"airStreet-airCore@air@0.179",
+			"airStreet-airCore@air@0.207",
+			"airStreet-airCore@air@0.234",
+			"airStreet-airCore@air@0.262",
+			"airStreet-airCore@air@0.289",
+			"airStreet-airCore@air@0.317"
+		],
+		"w11": [
+			"street-floorTwo@0.427",
+			"street-floorTwo@0.468",
+			"airStreet-airCore@air@0.179",
+			"airStreet-airCore@air@0.207",
+			"airStreet-airCore@air@0.234",
+			"airStreet-airCore@air@0.262",
+			"airStreet-airCore@air@0.289",
+			"airStreet-airCore@air@0.317",
+			"airStreet-airCore@air@0.344",
+			"airStreet-airCore@air@0.372"
+		],
+		"w12": [
+			"street-floorTwo@0.427",
+			"street-floorTwo@0.468",
+			"street-floorTwo@0.509",
+			"street-floorTwo@0.549",
+			"airStreet-airCore@air@0.262",
+			"airStreet-airCore@air@0.289",
+			"airStreet-airCore@air@0.317",
+			"airStreet-airCore@air@0.344",
+			"airStreet-airCore@air@0.372",
+			"airStreet-airCore@air@0.400"
+		],
+		"w13": [
+			"street-floorTwo@0.468",
+			"street-floorTwo@0.509",
+			"street-floorTwo@0.549",
+			"street-floorTwo@0.590",
+			"airStreet-airCore@air@0.289",
+			"airStreet-airCore@air@0.317",
+			"airStreet-airCore@air@0.344",
+			"airStreet-airCore@air@0.372",
+			"airStreet-airCore@air@0.400",
+			"airStreet-airCore@air@0.427"
+		],
+		"w14": [
+			"street-floorTwo@0.468",
+			"street-floorTwo@0.509",
+			"street-floorTwo@0.549",
+			"street-floorTwo@0.590",
+			"street-floorTwo@0.631",
+			"street-floorTwo@0.672",
+			"street-floorTwo@0.712",
+			"street-floorTwo@0.753",
+			"street-floorTwo@0.794",
+			"airStreet-airCore@air@0.344",
+			"airStreet-airCore@air@0.372",
+			"airStreet-airCore@air@0.400",
+			"airStreet-airCore@air@0.427",
+			"airStreet-airCore@air@0.455",
+			"airStreet-airCore@air@0.482"
+		],
+		"w15": [
+			"street-floorTwo@0.549",
+			"street-floorTwo@0.590",
+			"street-floorTwo@0.631",
+			"street-floorTwo@0.672",
+			"street-floorTwo@0.712",
+			"street-floorTwo@0.753",
+			"street-floorTwo@0.794",
+			"airStreet-airCore@air@0.400",
+			"airStreet-airCore@air@0.427",
+			"airStreet-airCore@air@0.455",
+			"airStreet-airCore@air@0.482",
+			"airStreet-airCore@air@0.510"
+		],
+		"w16": [
+			"street-floorTwo@0.631",
+			"street-floorTwo@0.672",
+			"street-floorTwo@0.712",
+			"street-floorTwo@0.753",
+			"street-floorTwo@0.794",
+			"airStreet-airCore@air@0.455",
+			"airStreet-airCore@air@0.482",
+			"airStreet-airCore@air@0.510",
+			"airStreet-airCore@air@0.537",
+			"airStreet-airCore@air@0.565"
+		],
+		"w17": [
+			"airStreet-airCore@air@0.234",
+			"airStreet-airCore@air@0.262",
+			"airStreet-airCore@air@0.289",
+			"airStreet-airCore@air@0.317",
+			"airStreet-airCore@air@0.344"
+		],
+		"w18": [
+			"floorTwo-roofCore@0.421",
+			"floorTwo-roofCore@0.485",
+			"floorTwo-roofCore@0.550",
+			"floorTwo-roofCore@0.615",
+			"floorTwo-roofCore@0.680",
+			"floorTwo-roofCore@0.744",
+			"floorTwo-roofCore@0.809",
+			"floorTwo-roofCore@0.874",
+			"floorTwo-roofCore@0.939"
+		],
+		"w19": [
+			"floorTwo-roofCore@0.227",
+			"floorTwo-roofCore@0.291",
+			"floorTwo-roofCore@0.356",
+			"floorTwo-roofCore@0.421",
+			"floorTwo-roofCore@0.485",
+			"floorTwo-roofCore@0.550",
+			"floorTwo-roofCore@0.615",
+			"floorTwo-roofCore@0.680",
+			"floorTwo-roofCore@0.744",
+			"floorTwo-roofCore@0.809"
+		],
+		"w20": [
+			"floorTwo-roofCore@0.227",
+			"floorTwo-roofCore@0.291",
+			"floorTwo-roofCore@0.356",
+			"floorTwo-roofCore@0.421",
+			"floorTwo-roofCore@0.485",
+			"floorTwo-roofCore@0.550",
+			"floorTwo-roofCore@0.615",
+			"floorTwo-roofCore@0.680",
+			"floorTwo-roofCore@0.744",
+			"floorTwo-roofCore@0.809",
+			"floorTwo-roofCore@0.874",
+			"floorTwo-roofCore@0.939",
+			"floorTwo-roofCore@1.000"
+		],
+		"w21": [
+			"floorTwo-roofCore@0.162",
+			"floorTwo-roofCore@0.227",
+			"floorTwo-roofCore@0.291",
+			"floorTwo-roofCore@0.356",
+			"floorTwo-roofCore@0.421",
+			"floorTwo-roofCore@0.485",
+			"floorTwo-roofCore@0.550",
+			"floorTwo-roofCore@0.615",
+			"floorTwo-roofCore@0.680",
+			"floorTwo-roofCore@0.744",
+			"floorTwo-roofCore@0.874",
+			"floorTwo-roofCore@0.939"
+		],
+		"w22": [
+			"airStreet-airCore@air@0.317",
+			"airStreet-airCore@air@0.344",
+			"airStreet-airCore@air@0.372",
+			"airStreet-airCore@air@0.400",
+			"airStreet-airCore@air@0.427"
+		],
+		"w23": [
+			"airStreet-airCore@air@0.372",
+			"airStreet-airCore@air@0.400",
+			"airStreet-airCore@air@0.427",
+			"airStreet-airCore@air@0.455",
+			"airStreet-airCore@air@0.482",
+			"airStreet-airCore@air@0.510",
+			"airStreet-airCore@air@0.537"
+		],
+		"w24": [
+			"street-floorTwo@0.834",
+			"street-floorTwo@0.875",
+			"street-floorTwo@0.916",
+			"street-floorTwo@0.956",
+			"street-floorTwo@0.997",
+			"floorTwo-roofCore@0.032",
+			"floorTwo-roofCore@0.097",
+			"floorTwo-roofCore@0.162",
+			"floorTwo-roofCore@0.227",
+			"floorTwo-roofCore@0.291",
+			"floorTwo-roofCore@0.356",
+			"floorTwo-roofCore@1.000",
+			"serviceStreet-floorTwo@0.865",
+			"serviceStreet-floorTwo@0.907",
+			"serviceStreet-floorTwo@0.949",
+			"serviceStreet-floorTwo@0.991",
+			"airStreet-airCore@air@0.895",
+			"airStreet-airCore@air@0.923",
+			"airStreet-airCore@air@0.951",
+			"airStreet-airCore@air@0.978"
+		],
+		"w25": [
+			"street-floorTwo@0.794",
+			"airStreet-airCore@air@0.427",
+			"airStreet-airCore@air@0.455",
+			"airStreet-airCore@air@0.482",
+			"airStreet-airCore@air@0.510",
+			"airStreet-airCore@air@0.537",
+			"airStreet-airCore@air@0.565",
+			"airStreet-airCore@air@0.592",
+			"airStreet-airCore@air@0.620",
+			"airStreet-airCore@air@0.648"
+		],
+		"w26": [
+			"street-floorTwo@0.794",
+			"street-floorTwo@0.834",
+			"street-floorTwo@0.875",
+			"street-floorTwo@0.916",
+			"street-floorTwo@0.956",
+			"street-floorTwo@0.997",
+			"floorTwo-roofCore@0.032",
+			"floorTwo-roofCore@0.097",
+			"serviceStreet-floorTwo@0.780",
+			"serviceStreet-floorTwo@0.822",
+			"serviceStreet-floorTwo@0.865",
+			"serviceStreet-floorTwo@0.907",
+			"serviceStreet-floorTwo@0.949",
+			"serviceStreet-floorTwo@0.991",
+			"airStreet-airCore@air@0.703",
+			"airStreet-airCore@air@0.730",
+			"airStreet-airCore@air@0.758",
+			"airStreet-airCore@air@0.840",
+			"airStreet-airCore@air@0.868",
+			"airStreet-airCore@air@0.895",
+			"airStreet-airCore@air@0.923"
+		],
+		"w27": [
+			"street-floorTwo@0.875",
+			"street-floorTwo@0.916",
+			"street-floorTwo@0.956",
+			"street-floorTwo@0.997",
+			"floorTwo-roofCore@0.032",
+			"floorTwo-roofCore@0.097",
+			"floorTwo-roofCore@0.162",
+			"floorTwo-roofCore@0.227",
+			"serviceStreet-floorTwo@0.865",
+			"serviceStreet-floorTwo@0.907",
+			"serviceStreet-floorTwo@0.949",
+			"serviceStreet-floorTwo@0.991",
+			"airStreet-airCore@air@0.813",
+			"airStreet-airCore@air@0.840",
+			"airStreet-airCore@air@0.868",
+			"airStreet-airCore@air@0.895"
+		],
+		"w28": [
+			"street-floorTwo@0.753",
+			"street-floorTwo@0.794",
+			"street-floorTwo@0.834",
+			"airStreet-airCore@air@0.482",
+			"airStreet-airCore@air@0.510",
+			"airStreet-airCore@air@0.537",
+			"airStreet-airCore@air@0.565",
+			"airStreet-airCore@air@0.592",
+			"airStreet-airCore@air@0.620",
+			"airStreet-airCore@air@0.648",
+			"airStreet-airCore@air@0.675",
+			"airStreet-airCore@air@0.703"
+		],
+		"w29": [
+			"street-floorTwo@0.753",
+			"street-floorTwo@0.794",
+			"street-floorTwo@0.834",
+			"street-floorTwo@0.875",
+			"street-floorTwo@0.916",
+			"serviceStreet-floorTwo@0.822",
+			"serviceStreet-floorTwo@0.865",
+			"serviceStreet-floorTwo@0.907",
+			"airStreet-airCore@air@0.620",
+			"airStreet-airCore@air@0.648",
+			"airStreet-airCore@air@0.675",
+			"airStreet-airCore@air@0.703",
+			"airStreet-airCore@air@0.730"
+		],
+		"w30": [
+			"floorTwo-roofCore@0.291",
+			"floorTwo-roofCore@0.356",
+			"floorTwo-roofCore@0.421",
+			"floorTwo-roofCore@0.485",
+			"floorTwo-roofCore@0.550",
+			"floorTwo-roofCore@0.615",
+			"floorTwo-roofCore@0.680",
+			"floorTwo-roofCore@0.744",
+			"floorTwo-roofCore@0.809",
+			"floorTwo-roofCore@0.874",
+			"floorTwo-roofCore@0.939",
+			"floorTwo-roofCore@1.000",
+			"airStreet-airCore@air@0.978",
+			"airStreet-airCore@air@1.000"
+		],
+		"w31": [
+			"floorTwo-roofCore@0.227",
+			"floorTwo-roofCore@0.291",
+			"floorTwo-roofCore@0.356",
+			"floorTwo-roofCore@0.421",
+			"floorTwo-roofCore@0.485",
+			"floorTwo-roofCore@0.550",
+			"floorTwo-roofCore@0.615",
+			"floorTwo-roofCore@0.680",
+			"floorTwo-roofCore@0.744",
+			"floorTwo-roofCore@0.809",
+			"floorTwo-roofCore@0.874",
+			"floorTwo-roofCore@0.939",
+			"floorTwo-roofCore@1.000",
+			"airStreet-airCore@air@0.951",
+			"airStreet-airCore@air@0.978",
+			"airStreet-airCore@air@1.000"
+		],
+		"w32": [
+			"floorTwo-roofCore@0.291",
+			"floorTwo-roofCore@0.356",
+			"floorTwo-roofCore@0.421",
+			"floorTwo-roofCore@0.615",
+			"floorTwo-roofCore@0.680",
+			"floorTwo-roofCore@0.744",
+			"floorTwo-roofCore@0.809",
+			"floorTwo-roofCore@0.874",
+			"floorTwo-roofCore@0.939",
+			"floorTwo-roofCore@1.000",
+			"airStreet-airCore@air@0.923",
+			"airStreet-airCore@air@0.951",
+			"airStreet-airCore@air@0.978",
+			"airStreet-airCore@air@1.000"
+		],
+		"w33": [
+			"floorTwo-roofCore@1.000",
+			"airStreet-airCore@air@0.675",
+			"airStreet-airCore@air@0.703",
+			"airStreet-airCore@air@0.895",
+			"airStreet-airCore@air@0.923",
+			"airStreet-airCore@air@0.951",
+			"airStreet-airCore@air@0.978",
+			"airStreet-airCore@air@1.000"
+		],
+		"w34": [
+			"floorTwo-roofCore@1.000",
+			"airStreet-airCore@air@0.758",
+			"airStreet-airCore@air@0.785",
+			"airStreet-airCore@air@0.813",
+			"airStreet-airCore@air@0.840",
+			"airStreet-airCore@air@0.868",
+			"airStreet-airCore@air@0.895",
+			"airStreet-airCore@air@0.923",
+			"airStreet-airCore@air@0.951",
+			"airStreet-airCore@air@0.978",
+			"airStreet-airCore@air@1.000"
+		],
+		"w35": [
+			"airStreet-airCore@air@0.785",
+			"airStreet-airCore@air@0.813",
+			"airStreet-airCore@air@0.840",
+			"airStreet-airCore@air@0.868",
+			"airStreet-airCore@air@0.895",
+			"airStreet-airCore@air@0.923",
+			"airStreet-airCore@air@0.951",
+			"airStreet-airCore@air@0.978"
+		],
+		"w36": [
+			"airStreet-airCore@air@0.510",
+			"airStreet-airCore@air@0.537",
+			"airStreet-airCore@air@0.620",
+			"airStreet-airCore@air@0.648",
+			"airStreet-airCore@air@0.675"
+		],
+		"w37": [
+			"airStreet-airCore@air@0.703",
+			"airStreet-airCore@air@0.730",
+			"airStreet-airCore@air@0.758",
+			"airStreet-airCore@air@0.785",
+			"airStreet-airCore@air@0.813",
+			"airStreet-airCore@air@0.840",
+			"airStreet-airCore@air@0.868",
+			"airStreet-airCore@air@0.895",
+			"airStreet-airCore@air@0.923",
+			"airStreet-airCore@air@0.951",
+			"airStreet-airCore@air@0.978"
+		],
+		"w38": [
+			"airStreet-airCore@air@0.648",
+			"airStreet-airCore@air@0.675",
+			"airStreet-airCore@air@0.703",
+			"airStreet-airCore@air@0.730",
+			"airStreet-airCore@air@0.758",
+			"airStreet-airCore@air@0.785",
+			"airStreet-airCore@air@0.840",
+			"airStreet-airCore@air@0.868",
+			"airStreet-airCore@air@0.895",
+			"airStreet-airCore@air@0.923",
+			"airStreet-airCore@air@0.951"
+		],
+		"w39": [
+			"airStreet-airCore@air@0.730",
+			"airStreet-airCore@air@0.758",
+			"airStreet-airCore@air@0.785",
+			"airStreet-airCore@air@0.813",
+			"airStreet-airCore@air@0.840",
+			"airStreet-airCore@air@0.868",
+			"airStreet-airCore@air@0.895",
+			"airStreet-airCore@air@0.923",
+			"airStreet-airCore@air@0.951"
+		]
+	}
+}
