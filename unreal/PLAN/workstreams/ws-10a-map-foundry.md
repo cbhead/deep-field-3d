@@ -81,6 +81,7 @@ Per §6.2, edit **only** this file's frontmatter (`state: active`, `owner:` your
 `claimed_at`, `lease_expires` = +24 h, `branch: ws/10a-map-foundry/<topic>`) and push that one-file
 commit straight to `unreal/main`. Do not let another session claim on your behalf and do not adopt a
 handle that is not yours.
+*(ADR-0029, 2026-09-26: claims and renewals now push to `main`, the trunk; `unreal/main` is frozen.)*
 
 ### What already exists — you are refining, not starting blank
 - `unreal/content/terrain/foundry.terrain.json` and `unreal/content/terrain/out/` — WS-30 built the

@@ -48,7 +48,8 @@ The order is by what each ruling unblocks: R1 unblocks the most.
 
 Not INT rulings, and still yours as the human: copy
 `unreal-checks.yml` to `main` (a push to the default branch), create the EOS portal
-product, and install the GPU box.
+product, and install the GPU box. *(2026-09-26, ADR-0029: the first is done; `unreal-checks.yml` is on
+`main` with the trunk.)*
 
 ---
 

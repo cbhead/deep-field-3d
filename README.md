@@ -4,12 +4,13 @@ First-person co-op tower defense for 1–4 players: Bloons-depth counters and ma
 with Sanctum-style build-and-shoot. It is the 3D rebuild of
 [deep-field-td](https://github.com/cbhead/deep-field-td).
 
-This branch, `unreal/main`, holds two things:
+This branch, `main`, holds two things:
 
 - **The Unreal Engine 5.8 rebuild (active).** It targets the Epic Games Store with Epic Online
   Services, is built on the Windows GPU workstation, and Windows is its only platform (ADR-0028).
-- **The Godot 4 client it replaces (frozen).** It retires at gate G3, when `game/` is deleted and
-  `unreal/main` becomes `main`.
+  It moved onto `main` on 2026-09-26 (ADR-0029); `unreal/main`, where it was built until then, is
+  frozen.
+- **The Godot 4 client it replaces (frozen).** It retires at gate G3, when `game/` is deleted.
 
 ## The Unreal rebuild
 

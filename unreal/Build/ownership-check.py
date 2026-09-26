@@ -5,8 +5,8 @@ Reads the glob table in unreal/PLAN/OWNERSHIP.md. Binary files (the LFS set) out
 workstream's globs are violations; text files outside are warnings (they should go through
 the owner or an RFC, but a cross-cutting text PR is sometimes right — INT decides).
 
-  python3 unreal/Build/ownership-check.py --ws 04                 # diff HEAD against origin/unreal/main
-  python3 unreal/Build/ownership-check.py --ws INT --base main    # INT may touch anything; still lists
+  python3 unreal/Build/ownership-check.py --ws 04                 # diff HEAD against origin/main
+  python3 unreal/Build/ownership-check.py --ws INT --base origin/main  # INT may touch anything; still lists
   python3 unreal/Build/ownership-check.py --ws 10a --files a b c  # explicit paths
 """
 from __future__ import annotations
@@ -67,7 +67,7 @@ def owners_of(path: str, rules: list[tuple[str, str]]) -> list[str]:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--ws", required=True, help="e.g. 04, 10a, INT")
-    ap.add_argument("--base", default="origin/unreal/main")
+    ap.add_argument("--base", default="origin/main")
     ap.add_argument("--files", nargs="*")
     a = ap.parse_args()
     me = "INT" if a.ws.upper() == "INT" else f"WS-{a.ws}"

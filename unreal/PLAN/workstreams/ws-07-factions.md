@@ -51,7 +51,7 @@ rulings below settle the blocking ones so you do not stall; argue back on any of
 
 ### Claim it yourself
 §6.2: edit only this file's frontmatter (`state: active`, your own handle in `owner`, `claimed_at`,
-`lease_expires` +24 h, `branch: ws/07-factions/<topic>`), push that one-file commit to `unreal/main`.
+`lease_expires` +24 h, `branch: ws/07-factions/<topic>`), push that one-file commit to `main` (the trunk since ADR-0029, 2026-09-26).
 
 ### This needs a machine with the engine
 It is GAS C++ and it must be compiled and tested. Since `fcc1e1d` — the last commit anything compiled —

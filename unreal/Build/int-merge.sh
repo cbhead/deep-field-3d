@@ -1,11 +1,11 @@
 #!/bin/zsh
-# INT: land one workstream branch on unreal/main (PROGRAMME.md §6.8).
+# INT: land one workstream branch on main (PROGRAMME.md §6.8).
 #   unreal/Build/int-merge.sh <branch> [--ws NN] [--no-smoke] [--dry-run] [--resume]
-# Steps: fetch → rebase <branch> onto origin/unreal/main in the persistent verify worktree → layering +
+# Steps: fetch → rebase <branch> onto origin/main in the persistent verify worktree → layering +
 # ownership + schema checks → editor build (incremental: the worktree keeps its Intermediate) → DF.Unit+
 # DF.Content tests → listen smoke → land (re-fetch; ledger/doc-only movement on main = re-run the checks,
 # rebase and push without rebuilding; code movement = verify again) → STATUS.md regenerated as its own
-# commit → push the branch (lease = the tip this landing took) → push unreal/main.
+# commit → push the branch (lease = the tip this landing took) → push main.
 #
 # One verify worktree, /Volumes/Toshiba/Deepfield-Unreal/int-verify, serves every landing so builds are
 # incremental instead of 15-minute fresh builds; a mkdir lock serialises landings. Before starting UBT the
@@ -64,7 +64,7 @@ current_branch() {   # the branch even mid-rebase, when HEAD is detached and onl
   local hn; hn=$(cat "$(git rev-parse --git-path rebase-merge/head-name)" 2>/dev/null || cat "$(git rev-parse --git-path rebase-apply/head-name)" 2>/dev/null || git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")
   echo "${hn#refs/heads/}"
 }
-# Rebase onto origin/unreal/main, or finish one already in progress, until HEAD is on top of main
+# Rebase onto origin/main, or finish one already in progress, until HEAD is on top of main
 # (a fetch may have moved main while a human was resolving, so one pass is not enough). STATUS.md is
 # generated: a conflict on it alone is resolved by regenerating. Anything unstaged or untracked means
 # we cannot tell what the human intended — stopping there is the only safe move, because `--skip` on a
@@ -73,10 +73,10 @@ rebase_onto_main() {
   local guard=0 before
   while :; do
     if ! in_rebase; then
-      git merge-base --is-ancestor origin/unreal/main HEAD && return 0
-      git rebase -q origin/unreal/main >/dev/null 2>&1 || true
+      git merge-base --is-ancestor origin/main HEAD && return 0
+      git rebase -q origin/main >/dev/null 2>&1 || true
       if ! in_rebase; then
-        git merge-base --is-ancestor origin/unreal/main HEAD && return 0
+        git merge-base --is-ancestor origin/main HEAD && return 0
         echo "git rebase refused to start (or stopped without conflicts):"; git status --short | head -5; return 1
       fi
     fi
@@ -128,9 +128,9 @@ regen_status_commit() {   # STATUS.md for the state about to land, as its own co
   echo "STATUS.md regenerated (own commit)"
 }
 record_verified() {
-  # The base is the merge-base, never origin/unreal/main itself: refs are shared by every worktree of
+  # The base is the merge-base, never origin/main itself: refs are shared by every worktree of
   # the clone and any session's fetch moves them mid-build, which would make "main did not move" a lie.
-  VERIFIED_BASE=$(git merge-base HEAD origin/unreal/main); VERIFIED_HEAD=$(git rev-parse HEAD)
+  VERIFIED_BASE=$(git merge-base HEAD origin/main); VERIFIED_HEAD=$(git rev-parse HEAD)
   printf '%s %s %s %s %s\n' "$BRANCH" "$VERIFIED_BASE" "$VERIFIED_HEAD" "$SMOKE" "$WS" > "$VB_FILE"
 }
 record_tip() { printf '%s %s\n' "$BRANCH" "$BRANCH_TIP" > "$TIP_FILE"; }
@@ -148,7 +148,7 @@ yield_to_agent_builds() {   # agent builds are the critical path; a landing wait
 checks() {
   step "checks"
   python3 unreal/Build/layering-check.py || fail layering
-  python3 unreal/Build/ownership-check.py --ws "$WS" --base origin/unreal/main || fail ownership
+  python3 unreal/Build/ownership-check.py --ws "$WS" --base origin/main || fail ownership
   python3 unreal/Build/validate-content-json.py > /tmp/int-schema.log || { cat /tmp/int-schema.log; fail schema; }
   python3 unreal/Build/check-test-coverage.py || fail "test coverage (a registered suite is outside the gate)"
 }
@@ -175,7 +175,7 @@ step "fetch"
 git -C "$REPO" fetch -q origin || fail fetch
 if [ ! -d "$WT/.git" ] && [ ! -f "$WT/.git" ]; then
   git -C "$REPO" worktree prune
-  git -C "$REPO" worktree add -q --detach "$WT" origin/unreal/main || fail "worktree add $WT"
+  git -C "$REPO" worktree add -q --detach "$WT" origin/main || fail "worktree add $WT"
   echo "created the verify worktree at $WT"
 fi
 cd "$WT" || fail cd
@@ -189,7 +189,7 @@ if [ "$RESUME" = 1 ]; then
     rebase_onto_main || fail "rebase (resolve and stage in $WT, then rerun with --resume)"
   else
     # Nothing in flight: what gets verified must be exactly what gets pushed, so the worktree may not
-    # carry uncommitted or untracked work (it would pass the build and never reach unreal/main).
+    # carry uncommitted or untracked work (it would pass the build and never reach main).
     git diff --quiet && git diff --cached --quiet || fail "uncommitted changes in $WT — commit them (they are then verified) or discard them:
 $(git status --short | head -10)"
     [ -z "$(git ls-files --others --exclude-standard)" ] || fail "untracked files in $WT: $(git ls-files --others --exclude-standard | head -5 | paste -sd' ' -)"
@@ -209,7 +209,7 @@ $(git status --short | head -10)"
     echo "resuming $INT_BRANCH: HEAD $(git rev-parse --short HEAD) was verified against $(git rev-parse --short "$VERIFIED_BASE")"
   else
     echo "resuming $INT_BRANCH: no verification record for this HEAD/settings; verifying"
-    git log --oneline origin/unreal/main..HEAD
+    git log --oneline origin/main..HEAD
     verify
   fi
 else
@@ -218,9 +218,9 @@ else
   git reset -q --hard && git clean -qfd     # tracked + untracked reset; ignored Intermediate/Binaries/Saved stay (incremental build)
   git checkout -q -B "$INT_BRANCH" "origin/$BRANCH" || fail "checkout origin/$BRANCH (does it exist?)"
   BRANCH_TIP=$(git rev-parse "origin/$BRANCH"); record_tip      # the lease for the branch push
-  step "rebase onto origin/unreal/main"
+  step "rebase onto origin/main"
   rebase_onto_main || fail "rebase (resolve and stage in $WT, then rerun with --resume)"
-  git log --oneline origin/unreal/main..HEAD
+  git log --oneline origin/main..HEAD
   verify
 fi
 
@@ -229,8 +229,8 @@ if [ "$DRY" = 1 ]; then echo "dry run: not pushing. Worktree at $WT on $INT_BRAN
 step "land"
 for attempt in 1 2 3; do
   git -C "$REPO" fetch -q origin || fail fetch
-  if [ "$(git rev-parse origin/unreal/main)" != "$VERIFIED_BASE" ]; then
-    if main_moved_code_only_docs "$VERIFIED_BASE" origin/unreal/main; then
+  if [ "$(git rev-parse origin/main)" != "$VERIFIED_BASE" ]; then
+    if main_moved_code_only_docs "$VERIFIED_BASE" origin/main; then
       echo "main moved by ledger/doc-only commits since verification; rebasing and re-running the checks, no rebuild"
       rebase_onto_main || fail "rebase onto moved main (resolve and stage in $WT, rerun with --resume)"
       checks
@@ -245,15 +245,15 @@ for attempt in 1 2 3; do
   record_verified
   git push -q origin "HEAD:$BRANCH" --force-with-lease="$BRANCH:$BRANCH_TIP" || fail "push branch: origin/$BRANCH moved since this landing took it at ${BRANCH_TIP:0:7} (its author pushed?) — rerun without --resume to take the new tip"
   BRANCH_TIP=$(git rev-parse HEAD); record_tip
-  if git push -q origin "HEAD:unreal/main" 2>/dev/null; then
+  if git push -q origin "HEAD:main" 2>/dev/null; then
     rm -f "$VB_FILE" "$TIP_FILE"
     cd "$REPO"
-    if [ "$(git symbolic-ref -q --short HEAD)" = "unreal/main" ] && git diff --quiet && git diff --cached --quiet && ! in_rebase; then
-      git pull -q --ff-only origin unreal/main 2>/dev/null || echo "clone has local commits on unreal/main; not fast-forwarded"
-    else echo "clone is not clean on unreal/main; not touching it"; fi
-    echo "int-merge: landed $BRANCH on unreal/main"
+    if [ "$(git symbolic-ref -q --short HEAD)" = "main" ] && git diff --quiet && git diff --cached --quiet && ! in_rebase; then
+      git pull -q --ff-only origin main 2>/dev/null || echo "clone has local commits on main; not fast-forwarded"
+    else echo "clone is not clean on main; not touching it"; fi
+    echo "int-merge: landed $BRANCH on main"
     exit 0
   fi
-  echo "push to unreal/main rejected (attempt $attempt); refetching"
+  echo "push to main rejected (attempt $attempt); refetching"
 done
-fail "push unreal/main after 3 attempts (rerun with --resume)"
+fail "push main after 3 attempts (rerun with --resume)"

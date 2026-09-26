@@ -10,6 +10,12 @@ _Last written: 2026-09-25, in the documentation pass for ADR-0028 (the Mac is re
 below is session-62767025's INT pass of 2026-09-24 and INT's late addendum of 2026-09-25, merged and
 corrected where `STATUS.md` and the landed history have moved since._
 
+_Updated 2026-09-26 for ADR-0029: **the trunk is `main`**, and `unreal/main` is merged into it and
+frozen. Only the branch facts were revised ("Branches", the build-state note in "The shape of the thing", the
+#44 entry, step 2 and the first hazard). The assessment of what is built and usable is still the
+25th's; PRs #44, #49, #56–#60 and #62 landed after it was written and are listed in
+`digests/2026-09-26.md`, not yet folded in here._
+
 ## The shape of the thing
 
 P0 and P1 are done: the project exists, the contracts are frozen in code, and content is text that a
@@ -27,9 +33,10 @@ walker moves, and then a Lance that shoots it.
 unmeasured.** PR #48 was merged through the GitHub UI unbuilt and broke the build
 (`DFGameMode.cpp:98` called `GetSubsystemArray<T>()`, which UE 5.8 does not have; `fcc1e1d` fixed it
 against the engine headers). PR #51 then merged onto the broken trunk, also unbuilt. The verifying
-build after the fix was interrupted, so **whether `unreal/main` compiles now has not been
-demonstrated.** No build or test result from the GPU box has been recorded yet;
-`unreal/Build/windows-bringup.md` §1 produces the first. Do not assume green.
+build after the fix was interrupted, so **whether the trunk compiles now has not been
+demonstrated** (the trunk is `main` since ADR-0029; the merge added no C++, so `unreal/DeepField/` on
+`main` is exactly the frozen `unreal/main`'s). No build or test result from the GPU box has been
+recorded yet; `unreal/Build/windows-bringup.md` §1 produces the first. Do not assume green.
 
 ## The machine (this changed on 2026-09-25)
 
@@ -70,16 +77,33 @@ demonstrated.** No build or test result from the GPU box has been recorded yet;
 | Towers (WS-04) | `DFTowerMath` from PR #51 (`910e51b`): the sim's tower rules as pure functions, 8 `DF.Unit.Tower` tests. **Merged unbuilt**, so build it, then run `DF.Unit.Tower`, before building on it. |
 | Automation (WS-15) | The Python checks, the hosted `unreal-checks` workflow, the gate definition (`DF_GATE_FILTER`, enforced by `check-test-coverage.py`), on Windows `deepfield.ps1` + `machine-inventory.ps1` (PR #52–#55), and the `unreal-win` workflow, written but not armed until a runner exists (`WIN_RUNNER_READY`). Only `int-merge` awaits a port (above). |
 
-## Stranded or in flight
+## Branches (2026-09-26, ADR-0029)
 
-- **PR #44, `ws/12-ui/tokens-screens`**: WS-12's UI tokens and the CommonUI screen stack.
-  session-fae2d0c5 re-claimed WS-12 on 2026-09-25 to fix it and land it. INT confirmed three findings.
-  The one that matters is a design error, not a typo: `DFUIScreenList.inl` puts Hud, Crosshairs,
-  Overheads, Prompts, Revive and Endless all on `DF.UI.Layer.Game`, while `UDFUILayout` models a layer
-  as one `UCommonActivatableWidgetContainerBase`, and such a container shows exactly one widget at a
-  time, deactivating the previous one. Six simultaneously visible pieces of chrome cannot share one
-  container: the HUD would be hidden by the crosshair. The other two: `PushScreen` has no duplicate
-  guard, and `FindOpenScreen` returns the oldest (buried) instance.
+Every branch on `origin` (checked 2026-09-26 at 02:06Z), and what it holds that `main` does not.
+There are no open PRs.
+
+| Branch | State | Holds beyond `main` | Next |
+|---|---|---|---|
+| `main` | **the trunk** | — | everything targets it: PRs, ledger pushes, worktrees, rebases, CI |
+| `unreal/main` | **frozen at `d6a1ce0`** (the WS-15 prep; it and the WS-07 prep reached the branch after PR #62, while ADR-0029 was being written), merged into `main` | nothing: every commit is on `main` | nobody pushes or branches from it. **Not yet locked**: the owner adds a rule restricting updates to it as soon as ADR-0029 lands; until then INT runs `git log origin/main..origin/unreal/main` each cycle and merges anything found. Kept so old clones and links find a stale branch, not a missing one; deleting it is the owner's call |
+| `claude/happy-babbage-t6qrhw` | **WS-04, in flight, NOT BUILT**; owner session-01HszbJQ-cloud, lease to 2026-09-26T02:29Z | ten `[WS-04]` commits, ~4,200 lines across `DFTowers`, `DFCore` and `DFMatch`: the tower actor half (`UDFTargetingComponent` over a DFCore targetable registry, `ADFTower`'s fire loop, team sends), `UDFBuildSubsystem` (place/upgrade/sell through a team-wallet seam), structures (siege damage, frame-end destruction, melee repair), the C9 rig (`UDFTowerRigComponent`, `DA_Tower`), traps (`ADFTrap`), the wave's condition reaching every tower, and the pre-build review fixes. Its two `deepfield.ps1` commits are earlier drafts of what landed as #52–#55 | its owner (or the next claimant once the lease lapses) merges `origin/main` — not `origin/unreal/main` — and opens the PR against `main`. Build it and run `DF.Unit.Tower` first: it sits on `DFTowerMath`, which #51 merged unbuilt. Expect three ledger conflicts, the same ones merging `origin/unreal/main` would give: regenerate `STATUS.md`, union `ws-03-player.md`'s session log by date, and in `CONTRACTS/README.md` keep `main`'s `ci.md` row plus WS-04's three new rows |
+| `ws/05-enemies-ai/waveplan` | **fully landed** | nothing: every commit is on `main` | may be deleted once WS-05's owner moves its frontmatter `branch:` off it (it still names this branch) |
+
+**Sessions holding leases when the trunk moved** (`STATUS.md`; UTC): WS-03 and WS-28
+(session-01DTQRZ3-cloud, to 2026-09-26 22:01 and 22:58), WS-04 (above), WS-05 (session-62767025, to
+02:05), WS-10a (session-01Bqjmob-cloud, to 2026-09-27 01:01), WS-12 (session-fae2d0c5, to 02:11) and
+WS-19 (session-01EeMqPt-cloud, to 14:34). Every branch they name except WS-04's has landed. Anything
+they hold locally, or start next, was cut from `unreal/main`: it retargets onto `origin/main`
+(ADR-0029 §5), and their next claim or renewal pushes to `main`.
+
+**Corrected on 2026-09-26:** this section used to list **PR #44** (`ws/12-ui/tokens-screens`, WS-12's UI
+tokens and CommonUI screen stack) as stranded. It landed on 2026-09-25 as `411bb0b`, after
+session-fae2d0c5 fixed INT's three findings in `042f7d7`: the play chrome became parts inside the HUD
+layout rather than six screens on one single-widget layer, `PushScreen` refuses a duplicate, and
+`FindOpenScreen` searches from the top. Like the rest of `DFUI`, it has not been built. WS-12's
+frontmatter still names the deleted branch, and its `last_commit` (`5fee3aa`, #41's commit from before
+the re-land) is on no branch; the landed work is `411bb0b`. Its owner updates both at their next
+session.
 
 ## What to do next, in the order I would do it
 
@@ -91,10 +115,11 @@ demonstrated.** No build or test result from the GPU box has been recorded yet;
    Today `unreal-checks` is the only lane that runs, so a green PR check means only that the ledger
    and schemas are consistent. The Windows workflow is written (`.github/workflows/unreal-win.yml`,
    every step `deepfield ci-local`) and arms itself once `WIN_RUNNER_READY` is set: register the
-   runner, land the file on `main` too, dispatch it once, then set the variable (CONTRACTS/ci.md,
-   runner step 8). Until then, and until `int-merge` is ported, every landing is verified by hand with
-   `deepfield ci-local`. Branch protection requiring the runner's check comes after, and is the owner's
-   call.
+   runner, dispatch it once, then set the variable (CONTRACTS/ci.md, runner step 8). Until then, and
+   until `int-merge` is ported, every landing is verified by hand with `deepfield ci-local`. Branch
+   protection requiring the runner's check comes after, and is the owner's call. The file is already
+   on the default branch, which the nightly and the Run workflow button need, because `main` is the
+   trunk (ADR-0029).
 3. **`ADFEnemy` + `UDFEnemyMovement`** (WS-05, active): the actor that turns three tested cores into
    something that walks down a lane and can be shot.
 4. **WS-04 Towers and WS-03 Player** (both active; WS-03 claimed on 2026-09-25): both on the critical
@@ -108,6 +133,11 @@ demonstrated.** No build or test result from the GPU box has been recorded yet;
 
 ## Hazards a new session should know
 
+- **The trunk is `main` (ADR-0029).** A clone or worktree still on `unreal/main` builds a frozen tree
+  and never sees a landing: `git fetch origin`, `git switch main`, `git merge --ff-only origin/main`.
+  Branch from, rebase onto and open PRs against `origin/main`. Old digests and session logs say
+  `unreal/main`; they record where things landed then, and every `unreal/main` sha they cite is on
+  `main`.
 - **Never test a stale binary.** `deepfield test` builds first and refuses modules older than their
   source; do not pass `-AllowStale` to get past it. If you run the engine's automation by hand, build
   immediately before (runbook §5). The history is in CONTRACTS/ci.md, "A green run on a stale binary".

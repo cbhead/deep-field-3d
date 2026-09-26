@@ -3,6 +3,19 @@ name: ci
 on:
   push:
     branches: [main]
+    # The same paths as pull_request's below, for the reason given there. ADR-0029 made main the
+    # trunk for the Unreal work too, so every Unreal landing and ledger push now lands here; without
+    # the filter each one would run these frozen lanes, flaky smoke and all. Keep the two lists
+    # identical.
+    paths:
+      - 'game/**'
+      - 'sim/**'
+      - 'docs/**'
+      - 'tools/model-validate.py'
+      - 'tools/design-export.sh'
+      - 'tools/asset-report.sh'
+      - 'tools/map-validate.sh'
+      - '.github/workflows/ci.yml'
   pull_request:
     # These lanes gate the Godot client and the C# sim, which are FROZEN (ADR-0005; `game/` is deleted
     # at G3). They used to run on every pull request, including Unreal-only ones, where they can only
@@ -18,6 +31,8 @@ on:
       - 'docs/**'
       - 'tools/model-validate.py'
       - 'tools/design-export.sh'
+      - 'tools/asset-report.sh'
+      - 'tools/map-validate.sh'
       - '.github/workflows/ci.yml'
 
 jobs:

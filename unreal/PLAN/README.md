@@ -21,29 +21,29 @@ for every workstream, the Appendices for the workstreams that cite them.
 ## Working copies (ADR-0028)
 
 - **Everything runs on the Windows GPU workstation.** The Unreal working copy is wherever `deepfield setup` put it (default `D:\DF\deepfield-3d`, else `C:\DF\deepfield-3d`; the box's actual path is in `Build/machines/windows-gpu.md`). The DDC is the `DDC` folder beside it.
-- Parallel sessions: `git worktree add ..\wt-ws-NN -b ws/NN-<slug>/<topic> origin/unreal/main`, run from that clone, so the worktree sits beside it and shares the DDC.
+- Parallel sessions: `git worktree add ..\wt-ws-NN -b ws/NN-<slug>/<topic> origin/main`, run from that clone, so the worktree sits beside it and shares the DDC.
 - Setup, build, test and play: `unreal\deepfield.cmd` ([the runbook](../README.md), §1); the smoke, the validator and packaging are in the runbook too. The `unreal/Build/*.sh` scripts are Mac-era and do not run on Windows.
 
 ## Session bootstrap prompt
 
 Paste this into a new Claude Code session (replace `WS-NN`). This is the only copy; PROGRAMME.md §6.10 points here.
 
-> You are working on Deep Field 3D's Unreal rebuild, on the Windows GPU workstation. Read `unreal/PLAN/PROGRAMME.md` (Sections 3, 5, 6 and the Appendix your workstream cites), then `unreal/PLAN/STATUS.md` (who owns what), `unreal/PLAN/NEXT.md` (where things stand and what is worth doing), `unreal/PLAN/DECISIONS.md`, `unreal/PLAN/CONTRACTS/` for the contracts you consume, and the latest `unreal/PLAN/digests/`. `unreal/README.md` is how to build, test and run. Claim workstream **WS-NN** per Section 6.2 (or continue it if you own it), run the session-start checklist (6.5), then work toward its DoD in PRs of ≤1 day each to `unreal/main`. Never edit another workstream's paths; propose contract changes as RFCs (6.6). End with the session-end checklist.
+> You are working on Deep Field 3D's Unreal rebuild, on the Windows GPU workstation. Read `unreal/PLAN/PROGRAMME.md` (Sections 3, 5, 6 and the Appendix your workstream cites), then `unreal/PLAN/STATUS.md` (who owns what), `unreal/PLAN/NEXT.md` (where things stand and what is worth doing), `unreal/PLAN/DECISIONS.md`, `unreal/PLAN/CONTRACTS/` for the contracts you consume, and the latest `unreal/PLAN/digests/`. `unreal/README.md` is how to build, test and run. Claim workstream **WS-NN** per Section 6.2 (or continue it if you own it), run the session-start checklist (6.5), then work toward its DoD in PRs of ≤1 day each to `main`. Never edit another workstream's paths; propose contract changes as RFCs (6.6). End with the session-end checklist.
 
 ## Claiming in one command
 
-From your worktree, on a branch off `origin/unreal/main`:
+From your worktree, on a branch off `origin/main`:
 
 ```bat
 python unreal/Build/plan-claim.py ws-04 --owner "<your session handle>" --branch ws/04-towers/rig
 git commit -m "PLAN: claim WS-04 (<your session handle>)" unreal/PLAN/workstreams/ws-04-towers.md
-git pull --rebase origin unreal/main
-git push origin HEAD:unreal/main
+git pull --rebase origin main
+git push origin HEAD:main
 ```
 
 `plan-claim.py` edits only your workstream file (owner, `claimed_at`, `lease_expires` = +24 h, branch,
 state → `claimed`); it does not commit, so the `git commit` line is required. Ledger commits like this
-one, and INT's own ledger updates, are the only direct pushes to `unreal/main`. If the push is
+one, and INT's own ledger updates, are the only direct pushes to `main`. If the push is
 rejected, re-read the file, because someone else may have claimed it.
 
 ## Regenerating STATUS.md

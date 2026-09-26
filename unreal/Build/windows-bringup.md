@@ -12,7 +12,9 @@ unreal\Build\machine-inventory.ps1` (from PowerShell or cmd, not Git Bash) write
 file. Re-run it and commit the result after each section, so the next session reads what the box has
 instead of guessing. At the last inventory (2026-09-24), the engine, Visual Studio, the Windows SDK and
 the .NET 8 SDK were not installed yet, the clone was at `C:\Users\Cbhea\deep-field-3d`, and the only
-volume (C:) had 181 GB free.
+volume (C:) had 181 GB free. That clone was on `unreal/main`, which is frozen now that `main` is the
+trunk (ADR-0029): before §1, switch it with `git fetch origin`, `git switch main`, `git merge --ff-only
+origin/main`. Its own copy of `deepfield.ps1` predates the move and will not warn; `main`'s copy does.
 
 Tick boxes in a PR as you go, write what you observed into your session log, and if a runbook step or
 the script turned out different, fix it in the same PR.
@@ -86,12 +88,12 @@ produce the same bits everywhere pins its arithmetic with the `DF_DET_FP_*` prag
       (WS-15 owns it).
 - [ ] Git (with LFS) on the runner's PATH, and Python findable by the runner's account
       (CONTRACTS/ci.md, runner step 4). `actions/checkout` fails without Git on PATH.
-- [ ] Arm the lane (CONTRACTS/ci.md, runner step 8): land `.github/workflows/unreal-win.yml` on `main`
-      as well, dispatch it once with `full` ticked, and when that run is green set the repository
-      variable `WIN_RUNNER_READY` to `true`. Until then its PR and nightly runs show as skipped, and
-      GitHub proves nothing about the Unreal tree beyond the hosted Python checks. Requiring the check
-      on `unreal/main` through branch protection comes after, and is the owner's call (CONTRACTS/ci.md,
-      2026-09-25).
+- [ ] Arm the lane (CONTRACTS/ci.md, runner step 8): `.github/workflows/unreal-win.yml` is already on
+      `main`, the trunk, so dispatch it once with `full` ticked, and when that run is green set the
+      repository variable `WIN_RUNNER_READY` to `true`. Until then its PR and nightly runs show as
+      skipped, and GitHub proves nothing about the Unreal tree beyond the hosted Python checks.
+      Requiring the check on `main` through branch protection comes after, and is the owner's call
+      (CONTRACTS/ci.md, 2026-09-25).
 - [ ] The port of `int-merge.sh` onto `deepfield.ps1` is the last WS-15 script port (`pr-check`, `smoke`
       and `ci-local` already are deepfield commands).
 

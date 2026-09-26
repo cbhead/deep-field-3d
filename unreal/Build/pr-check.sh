@@ -1,6 +1,6 @@
 #!/bin/zsh
 # What a workstream runs before opening a PR (PROGRAMME.md §6.5 session-end checklist, §7):
-# layering, ownership for YOUR workstream against origin/unreal/main, the content JSON schemas,
+# layering, ownership for YOUR workstream against origin/main, the content JSON schemas,
 # the editor build, then the landing gate (DF_GATE_FILTER in test.sh) under the editor lock — the same
 # tests the branch will be landed on, so a PR never learns about a red suite at landing time.
 #
@@ -17,7 +17,7 @@ PROJECT="$REPO/unreal/DeepField/DeepField.uproject"
 export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
 WS=""
 FILTER=""
-BASE="origin/unreal/main"
+BASE="origin/main"
 BUILD=1; TESTS=1; SMOKE=0
 while [ $# -gt 0 ]; do
   case "$1" in

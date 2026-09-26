@@ -125,3 +125,66 @@ Consequences:
   has produced a result. History (digests, session logs, earlier ADRs, RFCs) is left as written; where
   it says "the Mac", it records what happened then.
 Links: ADR-0016, ADR-0021, ADR-0023, `unreal/README.md`, `unreal/Build/windows-bringup.md`, `CONTRACTS/ci.md`.
+
+## ADR-0029 `main` is the trunk now; `unreal/main` is merged and frozen; Godot still retires at G3
+Date 2026-09-26 · Accepted (project owner) · Amends PROGRAMME.md §1.1, §6.2, §6.3, §6.5 and the G3 row.
+Context: §6.3 made `unreal/main` the integration branch and deferred its merge into `main` to G3,
+together with deleting `game/`. By 2026-09-26 `unreal/main` held 208 commits `main` did not (187
+without merges), and `main` held two PRs that `unreal/main` did not (four commits): #39 (arrow keys
+in the frozen client) and #61 (`unreal-win.yml`, which had to be landed on `main` separately, because
+GitHub runs a scheduled or dispatched workflow only from the default branch). So everything that reads
+the default branch — the nightly, the Run workflow button, the repository's front page, a plain
+`git clone` — pointed at the frozen client, and trunk infrastructure had to be copied across by hand.
+The owner asked for the rebuild to move onto `main` now rather than at G3. Decision:
+1. **`unreal/main` is merged into `main` with a merge commit, never a squash or a rebase**, so every
+   commit of `unreal/main`, and with it every ledger-cited sha that was on it, stays reachable from
+   `main`. The merge was clean: `main`'s two PRs touch nothing under `unreal/`, the one file both sides
+   added (`unreal-win.yml`) was byte-identical, and `README.md`, which both sides edited, merged
+   without conflict. The merge commit's `unreal/` is byte-identical to `unreal/main`'s tip. This change
+   lands through its PR's *Create a merge commit*, or as a fast-forward push of its branch; if `main`
+   moves first, `main` is merged into the branch, never rebased under it. That is an exception to the
+   2026-09-25 ruling against the merge button (CONTRACTS/ci.md), and a safe one: the merge adds no C++,
+   so there is no build for the button to skip.
+2. **`main` is the trunk from here**: PRs (§6.3), ledger pushes (§6.2), worktree bases, rebases, CI
+   triggers, `deepfield setup`'s clone and every landing.
+3. **`unreal/main` is frozen at the last commit merged into `main`**, whose sha `NEXT.md` ("Branches")
+   records. Nothing pushes to it and nothing branches from it. Two ledger commits, the WS-07 and WS-15
+   preps, reached it while this change was being written and were merged in. That is why the freeze
+   needs a lock rather than an agreement: the "Protect Trunks" ruleset on it blocks only deletion and
+   force-push. **The owner locks it** with a rule that restricts updates to `refs/heads/unreal/main`, as
+   soon as this change lands. Until the lock exists, INT runs `git log origin/main..origin/unreal/main`
+   every cycle and merges anything it finds into `main` (a merge commit, as in 1); only a session that
+   has not switched yet can put anything there. The branch is kept, not deleted, so an old clone,
+   worktree or link finds a stale branch rather than a missing one. Deleting it is the owner's call,
+   once every clone has switched.
+4. **Godot's retirement is unchanged**: `game/` stays frozen on `main` and is deleted at G3. Because
+   every Unreal landing and ledger push now lands on `main`, `ci.yml`'s Godot/sim lanes take the same
+   path filter on `push` as on `pull_request`, and both lists now also name the two `tools/` scripts
+   the lanes run. The lanes run only when something they cover changes.
+5. **Branches in flight retarget; they do not restart.** A branch cut from `unreal/main` merges or
+   rebases onto `origin/main` as it already did onto `origin/unreal/main`. `main` contains all of
+   `unreal/main`, so only the branch's own commits move. `NEXT.md` ("Branches") lists every branch,
+   what it still holds, and the sessions holding leases when the trunk moved.
+Consequences:
+- Every existing clone switches once: `git fetch origin`, `git switch main`, `git merge --ff-only
+  origin/main` (the last does nothing on a fresh tracking branch, and brings forward a local `main`
+  left over from before the merge). A clone left on `unreal/main` builds a frozen tree and never sees
+  a landing. A branch or worktree cut from `origin/unreal/main` merges or rebases onto `origin/main`
+  before its next push or PR.
+- The old instructions live on wherever the frozen branch is checked out. There, `PLAN/README.md`
+  still says to push claims to `unreal/main`, and `deepfield.ps1` still clones and diffs against it
+  and says nothing about the move. Only `main`'s copy of the script warns about a clone on
+  `unreal/main`: the runbook's one-liner, or `deepfield doctor -Dir <old clone>` run from a clone that
+  has switched. This is what the lock in (3) closes.
+- The trunk's build state did not change. `unreal/DeepField/` and `unreal/content/` on `main` are the
+  frozen tip's, and this change edits only plan documents, runbooks and `unreal/Build` tooling. So
+  NEXT.md's verdict that the trunk is unmeasured since `fcc1e1d` holds for `main` exactly as it did for
+  `unreal/main`, and `fcc1e1d` is still the commit to bisect from.
+- `unreal-win.yml` now lives on the branch it builds, so ci.md's "land the file on `main` too" is done.
+- `unreal/Build/machines/windows-gpu.*` record the branch the box's clone was on when inventoried;
+  they correct themselves at the next `machine-inventory.ps1` run after the switch.
+- History is left as written: digests, session logs, rulings, RFCs and earlier ADRs that say
+  `unreal/main` record where things landed then, and every `unreal/main` sha they cite is on `main`.
+  Standing asks the move made moot are struck through (ws-15) or annotated (the rulings doc, the
+  WS-10a claim step, the int-merge ruling in ci.md) with a dated note, not deleted.
+Links: PROGRAMME.md §1.1, §6.2, §6.3, §6.5 and the G3 row; `digests/2026-09-26.md`; `NEXT.md`; `README.md`.

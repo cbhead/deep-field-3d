@@ -12,7 +12,7 @@ on:
       - 'sim/**'
       - '.github/workflows/unreal-*.yml'
   push:
-    branches: [unreal/main]
+    branches: [main]
     paths:
       - 'unreal/**'
       - 'tools/**'

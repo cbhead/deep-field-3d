@@ -68,13 +68,13 @@ param(
   # The engine folder (the one containing Engine\). Default: found through the launcher's records.
   [string]$EngineDir = '',
   [string]$Map = '/Game/DF/Dev/L_Dev_Empty',
-  # setup: the branch to clone (default unreal/main), e.g. a PR branch to try before it merges.
+  # setup: the branch to clone (default main, the trunk), e.g. a PR branch to try before it merges.
   [string]$Branch = '',
   # pr-check: the workstream whose ownership globs apply (default: from the branch name ws/NN-slug/topic).
   # ci-local: the ownership view (default INT, which lists everything and fails only on binaries outside every glob).
   [string]$Ws = '',
   # pr-check, ci-local: the ref the ownership check diffs against.
-  [string]$Base = 'origin/unreal/main',
+  [string]$Base = 'origin/main',
   # smoke, ci-local: how many headless clients join the listen host (1-3: the host takes one of the 4 seats).
   [int]$Clients = 1,
   # ci-local: steps to skip, e.g. -Skip smoke or -Skip smoke,plan-status.
@@ -102,7 +102,7 @@ $ProgressPreference = 'SilentlyContinue'   # Invoke-WebRequest is 10x slower wit
 # What the project needs. Change these here and nowhere else.
 # ---------------------------------------------------------------------------------------------------
 $RepoUrl       = 'https://github.com/cbhead/deep-field-3d.git'
-$RepoBranch    = 'unreal/main'
+$RepoBranch    = 'main'
 $EnginePatch   = 2          # UE 5.8.2: a different patch re-saves assets on open (Build/windows-bringup.md 1)
 $MinFreeGB     = 150
 $MinPython     = [version]'3.9'
@@ -759,7 +759,15 @@ function Assert-Repo {
   Write-Ok "clone at $repo"
 
   $branch = Get-NativeOutput 'git' @('-C', $repo, 'rev-parse', '--abbrev-ref', 'HEAD')
-  if ($branch) { Write-Ok "branch $branch" }
+  if ($branch -eq 'unreal/main') {
+    # Frozen since 2026-09-26 (ADR-0029); the Unreal work continues on main. Say so once, never switch.
+    if (-not $script:Quiet) {
+      $move = 'switch main'
+      if (-not (Get-NativeOutput 'git' @('-C', $repo, 'rev-parse', '--verify', '--quiet', 'refs/heads/main'))) { $move = 'switch -c main --track origin/main' }
+      Write-Warn2 'branch unreal/main is frozen (ADR-0029): main is the trunk now, so this checkout gets no new work'
+      Write-Info "Move it to main yourself (setup never switches branches): git -C `"$repo`" fetch origin; git -C `"$repo`" $move; git -C `"$repo`" merge --ff-only origin/main"
+    }
+  } elseif ($branch) { Write-Ok "branch $branch" }
 
   if (-not $script:DoctorOnly) {
     Invoke-Native 'git' @('-C', $repo, 'config', 'core.longpaths', 'true') | Out-Null
@@ -1074,7 +1082,7 @@ function Invoke-CiLocal([string]$Filter, [int]$ClientCount, [int]$SmokePort) {
   # Build/ci-local.sh on Windows: the INT pre-merge set (PROGRAMME.md 6.8), what the nightly lane runs and
   # what INT runs on a rebased branch before it lands. Every step in order, stop at the first failure,
   # and a summary table whatever happened. plan-status is a warning unless -Strict: claims and lease
-  # renewals land on unreal/main between INT cycles by design, so the committed STATUS.md is often stale.
+  # renewals land on main between INT cycles by design, so the committed STATUS.md is often stale.
   $steps = @('layering', 'ownership', 'schema', 'coverage', 'plan-status', 'build', 'tests', 'smoke')
   $skipList = @($Skip | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
   foreach ($s in $skipList) { if ($steps -notcontains $s) { Fail "unknown step '$s' in -Skip" "The steps are: $($steps -join ' ')"; return $false } }

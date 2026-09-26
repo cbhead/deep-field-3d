@@ -1,9 +1,10 @@
 # Deep Field 3D on Unreal Engine 5.8 — runbook
 
-This is the Unreal rebuild of Deep Field 3D. It lives on the `unreal/main` branch, beside the frozen
-Godot client (`../game/`) and the C# sim (`../sim/`, which is now the written spec). **All engine work
-happens on Windows** (ADR-0028: the Mac is retired, and Windows is the only platform), and on Windows
-one script, `Build/deepfield.ps1`, does the setup and the everyday jobs.
+This is the Unreal rebuild of Deep Field 3D. It lives on the `main` branch (ADR-0029; `unreal/main`
+is frozen), beside the frozen Godot client (`../game/`) and the C# sim (`../sim/`, which is now the
+written spec). **All engine work happens on Windows** (ADR-0028: the Mac is retired, and Windows is
+the only platform), and on Windows one script, `Build/deepfield.ps1`, does the setup and the everyday
+jobs.
 
 - **To set up a machine and play, build or test:** [§1](#1-set-up-and-run-one-script), and nothing
   else, is enough.
@@ -42,11 +43,19 @@ Only these. The script installs everything else.
 `PowerShell`, Enter; the ordinary window, not "as administrator") and paste this one line:
 
 ```powershell
-irm https://raw.githubusercontent.com/cbhead/deep-field-3d/unreal/main/unreal/Build/deepfield.ps1 -OutFile "$env:TEMP\deepfield.ps1"; powershell -NoProfile -ExecutionPolicy Bypass -File "$env:TEMP\deepfield.ps1" setup
+irm https://raw.githubusercontent.com/cbhead/deep-field-3d/main/unreal/Build/deepfield.ps1 -OutFile "$env:TEMP\deepfield.ps1"; powershell -NoProfile -ExecutionPolicy Bypass -File "$env:TEMP\deepfield.ps1" setup
 ```
 
 **If you already have a clone**, double-click `unreal\deepfield.cmd` in it, or run `unreal\deepfield setup`
 in a terminal.
+
+**If that clone is still on `unreal/main`** (frozen since 2026-09-26, ADR-0029), move it to `main`
+first, once, in the clone: `git fetch origin`, `git switch main`, then `git merge --ff-only
+origin/main` (which does nothing unless the clone kept an old local `main`). The clone's own copy of
+the script predates the move and says nothing; `setup` and `doctor` run from `main`'s copy (the
+one-liner above, or `deepfield doctor -Dir <old clone>` from a clone already on `main`) warn about a
+clone on `unreal/main`, and never switch branches themselves. A branch or worktree cut from `origin/unreal/main` moves too: merge or rebase it
+onto `origin/main` before its next push.
 
 `setup` never assumes a bare machine. It works in two passes:
 
@@ -66,7 +75,7 @@ in a terminal.
 | Windows | 64-bit, build 19041+; long paths enabled | Enables long paths (one UAC prompt) |
 | Git | Git for Windows and Git LFS | Installs them with winget |
 | Python | Python 3.9+ (the Store's fake `python.exe` does not count) | Installs Python 3.12 with winget |
-| Repository | An existing clone anywhere on the machine (see pass 1; `-Dir` picks one when there are several) | Clones `unreal/main` to `D:\DF\deepfield-3d` (else `C:\DF\deepfield-3d`, or `-Dir`), turns off line-ending conversion, fetches every LFS file |
+| Repository | An existing clone anywhere on the machine (see pass 1; `-Dir` picks one when there are several) | Clones `main` to `D:\DF\deepfield-3d` (else `C:\DF\deepfield-3d`, or `-Dir`), turns off line-ending conversion, fetches every LFS file |
 | Unreal Engine | The version `DeepField.uproject` names (5.8), ideally patch 5.8.2 | Installs the Epic Games Launcher and opens it. **This is the one manual step:** sign in, then Unreal Engine > Library > **+** next to *Engine versions* > **5.8.2** > Install. Press Enter in the script's window when it has finished. Sets `UE_ROOT` for you. |
 | Visual Studio | VS 2022 (or 2026, or Build Tools) with an MSVC toolset the installed engine accepts (read from its `Engine\Config\Windows\Windows_SDK.json`; checked after the engine for that reason), and a Windows SDK 10.0.19041+ | Installs VS 2022 Community with the C++ game workloads, or updates and modifies the one you have. If it still has no accepted toolset, it prints the toolsets found and the engine's rules |
 | Build | - | Builds the editor (10-30 minutes the first time) |
@@ -237,7 +246,7 @@ unreal\deepfield pr-check
 It runs, in order: the repository checks and your workstream's ownership check, the build, then the
 full landing gate, the same tests your branch will be landed on. The workstream comes from the branch
 name (`ws/04-towers/rig` → `04`); on any other branch pass it: `deepfield pr-check -Ws 04`. `-Base`
-changes the ref the ownership check diffs against (default `origin/unreal/main`).
+changes the ref the ownership check diffs against (default `origin/main`).
 
 **What you should see:** `pr-check: OK (WS-NN)`. It stops at the first failing step and says which. A
 filter (`deepfield pr-check DF.Unit.Tower`) runs only those tests, for iterating, and ends
@@ -259,7 +268,7 @@ INT runs on a rebased branch before it lands (`Build/ci-local.sh`'s job): layeri
 the `STATUS.md` check, the build, the landing gate, then the smoke. It stops at the first failure and
 prints a summary table either way, ending `ci-local: OK`.
 
-- A stale `STATUS.md` is a `WARN`, not a failure: claims and lease renewals land on `unreal/main`
+- A stale `STATUS.md` is a `WARN`, not a failure: claims and lease renewals land on `main`
   between INT cycles by design. `-Strict` makes it fail.
 - `-Skip smoke` (or `-Skip smoke,plan-status`) skips steps, and the verdict says which. A test filter
   ends the run `PARTIAL`, as with pr-check. `-Clients` and `-Port` go to the smoke.
@@ -313,7 +322,7 @@ on a `Placeholder=true` asset is the registry audit doing its job (WS-01), not a
 
 | Task | Command (from the repo root, with `UE` and `PROJ` set per §2) |
 |---|---|
-| Start a parallel session | `git worktree add ..\wt-ws-NN -b ws/NN-<slug>/<topic> origin/unreal/main`: a worktree beside the clone, sharing its DDC. Reset `PROJ` inside it. |
+| Start a parallel session | `git worktree add ..\wt-ws-NN -b ws/NN-<slug>/<topic> origin/main`: a worktree beside the clone, sharing its DDC. Reset `PROJ` inside it. |
 | Work on the C++ in Visual Studio or Rider | `unreal\deepfield solution` generates `DeepField.sln` |
 | Re-import content after editing `unreal/content/json/*.json` | `python unreal\Build\validate-content-json.py`, then `"%UE%" "%PROJ%" -run=DFContentImport -nullrhi -unattended -nop4 -nosplash -NoSound`. Commit the JSON together with the regenerated `DT_*.uasset` files. Details: [content/README.md](content/README.md). |
 | Re-import a level after editing its `.level.json` (`unreal/content/levels/<id>.level.json`, or today's Godot-era briefs in `levels/legacy/`, which `-legacy` selects) | Take the LFS lock first (`git lfs lock <path to the .umap>`), then `"%UE%" "%PROJ%" -run=DFLevelImport -map=<id> [-legacy] -nullrhi -unattended -nop4 -nosplash -NoSound`. |

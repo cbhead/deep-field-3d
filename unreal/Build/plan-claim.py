@@ -2,7 +2,7 @@
 """Claim, renew, release or update a workstream file (PROGRAMME.md Section 6.2).
 
 Edits only the named workstream file. Push the resulting one-file commit directly to
-unreal/main after `git pull --rebase`; if the push is rejected, re-read the file — someone
+main after `git pull --rebase`; if the push is rejected, re-read the file — someone
 else may have claimed it.
 
   plan-claim.py ws-04 --owner "session-abc" --branch ws/04-towers/rig       # claim (state -> claimed)

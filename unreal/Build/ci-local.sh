@@ -1,12 +1,12 @@
 #!/bin/zsh
 # The INT pre-merge set (PROGRAMME.md §6.8) in one script — what the nightly self-hosted lane
-# runs, and what INT runs on a rebased branch before merging it to unreal/main.
+# runs, and what INT runs on a rebased branch before merging it to main.
 #
 #   unreal/Build/ci-local.sh                         # everything, in order, stop at the first failure
 #   unreal/Build/ci-local.sh --skip smoke            # skip a step (repeatable): layering ownership schema coverage plan-status build tests smoke
 #   unreal/Build/ci-local.sh --filter DF.Unit        # test filter (default: the landing gate, DF_GATE_FILTER in test.sh)
 #   unreal/Build/ci-local.sh --client-count 2        # smoke with two clients
-#   unreal/Build/ci-local.sh --ws 04 --base main     # ownership as a workstream against another base (default INT vs origin/unreal/main)
+#   unreal/Build/ci-local.sh --ws 04 --base origin/ws/04-towers/rig  # ownership as a workstream against another base, e.g. a stacked PR's parent (default INT vs origin/main)
 #   unreal/Build/ci-local.sh --strict                # a stale STATUS.md fails the run instead of warning
 #
 # Steps: layering-check.py · ownership-check.py · validate-content-json.py · check-test-coverage.py · plan-status.py --check ·
@@ -14,7 +14,7 @@
 # editor-lock.sh test.sh <filter> · editor-lock.sh smoke-listen.sh (the lock is held for the whole smoke).
 # deepfield.ps1's `ci-local` is the Windows twin (same steps, same WARN rule for plan-status).
 # Prints a summary table on exit, whatever happened. Exit 1 on the first failing step.
-# plan-status is a WARNING by default: claims and lease renewals are pushed straight to unreal/main
+# plan-status is a WARNING by default: claims and lease renewals are pushed straight to main
 # between INT cycles (PROGRAMME.md §6.2), so the committed STATUS.md is stale most days and
 # int-merge.sh regenerates it at every landing; the diff is printed, the table says WARN, and
 # --strict (or CI_LOCAL_ARGS=--strict on the nightly) turns it back into a failure.
@@ -26,7 +26,7 @@ PROJECT="$REPO/unreal/DeepField/DeepField.uproject"
 export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
 FILTER=""        # empty: test.sh applies DF_GATE_FILTER, the one definition
 WS="INT"
-BASE="origin/unreal/main"
+BASE="origin/main"
 CLIENTS=1
 STRICT=0
 SKIP=()
