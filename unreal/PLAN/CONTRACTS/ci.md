@@ -210,7 +210,7 @@ message that never appears **does** fail the test. But:
 stands unchanged: a branch lands only after a build, the landing gate and the smoke have run on the GPU
 box against the rebased tree — `unreal\deepfield ci-local` in a throwaway worktree holding the rebased
 branch, then the push by hand, until WS-15 ports `int-merge` onto `deepfield.ps1`. The runner step below is `windows-bringup.md` §5.)*
-**The GitHub merge button bypasses the only step that compiles anything.** Three incidents through that
+**The GitHub merge button bypasses the only step that compiles anything.** Four incidents through that
 one door, each worse than the last:
 
 | PR | what the route cost |

@@ -50,6 +50,100 @@ blocked_on:
 - The GPU-box PR lane (planned) builds but runs no tests: the box is shared with the agent sessions, and a PR's own tests run there by hand (`unreal/README.md` §5.4). Revisit once the lane exists and its cost is measured.
 - UBT's `-WaitMutex` queue: seven agents' builds queued behind one full build today (a no-change incremental took 1892 s wall). Worth a protocol note — stagger builds, or a queued build lock like `editor-lock.sh`.
 
+## Assignment from INT (2026-09-25) — audited, and the port is the point
+
+**WS-15 is paused with no owner, and it is now the workstream with the most leverage in the programme.**
+Not because CI is glamorous, but because of three facts the audit established:
+
+1. **Zero self-hosted runners are registered**, so no lane has ever built or tested the Unreal tree.
+   `unreal-checks` is green and compiles nothing; `unreal-win` exists and reports *skipped*.
+2. **Four PRs have merged onto `unreal/main` through the GitHub button instead of the landing script**
+   (`CONTRACTS/ci.md`). Two were explicitly unbuilt. One broke the trunk for an hour on a single symbol
+   that does not exist in UE 5.8. The landing script refuses at the build step — it is the only thing
+   that would have caught it, and it is the one script not yet ported.
+3. **ADR-0028 retired the Mac**, so the six zsh scripts in `unreal/Build/` now run nowhere. Their rules
+   are the accumulated scar tissue of fourteen defects found across two adversarial review rounds.
+
+### The risk in this workstream is not "write PowerShell". It is losing the guards silently.
+**This is demonstrated, not hypothetical.** The two ports already done (`pr-check`, `ci-local`/`smoke`)
+each dropped something:
+- `deepfield.ps1`'s staleness scan **omits the `.uproject`**, which `test.sh` includes — so a
+  `.uproject` edit (a module added, a plugin enabled) can now be tested against a binary that predates it.
+  That is precisely the failure the guard was written for: a green run that means nothing.
+- **`DF_TEST_ALLOW_EMPTY` has no ps1 equivalent** while `unreal/Build/README.md:43` still documents it,
+  so the "a filter that matches no test is a failure" rule has a documented escape hatch that does not exist.
+Port the **rules**, not the scripts, and re-read each guard's comment for the reason it is there before
+deciding it is incidental.
+
+### `int-merge` is the last port and the one that matters
+`deepfield.ps1`'s `ValidateSet` (line 61) has no `int-merge` verb and there is no `Invoke-IntMerge`.
+`windows-bringup.md:95` already calls it the last WS-15 port. Its 259 lines are almost entirely guards;
+these are the ones with a scar behind them, and what breaks if the port omits each:
+- **A landing lock with crash detection** (60 s grace on a pid-less dir, reclaim only when the pid is
+  dead) — without it two landings share one verify worktree and a checkout swaps the tree under a
+  running test. This happened; the staleness guard caught it.
+- **The verification record pins branch, base, HEAD, smoke and ws**, and the base is the **merge-base,
+  not `origin/unreal/main`** — refs are shared by every worktree, so any session's fetch moves a ref
+  mid-build. Recording the ref cost one landing three rejected pushes.
+- **`--force-with-lease` armed with the branch tip the landing actually took**, persisted for `--resume`,
+  not the ref a fetch refreshed a line earlier. Without this a landing silently overwrites an author who
+  pushed during verification. It fired for real and refused, correctly.
+- **`git rebase --continue` exits non-zero when it succeeds and stops at the next conflict.** Treating
+  that as failure made a two-conflict branch unlandable. The loop must re-inspect and bail only when a
+  step changes nothing at all.
+- **Auto-resolution is limited to two globs** (`unreal/PLAN/STATUS.md`, regenerated; and
+  `workstreams/ws-*.md`, union-merged in date order by `merge-ws-log.py`). Everything else stops for a
+  human. Widening that set is how you lose someone's work to a merge you did not read.
+- **Refuse to continue or skip while the worktree carries unstaged or untracked work** — `--skip` on a
+  merely-unstaged resolution drops the author's commit and force-pushes the result.
+- **Ledger/doc-only movement on the trunk re-runs the cheap checks and rebases without rebuilding**, but
+  `OWNERSHIP.md` counts as one of those files and the ownership verdict depends on it, so the checks must
+  run even on that path.
+- **Yield to other builds before starting one**, counting only real UBT processes (`dotnet` running the
+  dll) — `pgrep -f` alone matches every monitoring shell. On one machine with no 8 GB ceiling, decide
+  deliberately whether this still earns its place and record the decision either way.
+- **A build failure prints its diagnostics.** The filter was `" error "`, which matches
+  "1 error generated." but not `Foo.cpp:12:34: error: …`; that cost two full rebuilds to recover a
+  message the first build had already produced.
+Two things have **no Windows analogue as written**: `stat -f %m` (use `(Get-Item).LastWriteTimeUtc`) and
+the `/Volumes/Toshiba` worktree path.
+
+### ADR-0028's follow-ups: what is actually left
+Verified item by item. **Done:** `unreal-mac.yml` is gone from both `unreal/main` and `main` (`61d668f`);
+`pr-check` and `ci-local`/`smoke` are ps1 verbs. **Outstanding:** `DeepField.uproject:50` still reads
+`"TargetPlatforms": [ "Mac", "Windows" ]`; `.lfsconfig` still carries `fetchexclude` and
+`deepfield.ps1` still has `-LightClone` (lines 86, 791-807); `check-test-coverage.py:27` still says
+`DF.Perf` runs "never on the Mac"; `machine-inventory.ps1:326,347` still label readiness in Mac terms and
+the generated `machines/windows-gpu.md:19,28` carries them; `int-merge` is unported.
+**Two of those are INT's files, not yours** (`OWNERSHIP.md:8`: the `.uproject` and `.lfsconfig`) — send a
+"Needs INT" line rather than editing them. **And ADR-0028 missed a sixth target:** §4.1's G1 still reads
+"Mac CI builds `Development Editor`".
+
+### Six places the docs overclaim — fix as you touch them
+- **This file's `last_commit: bd9d16a` is on no branch**, and six later WS-15 landings are unrecorded in
+  the session log. Reconstruct it from `git log` before you add to it.
+- `OWNERSHIP.md:35` grants WS-15 `Plugins/DFAutomation/**` — **the directory does not exist.**
+- Scope's **"LFS lock audit" has zero implementation** anywhere in `unreal/Build`.
+- The DoD's second half — **"Windows packaging, EGS BuildPatchTool, crash reporting"** — exists only as
+  plan text, with nothing in the tree.
+- `PROGRAMME.md:356` calls `test.sh` "awaiting a Windows port" that has existed since 2026-09-25.
+- `CONTRACTS/ci.md:213` says "Three incidents" above a **four-row table** — INT's own error, fixed in
+  this commit.
+
+### Order I would work it
+1. **Register the runner** (`windows-bringup.md` §8) and make `unreal-win` actually run. Everything else
+   in this workstream is worth less until a lane compiles the tree. Then tell the owner, because
+   branch protection is theirs to enable and it is sequenced **after** the runner.
+2. **Port `int-merge` onto `deepfield.ps1`**, guard by guard from the list above, and state in the PR
+   which guard each block implements. Re-add the `.uproject` to the staleness scan and either implement
+   `DF_TEST_ALLOW_EMPTY` or delete it from `README.md`.
+3. The ADR-0028 leftovers, with the two INT files requested rather than edited.
+4. The honest DoD gaps: LFS lock audit, Windows packaging, crash reporting — or renegotiate the DoD with
+   INT if they belong to a later phase.
+
+**G2 needs you** for "a packaged Windows build runs it", `DF.Net.Feel` and the 150 ms emulation; **G3**
+for every ported probe green, four solo matches to victory in automation, and retiring Godot.
+
 ## Session log
 <!-- append-only: date · session · what landed · what's next -->
 - 2026-09-19 · session-75b58b1b/agent-ws15 · landed: `DFTestUtils.h` (FDFTestWorld, FDFMessageCapture); DF.Unit.MessageBus.{ParentFanout,UnsubscribeDuringDelivery} + DF.Unit.Tags.{ContentIdMapping,MessageInventoryHasTagPerEntry} (4/4 pass through editor-lock.sh test.sh); test.sh verdict from the JSON report (proved: a failing DF.Dev test → exit 1, an empty filter → exit 1 / 0 with DF_TEST_ALLOW_EMPTY=1; the proof test deleted, rebuilt); editor-lock.sh no-exec fix (also on main as 9fc6e61); smoke-listen.sh -client-count N (host + 2 clients OK); ci-local.sh end-to-end on the Mac (509 s: layering/ownership/schema ok, plan-status WARN, build 382 s, tests 43 s, smoke 82 s); pr-check.sh; Build/README.md documents every script incl. int-merge.sh; .github/workflows/unreal-checks.yml + unreal-mac.yml (PyYAML-valid; the nightly checks out unreal/main explicitly, the default branch being main); CONTRACTS/ci.md. Next: Gauntlet controllers (Plugins/DFAutomation), DF.Net.ListenHostPlusClient as a real test, Mac packaging (nightly-only, both editor slots), LFS lock audit, crash reporting. Needs INT: see above.

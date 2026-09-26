@@ -171,3 +171,20 @@ is declared in the header while `factions.schema.json` forbids it — a live C2 
 one-line JSON append with no engine. One question is left explicitly to the human rather than ruled:
 three documents give three different XP-cap semantics, and at 100 XP/level × 5 levels the reading matters.
 
+## Assignment, 2026-09-25: WS-15 Automation/CI is prepped — the highest-leverage workstream
+Brief in `unreal/PLAN/workstreams/ws-15-automation-ci.md`, "Assignment from INT". Paused, no owner.
+
+Why it leads: **zero runners are registered**, so no lane has ever built or tested this tree; **four PRs
+merged through the GitHub button** instead of the landing script, two unbuilt, one breaking the trunk;
+and **ADR-0028 retired the Mac**, so the six zsh scripts run nowhere while `int-merge` — the one that
+refuses at the build step — is the only script not yet ported.
+
+**The risk is losing the guards, and it is already happening.** The two completed ports each dropped
+something: `deepfield.ps1`'s staleness scan omits the `.uproject`, so a module or plugin change can be
+tested against a binary that predates it; and `DF_TEST_ALLOW_EMPTY` has no ps1 equivalent while
+`Build/README.md` still documents it. The brief inventories every guard in `int-merge.sh` with the defect
+behind it, so the port can be checked rule by rule rather than read as 259 lines of shell.
+
+It also lists six places the docs overclaim, including that this workstream's own `last_commit` is on no
+branch with six landings unrecorded, and that `OWNERSHIP.md` grants it a directory that does not exist.
+
