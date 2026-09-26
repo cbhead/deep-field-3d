@@ -324,54 +324,57 @@ function Check([string]$Item, [string]$Need, [string]$Have, [string]$Status, [st
 }
 
 $build = [int]$os.BuildNumber
-Check 'Windows' 'Windows 11, or 10 >= 19041' "$($osInfo.caption) build $($osInfo.build)" $(if ($build -ge 19041) { 'OK' } else { 'FAIL' }) '0'
+Check 'Windows' 'Windows 11, or 10 >= 19041' "$($osInfo.caption) build $($osInfo.build)" $(if ($build -ge 19041) { 'OK' } else { 'FAIL' }) 'runbook 1.1'
 
 $nvName = if ($nvidia) { "$($nvidia.name), driver $($nvidia.driver), $($nvidia.vram)" } else { 'no NVIDIA GPU found' }
-Check 'NVIDIA GPU + current driver' 'current Studio / Game Ready driver' $nvName $(if ($nvidia) { 'OK' } else { 'FAIL' }) '0'
+Check 'NVIDIA GPU + current driver' 'current Studio / Game Ready driver' $nvName $(if ($nvidia) { 'OK' } else { 'FAIL' }) 'runbook 1.1'
 
 $best = $volumes | Where-Object { $_.type -eq 'Fixed' } | Sort-Object { $_.free_gb } -Descending | Select-Object -First 1
 $bestTxt = if ($best) { "$($best.drive) $($best.free_gb) GB free of $($best.size_gb) GB" } else { 'no fixed volume' }
-Check 'Free NVMe space' '>= 500 GB free on one volume' $bestTxt $(if ($best -and $best.free_gb -ge 500) { 'OK' } else { 'FAIL' }) '0'
+Check 'Free NVMe space' '>= 500 GB free on one volume' $bestTxt $(if ($best -and $best.free_gb -ge 500) { 'OK' } else { 'FAIL' }) 'windows-bringup 1'
 
-Check 'Short clone root' 'D:\DF\deepfield-3d (short path)' "$($clone.path) ($($clone.path_length) chars)" $(if ($clone.path_length -le 24) { 'OK' } else { 'WARN' }) '0, 3'
+Check 'Short clone root' '<= 24 chars: D:\DF\deepfield-3d, or C:\DF\deepfield-3d without a D: drive (packaging is where long paths bite)' "$($clone.path) ($($clone.path_length) chars)" $(if ($clone.path_length -le 24) { 'OK' } else { 'WARN' }) 'runbook 8'
 
-Check 'Long paths enabled' 'LongPathsEnabled = 1' "$($settings.long_paths)" $(if ($settings.long_paths) { 'OK' } else { 'FAIL' }) '0'
+Check 'Long paths enabled' 'LongPathsEnabled = 1' "$($settings.long_paths)" $(if ($settings.long_paths) { 'OK' } else { 'FAIL' }) 'runbook 1.2'
 
 $exTxt = if ($defender.exclusions -is [string]) { $defender.exclusions } elseif ($defender.exclusions) { ($defender.exclusions -join '; ') } else { 'none' }
 $exStatus = if ($defender.exclusions -is [string]) { 'UNKNOWN' } elseif ($defender.exclusions) { 'OK' } else { 'FAIL' }
-Check 'Defender exclusions' 'clone, engine, UnrealEditor/cl/link/... processes' $exTxt $exStatus '0'
+Check 'Defender exclusions' 'clone, engine, UnrealEditor/cl/link/... processes' $exTxt $exStatus 'runbook 1.4'
 
-$ue58 = $ue | Where-Object { $_.version -like '5.8.2*' } | Select-Object -First 1
+# The same policy as deepfield.ps1: any 5.8 builds (the .uproject names 5.8), and a patch other than 2
+# is a warning, because it re-saves every asset it opens.
+$ue582 = $ue | Where-Object { $_.version -like '5.8.2 *' } | Select-Object -First 1
+$ue58  = $ue | Where-Object { $_.version -like '5.8.*' } | Select-Object -First 1
 $ueTxt = if ($ue) { ($ue | ForEach-Object { "$($_.version) at $($_.root)" }) -join '; ' } else { 'none installed' }
-Check 'Unreal Engine 5.8.2' 'UE 5.8.2 from the launcher (same patch as the Mac)' $ueTxt $(if ($ue58) { 'OK' } else { 'FAIL' }) '1'
-Check 'UE_ROOT' 'set to the 5.8 install' $(if ($envVars.UE_ROOT) { $envVars.UE_ROOT } else { 'unset' }) $(if ($envVars.UE_ROOT -and (Test-Path $envVars.UE_ROOT)) { 'OK' } else { 'FAIL' }) '1'
+Check 'Unreal Engine 5.8.2' 'UE 5.8 from the launcher, patch 2: another patch re-saves assets on open' $ueTxt $(if ($ue582) { 'OK' } elseif ($ue58) { 'WARN' } else { 'FAIL' }) 'runbook 1.2'
+Check 'UE_ROOT' 'set to the 5.8 install (deepfield finds the engine without it; the by-hand commands in runbook 2 use it)' $(if ($envVars.UE_ROOT) { $envVars.UE_ROOT } else { 'unset' }) $(if ($envVars.UE_ROOT -and (Test-Path $envVars.UE_ROOT)) { 'OK' } else { 'WARN' }) 'runbook 2'
 
 $allMsvc = @($vs | ForEach-Object { MsvcLabels $_ })
 $msvcTxt = if ($allMsvc) { ($allMsvc | ForEach-Object { "$($_.Label) ($(MsvcVerdict $_.Compiler))" }) -join '; ' } else { 'no Visual Studio / MSVC' }
 $msvcStatus = if ($allMsvc | Where-Object { (MsvcVerdict $_.Compiler) -eq 'preferred' }) { 'OK' } elseif ($allMsvc | Where-Object { (MsvcVerdict $_.Compiler) -eq 'allowed' }) { 'WARN' } else { 'FAIL' }
-Check 'MSVC toolset' '14.44 >= 35211 (VS 2022 17.14) or 14.50 >= 35723, judged by the compiler build (cl.exe), not the folder name' $msvcTxt $msvcStatus '2'
+Check 'MSVC toolset' '14.44 >= 35211 (VS 2022 17.14) or 14.50 >= 35723, judged by the compiler build (cl.exe), not the folder name' $msvcTxt $msvcStatus 'runbook 1.2'
 
 $sdkTxt = if ($winSdks) { $winSdks -join ', ' } else { 'none' }
 $sdkStatus = if ($winSdks -contains '10.0.22621.0') { 'OK' } elseif ($winSdks | Where-Object { [version]$_ -ge [version]'10.0.19041.0' }) { 'WARN' } else { 'FAIL' }
-Check 'Windows SDK' '10.0.22621.0 (10.0.19041.0 minimum)' $sdkTxt $sdkStatus '2'
+Check 'Windows SDK' '10.0.22621.0 (10.0.19041.0 minimum)' $sdkTxt $sdkStatus 'runbook 1.2'
 
 $dn8 = $dotnetSdks | Where-Object { $_ -like '8.*' }
-Check '.NET 8 SDK' 'for tools/content-export, waveplan-golden' $(if ($dotnetSdks) { $dotnetSdks -join ', ' } else { 'no SDK' }) $(if ($dn8) { 'OK' } else { 'FAIL' }) '2'
+Check '.NET 8 SDK' 'optional: only to regenerate the WavePlan goldens or re-export content from the sim (UBT uses its own bundled .NET)' $(if ($dotnetSdks) { $dotnetSdks -join ', ' } else { 'no SDK' }) $(if ($dn8) { 'OK' } else { 'WARN' }) 'tools/waveplan-golden'
 
 $gitTxt = if ($tools.git.found) { "$($tools.git.version)$(if (-not $tools.git.on_path) { ' - NOT on PATH' })" } else { 'not installed' }
-Check 'Git for Windows' 'installed, on PATH' $gitTxt $(if ($tools.git.found -and $tools.git.on_path) { 'OK' } elseif ($tools.git.found) { 'WARN' } else { 'FAIL' }) '3'
-Check 'Git LFS' 'git lfs install done' "$($tools.git_lfs.version); filter.lfs.process=$($gitCfg['filter.lfs.process'])" $(if ($gitCfg['filter.lfs.process']) { 'OK' } else { 'FAIL' }) '3'
-Check 'core.longpaths' 'true' (Val $gitCfg['core.longpaths']) $(if ($gitCfg['core.longpaths'] -eq 'true') { 'OK' } else { 'FAIL' }) '3'
-Check 'core.autocrlf' 'false' "$($gitCfg['core.autocrlf'])" $(if ($gitCfg['core.autocrlf'] -eq 'false') { 'OK' } else { 'FAIL' }) '3'
+Check 'Git for Windows' 'installed, on PATH' $gitTxt $(if ($tools.git.found -and $tools.git.on_path) { 'OK' } elseif ($tools.git.found) { 'WARN' } else { 'FAIL' }) 'runbook 1.2; ci.md runner 4'
+Check 'Git LFS' 'git lfs install done' "$($tools.git_lfs.version); filter.lfs.process=$($gitCfg['filter.lfs.process'])" $(if ($gitCfg['filter.lfs.process']) { 'OK' } else { 'FAIL' }) 'runbook 1.2'
+Check 'core.longpaths' 'true' (Val $gitCfg['core.longpaths']) $(if ($gitCfg['core.longpaths'] -eq 'true') { 'OK' } else { 'FAIL' }) 'runbook 1.2'
+Check 'core.autocrlf' 'false' "$($gitCfg['core.autocrlf'])" $(if ($gitCfg['core.autocrlf'] -eq 'false') { 'OK' } else { 'FAIL' }) 'runbook 1.2'
 $lfsEx = $gitCfg['lfs.fetchexclude (this clone)']
-Check 'LFS light-clone undone' 'lfs.fetchexclude = "" in this clone' $(if ($null -eq $lfsEx) { 'unset (the .lfsconfig Mac excludes apply)' } else { "'$lfsEx'" }) $(if ($null -ne $lfsEx -and $lfsEx -eq '') { 'OK' } else { 'FAIL' }) '3'
-Check 'GitHub CLI' 'installed, gh auth login' $(if ($tools.gh.found) { "$($tools.gh.version); $($gitCfg['gh auth'])" } else { 'not installed' }) $(if ($gitCfg['gh auth'] -eq 'logged in') { 'OK' } else { 'FAIL' }) '3'
+Check 'LFS light-clone undone' 'lfs.fetchexclude = "" in this clone' $(if ($null -eq $lfsEx) { 'unset (the .lfsconfig Mac excludes apply)' } else { "'$lfsEx'" }) $(if ($null -ne $lfsEx -and $lfsEx -eq '') { 'OK' } else { 'FAIL' }) 'runbook 1.2'
+Check 'GitHub CLI' 'optional: gh auth login, to open PRs from the box (deepfield and the runner do not use it)' $(if ($tools.gh.found) { "$($tools.gh.version); $($gitCfg['gh auth'])" } else { 'not installed' }) $(if ($gitCfg['gh auth'] -eq 'logged in') { 'OK' } else { 'WARN' }) '-'
 
 $pyOk = $tools.python.found -and ($tools.python.version -match 'Python 3\.(\d+)') -and ([int]$Matches[1] -ge 9)
-Check 'Python 3.9+' 'for the unreal\Build\*.py checks' "$($tools.python.version)" $(if ($pyOk) { 'OK' } else { 'FAIL' }) '5'
+Check 'Python 3.9+' 'for the unreal\Build\*.py checks' "$($tools.python.version)" $(if ($pyOk) { 'OK' } else { 'FAIL' }) 'runbook 3'
 
 $runTxt = if ($runner.services -or $runner.folders) { (@($runner.services) + @($runner.folders)) -join '; ' } else { 'none' }
-Check 'Self-hosted runner' 'deepfield-gpu, labels deepfield,gpu' $runTxt $(if ($runner.services -or $runner.folders) { 'OK' } else { 'FAIL' }) '8'
+Check 'Self-hosted runner' 'registered as deepfield-gpu with --labels deepfield' $runTxt $(if ($runner.services -or $runner.folders) { 'OK' } else { 'FAIL' }) 'ci.md runner 1-8'
 
 # ---------------------------------------------------------------- write
 
@@ -400,11 +403,11 @@ $md.Add("If you are about to rely on something about this machine, check here fi
 $md.Add('')
 $md.Add('## Bring-up readiness')
 $md.Add('')
-$md.Add((Row 'Status', 'Item', 'Runbook needs', 'This machine has', 'Runbook section'))
+$md.Add((Row 'Status', 'Item', 'Needs', 'This machine has', 'See'))
 $md.Add('|---|---|---|---|---|')
 foreach ($c in $checks) { $md.Add((Row $c.status, $c.item, $c.need, $c.have, $c.runbook)) }
 $md.Add('')
-$md.Add('`OK` meets the runbook; `WARN` works but is not what the runbook asks for; `FAIL` missing or wrong; `UNKNOWN` needs an elevated run to read.')
+$md.Add('`OK` meets the need; `WARN` works, or is optional, but is not what is asked for; `FAIL` missing or wrong; `UNKNOWN` needs an elevated run to read. "runbook N" is a section of unreal/README.md; "ci.md" is unreal/PLAN/CONTRACTS/ci.md.')
 $md.Add('')
 
 $md.Add('## Hardware')

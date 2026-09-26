@@ -26,7 +26,9 @@ the script turned out different, fix it in the same PR.
 - [ ] Disk: the drive the clone is on has **≥ 500 GB free** once the art sublevels, Megascans and
       packages arrive. At the last inventory, C: had 181 GB. Plan the space before the art lanes start.
 - [ ] `machine-inventory.ps1` re-run and committed. Its readiness table shows no `FAIL` except the
-      runner (§5), and has an elevated run behind it so that the Defender row is not `UNKNOWN`.
+      runner (§5) and the disk (above), and has an elevated run behind it so that the Defender row is
+      not `UNKNOWN`. Optional tools (the .NET 8 SDK for the WavePlan goldens, the GitHub CLI) and an
+      engine patch other than 5.8.2 are `WARN`.
 - [x] §5.1 (`deepfield test`) passes the landing gate: **155 of 155 on 2026-09-26** (`e859ffb`, UE
       5.8.2, MSVC 14.44), every registered suite. It was the suite's first MSVC verdict and the first
       build of PR #51. It took three fixes (`b234449`, `cb820b2`, `e859ffb`; PLAN/NEXT.md).
