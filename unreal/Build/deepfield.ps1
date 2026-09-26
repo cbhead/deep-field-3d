@@ -513,9 +513,11 @@ function Assert-VisualStudio {
     if ($script:DoctorOnly) { Fail "$($vs.Name): $($why -join '; ')" 'deepfield setup updates and modifies it.'; return }
     $installer = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\setup.exe'
     $path = $vs.Instance.installationPath
+    $updateRc = 'not run'
     if ($needUpdate) {
       Write-Fix "updating $($vs.Name) to the latest release (brings the current MSVC toolset); approve the UAC prompt"
       $p = Start-Process $installer -Wait -PassThru -ArgumentList @('update', '--installPath', "`"$path`"", '--passive', '--norestart')
+      $updateRc = $p.ExitCode
       Write-Info "Visual Studio Installer exit code $($p.ExitCode)"
     }
     # Only ids every supported Visual Studio knows: the workloads and what was found missing.
@@ -524,6 +526,7 @@ function Assert-VisualStudio {
     if (@(Get-WindowsSdks | Where-Object { $_ -ge $WinSdkMinimum }).Count -eq 0 -and $vs.Major -eq 17) { $addArgs += @('--add', 'Microsoft.VisualStudio.Component.Windows11SDK.22621') }
     Write-Fix "adding the C++ game workloads to $($vs.Name); approve the UAC prompt"
     $p = Start-Process $installer -Wait -PassThru -ArgumentList (@('modify', '--installPath', "`"$path`"", '--passive', '--norestart', '--includeRecommended') + $addArgs)
+    $modifyRc = $p.ExitCode
     Write-Info "Visual Studio Installer exit code $($p.ExitCode) (3010 means a restart is needed later)"
     $vs = Get-VsVerdict
     if (-not $vs -or $vs.Good.Count -eq 0) {
@@ -534,7 +537,20 @@ function Assert-VisualStudio {
       if ($rules.Min) { Write-Info "  minimum $($rules.Min)" }
       foreach ($r in $rules.Banned) { Write-Info "  refused $($r.Text)" }
       foreach ($r in $rules.Preferred) { Write-Info "  preferred $($r.Text)" }
-      Fail 'Visual Studio still has no MSVC toolset the engine accepts' "Open the Visual Studio Installer > Modify > Individual components, tick an 'MSVC ... x64/x86 build tools' entry whose version is in the`npreferred list above (or at least not refused), and 'Windows 11 SDK (10.0.22621.0)'. Then run this again.`nPlease also send the lines above to whoever maintains this script."
+      # Everything needed to diagnose this goes into the failure itself: the red block is what people
+      # copy, and the info lines above it are easy to miss.
+      $foundText = 'no Visual Studio 2022/2026 instance'
+      if ($vs) { $foundText = "$($vs.Name) at $($vs.Instance.installationPath); MSVC toolsets: $(Format-Toolsets $vs)" }
+      $ruleText = @()
+      if ($rules.Min) { $ruleText += "minimum $($rules.Min)" }
+      foreach ($r in $rules.Banned) { $ruleText += "refused $($r.Text)" }
+      foreach ($r in $rules.Preferred) { $ruleText += "preferred $($r.Text)" }
+      if ($ruleText.Count -eq 0) { $ruleText = @('none read') }
+      Fail 'Visual Studio still has no MSVC toolset the engine accepts' ("Found: $foundText`n" +
+        "Engine rules ($($rules.Source)): $($ruleText -join '; ')`n" +
+        "Visual Studio Installer exit codes: update $updateRc, modify $modifyRc (0 = done, 3010 = done but needs a restart; anything else = it did not finish)`n" +
+        "Fix: Visual Studio Installer > Update, then Modify > Individual components: tick an 'MSVC ... x64/x86 build tools' entry whose version`n" +
+        "is preferred above (or at least not refused), and 'Windows 11 SDK (10.0.22621.0)'. Then run this again. Paste this whole block when asking for help.")
       return
     }
   }
