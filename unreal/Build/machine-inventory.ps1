@@ -270,6 +270,9 @@ foreach ($r in ($roots | Where-Object { $_ } | ForEach-Object { $_.TrimEnd('\') 
         root       = $r
         version    = if ($bv) { "$($bv.MajorVersion).$($bv.MinorVersion).$($bv.PatchVersion) (CL $($bv.Changelist))" } else { 'no Build.version' }
         editor     = Test-Path (Join-Path $r 'Engine\Binaries\Win64\UnrealEditor.exe')
+        # The launcher's "Editor symbols for debugging" option puts a .pdb beside each editor module;
+        # the default install has only UnrealGame's.
+        editor_symbols = Test-Path (Join-Path $r 'Engine\Binaries\Win64\UnrealEditor-Core.pdb')
         windows_sdk_json = $sdkJson
     }
 }
@@ -354,6 +357,9 @@ $uePinned = $ue | Where-Object { $_.version -like "5.8.$pin *" } | Select-Object
 $ue58  = $ue | Where-Object { $_.version -like '5.8.*' } | Select-Object -First 1
 $ueTxt = if ($ue) { ($ue | ForEach-Object { "$($_.version) at $($_.root)" }) -join '; ' } else { 'none installed' }
 Check "Unreal Engine 5.8.$pin" "UE 5.8 from the launcher, the pinned patch $pin (deepfield.ps1 `$EnginePatch): another patch re-saves assets on open" $ueTxt $(if ($uePinned) { 'OK' } elseif ($ue58) { 'WARN' } else { 'FAIL' }) 'runbook 1.2'
+$ueSym = if ($uePinned) { $uePinned } else { $ue58 }
+$symTxt = if (-not $ueSym) { 'no 5.8 install' } elseif ($ueSym.editor_symbols) { "installed in $($ueSym.root)" } else { "not installed (no Engine\Binaries\Win64\UnrealEditor-Core.pdb in $($ueSym.root))" }
+Check 'Editor symbols' 'the launcher option "Editor symbols for debugging" on the 5.8 install (about 60 GB): without it every engine frame of a crash reads UnknownFunction' $symTxt $(if ($ueSym -and $ueSym.editor_symbols) { 'OK' } else { 'FAIL' }) 'windows-bringup 1; runbook 1.2'
 Check 'UE_ROOT' 'set to the 5.8 install (deepfield finds the engine without it; the by-hand commands in runbook 2 use it)' $(if ($envVars.UE_ROOT) { $envVars.UE_ROOT } else { 'unset' }) $(if ($envVars.UE_ROOT -and (Test-Path $envVars.UE_ROOT)) { 'OK' } else { 'WARN' }) 'runbook 2'
 
 $allMsvc = @($vs | ForEach-Object { MsvcLabels $_ })
