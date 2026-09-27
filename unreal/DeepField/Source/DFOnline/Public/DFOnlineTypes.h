@@ -13,9 +13,10 @@
 UENUM(BlueprintType)
 enum class EDFLoginMethod : uint8
 {
-	/** The ladder: command-line credentials (the Epic Games Store launcher's exchange code), then the
-	 *  SDK's persistent token, then the account portal when a human is present. The Null services
-	 *  pre-register the platform user, so Auto adopts it without a Login call. */
+	/** The ladder: a device id when -DFDeviceId is on the command line, the Dev Auth Tool when
+	 *  -DFDevAuth= is, then command-line credentials (the Epic Games Store launcher's exchange code),
+	 *  then the SDK's persistent token, then the account portal when a human is present. The Null
+	 *  services pre-register the platform user, so Auto adopts it without a Login call. */
 	Auto,
 	/** -AUTH_TYPE=exchangecode -AUTH_PASSWORD=<code>, as the EGS launcher passes them. */
 	ExchangeCode,
@@ -25,6 +26,12 @@ enum class EDFLoginMethod : uint8
 	Persistent,
 	/** Browser / overlay login. */
 	AccountPortal,
+	/** EOS Connect with this machine's device id: no Epic account, so no Epic Account Services
+	 *  (no friends, presence or overlay invites). Lobbies, sessions, P2P relay and join codes work.
+	 *  The development path until the organization has a verified domain; never the release login
+	 *  (unreal/PLAN/rfcs/needs-int-eos-config.md, "Before go-live"). Needs the OnlineServicesEOSGS
+	 *  plugin: the full OnlineServicesEOS always logs in an Epic account first. */
+	DeviceId,
 };
 
 UENUM(BlueprintType)

@@ -57,6 +57,7 @@ namespace DFOnlineTests
 		int32 LoginChanged = 0;
 		bool bCallbackOk = false;
 		FString CallbackReason;
+		bool bSessionDone = false;   // CreateInviteOnlySession's own callback fired
 
 		bool Boot(FAutomationTestBase* InTest)
 		{
@@ -185,9 +186,13 @@ bool FDFOnlineNullSessionTest::RunTest(const FString& Parameters)
 			F->Teardown();
 			return;
 		}
-		F->Online->CreateInviteOnlySession(TEXT("testlane"), DFTags::Tier_Standard, /*bEndless*/ false);
+		F->Online->CreateInviteOnlySession(TEXT("testlane"), DFTags::Tier_Standard, /*bEndless*/ false,
+			FDFOnlineResult::CreateLambda([F](bool, const FString&) { F->bSessionDone = true; }));
 	}));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFWaitUntil(F, [F]() { return !F->GameInstance || F->Online->IsHosting() || F->Online->GetConnectionState() == EDFConnectionState::LoggedIn; }, TEXT("session")));
+	// Wait for the creation's own callback. The state stays LoggedIn while a lobby is being created, so
+	// "hosting or LoggedIn" ended on the first frame against EOS, whose lobbies take a round trip;
+	// the Null lobbies had always finished inside that frame (2026-09-27, the first EOS lobby).
+	ADD_LATENT_AUTOMATION_COMMAND(FDFWaitUntil(F, [F]() { return !F->GameInstance || F->bSessionDone; }, TEXT("session")));
 	ADD_LATENT_AUTOMATION_COMMAND(FDFStep([this, F]()
 	{
 		if (!F->GameInstance)

@@ -7,6 +7,11 @@
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "GenericPlatform/GenericPlatformInputDeviceMapper.h"
+#include "HAL/IConsoleManager.h"
+#include "IEOSSDKManager.h"
+#include "Online/OnlineServicesEpicCommon.h"
+#include "eos_connect.h"
+#include "eos_sdk.h"
 #include "Kismet/GameplayStatics.h"
 #include "Messages/DFMessageBus.h"
 #include "Messages/DFMessages.h"
@@ -193,8 +198,20 @@ void UDFOnlineSubsystem::Login(EDFLoginMethod Method, FDFOnlineResult OnDone)
 	TArray<EDFLoginMethod> Ladder;
 	if (Method == EDFLoginMethod::Auto)
 	{
-		// Command-line credentials (the EGS launcher), then the cached token, then a human.
+		// Command-line credentials (the EGS launcher), then the cached token, then a human. A
+		// -DFDevAuth= on the command line puts the Dev Auth Tool first: it was documented as the
+		// development login, but until 2026-09-27 nothing but an explicit Login(Developer) reached it.
 		Ladder = { EDFLoginMethod::Auto, EDFLoginMethod::Persistent };
+		FString DevAuth;
+		if (FParse::Value(FCommandLine::Get(), TEXT("DFDevAuth="), DevAuth))
+		{
+			Ladder.Insert(EDFLoginMethod::Developer, 0);
+		}
+		// -DFDeviceId: the anonymous development login (EDFLoginMethod::DeviceId), ahead of everything.
+		if (FParse::Param(FCommandLine::Get(), TEXT("DFDeviceId")))
+		{
+			Ladder.Insert(EDFLoginMethod::DeviceId, 0);
+		}
 		if (!FApp::IsUnattended())
 		{
 			Ladder.Add(EDFLoginMethod::AccountPortal);
@@ -254,10 +271,16 @@ void UDFOnlineSubsystem::LoginStep(TArray<EDFLoginMethod> Ladder, int32 Index, F
 	case EDFLoginMethod::AccountPortal:
 		Params.CredentialsType = LoginCredentialsType::AccountPortal;
 		break;
+	case EDFLoginMethod::DeviceId:
+		// A Connect login with this machine's device id: FAuthEOSGS skips Epic Account Services
+		// (EASAuthEnabled defaults to false) and creates the product user on first login.
+		Params.CredentialsType = LoginCredentialsType::ExternalAuth;
+		Params.CredentialsToken.Emplace<FExternalAuthToken>(FExternalAuthToken{ ExternalLoginType::DeviceIdAccessToken, FString() });
+		break;
 	}
 
 	UE_LOG(LogDFOnline, Log, TEXT("login: %s via %s"), *Params.CredentialsType.ToString(), *GetProviderName().ToString());
-	Auth->Login(MoveTemp(Params)).OnComplete(this, [this, Ladder = MoveTemp(Ladder), Index, OnDone](const TOnlineResult<FAuthLogin>& Result) mutable
+	Auth->Login(MoveTemp(Params)).OnComplete(this, [this, Ladder = MoveTemp(Ladder), Index, Method, OnDone](const TOnlineResult<FAuthLogin>& Result) mutable
 	{
 		if (Result.IsOk())
 		{
@@ -267,6 +290,28 @@ void UDFOnlineSubsystem::LoginStep(TArray<EDFLoginMethod> Ladder, int32 Index, F
 		}
 		const FOnlineError& Error = Result.GetErrorValue();
 		UE_LOG(LogDFOnline, Log, TEXT("login step %d failed: %s"), Index, *Error.GetLogString());
+		if (Method == EDFLoginMethod::DeviceId && !bDeviceIdReady)
+		{
+			// The first login on this machine: no device id yet. Create it and take this step once more.
+			// (Creating it up front on every run made the SDK log an error once one existed.)
+			EnsureDeviceId([this, Ladder = MoveTemp(Ladder), Index, OnDone](bool bOk, const FString& DeviceReason) mutable
+			{
+				if (bOk)
+				{
+					LoginStep(MoveTemp(Ladder), Index, OnDone);
+				}
+				else if (Ladder.IsValidIndex(Index + 1))
+				{
+					UE_LOG(LogDFOnline, Log, TEXT("login step %d: device id: %s"), Index, *DeviceReason);
+					LoginStep(MoveTemp(Ladder), Index + 1, OnDone);
+				}
+				else
+				{
+					FailLogin(DeviceReason, OnDone);
+				}
+			});
+			return;
+		}
 		if (Ladder.IsValidIndex(Index + 1))
 		{
 			LoginStep(MoveTemp(Ladder), Index + 1, OnDone);
@@ -276,6 +321,54 @@ void UDFOnlineSubsystem::LoginStep(TArray<EDFLoginMethod> Ladder, int32 Index, F
 			FailLogin(Error.GetErrorId(), OnDone);
 		}
 	});
+}
+
+void UDFOnlineSubsystem::EnsureDeviceId(TFunction<void(bool bOk, const FString& Reason)> OnDone)
+{
+	if (bDeviceIdReady)
+	{
+		OnDone(true, FString());
+		return;
+	}
+	// Every Epic provider (OnlineServicesEOSGS, and OnlineServicesEOS on top of it) derives from
+	// FOnlineServicesEpicCommon, which owns the EOS platform handle.
+	if (!Services || Services->GetServicesProvider() != EOnlineServices::Epic)
+	{
+		OnDone(false, TEXT("deviceIdNeedsEpicServices"));
+		return;
+	}
+	IEOSPlatformHandlePtr Platform = static_cast<FOnlineServicesEpicCommon*>(Services.Get())->GetEOSPlatformHandle();
+	EOS_HConnect Connect = Platform ? EOS_Platform_GetConnectInterface(*Platform) : nullptr;
+	if (!Connect)
+	{
+		OnDone(false, TEXT("noEOSConnectInterface"));
+		return;
+	}
+
+	struct FDeviceIdRequest
+	{
+		TWeakObjectPtr<UDFOnlineSubsystem> Self;
+		TFunction<void(bool, const FString&)> OnDone;
+	};
+	EOS_Connect_CreateDeviceIdOptions Options = {};
+	Options.ApiVersion = EOS_CONNECT_CREATEDEVICEID_API_LATEST;
+	Options.DeviceModel = "PC Windows";
+	EOS_Connect_CreateDeviceId(Connect, &Options, new FDeviceIdRequest{ this, MoveTemp(OnDone) },
+		[](const EOS_Connect_CreateDeviceIdCallbackInfo* Data)
+		{
+			TUniquePtr<FDeviceIdRequest> Request(static_cast<FDeviceIdRequest*>(Data->ClientData));
+			UDFOnlineSubsystem* Self = Request->Self.Get();
+			if (!Self)
+			{
+				return;
+			}
+			// DuplicateNotAllowed: this machine already has one, from an earlier run. Either way it exists.
+			const bool bOk = Data->ResultCode == EOS_EResult::EOS_Success || Data->ResultCode == EOS_EResult::EOS_DuplicateNotAllowed;
+			const FString Result = UTF8_TO_TCHAR(EOS_EResult_ToString(Data->ResultCode));
+			UE_LOG(LogDFOnline, Log, TEXT("device id: %s"), *Result);
+			Self->bDeviceIdReady = bOk;
+			Request->OnDone(bOk, bOk ? FString() : Result);
+		});
 }
 
 bool UDFOnlineSubsystem::TryAdoptPlatformUser()
@@ -1175,3 +1268,50 @@ double UDFOnlineSubsystem::Now()
 {
 	return FPlatformTime::Seconds();
 }
+
+#if !UE_BUILD_SHIPPING
+// Dev only: log in by hand. EOS answers an Epic account's first login to this product with
+// corrective_action_required (the account has to approve the application's permissions once), and
+// only an interactive login can show that prompt: open the game windowed and run
+// `DF.Online.Login portal` once. Headless and Dev Auth logins go straight through afterwards. It is
+// also the manual trigger WS-11's two-machine checklist needs.
+static FAutoConsoleCommandWithWorldAndArgs GDFOnlineLoginCommand(
+	TEXT("DF.Online.Login"),
+	TEXT("Log in through UDFOnlineSubsystem: DF.Online.Login [auto|device|dev|portal|persistent|exchange] (default auto)."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		UDFOnlineSubsystem* Online = UDFOnlineSubsystem::Get(World);
+		if (!Online)
+		{
+			UE_LOG(LogDFOnline, Warning, TEXT("DF.Online.Login: no game instance in this world"));
+			return;
+		}
+		const FString Arg = Args.Num() > 0 ? Args[0].ToLower() : FString(TEXT("auto"));
+		EDFLoginMethod Method;
+		if (Arg == TEXT("auto")) { Method = EDFLoginMethod::Auto; }
+		else if (Arg == TEXT("dev")) { Method = EDFLoginMethod::Developer; }
+		else if (Arg == TEXT("portal")) { Method = EDFLoginMethod::AccountPortal; }
+		else if (Arg == TEXT("persistent")) { Method = EDFLoginMethod::Persistent; }
+		else if (Arg == TEXT("exchange")) { Method = EDFLoginMethod::ExchangeCode; }
+		else if (Arg == TEXT("device")) { Method = EDFLoginMethod::DeviceId; }
+		else
+		{
+			UE_LOG(LogDFOnline, Warning, TEXT("DF.Online.Login: unknown method '%s' (auto, device, dev, portal, persistent, exchange)"), *Arg);
+			return;
+		}
+		TWeakObjectPtr<UDFOnlineSubsystem> WeakOnline(Online);
+		Online->Login(Method, FDFOnlineResult::CreateLambda([WeakOnline](bool bOk, const FString& Reason)
+		{
+			const UDFOnlineSubsystem* O = WeakOnline.Get();
+			if (bOk && O)
+			{
+				const FDFOnlineIdentity& Me = O->GetLocalIdentity();
+				UE_LOG(LogDFOnline, Display, TEXT("DF.Online.Login: logged in via %s as '%s' (%s)"), *O->GetProviderName().ToString(), *Me.DisplayName, *Me.Id.ToString());
+			}
+			else
+			{
+				UE_LOG(LogDFOnline, Warning, TEXT("DF.Online.Login: failed (%s)"), *Reason);
+			}
+		}));
+	}));
+#endif

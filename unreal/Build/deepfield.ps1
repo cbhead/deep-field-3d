@@ -1069,6 +1069,13 @@ function Invoke-Tests([string]$Filter) {
   $argList = @("`"$($script:Project)`"", '-nullrhi', '-unattended', '-nop4', '-nosplash', '-NoSound',
     "-ExecCmds=`"Automation RunTests $Filter; Quit`"", '-TestExit="Automation Test Queue Empty"',
     "-ReportExportPath=`"$report`"", '-log', "-abslog=`"$log`"")
+  # The tests run on the Null online services everywhere. A machine with the untracked EOS file
+  # (unreal/PLAN/rfcs/needs-int-eos-config.md) would otherwise run DF.Online against Epic, with no
+  # login, and fail where the runner and every other clone pass. DF_TEST_ONLINE_SERVICES=Epic (plus
+  # -DFDeviceId in DF_TEST_EXTRA_ARGS) tests against EOS on purpose.
+  $services = 'Null'; if ($env:DF_TEST_ONLINE_SERVICES) { $services = $env:DF_TEST_ONLINE_SERVICES }
+  $argList += "-ini:Engine:[OnlineServices]:DefaultServices=$services"
+  if ($env:DF_TEST_EXTRA_ARGS) { $argList += ($env:DF_TEST_EXTRA_ARGS -split ' ' | Where-Object { $_ }) }
   $proc = Start-Process $p.EditorCmd -ArgumentList $argList -PassThru -WindowStyle Hidden
   $null = $proc.Handle   # without a handle taken now, ExitCode reads empty after the process ends
   if (-not $proc.WaitForExit($timeout * 1000)) {

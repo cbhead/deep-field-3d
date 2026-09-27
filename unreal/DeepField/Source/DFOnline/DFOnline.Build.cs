@@ -26,6 +26,9 @@ public class DFOnline : ModuleRules
 			"JsonUtilities",
 			"AssetRegistry",     // UDFContentHash enumerates the imported DataTables
 			"ApplicationCore",   // the primary platform user for the Null / EOS login
+			"OnlineServicesEpicCommon", // the EOS platform handle, for EOS_Connect_CreateDeviceId (EDFLoginMethod::DeviceId)
+			"EOSShared",
+			"EOSSDK",
 			"EngineSettings",    // the front-end map the backend returns to
 		});
 	}

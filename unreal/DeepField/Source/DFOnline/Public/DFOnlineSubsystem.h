@@ -147,6 +147,9 @@ private:
 
 	// login
 	void LoginStep(TArray<EDFLoginMethod> Ladder, int32 Index, FDFOnlineResult OnDone);
+	/** EOS_Connect_CreateDeviceId, after a DeviceId login fails on a machine that has none yet (the
+	 *  engine never calls it). OnDone(true) when the id exists, including one created on an earlier run. */
+	void EnsureDeviceId(TFunction<void(bool bOk, const FString& Reason)> OnDone);
 	bool TryAdoptPlatformUser();
 	void CompleteLogin(const UE::Online::FAccountInfo& Info);
 	void FailLogin(const FString& Reason, FDFOnlineResult OnDone);
@@ -178,6 +181,7 @@ private:
 	static double Now();
 
 	TSharedPtr<UE::Online::IOnlineServices> Services;
+	bool bDeviceIdReady = false;
 	TArray<UE::Online::FOnlineEventDelegateHandle> EventHandles;
 	TSharedPtr<IDFSessionBackend> Backend;
 
