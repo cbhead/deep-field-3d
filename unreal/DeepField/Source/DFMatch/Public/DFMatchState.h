@@ -41,7 +41,7 @@ struct DFMATCH_API FDFMatchSettings
 	float RestartSeconds = -1.f;
 	/** How long the host's travel to the new match takes once asked for; the request goes out this much
 	 *  before the countdown ends. Not from the URL: ADFGameMode::RestartLeadFor (the server-travel pause on
-	 *  a listen or dedicated host, 0 standalone). */
+	 *  a listen or dedicated host, 0 standalone), at InitGame and again at StartPlay (SetRestartLead). */
 	float RestartLeadSeconds = 0.f;
 };
 
@@ -110,6 +110,9 @@ public:
 	// ---- host -----------------------------------------------------------------------------------
 	/** From the game mode's InitGameState, before BeginPlay. Resets the phase machine. */
 	void ConfigureMatch(const FDFMatchSettings& InSettings);
+	/** From the game mode's StartPlay, once the host listens: the settings' RestartLeadSeconds, without
+	 *  resetting the phase machine (FDFMatchPhaseMachine::SetRestartLead). */
+	void SetRestartLead(float LeadSeconds);
 
 	/** Use this director instead of spawning one at BeginPlay (tests, a resume that built its own). */
 	void UseWaveDirector(ADFWaveDirector* InDirector);

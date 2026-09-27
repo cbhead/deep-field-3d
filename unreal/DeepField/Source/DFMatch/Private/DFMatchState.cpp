@@ -124,6 +124,14 @@ void ADFMatchState::ConfigureMatch(const FDFMatchSettings& InSettings)
 	Publish();
 }
 
+void ADFMatchState::SetRestartLead(float LeadSeconds)
+{
+	// Kept in the settings too, so BeginPlay's second ConfigureMatch does not undo it.
+	Settings.RestartLeadSeconds = FMath::Max(0.f, LeadSeconds);
+	Machine.SetRestartLead(Settings.RestartLeadSeconds);
+	Publish();
+}
+
 void ADFMatchState::SubscribeCredit()
 {
 	UDFMessageBus* Bus = HasAuthority() ? UDFMessageBus::Get(this) : nullptr;

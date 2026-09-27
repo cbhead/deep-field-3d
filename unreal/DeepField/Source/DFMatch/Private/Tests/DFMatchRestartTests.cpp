@@ -385,6 +385,69 @@ bool FDFMatchStateRestartDeadlineTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFMatchRestartLeadLateTest, "DF.Unit.Match.RestartLeadLearnedAfterConfigure", DFMatchRestartTest::Flags)
+bool FDFMatchRestartLeadLateTest::RunTest(const FString& Parameters)
+{
+	using namespace DFMatchRestartTest;
+	// A PIE host listens after InitGame, so its lead (0 there) arrives at StartPlay, after the match state
+	// was configured. The lead moves; the match does not start over.
+	FDFMatchPhaseMachine M = Fresh(2, 15.f);
+	M.Tick(3.f, 1, Alive);
+	M.SetRestartLead(4.f);
+	TestEqual(TEXT("the lead is set"), M.RestartLeadSeconds, 4.f);
+	TestEqual(TEXT("still in the first intermission"), M.Phase, EDFMatchPhase::Intermission);
+	TestEqual(TEXT("before the first wave"), M.WaveIndex, -1);
+	TestTrue(TEXT("with 5 s left, not a fresh 8"), FMath::IsNearlyEqual(M.PhaseTimer, 5.f));
+	TestEqual(TEXT("the clock runs on: 5 s later the first wave"), M.Tick(5.f, 1, Alive), EDFMatchStep::BeginWave);
+	M.WaveCleared(0, Alive);
+	M.Tick(8.f, 1, Alive);
+	TestEqual(TEXT("the last wave cleared: victory"), M.WaveCleared(1, Alive), EDFMatchStep::Victory);
+	TestEqual(TEXT("10.9 s on: not yet"), M.Tick(10.9f, 1, Alive), EDFMatchStep::None);
+	TestEqual(TEXT("asked at the lead, 4 s before the end, not at 0"), M.Tick(0.2f, 1, Alive), EDFMatchStep::Restart);
+	M.SetRestartLead(-1.f);
+	TestEqual(TEXT("never negative"), M.RestartLeadSeconds, 0.f);
+
+	// Learned once the restart clock runs (not in play, where StartPlay comes first): a clock shorter than
+	// the lead is raised to it, as Finish would have started it, so the countdown still ends with the switch.
+	FDFMatchPhaseMachine Late = Fresh(1, 15.f);
+	Late.Tick(8.f, 1, Alive);
+	Late.WaveCleared(0, Alive);
+	Late.Tick(13.f, 1, Alive);
+	Late.SetRestartLead(4.f);
+	TestTrue(TEXT("2 s left becomes 4"), FMath::IsNearlyEqual(Late.RestartTimer, 4.f));
+	TestEqual(TEXT("and asks on the next frame"), Late.Tick(0.016f, 1, Alive), EDFMatchStep::Restart);
+	Late.SetRestartLead(10.f);
+	TestTrue(TEXT("once asked, the clock is left alone"), FMath::IsNearlyEqual(Late.RestartTimer, 4.f - 0.016f, 1e-3f));
+
+	// The match state: two matches side by side, one told its lead after ConfigureMatch.
+	FFixture Standalone;
+	FFixture Hosted;
+	if (!Standalone.Init(*this, FDFMatchSettings()) || !Hosted.Init(*this, FDFMatchSettings()))
+	{
+		return false;
+	}
+	Standalone.Match->AdvanceMatch(1.f);
+	Hosted.Match->AdvanceMatch(1.f);
+	Hosted.Match->SetRestartLead(4.f);
+	TestEqual(TEXT("the settings carry the lead"), Hosted.Match->GetSettings().RestartLeadSeconds, 4.f);
+	TestEqual(TEXT("so does the machine"), Hosted.Match->GetPhaseMachine().RestartLeadSeconds, 4.f);
+	TestEqual(TEXT("still in the first intermission"), Hosted.Match->GetPhase(), EDFMatchPhase::Intermission);
+	TestEqual(TEXT("1 s of it left, not a fresh 2"), Hosted.Match->GetPhaseSecondsLeft(), 1.f, 0.01f);
+	Standalone.PlayWave();
+	Hosted.PlayWave();
+	TestEqual(TEXT("victory"), Hosted.Match->GetPhase(), EDFMatchPhase::Victory);
+	TestEqual(TEXT("15 s to the new match"), Hosted.Match->GetPhaseSecondsLeft(), 15.f, 0.01f);
+	Standalone.Match->AdvanceMatch(11.1f);
+	Hosted.Match->AdvanceMatch(11.1f);
+	TestEqual(TEXT("with no lead, not asked 3.9 s before the end"), Standalone.Requests, 0);
+	TestEqual(TEXT("with the lead learned late, asked"), Hosted.Requests, 1);
+	TestEqual(TEXT("and the countdown goes on"), Hosted.Match->GetPhaseSecondsLeft(), 3.9f, 0.06f);
+	Standalone.Match->AdvanceMatch(4.f);
+	TestEqual(TEXT("the standalone one asks when the clock runs out"), Standalone.Requests, 1);
+	TestEqual(TEXT("the hosted one asked once"), Hosted.Requests, 1);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFMatchStateNoRestartMidMatchTest, "DF.Unit.Match.StateNoRestartInLobbyOrEndless", DFMatchRestartTest::Flags)
 bool FDFMatchStateNoRestartMidMatchTest::RunTest(const FString& Parameters)
 {

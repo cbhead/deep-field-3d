@@ -35,11 +35,16 @@ void ADFGameMode::InitGame(const FString& MapName, const FString& Options, FStri
 {
 	Super::InitGame(MapName, Options, ErrorMessage);
 	MatchSettings = ParseMatchSettings(Options);
-	// UEngine::LoadMap listens before InitializeActorsForPlay calls this, so a hosting world already has
-	// its net driver and net mode here.
+	// UEngine::LoadMap listens before InitializeActorsForPlay calls this, so a host it loads (a packaged
+	// game, a restart travel) has its net driver here. PIE does not: StartPlay reads the lead again.
+	MatchSettings.RestartLeadSeconds = CurrentRestartLead();
+}
+
+float ADFGameMode::CurrentRestartLead() const
+{
 	const UWorld* World = GetWorld();
 	const UNetDriver* NetDriver = World ? World->GetNetDriver() : nullptr;
-	MatchSettings.RestartLeadSeconds = RestartLeadFor(GetNetMode(), NetDriver ? NetDriver->ServerTravelPause : 0.f);
+	return RestartLeadFor(GetNetMode(), NetDriver ? NetDriver->ServerTravelPause : 0.f);
 }
 
 FDFMatchSettings ADFGameMode::ParseMatchSettings(const FString& Options)
@@ -84,6 +89,21 @@ void ADFGameMode::InitGameState()
 		Match->ConfigureMatch(MatchSettings);
 		Match->OnRestartRequested.AddUObject(this, &ADFGameMode::HandleRestartRequested);
 	}
+}
+
+void ADFGameMode::StartPlay()
+{
+	// UGameInstance::StartPlayInEditorGameInstance calls InitGame (InitializeActorsForPlay) before
+	// EnableListenServer, so a PIE listen or dedicated host had no net driver there and a lead of 0: its
+	// HUD would reach 0 and read "Starting new match…" for the whole travel pause. UWorld::BeginPlay,
+	// which calls this, comes after the listen in PIE and in LoadMap alike. Before Super, so the match
+	// state's BeginPlay reconfigures with it; nothing has started, but the setter would not reset anyway.
+	MatchSettings.RestartLeadSeconds = CurrentRestartLead();
+	if (ADFMatchState* Match = GetGameState<ADFMatchState>())
+	{
+		Match->SetRestartLead(MatchSettings.RestartLeadSeconds);
+	}
+	Super::StartPlay();
 }
 
 void ADFGameMode::HandleRestartRequested(ADFMatchState* /*Match*/, bool& bOutUnderWay)

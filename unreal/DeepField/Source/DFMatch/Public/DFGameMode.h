@@ -21,7 +21,8 @@
 // clients are told to follow and reconnect, and every actor, the economy and the seats' records come
 // back from nothing. A ?lobby match returns to its lobby; -DFDemo spawns its director again with the new
 // match state. On a listen or dedicated host the map switches ServerTravelPause after the request
-// (clients hear ClientTravel first), which is why the request goes out that much early (RestartLeadFor).
+// (clients hear ClientTravel first), which is why the request goes out that much early (RestartLeadFor,
+// read again at StartPlay: a PIE host has no net driver yet at InitGame).
 UCLASS()
 class DFMATCH_API ADFGameMode : public AGameModeBase
 {
@@ -32,6 +33,7 @@ public:
 
 	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
 	virtual void InitGameState() override;
+	virtual void StartPlay() override;
 	virtual void PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage) override;
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	virtual void Logout(AController* Exiting) override;
@@ -71,6 +73,8 @@ public:
 
 private:
 	void HandleRestartRequested(ADFMatchState* Match, bool& bOutUnderWay);
+	/** RestartLeadFor this world as it is now: its net mode and its net driver's pause, 0 with no driver. */
+	float CurrentRestartLead() const;
 
 	FDFMatchSettings MatchSettings;
 	bool bRestarting = false;

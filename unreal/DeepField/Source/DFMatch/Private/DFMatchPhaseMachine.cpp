@@ -17,6 +17,15 @@ void FDFMatchPhaseMachine::Reset(float InIntermissionSeconds, int32 InTotalWaves
 	bRestartSent = false;
 }
 
+void FDFMatchPhaseMachine::SetRestartLead(float InRestartLeadSeconds)
+{
+	RestartLeadSeconds = FMath::Max(0.f, InRestartLeadSeconds);
+	if (IsRestartClockRunning() && !bRestartSent)
+	{
+		RestartTimer = FMath::Max(RestartTimer, RestartLeadSeconds);
+	}
+}
+
 bool FDFMatchPhaseMachine::IsClockRunning(int32 ConnectedPlayers) const
 {
 	return Phase == EDFMatchPhase::Intermission

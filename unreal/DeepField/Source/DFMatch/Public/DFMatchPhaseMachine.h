@@ -68,6 +68,13 @@ struct DFMATCH_API FDFMatchPhaseMachine
 	void Reset(float InIntermissionSeconds, int32 InTotalWaves, bool bInLobby, bool bInEndless, bool bInWaitForPlayers,
 		float InRestartSeconds = 0.f, float InRestartLeadSeconds = 0.f);
 
+	/**
+	 * The lead learned after Reset (a PIE host listens only after InitGame: ADFGameMode::StartPlay). Only
+	 * the lead changes: the phase, the wave and the intermission clock go on where they are. A restart
+	 * clock that has not asked yet is raised to the lead if shorter, as Finish would have started it.
+	 */
+	void SetRestartLead(float InRestartLeadSeconds);
+
 	bool IsOver() const { return Phase == EDFMatchPhase::Victory || Phase == EDFMatchPhase::Defeat; }
 
 	/** Whether the intermission clock is counting down right now (the HUD shows a countdown only then). */
