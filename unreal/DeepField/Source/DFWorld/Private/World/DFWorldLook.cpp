@@ -4,6 +4,7 @@
 #include "Engine/CollisionProfile.h"
 #include "Engine/StaticMesh.h"
 #include "GameFramework/Actor.h"
+#include "Look/DFShapeLook.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
 #include "Tint/DFPaletteSettings.h"
@@ -63,24 +64,8 @@ namespace DFWorldLook
 
 	void Tint(UStaticMeshComponent* Part, const FLinearColor& Colour)
 	{
-		if (!Part)
-		{
-			return;
-		}
-		UMaterialInstanceDynamic* Mid = Cast<UMaterialInstanceDynamic>(Part->GetMaterial(0));
-		if (!Mid)
-		{
-			// Not the shape's own material: UE 5.8's basic shapes carry DefaultMaterial, which has no "Color".
-			UMaterialInterface* Base = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
-			if (!Base)
-			{
-				return;
-			}
-			Mid = UMaterialInstanceDynamic::Create(Base, Part);
-			Mid->SetFlags(RF_Transient);
-			Part->SetMaterial(0, Mid);
-		}
-		Mid->SetVectorParameterValue(TEXT("Color"), Colour);
+		// DFShapeLook starts from BasicShapeMaterial: the shapes' own DefaultMaterial takes no colour.
+		DFShapeLook::Tint(Part, Colour);
 	}
 
 	FLinearColor PortalFrame() { return UDFPaletteSettings::FromHex(TEXT("#FF2E4A")); }
