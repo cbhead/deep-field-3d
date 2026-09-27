@@ -65,6 +65,12 @@ namespace
 		return FMath::Clamp(DistanceCm * 0.3f, 150.f, 900.f);
 	}
 
+	/** The least time a round at SpeedCmPerSecond takes from From to At: the straight line (0 with no speed). */
+	float StraightFlightSeconds(const FVector& From, const FVector& At, float SpeedCmPerSecond)
+	{
+		return SpeedCmPerSecond > 0.f ? static_cast<float>(FVector::Dist(From, At)) / SpeedCmPerSecond : 0.f;
+	}
+
 	/** Alpha (0..1) of the way from From to To, lifted ApexCm at the middle on a parabola (0: a straight line). */
 	FVector RoundPosition(const FVector& From, const FVector& To, float ApexCm, float Alpha)
 	{
@@ -298,8 +304,6 @@ void UDFCombatCueSubsystem::OnProjectileLanded(const FDFMsg_Shot& Shot)
 	// The host's round landed at Impact. Rounds from one tower at one body land in the order they were fired,
 	// on the host (same muzzle, same speed, homing on the same aim point) and here (the body cannot close on a
 	// round faster than it flies), so this landing is the oldest round's that the host has not landed yet.
-	// If that round's cue already landed on its own, this is its landing arriving late (its body walked away,
-	// so the host's round flew further than the cue): it has shown its flash, and a later round keeps flying.
 	int32 OldestOwed = INDEX_NONE;
 	for (int32 i = 0; i < Owed.Num(); ++i)
 	{
@@ -310,42 +314,79 @@ void UDFCombatCueSubsystem::OnProjectileLanded(const FDFMsg_Shot& Shot)
 			OldestOwed = i;
 		}
 	}
-	if (OldestOwed != INDEX_NONE)
-	{
-		Owed.RemoveAtSwap(OldestOwed, EAllowShrinking::No);
-		return;
-	}
-
-	// Otherwise it is the oldest of that tower's rounds at that body still in the air here, which arrived early
-	// (its body walked toward it): it lands where the host's did, now.
+	// That tower's rounds at that body still in the air here: the oldest the host has not landed, and the oldest
+	// it has (its landing came before its cue could fly there).
 	int32 Oldest = INDEX_NONE;
+	int32 OldestHostLanded = INDEX_NONE;
 	for (int32 i = 0; i < Cues.Num(); ++i)
 	{
 		const FCue& Cue = Cues[i];
-		if (Cue.Kind == EDFCombatCue::Round && Cue.StructureId == Shot.StructureId && Cue.TargetId == Shot.TargetId
-			&& (Oldest == INDEX_NONE || Cue.Age > Cues[Oldest].Age))
+		if (Cue.Kind != EDFCombatCue::Round || Cue.StructureId != Shot.StructureId || Cue.TargetId != Shot.TargetId)
 		{
-			Oldest = i;
+			continue;
+		}
+		int32& Pick = Cue.bHostLanded ? OldestHostLanded : Oldest;
+		if (Pick == INDEX_NONE || Cue.Age > Cues[Pick].Age)
+		{
+			Pick = i;
 		}
 	}
-	if (Oldest == INDEX_NONE)
+	// The host's round flew at least the straight line from the muzzle to where it landed, at its speed.
+	const float StraightSeconds = Oldest != INDEX_NONE
+		? StraightFlightSeconds(Cues[Oldest].From, Shot.Impact, Cues[Oldest].SpeedCmPerSecond) : 0.f;
+	auto LandHere = [this, &Shot](int32 Index)
 	{
+		const FCue Round = Cues[Index];
+		ReleaseCue(Cues[Index]);
+		Cues.RemoveAtSwap(Index, EAllowShrinking::No);
+		Land(Round, Shot.Impact);
+	};
+
+	// If that round's cue already landed on its own, this is its landing arriving late (its body walked away,
+	// so the host's round flew further than the cue): it has shown its flash, and a later round keeps flying.
+	// Unless that later round has flown the whole straight line to where this one came down already: a late
+	// landing comes a fire interval before the next round could have got there, so this is that round's, and
+	// the record is stale (its landing was spent otherwise, or never came). Spent anyway, it would leave that
+	// round to land on its own owing a record of its own, and every landing after it a round behind until the
+	// body died with its last round unlanded.
+	if (OldestOwed != INDEX_NONE)
+	{
+		const bool bStale = Oldest != INDEX_NONE && Cues[Oldest].Age >= StraightSeconds;
+		Owed.RemoveAtSwap(OldestOwed, EAllowShrinking::No);
+		if (!bStale)
+		{
+			return;
+		}
+	}
+
+	// Otherwise it is the oldest of that tower's rounds at that body in the air here that the host has not
+	// landed, which arrived early (its body walked toward it): it lands where the host's did, now.
+	if (Oldest != INDEX_NONE)
+	{
+		// Unless it cannot have got there yet. Its TowerFired came with this landing (a hitch here or a stalled
+		// relay handed both over in one frame, or the host landed a close round in the frame it fired it), or
+		// this landing is one of a round this machine never saw fly (it joined since, or stopped waiting for
+		// it). It draws nothing, and the round flies on as one the host has landed: it lands at its end owing
+		// nothing, and the next landing is the next round's.
+		FCue& Candidate = Cues[Oldest];
+		if (Candidate.Age < DFCombatCue::LandingMinFlightFraction * StraightSeconds)
+		{
+			Candidate.bHostLanded = true;
+			return;
+		}
+		LandHere(Oldest);
 		return;
 	}
-	// Unless it cannot be: the host's round flew at least the straight line from the muzzle to where it landed.
-	// A cue much younger than that is a later round, and this landing is one of a round this machine never saw
-	// fly (it joined since) or whose owed record ran out: it draws nothing.
-	const FCue& Candidate = Cues[Oldest];
-	const float MinFlightSeconds = Candidate.SpeedCmPerSecond > 0.f
-		? static_cast<float>(FVector::Dist(Candidate.From, Shot.Impact)) / Candidate.SpeedCmPerSecond : 0.f;
-	if (Candidate.Age < DFCombatCue::LandingMinFlightFraction * MinFlightSeconds)
+	// No round here waits for a landing, but one the host has landed is still in the air: if it could be this
+	// landing's, the one that marked it was a round this machine never saw fly, and this is its own.
+	if (OldestHostLanded != INDEX_NONE)
 	{
-		return;
+		const FCue& Marked = Cues[OldestHostLanded];
+		if (Marked.Age >= DFCombatCue::LandingMinFlightFraction * StraightFlightSeconds(Marked.From, Shot.Impact, Marked.SpeedCmPerSecond))
+		{
+			LandHere(OldestHostLanded);
+		}
 	}
-	const FCue Round = Candidate;
-	ReleaseCue(Cues[Oldest]);
-	Cues.RemoveAtSwap(Oldest, EAllowShrinking::No);
-	Land(Round, Shot.Impact);
 }
 
 void UDFCombatCueSubsystem::OnBodyGone(int32 TargetId)
@@ -353,13 +394,20 @@ void UDFCombatCueSubsystem::OnBodyGone(int32 TargetId)
 	// The host drops a round whose body died or left, dealing nothing and saying nothing (ADFTower::StepShots:
 	// "it lands nowhere"), so a cue still flying at it vanishes where it is: no flash, and no disc claiming a
 	// splash that never happened. The round that killed it landed first (the host sends that landing in the
-	// frame of the hit and EnemyKilled the frame after, and the relay's one reliable multicast keeps the order).
+	// frame of the hit and EnemyKilled the frame after, and the relay's one reliable multicast keeps the order):
+	// its cue landed then, or, if that landing came before the cue could fly there, it is one the host has
+	// landed, and lands at its end now, with the death it caused.
 	for (int32 i = Cues.Num() - 1; i >= 0; --i)
 	{
 		if (Cues[i].Kind == EDFCombatCue::Round && Cues[i].TargetId == TargetId)
 		{
+			const FCue Done = Cues[i];
 			ReleaseCue(Cues[i]);
 			Cues.RemoveAtSwap(i, EAllowShrinking::No);
+			if (Done.bHostLanded)
+			{
+				Land(Done, Done.To);   // after the release: the flash takes the round's own ball
+			}
 		}
 	}
 	// And a landing owed at it will never come.
@@ -610,11 +658,14 @@ void UDFCombatCueSubsystem::LandOnItsOwn(const FCue& Round)
 {
 	// The host's round is still flying after a body that walked away, and its ProjectileLanded is this round's,
 	// not the next one's. If it never comes (its body died or left, or its tower went), EnemyKilled/EnemyLeaked
-	// or the wait clears the record.
-	FOwedLanding& Entry = Owed.AddDefaulted_GetRef();
-	Entry.StructureId = Round.StructureId;
-	Entry.TargetId = Round.TargetId;
-	Entry.Wait = Round.Lifetime + DFCombatCue::LandingGraceSeconds;
+	// or the wait clears the record. A round whose landing came before its cue could fly there owes none.
+	if (!Round.bHostLanded)
+	{
+		FOwedLanding& Entry = Owed.AddDefaulted_GetRef();
+		Entry.StructureId = Round.StructureId;
+		Entry.TargetId = Round.TargetId;
+		Entry.Wait = Round.Lifetime + DFCombatCue::LandingGraceSeconds;
+	}
 	Land(Round, Round.To);
 }
 

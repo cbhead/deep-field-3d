@@ -290,16 +290,18 @@ bool FDFVfxFreshRoundTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("a landing that never came is let go"), Cues->NumOwedLandings(), 0);
 	World.Tick(0.2f);
 
-	// A landing from 12.5 m out a frame after this tower's next round left cannot be that round's: the host's
-	// round flew at least from the muzzle to where it landed. It is one this machine owes nothing for (a round
-	// fired before it joined, or one it stopped waiting for), and it draws nothing.
+	// A landing from 12.5 m out a frame after this tower's next round left cannot be that round's landing there:
+	// the host's round flew at least from the muzzle to where it landed. It is one this machine owes nothing
+	// for (a round fired before it joined, or one it stopped waiting for), or that round's own, come with its
+	// TowerFired; it draws nothing, and the round flies on as one the host has landed.
 	Bus->Broadcast(DFTags::Message_TowerFired, Shot(TEXT("lance"), Origin, Impact));
 	World.Tick(1.f / 60.f);
 	Bus->Broadcast(DFTags::Message_ProjectileLanded, Shot(TEXT("lance"), Origin, FVector(1250.f, 0.f, 150.f)));
 	TestEqual(TEXT("the fresh round stays in the air"), Cues->NumCues(EDFCombatCue::Round), 1);
 	TestEqual(TEXT("and nothing flashes"), Cues->NumCues(EDFCombatCue::Flash), 0);
 
-	// A landing it could be (6 m out after 0.22 s: its body came to meet it) lands it.
+	// A landing it could be (6 m out after 0.22 s: its body came to meet it), with no other round of that tower
+	// at that body waiting for one, lands it: the landing before was one of a round this machine never saw.
 	World.Tick(0.2f);
 	const FVector Met(600.f, 0.f, 150.f);
 	Bus->Broadcast(DFTags::Message_ProjectileLanded, Shot(TEXT("lance"), Origin, Met));
@@ -309,6 +311,135 @@ bool FDFVfxFreshRoundTest::RunTest(const FString& Parameters)
 	{
 		TestTrue(TEXT("where the host's round landed"), Flash[0]->GetComponentLocation().Equals(Met, 0.1));
 	}
+	TestEqual(TEXT("nothing owed"), Cues->NumOwedLandings(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFVfxSameFrameLandingTest, "DF.Unit.Vfx.SameFrameLandingOwesNothing", DFCombatCueTest::Flags)
+bool FDFVfxSameFrameLandingTest::RunTest(const FString& Parameters)
+{
+	using namespace DFCombatCueTest;
+	FDFTestWorld World;
+	UDFCombatCueSubsystem* Cues = Start(*this, World);
+	if (!Cues)
+	{
+		return false;
+	}
+	UDFMessageBus* Bus = World.MessageBus();
+	const FVector Origin(0.f, 0.f, 150.f);
+	const FVector Impact(600.f, 0.f, 70.f);           // 6 m to the aim point: 0.2 s
+	const FVector HostLanded(590.f, 0.f, 150.f);      // where the host's round came down, 5.9 m out
+	const FVector Met(400.f, 0.f, 150.f);             // an early landing, 4 m out: its body came to meet it
+
+	// A hitch here (or a stalled relay) hands over a lance's TowerFired and its ProjectileLanded in one frame: the
+	// host's round is down before its cue has flown. The landing draws nothing, and the round flies on as one the
+	// host has landed.
+	Bus->Broadcast(DFTags::Message_TowerFired, Shot(TEXT("lance"), Origin, Impact));
+	Bus->Broadcast(DFTags::Message_ProjectileLanded, Shot(TEXT("lance"), Origin, HostLanded));
+	TestEqual(TEXT("the round flies on"), Cues->NumCues(EDFCombatCue::Round), 1);
+	TestEqual(TEXT("no flash yet"), Cues->NumCues(EDFCombatCue::Flash), 0);
+	World.Tick(0.1f);
+	const TArray<UStaticMeshComponent*> Ball = Cues->GetParts(EDFCombatCue::Round);
+	if (TestEqual(TEXT("one ball"), Ball.Num(), 1))
+	{
+		TestTrue(TEXT("halfway at half the flight"), Ball[0]->GetComponentLocation().Equals(FVector(300.f, 0.f, 150.f), 0.5));
+	}
+	World.Tick(0.11f);
+	TestEqual(TEXT("it lands at its end"), Cues->NumCues(EDFCombatCue::Round), 0);
+	const TArray<UStaticMeshComponent*> Flash = Cues->GetParts(EDFCombatCue::Flash);
+	if (TestEqual(TEXT("with its flash"), Flash.Num(), 1))
+	{
+		TestTrue(TEXT("at the aim point above Impact"), Flash[0]->GetComponentLocation().Equals(AimAbove(Impact), 0.1));
+	}
+	TestEqual(TEXT("owing nothing: its landing came"), Cues->NumOwedLandings(), 0);
+	World.Tick(DFCombatCue::FlashSeconds + 0.01f);
+
+	// So the next round's landing is that round's: early, it lands it there and then. (Were the first round's
+	// landing owed again, this one would be spent on it, and every landing after a round behind.)
+	Bus->Broadcast(DFTags::Message_TowerFired, Shot(TEXT("lance"), Origin, Impact));
+	World.Tick(0.12f);
+	Bus->Broadcast(DFTags::Message_ProjectileLanded, Shot(TEXT("lance"), Origin, Met));
+	TestEqual(TEXT("the next round lands on its landing"), Cues->NumCues(EDFCombatCue::Round), 0);
+	const TArray<UStaticMeshComponent*> Early = Cues->GetParts(EDFCombatCue::Flash);
+	if (TestEqual(TEXT("one flash"), Early.Num(), 1))
+	{
+		TestTrue(TEXT("where the host's round landed"), Early[0]->GetComponentLocation().Equals(Met, 0.1));
+	}
+	TestEqual(TEXT("nothing owed"), Cues->NumOwedLandings(), 0);
+	World.Tick(DFCombatCue::FlashSeconds + 0.01f);
+
+	// While a round the host has landed is still in the air, the next landing passes it by for the round after.
+	Bus->Broadcast(DFTags::Message_TowerFired, Shot(TEXT("lance"), Origin, Impact));
+	Bus->Broadcast(DFTags::Message_ProjectileLanded, Shot(TEXT("lance"), Origin, HostLanded));
+	World.Tick(0.05f);
+	Bus->Broadcast(DFTags::Message_TowerFired, Shot(TEXT("lance"), Origin, Impact));
+	World.Tick(0.12f);
+	Bus->Broadcast(DFTags::Message_ProjectileLanded, Shot(TEXT("lance"), Origin, Met));
+	const TArray<UStaticMeshComponent*> Left = Cues->GetParts(EDFCombatCue::Round);
+	if (TestEqual(TEXT("one round still in the air"), Left.Num(), 1))
+	{
+		TestTrue(TEXT("the older one, 0.17 s along"), Left[0]->GetComponentLocation().Equals(FVector(510.f, 0.f, 150.f), 0.5));
+	}
+	const TArray<UStaticMeshComponent*> Younger = Cues->GetParts(EDFCombatCue::Flash);
+	if (TestEqual(TEXT("the younger landed"), Younger.Num(), 1))
+	{
+		TestTrue(TEXT("where the host's round landed"), Younger[0]->GetComponentLocation().Equals(Met, 0.1));
+	}
+	World.Tick(0.04f);
+	TestEqual(TEXT("the older lands at its end"), Cues->NumCues(EDFCombatCue::Round), 0);
+	TestEqual(TEXT("with its own flash"), Cues->NumCues(EDFCombatCue::Flash), 2);
+	TestEqual(TEXT("and nothing owed"), Cues->NumOwedLandings(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFVfxStaleOwedTest, "DF.Unit.Vfx.StaleOwedLandingGivesWay", DFCombatCueTest::Flags)
+bool FDFVfxStaleOwedTest::RunTest(const FString& Parameters)
+{
+	using namespace DFCombatCueTest;
+	FDFTestWorld World;
+	UDFCombatCueSubsystem* Cues = Start(*this, World);
+	if (!Cues)
+	{
+		return false;
+	}
+	UDFMessageBus* Bus = World.MessageBus();
+	const FVector Origin(0.f, 0.f, 150.f);
+
+	// A round lands on its own and its landing is owed, but that landing will not come (it was spent otherwise,
+	// or never sent). The next round's landing comes once that round has flown the whole straight line to where
+	// the host's round came down: a late landing comes a fire interval before the next round could have got
+	// there, so this one is that round's, and the record stands aside for it.
+	Bus->Broadcast(DFTags::Message_TowerFired, Shot(TEXT("lance"), Origin, FVector(1200.f, 0.f, 70.f)));   // 12 m: 0.4 s
+	World.Tick(0.25f, 2);
+	TestEqual(TEXT("landed on its own, its landing owed"), Cues->NumOwedLandings(), 1);
+	Bus->Broadcast(DFTags::Message_TowerFired, Shot(TEXT("lance"), Origin, FVector(1200.f, 0.f, 70.f)));
+	World.Tick(0.25f);
+	World.Tick(0.14f);
+	const FVector Met(1150.f, 0.f, 150.f);   // 11.5 m out, 0.383 s of flight: the next round has flown 0.39 s
+	Bus->Broadcast(DFTags::Message_ProjectileLanded, Shot(TEXT("lance"), Origin, Met));
+	TestEqual(TEXT("the next round lands on its landing"), Cues->NumCues(EDFCombatCue::Round), 0);
+	const TArray<UStaticMeshComponent*> Flash = Cues->GetParts(EDFCombatCue::Flash);
+	if (TestEqual(TEXT("one flash"), Flash.Num(), 1))
+	{
+		TestTrue(TEXT("where the host's round landed"), Flash[0]->GetComponentLocation().Equals(Met, 0.1));
+	}
+	TestEqual(TEXT("the stale record is gone"), Cues->NumOwedLandings(), 0);
+	World.Tick(DFCombatCue::FlashSeconds + 0.01f);
+
+	// A late landing keeps its record though the next round is well past half its flight. A lance with its range
+	// path bought fires every 0.3 s at a body 30 m off walking away at 3 m/s: each cue flies 1 s to where the
+	// body was, each host round 1.11 s to 33.3 m, by when the next round has flown 0.81 s of its 1.03.
+	Bus->Broadcast(DFTags::Message_TowerFired, Shot(TEXT("lance"), Origin, FVector(3000.f, 0.f, 70.f)));   // 30 m: 1 s
+	World.Tick(0.3f);
+	Bus->Broadcast(DFTags::Message_TowerFired, Shot(TEXT("lance"), Origin, FVector(3090.f, 0.f, 70.f)));   // 30.9 m: 1.03 s
+	World.Tick(0.25f, 2);
+	World.Tick(0.21f);
+	TestEqual(TEXT("the first landed on its own at 1 s"), Cues->NumOwedLandings(), 1);
+	World.Tick(0.1f);
+	Bus->Broadcast(DFTags::Message_ProjectileLanded, Shot(TEXT("lance"), Origin, FVector(3333.f, 0.f, 150.f)));
+	TestEqual(TEXT("its late landing leaves the next in the air"), Cues->NumCues(EDFCombatCue::Round), 1);
+	TestEqual(TEXT("with no second flash"), Cues->NumCues(EDFCombatCue::Flash), 1);
+	TestEqual(TEXT("and is paid"), Cues->NumOwedLandings(), 0);
 	return true;
 }
 
@@ -361,6 +492,51 @@ bool FDFVfxBodyGoneTest::RunTest(const FString& Parameters)
 	Kill.EnemyId = 12;
 	Bus->Broadcast(DFTags::Message_EnemyKilled, Kill);
 	TestEqual(TEXT("its body died: nothing owed"), Cues->NumOwedLandings(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFVfxKillingRoundTest, "DF.Unit.Vfx.KillingRoundLandsWithItsFlash", DFCombatCueTest::Flags)
+bool FDFVfxKillingRoundTest::RunTest(const FString& Parameters)
+{
+	using namespace DFCombatCueTest;
+	FDFTestWorld World;
+	UDFCombatCueSubsystem* Cues = Start(*this, World);
+	if (!Cues)
+	{
+		return false;
+	}
+	UDFMessageBus* Bus = World.MessageBus();
+	const FVector Origin(0.f, 0.f, 150.f);
+	const FVector Impact(1400.f, 0.f, 70.f);   // 14 m: a nova's second-long lob
+
+	// A lance round at body 7 is in the air when a hitch here hands over a nova's TowerFired at that body, its
+	// ProjectileLanded (the killing hit) and EnemyKilled in one frame. The host landed the shell, so its cue lands
+	// at its end there and then, with its flash and disc; the lance round the host dropped vanishes unlanded.
+	Bus->Broadcast(DFTags::Message_TowerFired, Shot(TEXT("lance"), FVector(0.f, 300.f, 150.f), FVector(600.f, 0.f, 70.f), 2, 7));
+	World.Tick(0.05f);
+	Bus->Broadcast(DFTags::Message_TowerFired, Shot(TEXT("nova"), Origin, Impact, 1, 7));
+	Bus->Broadcast(DFTags::Message_ProjectileLanded, Shot(TEXT("nova"), Origin, FVector(1390.f, 0.f, 150.f), 1, 7));
+	TestEqual(TEXT("both rounds in the air"), Cues->NumCues(EDFCombatCue::Round), 2);
+	TestEqual(TEXT("the shell's landing drew nothing yet"), Cues->NumCues(EDFCombatCue::Flash), 0);
+	FDFMsg_Kill Kill;
+	Kill.EnemyId = 7;
+	Kill.KillerStructureId = 1;
+	Bus->Broadcast(DFTags::Message_EnemyKilled, Kill);
+	TestEqual(TEXT("no round left in the air"), Cues->NumCues(EDFCombatCue::Round), 0);
+	TestEqual(TEXT("every ball put away or taken by a flash"), Cues->GetParts(EDFCombatCue::Round).Num(), 0);
+	const TArray<UStaticMeshComponent*> Disc = Cues->GetParts(EDFCombatCue::Splash);
+	if (TestEqual(TEXT("the killing shell's disc"), Disc.Num(), 1))
+	{
+		TestTrue(TEXT("on the ground under its end"), Disc[0]->GetComponentLocation().Equals(Impact + FVector(0.0, 0.0, DiscAboveCm), 0.1));
+	}
+	const TArray<UStaticMeshComponent*> Flash = Cues->GetParts(EDFCombatCue::Flash);
+	if (TestEqual(TEXT("one flash: the shell's, none for the dropped round"), Flash.Num(), 1))
+	{
+		TestTrue(TEXT("at the shell's end"), Flash[0]->GetComponentLocation().Equals(AimAbove(Impact), 0.1));
+	}
+	TestEqual(TEXT("nothing owed"), Cues->NumOwedLandings(), 0);
+	World.Tick(DFCombatCue::SplashSeconds + 0.01f);
+	TestEqual(TEXT("every part put away"), Cues->GetPartsInUse(), 0);
 	return true;
 }
 

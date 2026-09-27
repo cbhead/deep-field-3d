@@ -60,7 +60,8 @@ namespace DFCombatCue
 	 */
 	constexpr float LandingGraceSeconds = 0.5f;
 	/** The host's round flew at least the straight line from the muzzle to where it landed, at its speed: a
-	 *  landing never lands a cue younger than this share of that time (the rest allows for the relay's jitter). */
+	 *  landing never lands a cue younger than this share of that time (the rest allows for the relay's jitter).
+	 *  It marks it landed by the host instead: its TowerFired and its landing arrived together. */
 	constexpr float LandingMinFlightFraction = 0.5f;
 	/** The bolts' jitter seed in an automation test (a game's differs every run), so a test's bolts are the
 	 *  same on every run and a geometry change cannot pass or fail by luck. */
@@ -100,9 +101,16 @@ struct FDFCombatCuePart
  *   they were fired, on the host and here, so the message belongs to the oldest of them not yet landed
  *   by the host. If that one's cue already landed on its own (its body walked away, so the host's homing
  *   round took longer), the message is its and draws nothing; otherwise the oldest round of that tower
- *   at that body still in the air lands there and then (its body walked toward it).
+ *   at that body still in the air lands there and then (its body walked toward it). A round too young to
+ *   have got there (its TowerFired came in the same frame: a hitch, a stalled relay, a round the host
+ *   landed as it fired) is marked landed by the host instead: it flies on and lands at its end owing
+ *   nothing, unless a later landing it could be comes with no other round waiting (the one that marked
+ *   it was a round this machine never saw). An owed record whose next round has already flown the whole
+ *   straight line to a landing is stale, and gives way to that round, so the pair falls back in step.
  * - **EnemyKilled / EnemyLeaked**: the host drops every round at that body without a word (it lands
- *   nowhere: ADFTower::StepShots), so its cues vanish where they are, with no flash and no splash.
+ *   nowhere: ADFTower::StepShots), so its cues vanish where they are, with no flash and no splash. A
+ *   round the host has landed (the killing one, whose landing came before its cue could fly) lands at
+ *   its end there and then, with its flash.
  * - **BeamHeld**: a flash where a Beam locked on. The beam itself is drawn every frame, from each Beam
  *   ADFTower with a replicated CurrentTarget to that target's aim point, thicker and brighter with Heat.
  *
@@ -186,6 +194,9 @@ private:
 		float LandFlashCm = 0.f;
 		float Age = 0.f;
 		float Lifetime = 0.f;
+		/** Round: the host's ProjectileLanded for it came before the cue could have flown there, so it flies on to
+		 *  its end owing no landing, and a later landing is a later round's. */
+		bool bHostLanded = false;
 		/** Arc: when to throw the bolt into a new shape (once, halfway: a flicker). */
 		float RejitterAt = 0.f;
 		/** The firing tower's energy colour; each look scales it to its own brightness. */
@@ -219,7 +230,8 @@ private:
 	void OnTowerFired(const FDFMsg_Shot& Shot);
 	void OnProjectileLanded(const FDFMsg_Shot& Shot);
 	void OnBeamHeld(const FDFMsg_Shot& Shot);
-	/** EnemyKilled / EnemyLeaked: the body's rounds vanish unlanded, and no landing is owed for it any more. */
+	/** EnemyKilled / EnemyLeaked: the body's rounds vanish unlanded (those the host landed land at their end),
+	 *  and no landing is owed for it any more. */
 	void OnBodyGone(int32 TargetId);
 	void OnActorSpawned(AActor* Actor);
 	void Track(ADFTower* Tower);
@@ -234,7 +246,7 @@ private:
 	void SpawnArc(const FVector& From, const FVector& To, const FLinearColor& Energy);
 	/** A round arrived At (its own end, or where the host's round landed): its flash, and a Mortar's disc. */
 	void Land(const FCue& Round, const FVector& At);
-	/** A round reached its own end before any host landing for it: it lands there, and its landing is owed. */
+	/** A round reached its own end: it lands there, and its landing is owed unless the host's came already. */
 	void LandOnItsOwn(const FCue& Round);
 	/** Lay an arc's segments along a freshly jittered path from its From to its To. */
 	void ShapeArc(const FCue& Arc);
