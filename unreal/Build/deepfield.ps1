@@ -1652,11 +1652,14 @@ function Invoke-IntMerge([string]$Target, [int]$ClientCount, [int]$SmokePort) {
     Publish-Landing
     Pop-Location; $inWorktree = $false
     # The clone follows main when it is on main and clean; anything else is someone's work, left alone.
-    $onMain = (Get-NativeOutput 'git' @('-C', $clone, 'symbolic-ref', '-q', '--short', 'HEAD')) -eq 'main'
+    # Say which of those it is, so "not touching it" is never a puzzle.
+    $cloneBranch = Get-NativeOutput 'git' @('-C', $clone, 'symbolic-ref', '-q', '--short', 'HEAD')
     $dirty = Get-NativeOutput 'git' @('-C', $clone, 'status', '--porcelain', '--untracked-files=no')
-    if ($onMain -and -not $dirty) {
-      if ((Invoke-Native 'git' @('-C', $clone, 'merge', '-q', '--ff-only', 'origin/main')) -ne 0) { Write-Info 'the clone has local commits on main; not fast-forwarded' }
-    } else { Write-Info 'the clone is not clean on main; not touching it' }
+    if (-not $cloneBranch) { Write-Info 'the clone has a detached HEAD; left as it is' }
+    elseif ($cloneBranch -ne 'main') { Write-Info "the clone is on $cloneBranch, not main; left as it is (git switch main to follow the landing)" }
+    elseif ($dirty) { Write-Info 'the clone is on main with uncommitted changes; left as it is (commit or stash, then git merge --ff-only origin/main)' }
+    elseif ((Invoke-Native 'git' @('-C', $clone, 'merge', '-q', '--ff-only', 'origin/main')) -ne 0) { Write-Info 'the clone has local commits on main; not fast-forwarded' }
+    else { Write-Info "the clone's main fast-forwarded to $(Get-NativeOutput 'git' @('-C', $clone, 'rev-parse', '--short', 'HEAD'))" }
     Write-Host ''
     Write-Host "int-merge: landed $Target on main" -ForegroundColor Green
     return $true
