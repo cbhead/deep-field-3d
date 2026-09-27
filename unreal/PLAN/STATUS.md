@@ -1,6 +1,6 @@
 # Workstream status
 
-Generated 2026-09-27T07:00:09Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-27T07:08:44Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
 active: 6 · claimed: 1 · paused: 6 · review: 1 · unclaimed: 36
 
@@ -10,7 +10,7 @@ active: 6 · claimed: 1 · paused: 6 · review: 1 · unclaimed: 36
 | WS-01 | Content pipeline | P1 | CP | paused | — | — | 7f7b9b8 |  | — |
 | WS-02 | Gameplay core (GAS) | P1-P2 | CP | paused | — | — | — |  | — |
 | WS-03 | Player | P2 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T06:30:33Z | 19ded62 | yes | — |
-| WS-04 | Towers & build | P2-P3 | CP | active (lease expired) | session-01HszbJQ-cloud | 2026-09-26T02:29:31Z | — | yes | — |
+| WS-04 | Towers & build | P2-P3 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T07:08:36Z | — | yes | — |
 | WS-05 | Enemies & AI | P2-P3 | CP | claimed | session-gpu-box-2026-09-26 | 2026-09-28T06:47:31Z | 19ded62 | yes | — |
 | WS-06 | Economy, scrap, gunsmith | P3 |  | unclaimed | — | — | — |  | — |
 | WS-07 | Factions & abilities | P2-P4 | CP | unclaimed | — | — | — |  | — |

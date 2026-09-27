@@ -3,10 +3,10 @@ ws: 04
 slug: towers
 title: Towers & build
 state: active
-owner: session-01HszbJQ-cloud
-claimed_at: 2026-09-25T02:29:31Z
-lease_expires: 2026-09-26T02:29:31Z
-branch: claude/happy-babbage-t6qrhw
+owner: session-gpu-box-2026-09-26
+claimed_at: 2026-09-27T07:08:36Z
+lease_expires: 2026-09-28T07:08:36Z
+branch: ws/04-towers/actor-half
 last_commit: 
 editor_heavy: true
 phase: P2-P3
@@ -57,3 +57,4 @@ blocked_on:
 Targeting otherwise follows `Step.cs:1620-1653` exactly: layer filter, not burrowed, stealth needs the
 Detection channel, range and min-range, sight, then lowest `RemainingToCore` wins.
 
+- 2026-09-27 · session-gpu-box-2026-09-26 · **Taken over** (lease of session-01HszbJQ-cloud expired 2026-09-26; step 3 of the first playable, at the owner's request): land `claude/happy-babbage-t6qrhw` (unbuilt) as `ws/04-towers/actor-half`, squashed onto main, build it on Windows, fix what the compiler finds, then put a Lance on Testlane that kills the walking enemies.
