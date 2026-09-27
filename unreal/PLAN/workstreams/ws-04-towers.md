@@ -7,7 +7,7 @@ owner: session-gpu-box-2026-09-26
 claimed_at: 2026-09-27T07:08:36Z
 lease_expires: 2026-09-28T07:08:36Z
 branch: ws/04-towers/actor-half
-last_commit: 3efb3ce
+last_commit: cdbf76a
 editor_heavy: true
 phase: P2-P3
 size: L

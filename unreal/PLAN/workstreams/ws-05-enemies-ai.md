@@ -7,7 +7,7 @@ owner: session-gpu-box-2026-09-26
 claimed_at: 2026-09-27T06:47:31Z
 lease_expires: 2026-09-28T06:47:31Z
 branch: ws/05-enemies-ai/walking-enemies
-last_commit: 19ded62
+last_commit: cdbf76a
 editor_heavy: true
 phase: P2-P3
 size: XL

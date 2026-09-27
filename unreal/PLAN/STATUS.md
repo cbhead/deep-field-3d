@@ -1,6 +1,6 @@
 # Workstream status
 
-Generated 2026-09-27T08:00:22Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-27T08:04:39Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
 active: 8 · claimed: 1 · paused: 5 · review: 1 · unclaimed: 35
 
@@ -10,9 +10,9 @@ active: 8 · claimed: 1 · paused: 5 · review: 1 · unclaimed: 35
 | WS-01 | Content pipeline | P1 | CP | paused | — | — | 7f7b9b8 |  | — |
 | WS-02 | Gameplay core (GAS) | P1-P2 | CP | paused | — | — | — |  | — |
 | WS-03 | Player | P2 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T06:30:33Z | 19ded62 | yes | — |
-| WS-04 | Towers & build | P2-P3 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T07:08:36Z | 3efb3ce | yes | — |
-| WS-05 | Enemies & AI | P2-P3 | CP | claimed | session-gpu-box-2026-09-26 | 2026-09-28T06:47:31Z | 19ded62 | yes | — |
-| WS-06 | Economy, scrap, gunsmith | P3 |  | active | session-gpu-box-2026-09-26 | 2026-09-28T07:17:05Z | — |  | — |
+| WS-04 | Towers & build | P2-P3 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T07:08:36Z | cdbf76a | yes | — |
+| WS-05 | Enemies & AI | P2-P3 | CP | claimed | session-gpu-box-2026-09-26 | 2026-09-28T06:47:31Z | cdbf76a | yes | — |
+| WS-06 | Economy, scrap, gunsmith | P3 |  | active | session-gpu-box-2026-09-26 | 2026-09-28T07:17:05Z | cdbf76a |  | — |
 | WS-07 | Factions & abilities | P2-P4 | CP | unclaimed | — | — | — |  | — |
 | WS-08 | Vehicles | P3-P4 |  | unclaimed | — | — | — | yes | — |
 | WS-09 | World: lanes, sockets, traversal, conditions, terrain import | P1-P4 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T07:23:21Z | b98c25c | yes | — |
@@ -39,7 +39,7 @@ active: 8 · claimed: 1 · paused: 5 · review: 1 · unclaimed: 35
 | WS-25 | Physics layer | P4 |  | unclaimed | — | — | — | yes | — |
 | WS-26 | Co-op verbs & security rules | P4 |  | unclaimed | — | — | — |  | — |
 | WS-27 | Waves, tiers, endless, balance | P4 (last) |  | unclaimed | — | — | — |  | — |
-| WS-28 | Match flow (DFMatch) | P2-P3 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T06:30:33Z | 19ded62 |  | — |
+| WS-28 | Match flow (DFMatch) | P2-P3 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T06:30:33Z | cdbf76a |  | — |
 | WS-30 | Art pipeline (Claude Design → Unreal, terrain lane, validators) | P1+ |  | paused | — | — | aa379d0 | yes | — |
 | WS-31 | Materials & palette | P1+ |  | unclaimed | — | — | — | yes | — |
 | WS-32 | Skeletons & animation contract | P2+ |  | unclaimed | — | — | — | yes | — |
