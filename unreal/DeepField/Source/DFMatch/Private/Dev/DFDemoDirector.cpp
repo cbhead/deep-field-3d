@@ -7,6 +7,7 @@
 #include "EngineUtils.h"
 #include "GameFramework/PlayerController.h"
 #include "Misc/CommandLine.h"
+#include "UnrealClient.h"
 #include "Towers/DFBuildSubsystem.h"
 #include "Towers/DFTower.h"
 #include "World/DFCore.h"
@@ -49,21 +50,25 @@ void ADFDemoDirector::BeginPlay()
 		Camera->GetCameraComponent()->SetFieldOfView(CameraFieldOfView);
 		Camera->GetCameraComponent()->bConstrainAspectRatio = false;
 	}
-	UE_LOG(LogDFDemo, Display, TEXT("demo: building from the economy and filming from an orbit (-DFDemo)"));
+#if !UE_BUILD_SHIPPING
+	bCaptureFrames = FParse::Param(FCommandLine::Get(), TEXT("DFDemoCapture"));
+#endif
+	UE_LOG(LogDFDemo, Display, TEXT("demo: building from the economy and filming from an orbit (-DFDemo)%s"),
+		bCaptureFrames ? TEXT(", a screenshot with the HUD every frame (-DFDemoCapture)") : TEXT(""));
 }
 
 bool ADFDemoDirector::Survey()
 {
 	UWorld* World = GetWorld();
-	TArray<FVector> Portals;
+	TArray<FVector> Cores;
 	FBox Bounds(ForceInit);
 	for (TActorIterator<ADFSpawnPortal> It(World); It; ++It)
 	{
-		Portals.Add(It->GetActorLocation());
 		Bounds += It->GetActorLocation();
 	}
 	for (TActorIterator<ADFCore> It(World); It; ++It)
 	{
+		Cores.Add(It->GetActorLocation());
 		Bounds += It->GetActorLocation();
 	}
 	TArray<ADFSocket*> Sockets;
@@ -79,16 +84,18 @@ bool ADFDemoDirector::Survey()
 	{
 		return false;   // the level's actors are not in yet
 	}
-	auto NearestPortal = [&Portals](const FVector& At)
+	// Defend from the core outward: a first tower by the portal kills every body as it appears and
+	// nothing else happens on screen; from the core end, the wave walks the lane under fire.
+	auto NearestCore = [&Cores](const FVector& At)
 	{
 		double Best = TNumericLimits<double>::Max();
-		for (const FVector& Portal : Portals)
+		for (const FVector& Core : Cores)
 		{
-			Best = FMath::Min(Best, FVector::DistSquared2D(Portal, At));
+			Best = FMath::Min(Best, FVector::DistSquared2D(Core, At));
 		}
 		return Best;
 	};
-	Sockets.Sort([&NearestPortal](const ADFSocket& A, const ADFSocket& B) { return NearestPortal(A.GetActorLocation()) < NearestPortal(B.GetActorLocation()); });
+	Sockets.Sort([&NearestCore](const ADFSocket& A, const ADFSocket& B) { return NearestCore(A.GetActorLocation()) < NearestCore(B.GetActorLocation()); });
 	for (const ADFSocket* Socket : Sockets)
 	{
 		BuildOrder.Add(Socket->SocketId);
@@ -182,6 +189,11 @@ void ADFDemoDirector::Tick(float DeltaSeconds)
 	}
 	Focus = FMath::VInterpTo(Focus, Desired, DeltaSeconds, FollowSpeed);
 	PlaceCamera();
+	if (bCaptureFrames)
+	{
+		// -dumpmovie leaves the UI out; this is `shot showui` once per frame (Saved/Screenshots/ScreenShotNNNNN.png).
+		FScreenshotRequest::RequestScreenshot(FString(), /*bShowUI*/ true, /*bAddFilenameSuffix*/ true);
+	}
 	BuildClock += DeltaSeconds;
 	if (BuildClock >= BuildIntervalSeconds)
 	{

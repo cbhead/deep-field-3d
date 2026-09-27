@@ -4,12 +4,14 @@
   at a fixed step, encoded to an MP4.
 
 .DESCRIPTION
-  Starts the game (the editor binary with -game, or a packaged DeepField.exe with -Exe) with
-  -DFDemo -benchmark -fps=<Fps> -dumpmovie. -benchmark steps the world a fixed 1/Fps per frame
-  however long a frame takes to render, and -dumpmovie writes each frame to Saved/Screenshots, so the
-  video plays at real speed even when capture is slow. ADFDemoDirector builds towers from the economy
-  and films from an orbit (DFMatch/Public/Dev/DFDemoDirector.h). When Seconds x Fps frames exist, the
-  game is closed (only the process this script started) and ffmpeg encodes them.
+  Starts the game (the editor binary with -game, or a packaged DeepField.exe with -Exe) on the map in
+  endless mode (?endless, so the waves keep coming and grow until they break through; -NoEndless plays
+  the authored arc) with -DFDemo -DFDemoCapture -benchmark -fps=<Fps>. -benchmark steps the world a
+  fixed 1/Fps per frame however long a frame takes to render, and -DFDemoCapture has ADFDemoDirector
+  take a screenshot with the HUD every frame (-dumpmovie would leave the UI out), so the video plays at
+  real speed even when capture is slow. ADFDemoDirector builds towers from the economy and films from
+  an orbit (DFMatch/Public/Dev/DFDemoDirector.h). When Seconds x Fps frames exist, the game is closed
+  (only the process this script started) and ffmpeg encodes them.
 
   ffmpeg comes from the imageio-ffmpeg Python package: python -m pip install --user imageio-ffmpeg
 
@@ -25,7 +27,9 @@ param(
   [string]$Out = '',
   # A packaged DeepField.exe; default: the engine's UnrealEditor.exe -game on this clone's project.
   [string]$Exe = '',
-  # Extra game arguments, e.g. '-DFDemoNoOrbit' or a travel option.
+  # Play the authored waves only (the default is ?endless).
+  [switch]$NoEndless,
+  # Extra game arguments.
   [string]$ExtraArgs = ''
 )
 $ErrorActionPreference = 'Stop'
@@ -38,25 +42,26 @@ New-Item -ItemType Directory -Force (Split-Path $Out) | Out-Null
 $ffmpeg = (& python -c "import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())").Trim()
 if (-not (Test-Path $ffmpeg)) { throw 'ffmpeg not found: python -m pip install --user imageio-ffmpeg' }
 
+$url = if ($NoEndless) { $Map } else { "$Map`?endless" }
 if ($Exe) {
   $gameDir = Split-Path $Exe
   $shots = Join-Path $gameDir 'DeepField\Saved\Screenshots\Windows'
   $file = $Exe
-  $args0 = @($Map)
+  $args0 = @($url)
 } else {
   $ueRoot = $env:UE_ROOT
   if (-not $ueRoot) { $ueRoot = 'C:\Program Files\Epic Games\UE_5.8' }
   $file = Join-Path $ueRoot 'Engine\Binaries\Win64\UnrealEditor.exe'
   $shots = Join-Path $repo 'unreal\DeepField\Saved\Screenshots\WindowsEditor'
-  $args0 = @("`"$project`"", $Map, '-game')
+  $args0 = @("`"$project`"", $url, '-game')
 }
 if (Test-Path $shots) { Remove-Item -Recurse -Force $shots }
 
-$gameArgs = $args0 + @('-windowed', "-ResX=$ResX", "-ResY=$ResY", '-DFDemo', '-benchmark', "-fps=$Fps", '-dumpmovie',
+$gameArgs = $args0 + @('-windowed', "-ResX=$ResX", "-ResY=$ResY", '-DFDemo', '-DFDemoCapture', '-benchmark', "-fps=$Fps",
   '-nosplash', '-NoVerifyGC', '-log', "-ABSLOG=`"$(Join-Path (Split-Path $Out) 'record-demo.log')`"")
 if ($ExtraArgs) { $gameArgs += $ExtraArgs }
 $frames = $Seconds * $Fps
-Write-Host "record-demo: $Map, $Seconds s at $Fps fps ($frames frames), ${ResX}x$ResY -> $Out"
+Write-Host "record-demo: $url, $Seconds s at $Fps fps ($frames frames), ${ResX}x$ResY -> $Out"
 $proc = Start-Process -FilePath $file -ArgumentList $gameArgs -PassThru
 try {
   $deadline = (Get-Date).AddSeconds([Math]::Max(600, $Seconds * 20))

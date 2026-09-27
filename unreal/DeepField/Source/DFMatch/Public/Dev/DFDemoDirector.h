@@ -11,15 +11,16 @@ class ACameraActor;
  * itself for a recording or a showcase. ADFMatchState spawns one on the host when the flag is set.
  *
  * - **Builds** as the sim's player would, through UDFBuildSubsystem and WS-06's economy (no free
- *   money): every BuildIntervalSeconds it tries the next free pad, pads nearest the spawn portal
- *   first, a Nova every NovaEvery-th build and a Lance otherwise; a refusal (not enough money) just
- *   waits for bounty.
+ *   money): every BuildIntervalSeconds it tries the next free pad, a Nova every NovaEvery-th build and
+ *   a Lance otherwise; a refusal (not enough money) just waits for bounty.
  * - **Films**: the first local player's view moves to a camera that orbits the lane's bounds (pads,
  *   portal, core) from above, slowly; its focus leans toward the live enemies (UDFTargetRegistry), so
  *   the fight stays in frame with the towers and the HUD.
  *
- * Pair it with `-benchmark -fps=20 -dumpmovie` to write every frame to Saved/Screenshots at a fixed
- * step (unreal/Build/record-demo.ps1 does that and encodes the video).
+ * Build order is the pads nearest the core first, so the wave walks the lane under fire instead of dying
+ * at the portal. With `-DFDemoCapture` it also requests a screenshot with the HUD every frame; pair it
+ * with `-benchmark -fps=20` for a fixed step (unreal/Build/record-demo.ps1 does that, on `?endless`
+ * so the waves keep coming, and encodes the video).
  */
 UCLASS(NotBlueprintable, NotPlaceable)
 class DFMATCH_API ADFDemoDirector : public AActor
@@ -54,6 +55,7 @@ private:
 	TArray<FName> BuildOrder;
 	int32 Builds = 0;
 	bool bSurveyed = false;
+	bool bCaptureFrames = false;
 	FVector MapCentre = FVector::ZeroVector;
 	FVector Focus = FVector::ZeroVector;
 	float OrbitRadiusCm = 4000.f;
