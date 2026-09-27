@@ -27,9 +27,10 @@ namespace DFHudText
 	/** The line under the banner: "All 10 waves held" / "The core fell on wave 4" / "Reached wave 23". */
 	DFUI_API FText BannerDetail(const UDFMatchViewModel& Match);
 
-	/** Under the banner's detail while the host's restart clock runs (PhaseSecondsLeft once the match is
-	 *  over, ADFMatchState's play-again): "New match in 12s", whole seconds rounded up. Empty while the
-	 *  match runs, and when no new match is coming (the restart is off, or the host is already travelling). */
+	/** Under the banner's detail while a new match follows this one (RestartPending, ADFMatchState's
+	 *  play-again): "New match in 12s" (PhaseSecondsLeft, whole seconds rounded up), then "Starting new
+	 *  match…" once the countdown is over and the host is loading it. Empty while the match runs, and when
+	 *  no new match is coming (the restart is off, or the host could not start one). */
 	DFUI_API FText RestartLine(const UDFMatchViewModel& Match);
 
 	/** The toast for a DF.Message.*Rejected (FDFMsg_Rejected.Reason, messages.md's vocabulary): "Not enough

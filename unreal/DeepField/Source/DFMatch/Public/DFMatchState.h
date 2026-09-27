@@ -21,7 +21,9 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FDFOnMatchStateChanged, class ADFMatchState*
 DECLARE_MULTICAST_DELEGATE_OneParam(FDFOnWaveBoundary, int32 /*WaveIndex about to begin*/);
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FDFOnEarlyCalled, int32 /*Seat*/);
-DECLARE_MULTICAST_DELEGATE_OneParam(FDFOnRestartRequested, class ADFMatchState* /*MatchState*/);
+/** bOutUnderWay: a listener that has started the new match (the game mode's travel) sets it; left false,
+ *  no new match is coming and the match state stops its countdown. */
+DECLARE_MULTICAST_DELEGATE_TwoParams(FDFOnRestartRequested, class ADFMatchState* /*MatchState*/, bool& /*bOutUnderWay*/);
 
 /** How a match starts. The game mode fills it from the travel URL and hands it over in InitGameState. */
 struct DFMATCH_API FDFMatchSettings
@@ -35,8 +37,12 @@ struct DFMATCH_API FDFMatchSettings
 	bool bWaitForPlayers = false;
 	/** < 0: the balance dial intermissionSeconds (8 in the sim). */
 	float IntermissionSeconds = -1.f;
-	/** Seconds from Victory / Defeat to a new match. < 0: the match state's RestartDelaySeconds; 0 = never. */
+	/** Seconds from Victory / Defeat to a new match (?playagain=). < 0: the match state's RestartDelaySeconds; 0 = never. */
 	float RestartSeconds = -1.f;
+	/** How long the host's travel to the new match takes once asked for; the request goes out this much
+	 *  before the countdown ends. Not from the URL: ADFGameMode::RestartLeadFor (the server-travel pause on
+	 *  a listen or dedicated host, 0 standalone). */
+	float RestartLeadSeconds = 0.f;
 };
 
 /**
@@ -55,10 +61,12 @@ struct DFMATCH_API FDFMatchSettings
  * its damage (Step.cs:2071). ADFEnemy names the seat through IDFSeatHolder (DFCore).
  *
  * Play-again: after Victory or Defeat the host runs a restart clock (RestartDelaySeconds, or the URL's
- * ?restart=) and, when it runs out, broadcasts OnRestartRequested once. ADFGameMode binds it and reloads
- * the map with the same options, so the economy, the seats' records and everything else start fresh;
- * a test binds it instead and nothing travels. The clock's end replicates as PhaseEndsAtServerTime, the
- * same field the intermission uses, so every HUD counts down "New match in 12s" under the banner.
+ * ?playagain=) and broadcasts OnRestartRequested once, the travel's lead before it runs out (a listen
+ * host's switch waits out the engine's server-travel pause). ADFGameMode binds it and reloads the map
+ * with the same options, so the economy, the seats' records and everything else start fresh; a test
+ * binds it instead and nothing travels. The clock's end replicates as PhaseEndsAtServerTime, the same
+ * field the intermission uses, so every HUD counts down "New match in 12s" under the banner and reads
+ * "Starting new match…" once it is due, until the map goes. If nobody starts one, the clock stops.
  */
 UCLASS()
 class DFMATCH_API ADFMatchState : public AGameStateBase
@@ -90,9 +98,10 @@ public:
 	 *  restart's (the HUD shows a countdown only then). */
 	bool IsPhaseClockRunning() const { return PhaseEndsAtServerTime >= 0.f; }
 	/** Seconds until the next wave, or until the new match once this one is over, from the replicated
-	 *  end time and the shared server clock; 0 when the clock is not running. */
+	 *  end time and the shared server clock; 0 when the clock is not running, and once it has run out. */
 	float GetPhaseSecondsLeft() const;
-	/** The match is over and the host will start a new one when the phase clock runs out. */
+	/** The match is over and a new one follows: its countdown runs, or has run out and the host is
+	 *  loading it (the end time stays in the past until the map goes). */
 	bool IsRestartPending() const { return IsOver() && IsPhaseClockRunning(); }
 
 	/** Fired when a replicated field changes: on the host when it is written, on clients on receipt. */
@@ -134,9 +143,10 @@ public:
 	/** Host: a seat called the next wave early (WS-06 pays the early-call bonus, B§1.8). */
 	FDFOnEarlyCalled OnEarlyCalled;
 	/**
-	 * Host: the restart clock of a finished match ran out; start a new match. Broadcast once per match
-	 * (FDFMatchPhaseMachine sends Restart once). ADFGameMode binds it and reloads the map; unbound (a
-	 * test world, a game mode of its own), nothing happens and the match stays on its banner.
+	 * Host: the restart clock of a finished match is down to its lead; start a new match. Broadcast once
+	 * per match (FDFMatchPhaseMachine sends Restart once). ADFGameMode binds it, reloads the map and sets
+	 * bOutUnderWay. Unbound (a test world, a game mode of its own) or refused, nobody sets it: the clock
+	 * stops and the match stays on its banner.
 	 */
 	FDFOnRestartRequested OnRestartRequested;
 	const FDFMatchSettings& GetSettings() const { return Settings; }
@@ -144,7 +154,7 @@ public:
 	/** The phase machine itself, host only (tests read it). */
 	const FDFMatchPhaseMachine& GetPhaseMachine() const { return Machine; }
 
-	/** Seconds from Victory / Defeat to a new match when the URL does not say (?restart=<seconds>); 0 = never. */
+	/** Seconds from Victory / Defeat to a new match when the URL does not say (?playagain=<seconds>); 0 = never. */
 	UPROPERTY(EditDefaultsOnly, Category = "DF|Match", meta = (ClampMin = "0"))
 	float RestartDelaySeconds = 15.f;
 
@@ -198,6 +208,6 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_Match) int32 Lap = 0;
 	UPROPERTY(ReplicatedUsing = OnRep_Match) int32 EnemiesRemaining = 0;
 	/** Server-clock time the phase clock reaches zero (the intermission's, or after Victory / Defeat the
-	 *  restart's); -1 when it is not running. */
+	 *  restart's, which stays once passed while the new match loads); -1 when it is not running. */
 	UPROPERTY(ReplicatedUsing = OnRep_Match) float PhaseEndsAtServerTime = -1.f;
 };

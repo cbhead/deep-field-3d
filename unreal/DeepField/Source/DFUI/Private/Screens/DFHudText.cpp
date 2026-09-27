@@ -86,11 +86,17 @@ FText DFHudText::BannerDetail(const UDFMatchViewModel& Match)
 FText DFHudText::RestartLine(const UDFMatchViewModel& Match)
 {
 	const bool bOver = Match.GetPhase() == EDFMatchPhase::Victory || Match.GetPhase() == EDFMatchPhase::Defeat;
-	if (!bOver || Match.GetPhaseSecondsLeft() <= 0.f)
+	if (!bOver || !Match.IsRestartPending())
 	{
 		return FText::GetEmpty();
 	}
-	// Rounded up, as the wave countdown: "1s" until the host travels, never "0s" while it has not.
+	if (Match.GetPhaseSecondsLeft() <= 0.f)
+	{
+		// The countdown is over and the map has not gone yet: the host is loading the new match, and a
+		// client that has left to follow it is waiting for it (seconds on a big map), not stuck.
+		return LOCTEXT("NewMatchStarting", "Starting new match…");
+	}
+	// Rounded up, as the wave countdown: "1s" until the new match starts, never "0s" while it has not.
 	return FText::Format(LOCTEXT("NewMatchIn", "New match in {0}s"), FMath::CeilToInt(Match.GetPhaseSecondsLeft()));
 }
 

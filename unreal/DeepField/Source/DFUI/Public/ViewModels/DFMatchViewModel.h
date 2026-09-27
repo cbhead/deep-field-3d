@@ -49,6 +49,10 @@ private:
 	DF_VM_ACCESSORS(EDFMatchPhase, Phase)
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "DF|Match", meta = (AllowPrivateAccess = "true")) float PhaseSecondsLeft = 0.f;
 	DF_VM_ACCESSORS(float, PhaseSecondsLeft)
+	/** Victory / Defeat and a new match follows (ADFMatchState::IsRestartPending): PhaseSecondsLeft counts
+	 *  down to it, and once that is 0 the host is loading it. False when none is coming. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "DF|Match", meta = (AllowPrivateAccess = "true")) bool bRestartPending = false;
+	DF_VM_BOOL_ACCESSORS(RestartPending)
 	/** The party is still assembling; the match has not launched. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "DF|Match", meta = (AllowPrivateAccess = "true")) bool bLobby = false;
 	DF_VM_BOOL_ACCESSORS(Lobby)

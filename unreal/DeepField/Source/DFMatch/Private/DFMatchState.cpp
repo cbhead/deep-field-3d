@@ -119,7 +119,7 @@ void ADFMatchState::ConfigureMatch(const FDFMatchSettings& InSettings)
 		: DFBalance::Dial(this, TEXT("intermissionSeconds"), 8.f);
 	const float Restart = Settings.RestartSeconds >= 0.f ? Settings.RestartSeconds : RestartDelaySeconds;
 	const int32 Arc = (Director && Director->IsConfigured()) ? Director->GetTables().Waves.Num() : 0;
-	Machine.Reset(Intermission, Arc, Settings.bLobby, Settings.bEndless, Settings.bWaitForPlayers, Restart);
+	Machine.Reset(Intermission, Arc, Settings.bLobby, Settings.bEndless, Settings.bWaitForPlayers, Restart, Settings.RestartLeadSeconds);
 	bConfigured = true;
 	Publish();
 }
@@ -452,12 +452,20 @@ void ADFMatchState::ApplyStep(EDFMatchStep Step)
 		return;
 
 	case EDFMatchStep::Restart:
+	{
 		// Once per match (the machine sends Restart once); the game mode reloads the map.
-		UE_LOG(LogDFMatchState, Log, TEXT("restart: the match ended in %s %.0f s ago; asking for a new one%s"),
-			Machine.Phase == EDFMatchPhase::Victory ? TEXT("victory") : TEXT("defeat"), Machine.RestartSeconds,
-			OnRestartRequested.IsBound() ? TEXT("") : TEXT(" (nobody is listening: the match stays over)"));
-		OnRestartRequested.Broadcast(this);
+		bool bUnderWay = false;
+		OnRestartRequested.Broadcast(this, bUnderWay);
+		UE_LOG(LogDFMatchState, Log, TEXT("restart: the match ended in %s; new match in %.1f s%s"),
+			Machine.Phase == EDFMatchPhase::Victory ? TEXT("victory") : TEXT("defeat"), Machine.RestartTimer,
+			bUnderWay ? TEXT("") : TEXT(" not started by anyone: the match stays over"));
+		if (!bUnderWay)
+		{
+			// No countdown to a match that is not coming: the HUD keeps the banner and drops the line.
+			Machine.AbandonRestart();
+		}
 		return;
+	}
 	}
 }
 
@@ -508,14 +516,18 @@ void ADFMatchState::Publish()
 	// The clock replicates as the server time it runs out, so a client counts down on its own and the
 	// field changes only when the clock starts, stops or jumps (an early call), never every frame. Once
 	// the match is over the same field carries the restart clock: the phase ends when the new match starts.
+	const float Now = static_cast<float>(GetServerWorldTimeSeconds());
 	float EndsAt = -1.f;
 	if (Machine.IsClockRunning(GetConnectedPlayerCount()))
 	{
-		EndsAt = static_cast<float>(GetServerWorldTimeSeconds()) + Machine.PhaseTimer;
+		EndsAt = Now + Machine.PhaseTimer;
 	}
 	else if (Machine.IsRestartClockRunning())
 	{
-		EndsAt = static_cast<float>(GetServerWorldTimeSeconds()) + Machine.RestartTimer;
+		// Due (the clock sits at 0 while the host loads the new match): the end time stays where it was,
+		// in the past, rather than following the clock frame by frame. A client that has already left to
+		// follow the host keeps the last one it heard and reads "Starting new match…" until it arrives.
+		EndsAt = (Machine.RestartTimer > 0.f || PhaseEndsAtServerTime < 0.f) ? Now + Machine.RestartTimer : FMath::Min(PhaseEndsAtServerTime, Now);
 	}
 	if ((EndsAt < 0.f) != (PhaseEndsAtServerTime < 0.f) || FMath::Abs(EndsAt - PhaseEndsAtServerTime) > 0.05f)
 	{

@@ -1,6 +1,8 @@
+#include "DFGameMode.h"
 #include "DFMatchPhaseMachine.h"
 #include "DFMatchState.h"
 #include "Economy/DFEconomyStateComponent.h"
+#include "Engine/EngineBaseTypes.h"
 #include "Misc/AutomationTest.h"
 #include "Testing/DFTestUtils.h"
 #include "Waves/DFWaveDirector.h"
@@ -11,7 +13,8 @@
 // DF.Unit.Match.* (play-again) — a finished match leads to a new one. The pure half drives
 // FDFMatchPhaseMachine's restart clock; the world half drives ADFMatchState by hand, as
 // DFMatchStateTests.cpp does, and listens on OnRestartRequested (the hook ADFGameMode binds to reload
-// the map), so nothing travels: a test world has no game mode to bind it.
+// the map), so nothing travels: a test world has no game mode to bind it. The URL half runs the
+// option through the engine's own FURL, as UEngine::Browse and the restart travel do.
 
 namespace DFMatchRestartTest
 {
@@ -19,11 +22,23 @@ namespace DFMatchRestartTest
 	const TOptional<int32> Alive(20);
 	const TOptional<int32> Dead(0);
 
-	FDFMatchPhaseMachine Fresh(int32 TotalWaves, float RestartSeconds, bool bLobby = false, bool bEndless = false)
+	FDFMatchPhaseMachine Fresh(int32 TotalWaves, float RestartSeconds, bool bLobby = false, bool bEndless = false, float LeadSeconds = 0.f)
 	{
 		FDFMatchPhaseMachine M;
-		M.Reset(8.f, TotalWaves, bLobby, bEndless, /*bWaitForPlayers*/ false, RestartSeconds);
+		M.Reset(8.f, TotalWaves, bLobby, bEndless, /*bWaitForPlayers*/ false, RestartSeconds, LeadSeconds);
 		return M;
+	}
+
+	/** The options string a map's game mode gets in InitGame: "?" + each option (UWorld::InitializeActorsForPlay). */
+	FString OptionsOf(const FURL& Url)
+	{
+		FString Options;
+		for (const FString& Op : Url.Op)
+		{
+			Options += TEXT("?");
+			Options += Op;
+		}
+		return Options;
 	}
 
 	/** One wave on one lane: two grunts. */
@@ -53,6 +68,8 @@ namespace DFMatchRestartTest
 		ADFWaveDirector* Director = nullptr;
 		ADFMatchState* Match = nullptr;
 		int32 Requests = 0;
+		/** What the hook answers: true stands in for ADFGameMode's travel, false for a refused one. */
+		bool bTravels = true;
 
 		bool Init(FAutomationTestBase& Test, const FDFMatchSettings& InSettings)
 		{
@@ -71,8 +88,12 @@ namespace DFMatchRestartTest
 			Settings.IntermissionSeconds = 2.f;
 			Match->ConfigureMatch(Settings);
 			Match->UseWaveDirector(Director);
-			// What ADFGameMode::InitGameState binds; here it only counts.
-			Match->OnRestartRequested.AddLambda([this](ADFMatchState*) { ++Requests; });
+			// What ADFGameMode::InitGameState binds; here it only counts, and says whether it "travelled".
+			Match->OnRestartRequested.AddLambda([this](ADFMatchState*, bool& bOutUnderWay)
+			{
+				++Requests;
+				bOutUnderWay = bOutUnderWay || bTravels;
+			});
 			return true;
 		}
 
@@ -99,11 +120,18 @@ bool FDFMatchRestartClockTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("at the full delay"), FMath::IsNearlyEqual(M.RestartTimer, 15.f));
 	TestEqual(TEXT("14.9 s later: not yet"), M.Tick(14.9f, 1, Alive), EDFMatchStep::None);
 	TestTrue(TEXT("0.1 s left"), FMath::IsNearlyEqual(M.RestartTimer, 0.1f, 1e-3f));
-	TestEqual(TEXT("the clock runs out: restart"), M.Tick(0.2f, 1, Alive), EDFMatchStep::Restart);
-	TestFalse(TEXT("the clock stops once it has asked"), M.IsRestartClockRunning());
+	TestEqual(TEXT("the clock runs out (standalone: no lead): restart"), M.Tick(0.2f, 1, Alive), EDFMatchStep::Restart);
+	TestTrue(TEXT("the new match is due: the clock stays, at 0, while the host loads it"), M.IsRestartClockRunning());
+	TestEqual(TEXT("never below 0"), M.RestartTimer, 0.f);
 	TestEqual(TEXT("and it asks once: a minute later, nothing"), M.Tick(60.f, 1, Alive), EDFMatchStep::None);
+	TestTrue(TEXT("still due"), M.IsRestartClockRunning() && M.RestartTimer == 0.f);
 	TestEqual(TEXT("still over while the host travels"), M.Phase, EDFMatchPhase::Victory);
 	TestEqual(TEXT("a late clear changes nothing"), M.WaveCleared(0, Alive), EDFMatchStep::None);
+	// Nobody started the new match (the travel was refused): the clock stops, and nothing asks again.
+	M.AbandonRestart();
+	TestFalse(TEXT("an abandoned restart stops the clock"), M.IsRestartClockRunning());
+	TestEqual(TEXT("and is not asked for again"), M.Tick(60.f, 1, Alive), EDFMatchStep::None);
+	TestFalse(TEXT("nor does the clock come back"), M.IsRestartClockRunning());
 
 	// Defeat restarts too, whoever is connected: a host left alone still gets a new match.
 	FDFMatchPhaseMachine Lost = Fresh(3, 15.f);
@@ -122,6 +150,88 @@ bool FDFMatchRestartClockTest::RunTest(const FString& Parameters)
 	M.Reset(8.f, 1, false, false, false, 15.f);
 	TestFalse(TEXT("a fresh match has no restart clock"), M.IsRestartClockRunning());
 	TestFalse(TEXT("and has not asked"), M.bRestartSent);
+	M.AbandonRestart();
+	TestEqual(TEXT("abandoning a restart mid-match does nothing"), M.Tick(8.f, 1, Alive), EDFMatchStep::BeginWave);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFMatchRestartLeadTest, "DF.Unit.Match.RestartAskedTheTravelsLeadEarly", DFMatchRestartTest::Flags)
+bool FDFMatchRestartLeadTest::RunTest(const FString& Parameters)
+{
+	using namespace DFMatchRestartTest;
+	// A listen host: the map switches ServerTravelPause (4 s) after ServerTravel, so the request goes out
+	// 4 s before the countdown ends and the new match starts when the HUD reaches 0, not 4 s after it.
+	FDFMatchPhaseMachine Host = Fresh(1, 15.f, false, false, /*LeadSeconds*/ 4.f);
+	Host.Tick(8.f, 1, Alive);
+	TestEqual(TEXT("victory"), Host.WaveCleared(0, Alive), EDFMatchStep::Victory);
+	TestTrue(TEXT("the countdown is the whole delay"), FMath::IsNearlyEqual(Host.RestartTimer, 15.f));
+	TestEqual(TEXT("10.9 s on (4.1 s left): not yet"), Host.Tick(10.9f, 1, Alive), EDFMatchStep::None);
+	TestEqual(TEXT("down to the lead: restart"), Host.Tick(0.2f, 1, Alive), EDFMatchStep::Restart);
+	TestTrue(TEXT("the countdown goes on while the travel waits out its pause"), Host.IsRestartClockRunning());
+	TestTrue(TEXT("3.9 s left"), FMath::IsNearlyEqual(Host.RestartTimer, 3.9f, 1e-3f));
+	TestEqual(TEXT("asked once"), Host.Tick(2.f, 1, Alive), EDFMatchStep::None);
+	TestEqual(TEXT("the lead runs out: nothing more to ask"), Host.Tick(2.f, 1, Alive), EDFMatchStep::None);
+	TestTrue(TEXT("due, when the host's map switches"), Host.IsRestartClockRunning() && Host.RestartTimer == 0.f);
+
+	// A delay shorter than the lead cannot be kept: the countdown shows the real one and asks at once.
+	FDFMatchPhaseMachine Quick = Fresh(1, 2.f, false, false, /*LeadSeconds*/ 4.f);
+	Quick.Tick(8.f, 1, Alive);
+	TestEqual(TEXT("victory"), Quick.WaveCleared(0, Alive), EDFMatchStep::Victory);
+	TestTrue(TEXT("?playagain=2 on a listen host counts 4 s"), FMath::IsNearlyEqual(Quick.RestartTimer, 4.f));
+	TestEqual(TEXT("and asks on the next frame"), Quick.Tick(0.016f, 1, Alive), EDFMatchStep::Restart);
+
+	// 0 stays "never", whatever the lead.
+	FDFMatchPhaseMachine Never = Fresh(1, 0.f, false, false, /*LeadSeconds*/ 4.f);
+	Never.Tick(8.f, 1, Alive);
+	Never.WaveCleared(0, Alive);
+	TestFalse(TEXT("no restart clock with the restart off"), Never.IsRestartClockRunning());
+
+	// The lead is the engine's: a networked host waits out ServerTravelPause, a standalone game switches at once.
+	TestEqual(TEXT("standalone: no lead"), ADFGameMode::RestartLeadFor(NM_Standalone, 4.f), 0.f);
+	TestEqual(TEXT("listen host: the travel pause"), ADFGameMode::RestartLeadFor(NM_ListenServer, 4.f), 4.f);
+	TestEqual(TEXT("dedicated server: the travel pause"), ADFGameMode::RestartLeadFor(NM_DedicatedServer, 4.f), 4.f);
+	TestEqual(TEXT("never negative"), ADFGameMode::RestartLeadFor(NM_ListenServer, -1.f), 0.f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFMatchPlayAgainOptionTest, "DF.Unit.Match.PlayAgainOptionSurvivesTravel", DFMatchRestartTest::Flags)
+bool FDFMatchPlayAgainOptionTest::RunTest(const FString& Parameters)
+{
+	using namespace DFMatchRestartTest;
+	// Why the key is not "restart": the engine reads such an option as its own command (UEngine::Browse
+	// then loads the last URL instead of this one), and restart=30 is such an option.
+	FURL Clash(nullptr, TEXT("/Game/DF/Maps/Testlane/L_Testlane?listen?restart=30"), TRAVEL_Absolute);
+	TestTrue(TEXT("restart=30 is the engine's restart command"), Clash.HasOption(TEXT("restart")));
+
+	FURL Host(nullptr, TEXT("/Game/DF/Maps/Testlane/L_Testlane?listen?playagain=30"), TRAVEL_Absolute);
+	TestTrue(TEXT("the host's URL parses"), Host.Valid != 0);
+	TestFalse(TEXT("playagain=30 is not: Browse loads this URL"), Host.HasOption(TEXT("restart")));
+	const FDFMatchSettings First = ADFGameMode::ParseMatchSettings(OptionsOf(Host));
+	TestEqual(TEXT("the first match waits 30 s"), First.RestartSeconds, 30.f);
+
+	// ADFGameMode::RestartMatch travels to "?Restart" relative to the last URL; AGameModeBase::ProcessServerTravel
+	// and UEngine::TickWorldTravel build this URL, and Browse, seeing restart, reloads the last URL itself.
+	FURL Next(&Host, TEXT("?Restart"), TRAVEL_Relative);
+	TestTrue(TEXT("the restart travel is the engine's restart"), Next.HasOption(TEXT("restart")));
+	TestEqual(TEXT("the map is the same"), Next.Map, Host.Map);
+	TestEqual(TEXT("the delay rides along"), FString(Next.GetOption(TEXT("playagain="), TEXT(""))), FString(TEXT("30")));
+	TestTrue(TEXT("and so does ?listen"), Next.HasOption(TEXT("listen")));
+	TestEqual(TEXT("the bare Restart does not read as a delay"), ADFGameMode::ParseMatchSettings(OptionsOf(Next)).RestartSeconds, 30.f);
+	FURL Third(&Next, TEXT("?Restart"), TRAVEL_Relative);
+	TestEqual(TEXT("every later match waits 30 s too"), ADFGameMode::ParseMatchSettings(OptionsOf(Third)).RestartSeconds, 30.f);
+
+	// The option's other values, and the other options beside it.
+	TestEqual(TEXT("absent: the match state's default"), ADFGameMode::ParseMatchSettings(TEXT("?listen")).RestartSeconds, -1.f);
+	TestEqual(TEXT("absent with the engine's Restart: still the default"), ADFGameMode::ParseMatchSettings(TEXT("?listen?Restart")).RestartSeconds, -1.f);
+	TestEqual(TEXT("?playagain=0: never"), ADFGameMode::ParseMatchSettings(TEXT("?playagain=0")).RestartSeconds, 0.f);
+	TestEqual(TEXT("never negative"), ADFGameMode::ParseMatchSettings(TEXT("?playagain=-5")).RestartSeconds, 0.f);
+	const FDFMatchSettings All = ADFGameMode::ParseMatchSettings(TEXT("?seed=7?lobby?endless?intermission=3?playagain=5?wavesmap=foundry"));
+	TestEqual(TEXT("seed"), static_cast<int32>(All.Seed), 7);
+	TestTrue(TEXT("lobby and endless"), All.bLobby && All.bEndless);
+	TestEqual(TEXT("intermission"), All.IntermissionSeconds, 3.f);
+	TestEqual(TEXT("play again"), All.RestartSeconds, 5.f);
+	TestEqual(TEXT("waves map"), All.MapId, FName(TEXT("foundry")));
+	TestEqual(TEXT("the lead is not a URL option"), All.RestartLeadSeconds, 0.f);
 	return true;
 }
 
@@ -151,7 +261,7 @@ bool FDFMatchNoRestartMidMatchTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("the core falls: the endless run is over"), Endless.WaveCleared(5, Dead), EDFMatchStep::Defeat);
 	TestTrue(TEXT("and a new one follows it"), Endless.IsRestartClockRunning());
 
-	// RestartSeconds 0 (?restart=0): the banner stays up for good.
+	// RestartSeconds 0 (?playagain=0): the banner stays up for good.
 	FDFMatchPhaseMachine Never = Fresh(1, 0.f);
 	Never.Tick(8.f, 1, Alive);
 	TestEqual(TEXT("victory"), Never.WaveCleared(0, Alive), EDFMatchStep::Victory);
@@ -185,14 +295,34 @@ bool FDFMatchStateRestartDeadlineTest::RunTest(const FString& Parameters)
 	F.Match->AdvanceMatch(9.9f);
 	TestEqual(TEXT("not asked before the clock runs out"), F.Requests, 0);
 	F.Match->AdvanceMatch(0.2f);
-	TestEqual(TEXT("asked once when it runs out"), F.Requests, 1);
-	TestFalse(TEXT("the clock is down once asked"), F.Match->IsPhaseClockRunning());
-	TestFalse(TEXT("nothing pending any more"), F.Match->IsRestartPending());
+	TestEqual(TEXT("asked once when it runs out (standalone: no lead)"), F.Requests, 1);
+	// The travel is under way: the new match is due, and every HUD reads "Starting new match…" until it loads.
+	TestTrue(TEXT("still pending while the host travels"), F.Match->IsRestartPending());
+	TestEqual(TEXT("with no seconds left"), F.Match->GetPhaseSecondsLeft(), 0.f);
 	F.Match->AdvanceMatch(60.f);
 	F.Match->AdvanceMatch(60.f);
 	TestEqual(TEXT("never twice, however long the travel takes"), F.Requests, 1);
+	TestTrue(TEXT("and still due"), F.Match->IsRestartPending() && F.Match->GetPhaseSecondsLeft() == 0.f);
 
-	// ?restart=<seconds> wins over the class default; the defeat path runs the same clock.
+	// The request was refused (the session or the engine said no): no new match is coming, so no countdown.
+	{
+		FFixture Refused;
+		Refused.bTravels = false;
+		if (!Refused.Init(*this, FDFMatchSettings()))
+		{
+			return false;
+		}
+		Refused.PlayWave();
+		Refused.Match->AdvanceMatch(15.1f);
+		TestEqual(TEXT("asked"), Refused.Requests, 1);
+		TestFalse(TEXT("nobody started it: nothing pending"), Refused.Match->IsRestartPending());
+		TestFalse(TEXT("the clock is down"), Refused.Match->IsPhaseClockRunning());
+		TestEqual(TEXT("still over, on the banner"), Refused.Match->GetPhase(), EDFMatchPhase::Victory);
+		Refused.Match->AdvanceMatch(60.f);
+		TestEqual(TEXT("and not asked again"), Refused.Requests, 1);
+	}
+
+	// ?playagain=<seconds> wins over the class default; the defeat path runs the same clock.
 	{
 		FFixture Short;
 		FDFMatchSettings Settings;
@@ -210,12 +340,34 @@ bool FDFMatchStateRestartDeadlineTest::RunTest(const FString& Parameters)
 		Economy->TakeLives(Economy->GetLives());
 		Short.Match->AdvanceMatch(0.016f);
 		TestEqual(TEXT("the core fell: defeat"), Short.Match->GetPhase(), EDFMatchPhase::Defeat);
-		TestEqual(TEXT("?restart=3: 3 s to the new match"), Short.Match->GetPhaseSecondsLeft(), 3.f, 0.01f);
+		TestEqual(TEXT("?playagain=3: 3 s to the new match"), Short.Match->GetPhaseSecondsLeft(), 3.f, 0.01f);
 		Short.Match->AdvanceMatch(3.1f);
 		TestEqual(TEXT("asked after 3 s"), Short.Requests, 1);
 	}
 
-	// ?restart=0: the banner stays up, nobody is asked.
+	// A listen host: asked the travel pause early, and the countdown goes on to the moment the map switches.
+	{
+		FFixture Hosted;
+		FDFMatchSettings Settings;
+		Settings.RestartLeadSeconds = 4.f;
+		if (!Hosted.Init(*this, Settings))
+		{
+			return false;
+		}
+		Hosted.PlayWave();
+		TestEqual(TEXT("15 s to the new match"), Hosted.Match->GetPhaseSecondsLeft(), 15.f, 0.01f);
+		Hosted.Match->AdvanceMatch(10.9f);
+		TestEqual(TEXT("4.1 s left: not asked yet"), Hosted.Requests, 0);
+		Hosted.Match->AdvanceMatch(0.2f);
+		TestEqual(TEXT("down to the travel pause: asked"), Hosted.Requests, 1);
+		TestTrue(TEXT("the countdown still runs"), Hosted.Match->IsRestartPending());
+		TestEqual(TEXT("3.9 s to go, not 0: the HUD keeps counting while the travel waits"), Hosted.Match->GetPhaseSecondsLeft(), 3.9f, 0.06f);
+		Hosted.Match->AdvanceMatch(4.f);
+		TestTrue(TEXT("then due"), Hosted.Match->IsRestartPending() && Hosted.Match->GetPhaseSecondsLeft() == 0.f);
+		TestEqual(TEXT("asked once"), Hosted.Requests, 1);
+	}
+
+	// ?playagain=0: the banner stays up, nobody is asked.
 	{
 		FFixture Off;
 		FDFMatchSettings Settings;

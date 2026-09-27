@@ -340,6 +340,7 @@ and CI and packaged builds stay without them.
   | `?endless` | endless mode: the waves never stop, and only the core ends the run |
   | `?lobby` | wait in a lobby until the lowest seat sends Launch |
   | `?intermission=<s>` | intermission length (default: the `intermissionSeconds` balance dial, 8 s) |
+  | `?playagain=<s>` | seconds from Victory / Defeat to a new match on the same map (default 15; `0` = never). Not `?restart=`: the engine reads that as its own restart command and drops the URL |
   | `?seed=<n>` | a fixed wave-plan seed |
   | `?wavesmap=<id>` | play another map's wave tables |
 

@@ -1,6 +1,7 @@
 #include "DFMatchPhaseMachine.h"
 
-void FDFMatchPhaseMachine::Reset(float InIntermissionSeconds, int32 InTotalWaves, bool bInLobby, bool bInEndless, bool bInWaitForPlayers, float InRestartSeconds)
+void FDFMatchPhaseMachine::Reset(float InIntermissionSeconds, int32 InTotalWaves, bool bInLobby, bool bInEndless, bool bInWaitForPlayers,
+	float InRestartSeconds, float InRestartLeadSeconds)
 {
 	IntermissionSeconds = FMath::Max(0.f, InIntermissionSeconds);
 	TotalWaves = FMath::Max(0, InTotalWaves);
@@ -8,6 +9,7 @@ void FDFMatchPhaseMachine::Reset(float InIntermissionSeconds, int32 InTotalWaves
 	bEndless = bInEndless;
 	bWaitForPlayers = bInWaitForPlayers;
 	RestartSeconds = FMath::Max(0.f, InRestartSeconds);
+	RestartLeadSeconds = FMath::Max(0.f, InRestartLeadSeconds);
 	Phase = EDFMatchPhase::Intermission;
 	WaveIndex = -1;
 	PhaseTimer = IntermissionSeconds;
@@ -52,8 +54,17 @@ void FDFMatchPhaseMachine::Finish(EDFMatchPhase Verdict)
 {
 	Phase = Verdict;
 	// A party that never launched has played no match to follow with another; RestartSeconds 0 keeps
-	// the banner up for good (the match state's knob, or ?restart=0).
-	RestartTimer = (RestartSeconds > 0.f && !bLobby && !bRestartSent) ? RestartSeconds : -1.f;
+	// the banner up for good (the match state's knob, or ?playagain=0). A delay shorter than the lead
+	// cannot be kept (the host's travel alone takes the lead), so the countdown shows the real one.
+	RestartTimer = (RestartSeconds > 0.f && !bLobby && !bRestartSent) ? FMath::Max(RestartSeconds, RestartLeadSeconds) : -1.f;
+}
+
+void FDFMatchPhaseMachine::AbandonRestart()
+{
+	if (IsOver())
+	{
+		RestartTimer = -1.f;
+	}
 }
 
 EDFMatchStep FDFMatchPhaseMachine::Tick(float DeltaSeconds, int32 ConnectedPlayers, TOptional<int32> Lives)
@@ -65,12 +76,15 @@ EDFMatchStep FDFMatchPhaseMachine::Tick(float DeltaSeconds, int32 ConnectedPlaye
 		{
 			return EDFMatchStep::None;
 		}
-		RestartTimer -= DeltaSeconds;
-		if (RestartTimer > 0.f)
+		// Down to 0 and no further: from then on the new match is due and the host is loading it.
+		RestartTimer = FMath::Max(0.f, RestartTimer - DeltaSeconds);
+		// Asked RestartLeadSeconds early: AGameModeBase::ProcessServerTravel leaves a listen or dedicated
+		// host on the net driver's ServerTravelPause (4 s) before the map switches, so its clients hear
+		// ClientTravel first. Standalone the lead is 0 and the switch comes the next frame.
+		if (bRestartSent || RestartTimer > RestartLeadSeconds)
 		{
 			return EDFMatchStep::None;
 		}
-		RestartTimer = -1.f;
 		bRestartSent = true;
 		return EDFMatchStep::Restart;
 	}

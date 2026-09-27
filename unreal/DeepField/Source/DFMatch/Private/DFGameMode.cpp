@@ -8,6 +8,7 @@
 #include "Messages/DFMessageBus.h"
 #include "Messages/DFMessages.h"
 #include "Engine/GameInstance.h"
+#include "Engine/NetDriver.h"
 #include "Engine/World.h"
 #include "GameFramework/GameSession.h"
 #include "GameFramework/PlayerController.h"
@@ -17,6 +18,8 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogDFMatch, Log, All);
+
+const TCHAR* ADFGameMode::OptPlayAgain = TEXT("playagain");
 
 ADFGameMode::ADFGameMode()
 {
@@ -31,26 +34,46 @@ ADFGameMode::ADFGameMode()
 void ADFGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
 {
 	Super::InitGame(MapName, Options, ErrorMessage);
-	MatchSettings = FDFMatchSettings();
-	MatchSettings.Seed = static_cast<uint32>(FMath::Max(0, UGameplayStatics::GetIntOption(Options, TEXT("seed"), 0)));
-	MatchSettings.bLobby = UGameplayStatics::HasOption(Options, TEXT("lobby"));
-	MatchSettings.bEndless = UGameplayStatics::HasOption(Options, TEXT("endless"));
-	MatchSettings.bWaitForPlayers = IsRunningDedicatedServer() || UGameplayStatics::HasOption(Options, TEXT("waitforplayers"));
+	MatchSettings = ParseMatchSettings(Options);
+	// UEngine::LoadMap listens before InitializeActorsForPlay calls this, so a hosting world already has
+	// its net driver and net mode here.
+	const UWorld* World = GetWorld();
+	const UNetDriver* NetDriver = World ? World->GetNetDriver() : nullptr;
+	MatchSettings.RestartLeadSeconds = RestartLeadFor(GetNetMode(), NetDriver ? NetDriver->ServerTravelPause : 0.f);
+}
+
+FDFMatchSettings ADFGameMode::ParseMatchSettings(const FString& Options)
+{
+	FDFMatchSettings Parsed;
+	Parsed.Seed = static_cast<uint32>(FMath::Max(0, UGameplayStatics::GetIntOption(Options, TEXT("seed"), 0)));
+	Parsed.bLobby = UGameplayStatics::HasOption(Options, TEXT("lobby"));
+	Parsed.bEndless = UGameplayStatics::HasOption(Options, TEXT("endless"));
+	Parsed.bWaitForPlayers = IsRunningDedicatedServer() || UGameplayStatics::HasOption(Options, TEXT("waitforplayers"));
 	const FString WavesMap = UGameplayStatics::ParseOption(Options, TEXT("wavesmap"));
 	if (!WavesMap.IsEmpty())
 	{
-		MatchSettings.MapId = FName(*WavesMap);
+		Parsed.MapId = FName(*WavesMap);
 	}
 	const FString Intermission = UGameplayStatics::ParseOption(Options, TEXT("intermission"));
 	if (!Intermission.IsEmpty())
 	{
-		MatchSettings.IntermissionSeconds = FMath::Max(0.f, FCString::Atof(*Intermission));
+		Parsed.IntermissionSeconds = FMath::Max(0.f, FCString::Atof(*Intermission));
 	}
-	const FString Restart = UGameplayStatics::ParseOption(Options, TEXT("restart"));
-	if (!Restart.IsEmpty())
+	// Its own key, not "restart" (see OptPlayAgain): the engine's bare "?Restart" rides along on the
+	// restart travel's URL and must not read as a delay.
+	const FString PlayAgain = UGameplayStatics::ParseOption(Options, OptPlayAgain);
+	if (!PlayAgain.IsEmpty())
 	{
-		MatchSettings.RestartSeconds = FMath::Max(0.f, FCString::Atof(*Restart));
+		Parsed.RestartSeconds = FMath::Max(0.f, FCString::Atof(*PlayAgain));
 	}
+	return Parsed;
+}
+
+float ADFGameMode::RestartLeadFor(ENetMode NetMode, float ServerTravelPause)
+{
+	// GameModeBase.cpp ProcessServerTravel: "Switch immediately if not networking", else NextSwitchCountdown
+	// stays at what UWorld::Listen set, NetDriver->ServerTravelPause.
+	return (NetMode == NM_ListenServer || NetMode == NM_DedicatedServer) ? FMath::Max(0.f, ServerTravelPause) : 0.f;
 }
 
 void ADFGameMode::InitGameState()
@@ -63,9 +86,11 @@ void ADFGameMode::InitGameState()
 	}
 }
 
-void ADFGameMode::HandleRestartRequested(ADFMatchState* /*Match*/)
+void ADFGameMode::HandleRestartRequested(ADFMatchState* /*Match*/, bool& bOutUnderWay)
 {
 	RestartMatch();
+	// Under way: this travel, or one already pending. Refused, the match state stops its countdown.
+	bOutUnderWay = bOutUnderWay || bRestarting;
 }
 
 bool ADFGameMode::RestartMatch()
@@ -81,7 +106,8 @@ bool ADFGameMode::RestartMatch()
 		return false;
 	}
 	// Relative travel to "?Restart": the map and options of the last URL, the way AGameMode::RestartGame
-	// does it. The engine refuses a second travel while one is pending (NextURL is set), and so does bRestarting.
+	// does it (?playagain= survives it: OptPlayAgain). The engine refuses a second travel while one is
+	// pending (NextURL is set), and so does bRestarting.
 	bRestarting = World->ServerTravel(TEXT("?Restart"), /*bAbsolute*/ false);
 	UE_LOG(LogDFMatch, Log, TEXT("new match: reloading %s%s"), *World->GetMapName(), bRestarting ? TEXT("") : TEXT(" refused by the engine"));
 	return bRestarting;

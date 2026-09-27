@@ -12,7 +12,7 @@ enum class EDFMatchStep : uint8
 	Intermission,  // the wave cleared and the arc goes on; the intermission clock is reset
 	Victory,
 	Defeat,
-	Restart,       // the restart clock after Victory / Defeat ran out: the host starts a new match (sent once)
+	Restart,       // the restart clock after Victory / Defeat is down to its lead: the host starts a new match (sent once)
 };
 
 /**
@@ -28,9 +28,13 @@ enum class EDFMatchStep : uint8
  * unknown lives count never defeats anyone.
  *
  * Play-again (WS-28, not the sim's: Godot's end screen waited for the player): a finished match starts
- * the restart clock, RestartSeconds long, and when it runs out Tick returns Restart, once. A match
- * finishes only by Victory or Defeat, so a running one never restarts, an endless run included (it
- * never reaches Victory; only its core falling ends it), and neither does a party still in the lobby.
+ * the restart clock, RestartSeconds long, which counts down to the moment the new match starts. Tick
+ * returns Restart once, RestartLeadSeconds before that moment: a networked host's travel takes that long
+ * to happen (the engine's server-travel pause), so asking early makes the reload land as the countdown
+ * reaches 0. The clock then stays at 0 (the new match is due) until the map goes, or until the host says
+ * no new match is coming (AbandonRestart). A match finishes only by Victory or Defeat, so a running one
+ * never restarts, an endless run included (it never reaches Victory; only its core falling ends it), and
+ * neither does a party still in the lobby.
  */
 struct DFMATCH_API FDFMatchPhaseMachine
 {
@@ -51,21 +55,30 @@ struct DFMATCH_API FDFMatchPhaseMachine
 	bool bEndless = false;
 	/** Seconds from Victory or Defeat to a new match; 0 = the match stays over. */
 	float RestartSeconds = 0.f;
-	/** Seconds left on the restart clock; < 0 while the match runs, when no restart comes, and once it was sent. */
+	/** How long before the new match the host asks for it: its travel's delay (ADFGameMode::RestartLeadFor,
+	 *  the server-travel pause on a listen or dedicated host, 0 standalone). The clock never starts shorter. */
+	float RestartLeadSeconds = 0.f;
+	/** Seconds to the new match: < 0 when none is coming (the match runs, the restart is off or was
+	 *  abandoned); after Victory / Defeat it counts down and stays at 0 once the new match is due. */
 	float RestartTimer = -1.f;
 	/** The Restart step has been returned: it never is again (the host is already travelling). */
 	bool bRestartSent = false;
 
 	/** A fresh match (World.cs defaults + ApplyLaunch's clock). */
-	void Reset(float InIntermissionSeconds, int32 InTotalWaves, bool bInLobby, bool bInEndless, bool bInWaitForPlayers, float InRestartSeconds = 0.f);
+	void Reset(float InIntermissionSeconds, int32 InTotalWaves, bool bInLobby, bool bInEndless, bool bInWaitForPlayers,
+		float InRestartSeconds = 0.f, float InRestartLeadSeconds = 0.f);
 
 	bool IsOver() const { return Phase == EDFMatchPhase::Victory || Phase == EDFMatchPhase::Defeat; }
 
 	/** Whether the intermission clock is counting down right now (the HUD shows a countdown only then). */
 	bool IsClockRunning(int32 ConnectedPlayers) const;
 
-	/** Whether a finished match is counting down to a new one (RestartTimer is the seconds left). */
+	/** Whether a new match follows this finished one: RestartTimer is the seconds left, 0 once it is due. */
 	bool IsRestartClockRunning() const { return IsOver() && RestartTimer >= 0.f; }
+
+	/** The host asked for the new match and none is coming (nobody took the request up, or the travel was
+	 *  refused): the clock stops and the match stays over on its banner. Restart is not sent again. */
+	void AbandonRestart();
 
 	/** Command.Launch from the launch seat: lobby -> intermission with a full clock. False if not in the lobby. */
 	bool Launch();
@@ -76,7 +89,8 @@ struct DFMATCH_API FDFMatchPhaseMachine
 	/**
 	 * One host frame. Returns Defeat if the lives source says the core is gone (any phase, before the
 	 * clock: a dead core never starts a wave), BeginWave when the intermission clock runs out, else None.
-	 * Once the match is over it runs the restart clock instead, and returns Restart when that runs out.
+	 * Once the match is over it runs the restart clock instead, and returns Restart (once) when that is
+	 * down to RestartLeadSeconds.
 	 */
 	EDFMatchStep Tick(float DeltaSeconds, int32 ConnectedPlayers, TOptional<int32> Lives);
 
@@ -88,6 +102,7 @@ struct DFMATCH_API FDFMatchPhaseMachine
 	EDFMatchStep WaveCleared(int32 ClearedWave, TOptional<int32> Lives);
 
 private:
-	/** Victory or Defeat, and the restart clock starts (not in the lobby, not with RestartSeconds 0). */
+	/** Victory or Defeat, and the restart clock starts (not in the lobby, not with RestartSeconds 0), never
+	 *  shorter than the lead. */
 	void Finish(EDFMatchPhase Verdict);
 };

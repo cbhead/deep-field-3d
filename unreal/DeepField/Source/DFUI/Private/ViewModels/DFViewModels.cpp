@@ -212,6 +212,7 @@ void UDFMatchViewModel::Reset()
 	SetTotalWaves(Fresh->TotalWaves);
 	SetPhase(Fresh->Phase);
 	SetPhaseSecondsLeft(Fresh->PhaseSecondsLeft);
+	SetRestartPending(Fresh->bRestartPending);
 	SetLobby(Fresh->bLobby);
 	SetEndless(Fresh->bEndless);
 	SetLap(Fresh->Lap);

@@ -140,11 +140,68 @@ bool FDFUIFeedMatchStateTest::RunTest(const FString&)
 	TestEqual(TEXT("banner detail"), Str(DFHudText::BannerDetail(*Match)), FString(TEXT("The core fell on wave 2")));
 
 	// Play-again: the restart clock rides the same replicated end time, so the countdown reaches the model.
+	TestTrue(TEXT("a new match is coming"), Match->IsRestartPending());
 	TestEqual(TEXT("the restart countdown is the replicated end time read now"), Match->GetPhaseSecondsLeft(), State->RestartDelaySeconds, 0.01f);
 	TestEqual(TEXT("under the banner"), Str(DFHudText::RestartLine(*Match)), FString(TEXT("New match in 15s")));
 	State->AdvanceMatch(3.5f);
 	FDFMatchStateFeed::Fill(*Match, *State, nullptr);
 	TestEqual(TEXT("it counts down"), Str(DFHudText::RestartLine(*Match)), FString(TEXT("New match in 12s")));
+
+	// The game mode takes the request up (here a stand-in that only says so): past the countdown the
+	// host is loading the new match, and the line says so rather than going blank.
+	int32 Requests = 0;
+	State->OnRestartRequested.AddLambda([&Requests](ADFMatchState*, bool& bOutUnderWay) { ++Requests; bOutUnderWay = true; });
+	State->AdvanceMatch(11.6f);
+	FDFMatchStateFeed::Fill(*Match, *State, nullptr);
+	TestEqual(TEXT("asked for the new match"), Requests, 1);
+	TestTrue(TEXT("still coming"), Match->IsRestartPending());
+	TestEqual(TEXT("the countdown is over"), Match->GetPhaseSecondsLeft(), 0.f);
+	TestEqual(TEXT("loading it"), Str(DFHudText::RestartLine(*Match)), FString(TEXT("Starting new match…")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFUIFeedRestartRefusedTest, "DF.UI.Feed.NoNewMatchNoCountdown", DFHudTest::Flags)
+bool FDFUIFeedRestartRefusedTest::RunTest(const FString&)
+{
+	using namespace DFHudTest;
+	FDFTestWorld World;
+	ADFWaveDirector* Director = World.SpawnActor<ADFWaveDirector>();
+	ADFMatchState* State = World.SpawnActor<ADFMatchState>();
+	if (!TestNotNull(TEXT("director"), Director) || !TestNotNull(TEXT("match state"), State))
+	{
+		return false;
+	}
+	FString Error;
+	if (!TestTrue(TEXT("fixture tables configure"), Director->ConfigureWithTables(7u, Tables(), Error)))
+	{
+		return false;
+	}
+	FDFMatchSettings Settings;
+	Settings.IntermissionSeconds = 2.f;
+	Settings.RestartSeconds = 5.f;
+	State->ConfigureMatch(Settings);
+	State->UseWaveDirector(Director);
+	UDFMatchViewModel* Match = NewObject<UDFMatchViewModel>();
+
+	State->AdvanceMatch(2.1f);
+	State->GetEconomy()->TakeLives(State->GetEconomy()->GetLives());
+	State->AdvanceMatch(0.016f);
+	FDFMatchStateFeed::Fill(*Match, *State, nullptr);
+	TestEqual(TEXT("defeat"), Match->GetPhase(), EDFMatchPhase::Defeat);
+	State->AdvanceMatch(0.5f);
+	FDFMatchStateFeed::Fill(*Match, *State, nullptr);
+	TestEqual(TEXT("counting"), Str(DFHudText::RestartLine(*Match)), FString(TEXT("New match in 5s")));
+
+	// Nobody takes the request up (no game mode here; a refused travel on a host): no new match is
+	// coming, so the line goes rather than promise one.
+	State->AdvanceMatch(4.6f);
+	FDFMatchStateFeed::Fill(*Match, *State, nullptr);
+	TestFalse(TEXT("nothing pending"), Match->IsRestartPending());
+	TestTrue(TEXT("no line"), DFHudText::RestartLine(*Match).IsEmpty());
+	TestEqual(TEXT("the banner stays"), Str(DFHudText::Banner(Match->GetPhase())), FString(TEXT("DEFEAT")));
+
+	Match->Reset();
+	TestFalse(TEXT("a reset model has nothing pending"), Match->IsRestartPending());
 	return true;
 }
 
@@ -298,11 +355,16 @@ bool FDFUIHudTextTest::RunTest(const FString&)
 	TestTrue(TEXT("no banner while the match runs"), DFHudText::Banner(EDFMatchPhase::Wave).IsEmpty() && DFHudText::Banner(EDFMatchPhase::Intermission).IsEmpty());
 
 	// Play-again: once the match is over, the phase's seconds are the restart clock's.
-	TestTrue(TEXT("no restart line with the clock stopped (restart off, or already travelling)"), DFHudText::RestartLine(*Match).IsEmpty());
+	TestTrue(TEXT("no restart line when no new match is coming (restart off, or refused)"), DFHudText::RestartLine(*Match).IsEmpty());
 	Match->SetPhaseSecondsLeft(11.2f);
+	TestTrue(TEXT("seconds alone are not a new match"), DFHudText::RestartLine(*Match).IsEmpty());
+	Match->SetRestartPending(true);
 	TestEqual(TEXT("new match, rounded up"), Str(DFHudText::RestartLine(*Match)), FString(TEXT("New match in 12s")));
 	Match->SetPhaseSecondsLeft(0.3f);
 	TestEqual(TEXT("never 0s while it has not happened"), Str(DFHudText::RestartLine(*Match)), FString(TEXT("New match in 1s")));
+	Match->SetPhaseSecondsLeft(0.f);
+	TestEqual(TEXT("the countdown is over and the map has not gone: loading"), Str(DFHudText::RestartLine(*Match)), FString(TEXT("Starting new match…")));
+	Match->SetPhaseSecondsLeft(0.3f);
 	Match->SetPhase(EDFMatchPhase::Defeat);
 	TestEqual(TEXT("after a defeat too"), Str(DFHudText::RestartLine(*Match)), FString(TEXT("New match in 1s")));
 	TestEqual(TEXT("the phase line keeps the verdict"), Str(DFHudText::PhaseLine(*Match)), FString(TEXT("Defeat")));
