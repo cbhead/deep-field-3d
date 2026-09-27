@@ -6,6 +6,9 @@ Saved/
 Build/Receipts/
 # BuildCookRun's -fileopenlog writes these on every cook
 Build/*/FileOpenOrder/
+# Every EOS value and the Epic switch live here, never in git (unreal/PLAN/rfcs/needs-int-eos-config.md).
+# Windows-only settings that should be tracked go in DefaultEngine.ini instead.
+Config/Windows/WindowsEngine.ini
 .vs/
 .vscode/
 *.xcworkspace/
