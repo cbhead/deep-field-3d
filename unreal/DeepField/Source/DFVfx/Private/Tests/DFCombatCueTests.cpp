@@ -338,7 +338,17 @@ bool FDFVfxSameFrameLandingTest::RunTest(const FString& Parameters)
 	Bus->Broadcast(DFTags::Message_ProjectileLanded, Shot(TEXT("lance"), Origin, HostLanded));
 	TestEqual(TEXT("the round flies on"), Cues->NumCues(EDFCombatCue::Round), 1);
 	TestEqual(TEXT("no flash yet"), Cues->NumCues(EDFCombatCue::Flash), 0);
-	World.Tick(0.1f);
+	// Another landing for the pair, with no other round of theirs in the air and none owed, while the marked round
+	// is too young to have got there (5.9 m out is 0.197 s of flight at least; it has flown 0.05 s, under half of
+	// that), is not its landing either (one of a round this machine stopped waiting for, come at last): it draws
+	// nothing, and the round flies on. (Were any later landing to land a marked round, this one would land it now.)
+	World.Tick(0.05f);
+	TestEqual(TEXT("nothing owed before the stray"), Cues->NumOwedLandings(), 0);
+	Bus->Broadcast(DFTags::Message_ProjectileLanded, Shot(TEXT("lance"), Origin, HostLanded));
+	TestEqual(TEXT("a landing too soon for the marked round leaves it in the air"), Cues->NumCues(EDFCombatCue::Round), 1);
+	TestEqual(TEXT("and draws nothing"), Cues->NumCues(EDFCombatCue::Flash), 0);
+	TestEqual(TEXT("nor is owed"), Cues->NumOwedLandings(), 0);
+	World.Tick(0.05f);
 	const TArray<UStaticMeshComponent*> Ball = Cues->GetParts(EDFCombatCue::Round);
 	if (TestEqual(TEXT("one ball"), Ball.Num(), 1))
 	{
