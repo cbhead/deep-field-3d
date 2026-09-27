@@ -210,7 +210,7 @@ message that never appears **does** fail the test. But:
 *(ADR-0028, the same day: `int-merge.sh` is Mac-only and now has no machine. The rule's substance
 stands unchanged: a branch lands only after a build, the landing gate and the smoke have run on the GPU
 box against the rebased tree — `unreal\deepfield ci-local` in a throwaway worktree holding the rebased
-branch, then the push by hand, until WS-15 ports `int-merge` onto `deepfield.ps1`. The runner step below is `windows-bringup.md` §5.)*
+branch, then the push by hand, until WS-15 ports `int-merge` onto `deepfield.ps1`. *(2026-09-26: ported. Land with `unreal\deepfield int-merge <branch> -Ws NN`.)* The runner step below is `windows-bringup.md` §5.)*
 *(ADR-0029, 2026-09-26: the Unreal trunk is now `main`, so the rule, and the branch-protection
 recommendation at the end of this section, apply to Unreal changes landing on `main`. A check required
 on `main` must still let §6.2's direct ledger pushes through: scope it to pull requests, or give
@@ -229,7 +229,7 @@ one door, each worse than the last:
 of them need a compiler. That is not a careless author; it is the same shape as every other verification
 failure in this project, one level further out: **the check ran and told you nothing.**
 
-So the rule: **land with `unreal/Build/int-merge.sh <branch> --ws NN`, never with the merge button.**
+So the rule: **land with `unreal/Build/int-merge.sh <branch> --ws NN`, never with the merge button.** *(On Windows since 2026-09-26: `unreal\deepfield int-merge <branch> -Ws NN`.)*
 It refuses at the build step, which is exactly where #48 needed refusing — 765 s in, with nothing on the
 trunk. A PR that cannot be landed from a machine with the engine installed is not ready to land.
 

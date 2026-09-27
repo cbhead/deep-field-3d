@@ -146,8 +146,9 @@ produce the same bits everywhere pins its arithmetic with the `DF_DET_FP_*` prag
       owner's editor on the other checkout, fixed in `ed36015`; the second, on `ed36015`, was green:
       `ci-local: OK` in 54 s, gate 155 passed, smoke with one client. `WIN_RUNNER_READY` = `true` set
       by the owner. Branch protection not requested.)*
-- [ ] The port of `int-merge.sh` onto `deepfield.ps1` is the last WS-15 script port (`pr-check`, `smoke`
-      and `ci-local` already are deepfield commands).
+- [x] The port of `int-merge.sh` onto `deepfield.ps1` is the last WS-15 script port (`pr-check`, `smoke`
+      and `ci-local` already are deepfield commands). *(2026-09-26: `deepfield int-merge <branch> -Ws NN`;
+      tested on scratch branches, then landed through itself. WS-15 log.)*
 
 ## 6. When the list is green
 
