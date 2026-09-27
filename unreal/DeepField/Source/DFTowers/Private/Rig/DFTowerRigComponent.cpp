@@ -3,7 +3,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "GameFramework/Actor.h"
-#include "Materials/MaterialInstanceDynamic.h"
+#include "Look/DFShapeLook.h"
 #include "Rig/DFTowerDefinition.h"
 #include "Towers/DFTowerMath.h"
 
@@ -117,10 +117,7 @@ UStaticMeshComponent* UDFTowerRigComponent::MakeShapePart(FName Name, UStaticMes
 	Part->RegisterComponent();
 	if (Mesh)
 	{
-		if (UMaterialInstanceDynamic* Mid = Part->CreateDynamicMaterialInstance(0))
-		{
-			Mid->SetVectorParameterValue(TEXT("Color"), Colour);
-		}
+		DFShapeLook::Tint(Part, Colour);
 	}
 	return Part;
 }

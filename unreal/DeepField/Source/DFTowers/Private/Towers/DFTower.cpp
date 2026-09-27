@@ -15,7 +15,7 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "Messages/DFMessageBus.h"
-#include "Materials/MaterialInstanceDynamic.h"
+#include "Look/DFShapeLook.h"
 #include "Messages/DFMessages.h"
 #include "Net/UnrealNetwork.h"
 #include "Status/DFStatusComponent.h"
@@ -317,10 +317,7 @@ void ADFTower::DrawRounds()
 		RoundsView->SetupAttachment(RootComponent);
 		RoundsView->RegisterComponent();
 		RoundsView->SetWorldTransform(FTransform::Identity);
-		if (UMaterialInstanceDynamic* Mid = RoundsView->CreateDynamicMaterialInstance(0))
-		{
-			Mid->SetVectorParameterValue(TEXT("Color"), FLinearColor(1.f, 0.62f, 0.2f));   // hazard amber
-		}
+		DFShapeLook::Tint(RoundsView, FLinearColor(1.f, 0.62f, 0.2f));   // hazard amber
 	}
 	// Rebuild the few instances every frame: rounds live a fraction of a second and there are only a handful.
 	constexpr float RoundScale = 0.14f;   // a 14 cm ball on a 1 m sphere

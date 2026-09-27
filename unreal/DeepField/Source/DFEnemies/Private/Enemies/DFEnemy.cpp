@@ -11,6 +11,7 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Look/DFShapeLook.h"
 #include "Materials/MaterialInterface.h"
 #include "Messages/DFMessageBus.h"
 #include "Messages/DFMessages.h"
@@ -334,21 +335,18 @@ void ADFEnemy::ApplyPlaceholderLook()
 	// One stable colour per enemy id, so a mixed wave reads at a glance.
 	const uint32 Hash = GetTypeHash(Entry.DefId.ToString());
 	BaseColour = FLinearColor::MakeFromHSV8(static_cast<uint8>(Hash & 0xFF), 200, 230);
-	if (!BodyMaterial)
-	{
-		BodyMaterial = Body->CreateDynamicMaterialInstance(0);
-	}
+	bTinted = true;
 	RefreshHealthTint();
 }
 
 void ADFEnemy::RefreshHealthTint()
 {
-	if (!BodyMaterial)
+	if (!bTinted || !Body)
 	{
 		return;
 	}
 	// A hurt body reads as hurt: toward the wound colour and darker as health falls.
 	const float Hurt = 1.f - GetHealthFraction();
 	const FLinearColor Colour = FMath::Lerp(BaseColour, DFEnemyLook::Wound, Hurt * DFEnemyLook::WoundWeight) * FMath::Lerp(1.f, 0.45f, Hurt);
-	BodyMaterial->SetVectorParameterValue(TEXT("Color"), Colour);
+	DFShapeLook::Tint(Body, Colour);
 }

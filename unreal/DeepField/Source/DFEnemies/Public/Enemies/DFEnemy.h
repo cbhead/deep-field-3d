@@ -129,8 +129,8 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "DF|Enemy")
 	TObjectPtr<UDFStatusComponent> Status;
 
-	UPROPERTY(Transient)
-	TObjectPtr<UMaterialInstanceDynamic> BodyMaterial;
+	/** The id's colour is known (ApplyPlaceholderLook ran); health tints from it. */
+	bool bTinted = false;
 
 	FLinearColor BaseColour = FLinearColor::White;
 

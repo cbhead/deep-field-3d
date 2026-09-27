@@ -15,7 +15,8 @@ class ACameraActor;
  *   first, a Nova every NovaEvery-th build and a Lance otherwise; a refusal (not enough money) just
  *   waits for bounty.
  * - **Films**: the first local player's view moves to a camera that orbits the lane's bounds (pads,
- *   portal, core) from above, slowly, so the wave, the towers and the HUD are all on screen.
+ *   portal, core) from above, slowly; its focus leans toward the live enemies (UDFTargetRegistry), so
+ *   the fight stays in frame with the towers and the HUD.
  *
  * Pair it with `-benchmark -fps=20 -dumpmovie` to write every frame to Saved/Screenshots at a fixed
  * step (unreal/Build/record-demo.ps1 does that and encodes the video).
@@ -38,6 +39,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "DF|Demo") int32 NovaEvery = 3;
 	UPROPERTY(EditAnywhere, Category = "DF|Demo") float OrbitDegreesPerSecond = 3.f;
 	UPROPERTY(EditAnywhere, Category = "DF|Demo") float CameraFieldOfView = 60.f;
+	/** How far the focus leans from the map's centre toward the enemies' centroid (0..1), and how fast. */
+	UPROPERTY(EditAnywhere, Category = "DF|Demo") float FollowWeight = 0.6f;
+	UPROPERTY(EditAnywhere, Category = "DF|Demo") float FollowSpeed = 0.8f;
 
 private:
 	void TryBuild();
@@ -50,6 +54,7 @@ private:
 	TArray<FName> BuildOrder;
 	int32 Builds = 0;
 	bool bSurveyed = false;
+	FVector MapCentre = FVector::ZeroVector;
 	FVector Focus = FVector::ZeroVector;
 	float OrbitRadiusCm = 4000.f;
 	float OrbitHeightCm = 2500.f;

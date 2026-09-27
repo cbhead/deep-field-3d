@@ -2,6 +2,7 @@
 
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
+#include "Combat/DFTargetable.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "GameFramework/PlayerController.h"
@@ -92,10 +93,12 @@ bool ADFDemoDirector::Survey()
 	{
 		BuildOrder.Add(Socket->SocketId);
 	}
-	Focus = Bounds.GetCenter();
+	MapCentre = Bounds.GetCenter();
+	Focus = MapCentre;
 	const FVector Extent = Bounds.GetExtent();
-	OrbitRadiusCm = FMath::Max(2500.f, static_cast<float>(FMath::Max(Extent.X, Extent.Y)) * 1.35f);
-	OrbitHeightCm = OrbitRadiusCm * 0.75f;
+	// Close enough that a 0.8 m body reads, far enough that the lane's ends stay in frame.
+	OrbitRadiusCm = FMath::Clamp(static_cast<float>(FMath::Max(Extent.X, Extent.Y)) * 0.9f, 1800.f, 3600.f);
+	OrbitHeightCm = OrbitRadiusCm * 0.6f;
 	UE_LOG(LogDFDemo, Display, TEXT("demo: %d pads, orbit %.0f m around %s"), BuildOrder.Num(), OrbitRadiusCm / 100.f, *Focus.ToCompactString());
 	return true;
 }
@@ -157,6 +160,27 @@ void ADFDemoDirector::Tick(float DeltaSeconds)
 		}
 	}
 	OrbitDeg = FMath::Fmod(OrbitDeg + OrbitDegreesPerSecond * DeltaSeconds, 360.f);
+	// Lean toward the fight: the centroid of every live body, smoothed so a death does not jerk the shot.
+	FVector Desired = MapCentre;
+	if (UDFTargetRegistry* Registry = UDFTargetRegistry::Get(this))
+	{
+		FVector Sum = FVector::ZeroVector;
+		int32 Count = 0;
+		for (AActor* Body : Registry->GetTargets())
+		{
+			const IDFTargetable* Target = Cast<IDFTargetable>(Body);
+			if (Target && !Target->IsTargetDead())
+			{
+				Sum += Target->GetTargetPosition();
+				++Count;
+			}
+		}
+		if (Count > 0)
+		{
+			Desired = FMath::Lerp(MapCentre, Sum / Count, FollowWeight);
+		}
+	}
+	Focus = FMath::VInterpTo(Focus, Desired, DeltaSeconds, FollowSpeed);
 	PlaceCamera();
 	BuildClock += DeltaSeconds;
 	if (BuildClock >= BuildIntervalSeconds)
