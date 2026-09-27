@@ -4,6 +4,8 @@
 #include "Components/StaticMeshComponent.h"
 #include "DFGameplayTags.h"
 #include "DFWorldCollision.h"
+#include "Engine/World.h"
+#include "TimerManager.h"
 #include "World/DFWorldLook.h"
 
 ADFSocket::ADFSocket()
@@ -29,14 +31,14 @@ ADFSocket::ADFSocket()
 	Plate = DFWorldLook::CreatePart(*this, RootComponent, TEXT("Plate"), EShape::Cylinder,
 		FVector(0.f, 0.f, PadHalfHeightCm), FVector(PlateRadiusCm * 2.f, PlateRadiusCm * 2.f, PadHalfHeightCm * 2.f), EComponentMobility::Static);
 	FlushPlate = DFWorldLook::CreatePart(*this, RootComponent, TEXT("FlushPlate"), EShape::Cylinder,
-		FVector(0.f, 0.f, FlushPlateHeightCm * 0.5f), FVector(PlateRadiusCm * 2.f, PlateRadiusCm * 2.f, FlushPlateHeightCm), EComponentMobility::Static);
+		FVector(0.f, 0.f, FlushPlateHeightCm * 0.5f), FVector(PlateRadiusCm * 2.f, PlateRadiusCm * 2.f, FlushPlateHeightCm), EComponentMobility::Movable);
 	FlushPlate->SetVisibility(false);
 	FlushPlate->SetCastShadow(false);
 	// The ring is a thin, wider disc under the plate: only its rim shows, as an outline on the ground
 	// (over a flush plate the whole disc shows, which reads as the pad lighting up).
 	const float RingDiameterCm = (PlateRadiusCm + AimRingMarginCm) * 2.f;
 	AimRing = DFWorldLook::CreatePart(*this, RootComponent, TEXT("AimRing"), EShape::Cylinder,
-		FVector(0.f, 0.f, AimRingHeightCm * 0.5f), FVector(RingDiameterCm, RingDiameterCm, AimRingHeightCm), EComponentMobility::Static);
+		FVector(0.f, 0.f, AimRingHeightCm * 0.5f), FVector(RingDiameterCm, RingDiameterCm, AimRingHeightCm), EComponentMobility::Movable);
 	AimRing->SetVisibility(false);
 	AimRing->SetCastShadow(false);
 }
@@ -52,6 +54,38 @@ void ADFSocket::BeginPlay()
 	Super::BeginPlay();
 	// A level loaded into a game is not constructed again, and the tint is transient (never saved).
 	RefreshLook();
+	if (GetWorld() && GetWorld()->IsGameWorld() && LiesInLane(Tag) && !AlignToLaneSurface())
+	{
+		// The terrain may stream in after the gameplay level: try once more when it has.
+		GetWorldTimerManager().SetTimer(AlignRetry, FTimerDelegate::CreateWeakLambda(this, [this]() { AlignToLaneSurface(); }), 1.f, false);
+	}
+}
+
+bool ADFSocket::AlignToLaneSurface()
+{
+	UWorld* World = GetWorld();
+	if (!World || !LiesInLane(Tag) || !FlushPlate || !AimRing)
+	{
+		return false;
+	}
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(DFPadLaneSurface), /*bTraceComplex*/ true, this);
+	FHitResult Hit;
+	const FVector Origin = GetActorLocation();
+	if (!World->LineTraceSingleByChannel(Hit, Origin + FVector(0.f, 0.f, 300.f), Origin - FVector(0.f, 0.f, 300.f), DFCollision::LaneSurface, Params)
+		|| Hit.ImpactNormal.Z < 0.5)   // steeper than 60 degrees is not a lane: leave the plate level
+	{
+		return false;
+	}
+	// Up along the surface, the pad's own facing kept as far as the slope allows.
+	const FQuat Tilt = FQuat::FindBetweenNormals(FVector::UpVector, Hit.ImpactNormal);
+	const FQuat Facing = GetActorQuat();
+	const FVector Surface = Hit.ImpactPoint;
+	for (UStaticMeshComponent* Part : { FlushPlate.Get(), AimRing.Get() })
+	{
+		const float HalfHeightCm = Part == FlushPlate ? FlushPlateHeightCm * 0.5f : AimRingHeightCm * 0.5f;
+		Part->SetWorldLocationAndRotation(Surface + Hit.ImpactNormal * HalfHeightCm, Tilt * Facing);
+	}
+	return true;
 }
 
 FLinearColor ADFSocket::PlateColourFor(EDFSocketTag InTag)

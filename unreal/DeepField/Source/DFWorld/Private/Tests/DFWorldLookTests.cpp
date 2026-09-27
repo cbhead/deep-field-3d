@@ -391,7 +391,11 @@ bool FDFWorldSocketLookTest::RunTest(const FString& Parameters)
 	}
 	TestTrue(TEXT("a trap pad shows only the flush plate"), TrapFlush->IsVisible() && !TrapPlate->IsVisible());
 	TestTrue(TEXT("a trap pad is hazard amber"), TintedAs(TrapFlush, DFWorldLook::PadTrap()));
-	TestTrue(FString::Printf(TEXT("the flush plate is at most 3 cm high (%.1f)"), TopOf(TrapFlush) - Trap->GetActorLocation().Z), TopOf(TrapFlush) - Trap->GetActorLocation().Z <= 3.0);
+	const double FlushTop = TopOf(TrapFlush) - Trap->GetActorLocation().Z;
+	// Low enough to walk over, high enough to show above the lane strip (2 cm thick, lifted 1 cm).
+	TestTrue(FString::Printf(TEXT("the flush plate is 3.5-5 cm high (%.1f)"), FlushTop), FlushTop > 3.5 && FlushTop <= 5.0);
+	TestTrue(TEXT("the ring's top is above a flush plate's (the whole in-lane pad lights)"), TopOf(PartNamed(Trap, TEXT("AimRing"))) > TopOf(TrapFlush));
+	TestFalse(TEXT("no lane surface under the pad: it stays level"), Trap->AlignToLaneSurface());
 	UMaterialInterface* Before = TrapFlush->GetMaterial(0);
 	Trap->RefreshLook();
 	TestTrue(TEXT("a second tint reuses the dynamic instance"), TrapFlush->GetMaterial(0) == Before);
@@ -402,6 +406,55 @@ bool FDFWorldSocketLookTest::RunTest(const FString& Parameters)
 	Barricade->RefreshLook();
 	UStaticMeshComponent* BarricadeFlush = PartNamed(Barricade, TEXT("FlushPlate"));
 	TestTrue(TEXT("a barricade pad is flush concrete"), BarricadeFlush && BarricadeFlush->IsVisible() && TintedAs(BarricadeFlush, DFWorldLook::PadBarricade()));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFWorldLanePadSlopeTest, "DF.Unit.World.LanePadFollowsSlope", DFWorldLookTest::Flags)
+bool FDFWorldLanePadSlopeTest::RunTest(const FString& Parameters)
+{
+	// Foundry's trap pads sit on 13-25 % climbs: a level plate there stands out of the lane on its
+	// downhill side and the wave walks through it. An in-lane pad lies along the DF_LaneSurface under it.
+	using namespace DFWorldLookTest;
+	FDFTestWorld World;
+	const FVector At(4000.0, -3000.0, 0.0);
+	const FRotator Grade(14.f, 0.f, 0.f);   // a 25 % climb along +X
+	AActor* Ramp = World.SpawnActor<AActor>(FTransform(Grade, At));
+	UBoxComponent* Surface = NewObject<UBoxComponent>(Ramp, TEXT("Surface"));
+	Ramp->SetRootComponent(Surface);
+	Surface->SetBoxExtent(FVector(600.0, 600.0, 10.0));
+	Surface->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	Surface->SetCollisionResponseToAllChannels(ECR_Ignore);
+	Surface->SetCollisionResponseToChannel(DFCollision::LaneSurface, ECR_Block);
+	Surface->RegisterComponent();
+	Surface->SetWorldTransform(FTransform(Grade, At - Grade.RotateVector(FVector(0.0, 0.0, 10.0))));   // top face through At
+
+	ADFSocket* Trap = World.SpawnActor<ADFSocket>(FTransform(At));
+	if (!TestNotNull(TEXT("trap socket"), Trap))
+	{
+		return false;
+	}
+	Trap->Tag = EDFSocketTag::Trap;
+	Trap->RefreshLook();
+	TestTrue(TEXT("a lane surface under the pad is found"), Trap->AlignToLaneSurface());
+	const FVector Normal = Grade.RotateVector(FVector::UpVector);
+	for (const TCHAR* Name : { TEXT("FlushPlate"), TEXT("AimRing") })
+	{
+		UStaticMeshComponent* Part = PartNamed(Trap, Name);
+		if (!TestNotNull(Name, Part))
+		{
+			return false;
+		}
+		const double Dot = FVector::DotProduct(Part->GetUpVector(), Normal);
+		TestTrue(FString::Printf(TEXT("%s lies along the 25 %% grade (up . normal = %.4f)"), Name, Dot), Dot > 0.9999);
+		// Its centre sits just above the surface: nothing of it stands out on the downhill side.
+		const double Above = FVector::DotProduct(Part->GetComponentLocation() - At, Normal);
+		TestTrue(FString::Printf(TEXT("%s sits on the surface (%.1f cm above it)"), Name, Above), Above > 0.0 && Above < 3.0);
+		ExpectInert(*this, World.GetWorld(), Part, FString::Printf(TEXT("sloped %s"), Name));
+	}
+
+	// A ground pad is never tilted: a tower stands on it, and the importer levels its pad.
+	ADFSocket* Ground = World.SpawnActor<ADFSocket>(FTransform(At + FVector(200.0, 0.0, 50.0)));
+	TestFalse(TEXT("a ground pad does not follow the lane"), Ground && Ground->AlignToLaneSurface());
 	return true;
 }
 

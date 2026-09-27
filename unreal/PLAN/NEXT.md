@@ -37,8 +37,8 @@ records it. A packaged Development build is in `C:\Users\Cbhea\packages\playable
 _**Hazard, new:** Windows Smart App Control switched itself from evaluation to enforcement on the box
 at 03:59 local on 2026-09-27 and has since refused some freshly built project DLLs (CodeIntegrity
 event 3077, `GetLastError=4551` when the editor loads a module); `int-verify`'s DFGameplay/DFWorld
-builds were refused. Whether to turn it off is the owner's call (Windows Security > App & browser
-control); until then a landing can use `-VerifyDir` on a worktree whose DLLs load. The sections below
+builds were refused. The owner turned it off the same afternoon (the policy state reads 0); if a gate ever fails with
+"the editor exited without a test report", grep the test log for 4551 first. The sections below
 predate all of this._
 
 ## The shape of the thing

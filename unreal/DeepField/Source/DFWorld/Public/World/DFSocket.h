@@ -82,13 +82,24 @@ public:
 
 	/** The plate stands on the pad box: its top is the pad top, where a tower stands. */
 	static constexpr float PlateRadiusCm = PadRadiusCm;
-	/** A Trap or Barricade pad's plate: flush, so a body walking the lane crosses it. */
-	static constexpr float FlushPlateHeightCm = 2.f;
+	/** A Trap or Barricade pad's plate: flush, so a body walking the lane crosses it. Its top clears
+	 *  the lane strip (ADFLaneGraphInfo: 2 cm thick, lifted 1 cm), which would otherwise paint over it. */
+	static constexpr float FlushPlateHeightCm = 4.f;
 	/** Trap and Barricade pads lie in the lane (their plate is flush). */
 	static bool LiesInLane(EDFSocketTag InTag) { return InTag == EDFSocketTag::Trap || InTag == EDFSocketTag::Barricade; }
 	/** The ring shows this far outside the plate. */
 	static constexpr float AimRingMarginCm = 18.f;
-	static constexpr float AimRingHeightCm = 4.f;
+	/** Above a flush plate's top (so over an in-lane pad the whole disc lights), below a full plate's. */
+	static constexpr float AimRingHeightCm = 5.f;
+
+	/**
+	 * An in-lane pad lies on the lane, and lanes climb (Foundry's trap pads sit on 13-25 % grades): tilt
+	 * the flush plate and the ring to the lane surface under the pad (a DF_LaneSurface trace, the channel
+	 * lane projection uses), so neither stands out of a slope for the wave to walk through. Game worlds
+	 * call it at BeginPlay; a no-op for pads that are not in the lane or with no surface under them.
+	 * Returns whether it found a surface.
+	 */
+	bool AlignToLaneSurface();
 
 protected:
 	virtual void BeginPlay() override;
@@ -101,8 +112,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "DF|Look")
 	TObjectPtr<UStaticMeshComponent> Plate;
 
-	/** Shown instead of Plate on a pad that lies in the lane. Two parts, toggled by visibility, because
-	 *  a Static component may not be moved at play and a placed pad's Tag is only known then. */
+	/** Shown instead of Plate on a pad that lies in the lane (toggled by visibility: Plate is Static and a
+	 *  placed pad's Tag is only known at play). Movable, like AimRing, so it can lie along a sloped lane. */
 	UPROPERTY(VisibleAnywhere, Category = "DF|Look")
 	TObjectPtr<UStaticMeshComponent> FlushPlate;
 
@@ -110,4 +121,5 @@ protected:
 	TObjectPtr<UStaticMeshComponent> AimRing;
 
 	EDFPadHighlight AimHighlight = EDFPadHighlight::None;
+	FTimerHandle AlignRetry;
 };
