@@ -2,7 +2,9 @@
 #include "Components/BoxComponent.h"
 #include "DFWorldCollision.h"
 #include "Content/DFContentSubsystem.h"
+#include "DFGameplayTags.h"
 #include "DFTowerTestDummy.h"
+#include "Messages/DFMessages.h"
 #include "Misc/AutomationTest.h"
 #include "Testing/DFTestUtils.h"
 #include "Towers/DFTargetingComponent.h"
@@ -211,6 +213,63 @@ bool FDFTowerFireLoopTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("and is gone"), Tower->GetShotsInFlight(), 0);
 		TestEqual(TEXT("and nothing dead is fired at"), Fired, 2);
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFTowerTeslaHopsTest, "DF.Unit.Tower.TeslaAnnouncesEveryHop", DFTowerActorTest::Flags)
+bool FDFTowerTeslaHopsTest::RunTest(const FString& Parameters)
+{
+	using namespace DFTowerActorTest;
+	// DFVfx draws a Tesla chain from the messages alone, so each hop is a TowerFired of its own: the first
+	// from the muzzle, the hop from the aim point of the body it jumps off. The arc (towers.json) chains
+	// once, 6 m. OnFired stays once per discharge.
+	FDFTestWorld World;
+	if (!ContentReady(*this, World))
+	{
+		return false;
+	}
+	ADFTower* Tower = World.SpawnActor<ADFTower>();
+	if (!TestNotNull(TEXT("tower"), Tower) || !TestTrue(TEXT("arc from the content tables"), Tower->InitializeTower(TEXT("arc"), TEXT("g1"), 1, 90)))
+	{
+		return false;
+	}
+	ADFTowerTestDummy* First = Spawn(World, 1, 5.f, 10.f);    // the least left to walk: struck first
+	ADFTowerTestDummy* Second = Spawn(World, 2, 8.f, 20.f);   // 3 m from it: the hop
+	ADFTowerTestDummy* Far = Spawn(World, 3, 30.f, 30.f);     // out of the tower's range and 22 m from anything
+	if (!TestNotNull(TEXT("dummies"), First) || !TestNotNull(TEXT("dummies"), Second) || !TestNotNull(TEXT("dummies"), Far))
+	{
+		return false;
+	}
+	int32 Fired = 0;
+	Tower->OnFired.AddLambda([&Fired](ADFTower*, AActor*) { ++Fired; });
+	FDFMessageCapture Shots(World.MessageBus(), DFTags::Message_TowerFired);
+
+	Tower->StepTower(1.f / 30.f);
+	TestEqual(TEXT("one discharge"), Fired, 1);
+	if (!TestEqual(TEXT("two TowerFired: the strike and the one hop"), Shots.Num(), 2))
+	{
+		return false;
+	}
+	const FDFMsg_Shot* Strike = Shots.PayloadAt<FDFMsg_Shot>(0);
+	const FDFMsg_Shot* Hop = Shots.PayloadAt<FDFMsg_Shot>(1);
+	if (!TestNotNull(TEXT("strike payload"), Strike) || !TestNotNull(TEXT("hop payload"), Hop))
+	{
+		return false;
+	}
+	TestEqual(TEXT("the strike hits the first body"), Strike->TargetId, 1);
+	TestTrue(TEXT("from the muzzle"), Strike->Origin.Equals(FVector(0.f, 0.f, DFTowerMath::ShotMuzzleHeightCm), 1e-3));
+	TestTrue(TEXT("at the first body"), Strike->Impact.Equals(First->GetActorLocation(), 1e-3));
+	TestEqual(TEXT("the hop reaches the second body"), Hop->TargetId, 2);
+	TestTrue(TEXT("from the first body's aim point"), Hop->Origin.Equals(First->GetAimPoint(), 1e-3));
+	TestTrue(TEXT("at the second body"), Hop->Impact.Equals(Second->GetActorLocation(), 1e-3));
+	TestTrue(TEXT("the same tower and def"), Hop->StructureId == Tower->GetStructureId() && Hop->DefId == FName(TEXT("arc")));
+
+	// Alone in range, nothing to jump to: the strike and no hop.
+	Second->bDead = true;
+	Shots.Reset();
+	Tower->StepTower(1.f);   // past the 1 / 1.2 s cooldown
+	TestEqual(TEXT("a second discharge"), Fired, 2);
+	TestEqual(TEXT("nothing within 6 m of the struck body: one TowerFired"), Shots.Num(), 1);
 	return true;
 }
 

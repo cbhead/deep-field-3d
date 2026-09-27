@@ -9,13 +9,10 @@
 #include "DFGameplayTags.h"
 #include "Damage/DFDamageContext.h"
 #include "Effects/DFGE_Damage.h"
-#include "Components/InstancedStaticMeshComponent.h"
 #include "Components/SceneComponent.h"
 #include "Engine/AssetManager.h"
-#include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "Messages/DFMessageBus.h"
-#include "Look/DFShapeLook.h"
 #include "Messages/DFMessages.h"
 #include "Net/UnrealNetwork.h"
 #include "Status/DFStatusComponent.h"
@@ -288,43 +285,6 @@ void ADFTower::Tick(float DeltaSeconds)
 	if (GetNetMode() != NM_DedicatedServer)
 	{
 		TickRig(DeltaSeconds);
-		if (HasAuthority())
-		{
-			DrawRounds();
-		}
-	}
-}
-
-void ADFTower::DrawRounds()
-{
-	if (!RoundsView)
-	{
-		if (Shots.Num() == 0)
-		{
-			return;
-		}
-		UStaticMesh* Sphere = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Sphere.Sphere"));
-		if (!Sphere)
-		{
-			return;
-		}
-		RoundsView = NewObject<UInstancedStaticMeshComponent>(this, TEXT("RoundsView"));
-		RoundsView->SetStaticMesh(Sphere);
-		RoundsView->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		RoundsView->SetCastShadow(false);
-		RoundsView->SetUsingAbsoluteLocation(true);
-		RoundsView->SetUsingAbsoluteRotation(true);
-		RoundsView->SetupAttachment(RootComponent);
-		RoundsView->RegisterComponent();
-		RoundsView->SetWorldTransform(FTransform::Identity);
-		DFShapeLook::Glow(RoundsView, FLinearColor(4.f, 2.2f, 0.6f));   // hazard amber, bright enough to read as a round
-	}
-	// Rebuild the few instances every frame: rounds live a fraction of a second and there are only a handful.
-	constexpr float RoundScale = 0.3f;   // a 30 cm glowing ball on a 1 m sphere: readable from the demo's orbit
-	RoundsView->ClearInstances();
-	for (const FShotInFlight& Shot : Shots)
-	{
-		RoundsView->AddInstance(FTransform(FRotator::ZeroRotator, Shot.Shot.PositionCm, FVector(RoundScale)), /*bWorldSpace*/ true);
 	}
 }
 
@@ -544,6 +504,13 @@ void ADFTower::FireTesla(const FDFTowerRow& Row, AActor* First)
 		}
 		Damage *= Row.ChainFalloff;
 		Hit.Add(Candidates[Next].Id);
+		// Each hop is announced like the first strike, from the body it jumps off, so every machine can draw
+		// the chain (Step.cs emits TowerFired for the strike only: its one view saw the whole world). Damage
+		// is still Step.cs's order; the message changes nothing. A body the previous hit killed is still here
+		// (it leaves next frame), so its aim point is where the arc left it; the gathered position is the fallback.
+		const IDFTargetable* From = AsTargetable(Bodies[Struck]);
+		const FVector Origin = From ? From->GetAimPoint() : Candidates[Struck].PositionCm + FVector(0.f, 0.f, DFTowerMath::ShotAimHeightCm);
+		AnnounceFrom(DFTags::Message_TowerFired, Origin, Bodies[Next], Bodies[Next]->GetActorLocation());
 		DealDamage(Row, Bodies[Next], Damage, DFTags::Damage_Type_Shock);
 		Struck = Next;
 	}
@@ -625,6 +592,11 @@ void ADFTower::DealDamage(const FDFTowerRow& Row, AActor* Target, float Amount, 
 
 void ADFTower::Announce(const FGameplayTag& Tag, AActor* Target, const FVector& Impact) const
 {
+	AnnounceFrom(Tag, GetActorLocation() + FVector(0.f, 0.f, DFTowerMath::ShotMuzzleHeightCm), Target, Impact);
+}
+
+void ADFTower::AnnounceFrom(const FGameplayTag& Tag, const FVector& Origin, AActor* Target, const FVector& Impact) const
+{
 	UDFMessageBus* Bus = UDFMessageBus::Get(this);
 	if (!Bus)
 	{
@@ -634,7 +606,7 @@ void ADFTower::Announce(const FGameplayTag& Tag, AActor* Target, const FVector& 
 	Message.StructureId = StructureId;
 	Message.TargetId = AsTargetable(Target) ? AsTargetable(Target)->GetTargetId() : 0;
 	Message.DefId = DefId;
-	Message.Origin = GetActorLocation() + FVector(0.f, 0.f, DFTowerMath::ShotMuzzleHeightCm);
+	Message.Origin = Origin;
 	Message.Impact = Impact;
 	if (const FDFTowerRow* Row = GetRow())
 	{

@@ -226,7 +226,8 @@
       "type": "Runtime",
       "df": [
         "DFCore",
-        "DFGameplay"
+        "DFGameplay",
+        "DFTowers"
       ],
       "public": [
         "Core",

@@ -9,7 +9,6 @@
 
 class UDFTargetingComponent;
 class UDFTowerRigComponent;
-class UInstancedStaticMeshComponent;
 struct FDFConditionRow;
 struct FDFTowerRow;
 
@@ -24,6 +23,8 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FDFOnTowerShot, class ADFTower* /*Tower*/, 
  *   on a new target, then fire a homing round (DFTowerMath::FDFTowerShot) that lands on the target
  *   (or splashes around it) or vanishes if the target dies first.
  * - **Tesla** strikes at once and chains to the nearest un-struck bodies, with damage falling off per hop.
+ *   Every strike is announced (DF.Message.TowerFired): the first from the muzzle, each hop from the aim
+ *   point of the body it jumps off, so every machine can draw the whole chain.
  * - **Beam** deals damage every frame, ramping while it holds one target; switching costs the ramp.
  * - **Aura** applies its statuses to everything in range on its target layers, every frame.
  * - **Barricade / Support** have no weapon (a barricade works by existing; Support is WS-16's).
@@ -40,6 +41,8 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FDFOnTowerShot, class ADFTower* /*Tower*/, 
  *
  * The C9 rig (UDFTowerRigComponent) is cosmetic and runs on every machine that draws: it turns the
  * turret toward the replicated CurrentTarget and shows the stage modules for the replicated path levels.
+ * The shots themselves are DFVfx's to draw, on every machine, from the team messages (TowerFired,
+ * ProjectileLanded, BeamHeld) and a Beam's replicated CurrentTarget and Heat; the tower draws none.
  */
 UCLASS()
 class DFTOWERS_API ADFTower : public AActor, public IDFStructure
@@ -103,7 +106,8 @@ public:
 	float GetDamageDealt() const { return DamageDealt; }
 	int32 GetKills() const { return Kills; }
 
-	/** Host: a weapon discharged (a round launched, a tesla strike, a beam acquiring a new target). */
+	/** Host: a weapon discharged (a round launched, a tesla strike, a beam acquiring a new target). Once
+	 *  per discharge: a Tesla chain's hops are messages (TowerFired), not further discharges. */
 	FDFOnTowerShot OnFired;
 	/** Host: a round arrived (after its damage and statuses were applied). */
 	FDFOnTowerShot OnShotLanded;
@@ -118,7 +122,10 @@ private:
 	void FireTesla(const FDFTowerRow& Row, AActor* First);
 	/** Step.cs Damage() as a tower hit: UDFGE_Damage on the body's ASC, then Applies. */
 	void DealDamage(const FDFTowerRow& Row, AActor* Body, float Amount, const FGameplayTag& DamageType);
+	/** A team message (FDFMsg_Shot) about Target, from the muzzle (1.5 m up, the sim's) to Impact. */
 	void Announce(const FGameplayTag& Tag, AActor* Target, const FVector& Impact) const;
+	/** As Announce, from Origin: a Tesla hop leaves the body it jumps off, not the tower. */
+	void AnnounceFrom(const FGameplayTag& Tag, const FVector& Origin, AActor* Target, const FVector& Impact) const;
 	void SetCurrentTarget(AActor* Target);
 	/** A barricade's intact / damaged / broken, announced when it changes (DF.Message.BarricadeState). */
 	void AnnounceBarricadeState();
@@ -131,13 +138,9 @@ private:
 	void ConfigureRig();
 	/** Every machine that draws: turn toward the replicated target, or idle. */
 	void TickRig(float DeltaSeconds);
-	/** A listen host that draws: one small sphere per round in flight, until WS-14's projectile VFX
-	 *  (which will hear DF.Message.TowerFired / ProjectileLanded on every machine). */
-	void DrawRounds();
 
 	UPROPERTY(VisibleAnywhere, Category = "DF|Tower") TObjectPtr<UDFTargetingComponent> Targeting;
 	UPROPERTY(VisibleAnywhere, Category = "DF|Tower") TObjectPtr<UDFTowerRigComponent> Rig;
-	UPROPERTY(Transient) TObjectPtr<UInstancedStaticMeshComponent> RoundsView;
 
 	UPROPERTY(ReplicatedUsing = OnRep_DefId) FName DefId;
 	UPROPERTY(Replicated) FName SocketId;

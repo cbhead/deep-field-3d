@@ -48,6 +48,13 @@ namespace DFTowerRig
 	 */
 	DFTOWERS_API FDFTowerRigLimits ManifestLimitsFor(FName TowerId);
 
+	/**
+	 * The basic-shapes placeholder's energy colour for TowerId (its barrel, or its turning block): one
+	 * stable, bright hue per tower id, so two kinds side by side read apart. DFVfx's placeholder combat
+	 * cues draw a tower's shots in the same colour, so a round can be traced back to the tower that fired.
+	 */
+	DFTOWERS_API FLinearColor PlaceholderEnergy(FName TowerId);
+
 	/** Yaw and pitch (degrees, in the tower's frame) that point from PivotCm at TargetCm, for a tower
 	 *  whose actor yaw is TowerYawDeg. Yaw in (-180, 180]. X = yaw, Y = pitch. */
 	DFTOWERS_API FVector2D DesiredAngles(const FVector& PivotCm, float TowerYawDeg, const FVector& TargetCm);

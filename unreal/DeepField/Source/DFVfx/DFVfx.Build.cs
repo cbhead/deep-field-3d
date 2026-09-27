@@ -12,6 +12,7 @@ public class DFVfx : ModuleRules
 		PublicDependencyModuleNames.AddRange(new string[] {
 			"DFCore",
 			"DFGameplay",
+			"DFTowers",
 			"Core",
 			"CoreUObject",
 			"Engine",

@@ -130,9 +130,8 @@ void UDFTowerRigComponent::MakePlaceholderParts(FName TowerId)
 	{
 		return;
 	}
-	// One stable energy colour per tower id, so two kinds side by side read apart.
-	const uint32 Hash = GetTypeHash(TowerId.ToString());
-	const FLinearColor Energy = FLinearColor::MakeFromHSV8(static_cast<uint8>(Hash & 0xFF), 190, 255);
+	// One stable energy colour per tower id, so two kinds side by side read apart (and DFVfx's cues match it).
+	const FLinearColor Energy = DFTowerRig::PlaceholderEnergy(TowerId);
 
 	// Engine basic shapes are 1 m with the pivot at their centre.
 	const float FootScale = PlaceholderFootWidthCm / 100.f;

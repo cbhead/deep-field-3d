@@ -39,6 +39,12 @@ namespace DFTowerRig
 		return FDFTowerRigLimits();
 	}
 
+	FLinearColor PlaceholderEnergy(FName TowerId)
+	{
+		const uint32 Hash = GetTypeHash(TowerId.ToString());
+		return FLinearColor::MakeFromHSV8(static_cast<uint8>(Hash & 0xFF), 190, 255);
+	}
+
 	FVector2D DesiredAngles(const FVector& PivotCm, float TowerYawDeg, const FVector& TargetCm)
 	{
 		const FVector To = TargetCm - PivotCm;
