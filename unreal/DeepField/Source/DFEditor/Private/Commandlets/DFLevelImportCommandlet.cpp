@@ -350,7 +350,22 @@ UWorld* UDFLevelImportCommandlet::LoadOrCreatePersistentLevel(const FString& Pac
 
 	FVector Start = Level.HeroSpawn;
 	ProjectToGround(World, Start);
-	APlayerStart* PlayerStart = World->SpawnActor<APlayerStart>(Start + FVector(0.f, 0.f, PlayerStartLiftCm), FRotator::ZeroRotator, SP);
+	// Face the build pads: a player who spawns looking at empty ground has to find the game first.
+	FRotator StartFacing = FRotator::ZeroRotator;
+	if (Level.Sockets.Num() > 0)
+	{
+		FVector Pads = FVector::ZeroVector;
+		for (const FDFLevelSocket& Socket : Level.Sockets)
+		{
+			Pads += Socket.Position;
+		}
+		const FVector ToPads = (Pads / Level.Sockets.Num() - Start).GetSafeNormal2D();
+		if (!ToPads.IsNearlyZero())
+		{
+			StartFacing = FRotator(0.f, static_cast<float>(ToPads.Rotation().Yaw), 0.f);
+		}
+	}
+	APlayerStart* PlayerStart = World->SpawnActor<APlayerStart>(Start + FVector(0.f, 0.f, PlayerStartLiftCm), StartFacing, SP);
 	PlayerStart->SetActorLabel(TEXT("PlayerStart"));
 
 	ADirectionalLight* Sun = World->SpawnActor<ADirectionalLight>(FVector(0.f, 0.f, 500.f), FRotator(-55.f, -30.f, 0.f), SP);
