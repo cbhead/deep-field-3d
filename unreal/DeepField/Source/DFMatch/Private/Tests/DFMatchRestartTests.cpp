@@ -1,9 +1,11 @@
 #include "DFGameMode.h"
 #include "DFMatchPhaseMachine.h"
 #include "DFMatchState.h"
+#include "DFTestHostGameMode.h"
 #include "Economy/DFEconomyStateComponent.h"
 #include "Engine/EngineBaseTypes.h"
 #include "Misc/AutomationTest.h"
+#include "Misc/ScopeExit.h"
 #include "Testing/DFTestUtils.h"
 #include "Waves/DFWaveDirector.h"
 #include "Waves/DFWavePlan.h"
@@ -13,8 +15,9 @@
 // DF.Unit.Match.* (play-again) — a finished match leads to a new one. The pure half drives
 // FDFMatchPhaseMachine's restart clock; the world half drives ADFMatchState by hand, as
 // DFMatchStateTests.cpp does, and listens on OnRestartRequested (the hook ADFGameMode binds to reload
-// the map), so nothing travels: a test world has no game mode to bind it. The URL half runs the
-// option through the engine's own FURL, as UEngine::Browse and the restart travel do.
+// the map), so nothing travels: a test world has no game mode to bind it (RestartLeadReadAgainAtStartPlay
+// spawns one, ADFTestHostGameMode, and unbinds it). The URL half runs the option through the engine's
+// own FURL, as UEngine::Browse and the restart travel do.
 
 namespace DFMatchRestartTest
 {
@@ -445,6 +448,83 @@ bool FDFMatchRestartLeadLateTest::RunTest(const FString& Parameters)
 	Standalone.Match->AdvanceMatch(4.f);
 	TestEqual(TEXT("the standalone one asks when the clock runs out"), Standalone.Requests, 1);
 	TestEqual(TEXT("the hosted one asked once"), Hosted.Requests, 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFMatchStartPlayLeadTest, "DF.Unit.Match.RestartLeadReadAgainAtStartPlay", DFMatchRestartTest::Flags)
+bool FDFMatchStartPlayLeadTest::RunTest(const FString& Parameters)
+{
+	using namespace DFMatchRestartTest;
+	// A PIE listen host, in PIE's order: InitGame with no net driver yet, the match state and InitGameState,
+	// then the listen, then StartPlay, which begins play (the match state's BeginPlay configures it again).
+	// The game mode is spawned deferred so InitGame comes before its PreInitializeComponents, as in
+	// InitializeActorsForPlay. What StartPlay does is ADFGameMode's; only the listen is the test host's.
+	FDFTestWorld World;
+	ON_SCOPE_EXIT
+	{
+		// StartPlay began play: end it before FDFTestWorld tears the world down (CleanupWorld warns otherwise).
+		if (UWorld* W = World.GetWorld(); W && W->HasBegunPlay())
+		{
+			W->EndPlay(EEndPlayReason::Quit);
+		}
+	};
+	FActorSpawnParameters Params;
+	Params.bDeferConstruction = true;
+	ADFTestHostGameMode* Mode = World.GetWorld()->SpawnActor<ADFTestHostGameMode>(ADFTestHostGameMode::StaticClass(), FTransform::Identity, Params);
+	if (!TestNotNull(TEXT("game mode"), Mode))
+	{
+		return false;
+	}
+	FString Error;
+	Mode->InitGame(TEXT("L_Testlane"), TEXT("?listen?intermission=2"), Error);
+	TestEqual(TEXT("InitGame, before the listen: no lead (what a PIE host had)"), Mode->GetMatchSettings().RestartLeadSeconds, 0.f);
+	Mode->FinishSpawning(FTransform::Identity);
+	ADFMatchState* Match = Mode->GetGameState<ADFMatchState>();
+	if (!TestNotNull(TEXT("the game mode spawned its match state"), Match))
+	{
+		return false;
+	}
+	TestEqual(TEXT("InitGameState configured it with no lead"), Match->GetPhaseMachine().RestartLeadSeconds, 0.f);
+	TestFalse(TEXT("and it has not begun play"), Match->HasActorBegunPlay());
+
+	// The director its BeginPlay would make from the level's lane graph (a test world has none): one wave.
+	ADFWaveDirector* Director = World.SpawnActor<ADFWaveDirector>();
+	if (!TestNotNull(TEXT("director"), Director))
+	{
+		return false;
+	}
+	if (!TestTrue(*FString::Printf(TEXT("fixture tables configure (%s)"), *Error), Director->ConfigureWithTables(7u, Tables(), Error)))
+	{
+		return false;
+	}
+	Match->UseWaveDirector(Director);
+	// The game mode's own binding travels, and a test world has nowhere to go: count the requests instead.
+	TestEqual(TEXT("InitGameState bound the game mode's travel"), Match->OnRestartRequested.RemoveAll(Mode), 1);
+	int32 Requests = 0;
+	Match->OnRestartRequested.AddLambda([&Requests](ADFMatchState*, bool& bOutUnderWay)
+	{
+		++Requests;
+		bOutUnderWay = true;
+	});
+
+	Mode->bListening = true;
+	Mode->StartPlay();
+	TestTrue(TEXT("StartPlay began play: the match state's BeginPlay has configured it again"), Match->HasActorBegunPlay());
+	TestEqual(TEXT("the game mode's settings carry the lead"), Mode->GetMatchSettings().RestartLeadSeconds, 4.f);
+	TestEqual(TEXT("so do the match state's, through its BeginPlay"), Match->GetSettings().RestartLeadSeconds, 4.f);
+	TestEqual(TEXT("and its phase machine's"), Match->GetPhaseMachine().RestartLeadSeconds, 4.f);
+	TestEqual(TEXT("a one-wave match"), Match->GetTotalWaves(), 1);
+
+	Match->AdvanceMatch(2.1f);
+	Director->Tick(60.f);
+	Director->NotifyEnemyRemoved(Director->GetAliveCount());
+	TestEqual(TEXT("the wave cleared: victory"), Match->GetPhase(), EDFMatchPhase::Victory);
+	TestEqual(TEXT("15 s to the new match"), Match->GetPhaseSecondsLeft(), 15.f, 0.01f);
+	Match->AdvanceMatch(10.9f);
+	TestEqual(TEXT("4.1 s left: not asked yet"), Requests, 0);
+	Match->AdvanceMatch(0.2f);
+	TestEqual(TEXT("down to the travel pause: asked, 4 s early, not at 0"), Requests, 1);
+	TestEqual(TEXT("and the countdown goes on to the switch"), Match->GetPhaseSecondsLeft(), 3.9f, 0.06f);
 	return true;
 }
 

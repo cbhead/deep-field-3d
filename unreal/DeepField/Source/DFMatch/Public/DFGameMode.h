@@ -71,10 +71,16 @@ public:
 	 *  the session or the engine refused it. Once per map: the travel replaces this game mode. */
 	bool RestartMatch();
 
+protected:
+	/**
+	 * RestartLeadFor this world as it is now: its net mode and its net driver's pause, 0 with no driver.
+	 * Virtual only for DF.Unit.Match.RestartLeadReadAgainAtStartPlay: a test world never listens, so its
+	 * host (ADFTestHostGameMode) answers the listen server's pause from the moment it "listens".
+	 */
+	virtual float CurrentRestartLead() const;
+
 private:
 	void HandleRestartRequested(ADFMatchState* Match, bool& bOutUnderWay);
-	/** RestartLeadFor this world as it is now: its net mode and its net driver's pause, 0 with no driver. */
-	float CurrentRestartLead() const;
 
 	FDFMatchSettings MatchSettings;
 	bool bRestarting = false;
