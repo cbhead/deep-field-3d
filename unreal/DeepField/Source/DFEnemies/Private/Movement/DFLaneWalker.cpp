@@ -1,8 +1,14 @@
 #include "Movement/DFLaneWalker.h"
 
-#include "Determinism/DFDetMath.h"
-
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DFLaneWalker)
+
+// Not pinned with DF_DET_FP_*, deliberately, so a Game target builds this file /fp:fast. Nothing
+// compares a walk across machines: only the host walks (a client gets a replicated position, PROGRAMME.md §3.3);
+// the resume save is written at intermission, when no enemy is alive, and holds none (C13,
+// UDFMatchSave); and this is not the sim's arithmetic to begin with, since ADR-0018's slope rules
+// sit on top and FVector is double. What a new host must reproduce is the wave plan, and that is
+// pinned (DFWavePlan.cpp). If walker state ever goes into a save that another host resumes, or
+// into a lockstep check, pin this file and give it golden vectors the way DFWavePlan has them.
 
 DEFINE_LOG_CATEGORY_STATIC(LogDFWalk, Log, All);
 
