@@ -1,6 +1,6 @@
 # Workstream status
 
-Generated 2026-09-27T20:32:34Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-27T21:59:35Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
 active: 9 · claimed: 1 · paused: 5 · review: 1 · unclaimed: 34
 
@@ -25,7 +25,7 @@ active: 9 · claimed: 1 · paused: 5 · review: 1 · unclaimed: 34
 | WS-11 | Online, lobby, profile (EOS) | P1-P3 | CP | paused | — | — | b957b16 |  | — |
 | WS-12 | UI (Common UI + MVVM) | P2-P5 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T07:23:21Z | 1588631 | yes | — |
 | WS-13 | Audio (MetaSounds) | P2-P5 |  | unclaimed | — | — | — | yes | — |
-| WS-14 | VFX (Niagara) | P2-P5 |  | active | session-gpu-box-2026-09-26 | 2026-09-28T18:35:07Z | 6d45758 | yes | — |
+| WS-14 | VFX (Niagara) | P2-P5 |  | active | session-gpu-box-2026-09-26 | 2026-09-28T18:35:07Z | 024744f | yes | — |
 | WS-15 | Automation, CI, packaging, store | P1+ |  | paused | — | — | 8e0e623 |  | — |
 | WS-16 | Overclock tower + grid | P4 |  | unclaimed | — | — | — |  | — |
 | WS-17 | Elite modifiers | P4 |  | unclaimed | — | — | — |  | — |
@@ -39,7 +39,7 @@ active: 9 · claimed: 1 · paused: 5 · review: 1 · unclaimed: 34
 | WS-25 | Physics layer | P4 |  | unclaimed | — | — | — | yes | — |
 | WS-26 | Co-op verbs & security rules | P4 |  | unclaimed | — | — | — |  | — |
 | WS-27 | Waves, tiers, endless, balance | P4 (last) |  | unclaimed | — | — | — |  | — |
-| WS-28 | Match flow (DFMatch) | P2-P3 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T06:30:33Z | f9659cd |  | — |
+| WS-28 | Match flow (DFMatch) | P2-P3 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T06:30:33Z | f1b1337 |  | — |
 | WS-30 | Art pipeline (Claude Design → Unreal, terrain lane, validators) | P1+ |  | paused | — | — | aa379d0 | yes | — |
 | WS-31 | Materials & palette | P1+ |  | unclaimed | — | — | — | yes | — |
 | WS-32 | Skeletons & animation contract | P2+ |  | unclaimed | — | — | — | yes | — |
