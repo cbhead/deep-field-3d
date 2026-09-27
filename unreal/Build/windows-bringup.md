@@ -95,8 +95,10 @@ Default, which is `/fp:fast` on MSVC (CONTRACTS/ci.md, "GPU-box lane"; re-read t
 first package, runbook §8). Code that must
 produce the same bits everywhere pins its arithmetic with the `DF_DET_FP_*` pragmas in
 `Source/DFCore/Public/Determinism/` (`DFDetMath.h`, `DFDetRng.h`), used by
-`DFEnemies/Private/Waves/DFWavePlan.cpp`, `DFEnemies/Private/Movement/DFLaneWalker.cpp` and
-`DFTowers/Private/Towers/DFTowerMath.cpp`. Those pragmas have only ever been compiled by clang.
+`DFEnemies/Private/Waves/DFWavePlan.cpp` and `DFTowers/Private/Towers/DFTowerMath.cpp`.
+`DFEnemies/Private/Movement/DFLaneWalker.cpp` used to be listed here and is deliberately not
+pinned: only the host walks and no save carries a walker (CONTRACTS/ci.md, "GPU-box lane").
+Until 2026-09-26 those pragmas had only ever been compiled by clang.
 
 - [x] Use the **packaged** Development build from §3. That is a Game target, and unlike a bare
       `Binaries\Win64\DeepField.exe` it has cooked content to start on. Run the golden tests in it,
@@ -118,7 +120,8 @@ produce the same bits everywhere pins its arithmetic with the `DF_DET_FP_*` prag
       *(2026-09-26: the command worked as written, from `packages\dev`. `DF.Unit.WavePlan.`: 13 of 13,
       `PlansMatchSim` included. `DF.Unit.Tower+DF.Unit.LaneWalker`: 18 of 18. The Game target's
       response files read `/fp:fast` for every DF module, so the pragmas were what held. The lane
-      walker is not actually pinned: CONTRACTS/ci.md, "GPU-box lane".)*
+      walker is not pinned, and WS-05 ruled the same day that it need not be: CONTRACTS/ci.md,
+      "GPU-box lane".)*
 - [x] Compare with the Editor-target run of the same filter (`deepfield test DF.Unit.WavePlan.`) and
       record both in the session log. *(2026-09-26: Editor target 13 of 13, the same tests, so no
       difference; WS-15 log.)*
