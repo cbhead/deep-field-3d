@@ -53,6 +53,9 @@ namespace DFWorldLook
 		Part->SetRelativeScale3D(SizeCm / 100.f);
 		Part->SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
 		Part->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		// The NoCollision profile names only the engine channels; the project's trace channels would keep their
+		// ini default (Block). Say it for every channel, so no query can ever be told this part is there.
+		Part->SetCollisionResponseToAllChannels(ECR_Ignore);
 		Part->SetGenerateOverlapEvents(false);
 		Part->SetCanEverAffectNavigation(false);
 		return Part;
@@ -67,7 +70,8 @@ namespace DFWorldLook
 		UMaterialInstanceDynamic* Mid = Cast<UMaterialInstanceDynamic>(Part->GetMaterial(0));
 		if (!Mid)
 		{
-			UMaterialInterface* Base = Part->GetMaterial(0);   // the shape's own BasicShapeMaterial
+			// Not the shape's own material: UE 5.8's basic shapes carry DefaultMaterial, which has no "Color".
+			UMaterialInterface* Base = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
 			if (!Base)
 			{
 				return;

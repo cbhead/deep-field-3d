@@ -44,6 +44,7 @@ void ADFLaneGraphInfo::RebuildLaneStrip()
 		LaneStrip->SetStaticMesh(StripMesh);
 		LaneStrip->SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
 		LaneStrip->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		LaneStrip->SetCollisionResponseToAllChannels(ECR_Ignore);   // the profile leaves the project's trace channels at Block
 		LaneStrip->SetGenerateOverlapEvents(false);
 		LaneStrip->SetCanEverAffectNavigation(false);
 		LaneStrip->SetCastShadow(false);
