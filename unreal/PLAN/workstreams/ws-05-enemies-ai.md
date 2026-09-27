@@ -2,11 +2,11 @@
 ws: 05
 slug: enemies-ai
 title: Enemies & AI
-state: paused
-owner: 
-claimed_at: 2026-09-26T23:41:35Z
-lease_expires: 
-branch: ws/05-enemies-ai/walker-fp
+state: claimed
+owner: session-gpu-box-2026-09-26
+claimed_at: 2026-09-27T06:47:31Z
+lease_expires: 2026-09-28T06:47:31Z
+branch: ws/05-enemies-ai/walking-enemies
 last_commit: 22eec3c
 editor_heavy: true
 phase: P2-P3
