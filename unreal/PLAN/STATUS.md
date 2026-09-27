@@ -1,8 +1,8 @@
 # Workstream status
 
-Generated 2026-09-27T17:49:20Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-27T18:35:07Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
-active: 8 · claimed: 1 · paused: 5 · review: 1 · unclaimed: 35
+active: 9 · claimed: 1 · paused: 5 · review: 1 · unclaimed: 34
 
 | WS | Title | Phase | CP | State | Owner | Lease expires | Last commit | Editor-heavy | Blocked on |
 |---|---|---|---|---|---|---|---|---|---|
@@ -25,7 +25,7 @@ active: 8 · claimed: 1 · paused: 5 · review: 1 · unclaimed: 35
 | WS-11 | Online, lobby, profile (EOS) | P1-P3 | CP | paused | — | — | b957b16 |  | — |
 | WS-12 | UI (Common UI + MVVM) | P2-P5 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T07:23:21Z | 39dd916 | yes | — |
 | WS-13 | Audio (MetaSounds) | P2-P5 |  | unclaimed | — | — | — | yes | — |
-| WS-14 | VFX (Niagara) | P2-P5 |  | unclaimed | — | — | — | yes | — |
+| WS-14 | VFX (Niagara) | P2-P5 |  | active | session-gpu-box-2026-09-26 | 2026-09-28T18:35:07Z | — | yes | — |
 | WS-15 | Automation, CI, packaging, store | P1+ |  | paused | — | — | 8e0e623 |  | — |
 | WS-16 | Overclock tower + grid | P4 |  | unclaimed | — | — | — |  | — |
 | WS-17 | Elite modifiers | P4 |  | unclaimed | — | — | — |  | — |

@@ -2,11 +2,11 @@
 ws: 14
 slug: vfx
 title: VFX (Niagara)
-state: unclaimed
-owner: 
-claimed_at: 
-lease_expires: 
-branch: 
+state: active
+owner: session-gpu-box-2026-09-26
+claimed_at: 2026-09-27T18:35:07Z
+lease_expires: 2026-09-28T18:35:07Z
+branch: ws/14-vfx/placeholder-combat-cues
 last_commit: 
 editor_heavy: true
 phase: P2-P5
@@ -41,3 +41,4 @@ blocked_on:
 
 ## Session log
 <!-- append-only: date · session · what landed · what's next -->
+- 2026-09-27 · session-gpu-box-2026-09-26 · **Claimed for placeholder combat cues** (next step after the first playable, at the owner's request): a DFVfx subsystem that draws every tower kind's shots on every machine from the relayed DF.Message.TowerFired / ProjectileLanded / BeamHeld (rounds, mortar arcs, tesla arcs, beams, impacts) with engine basic shapes (DFShapeLook) until the Niagara systems, replacing the host-only rounds view in ADFTower; branch `ws/14-vfx/placeholder-combat-cues`.
