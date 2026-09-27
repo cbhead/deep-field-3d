@@ -3,10 +3,12 @@
     UnrealEditor-Cmd <DeepField.uproject> -run=pythonscript -script=<this file> -unattended -nullrhi
 
 Writes Content/DF/Core/Input/IMC_DF_Default and the actions ADFHeroCharacter binds (IA_Move, IA_Look,
-IA_Jump, IA_Sprint, IA_Crouch, IA_Aim), with C16's defaults: the Godot bindings (WASD and the arrow
-keys, Space, Shift, mouse) and a gamepad from day one. Safe to re-run: existing assets are updated in
-place, and the mapping context's keys are rewritten from the table below, so the table is the source
-of truth. The rest of C16's actions (IA_Fire, IA_Build, ...) arrive with the features that use them.
+IA_Jump, IA_Sprint, IA_Crouch, IA_Aim) and ADFPlayerController binds (IA_Build: hold E on a socket;
+IA_Sell: hold X 0.7 s on a tower), with C16's defaults: the Godot bindings (WASD and the arrow keys,
+Space, Shift, mouse, hold E / X) and a gamepad from day one. Safe to re-run: existing assets are
+updated in place, and the mapping context's keys are rewritten from the table below, so the table is
+the source of truth. The rest of C16's actions (IA_Fire, IA_Upgrade, ...) arrive with the features
+that use them.
 
 ADFHeroCharacter::Move reads X as strafe and Y as forward; Look adds X to yaw and Y to pitch.
 """
@@ -67,6 +69,15 @@ def dead_zone(outer):
     return unreal.new_object(unreal.InputModifierDeadZone, outer)
 
 
+def hold(ia, seconds):
+    """C16's hold-to-act: triggers once, after Seconds held (the action owns the trigger)."""
+    t = unreal.new_object(unreal.InputTriggerHold, ia)
+    t.set_editor_property("hold_time_threshold", seconds)
+    t.set_editor_property("is_one_shot", True)
+    ia.set_editor_property("triggers", [t])
+    return ia
+
+
 AXIS2D = unreal.InputActionValueType.AXIS2D
 BOOL = unreal.InputActionValueType.BOOLEAN
 
@@ -76,6 +87,8 @@ jump = action("IA_Jump", BOOL, "Jump")
 sprint = action("IA_Sprint", BOOL, "Sprint while held")
 crouch = action("IA_Crouch", BOOL, "Crouch while held")
 aim = action("IA_Aim", BOOL, "Aim down sights while held")
+build = hold(action("IA_Build", BOOL, "Hold on a free socket: build there"), 0.25)
+sell = hold(action("IA_Sell", BOOL, "Hold on a tower: sell it"), 0.7)
 
 imc = load_or_create("IMC_DF_Default", unreal.InputMappingContext, unreal.InputMappingContext_Factory())
 imc.set_editor_property("context_description", "On foot (C16 defaults: the Godot bindings plus a gamepad)")
@@ -102,6 +115,10 @@ TABLE = [
     (crouch, "Gamepad_FaceButton_Right", lambda o: []),
     (aim, "RightMouseButton", lambda o: []),
     (aim, "Gamepad_LeftTrigger", lambda o: []),
+    (build, "E", lambda o: []),
+    (build, "Gamepad_FaceButton_Left", lambda o: []),
+    (sell, "X", lambda o: []),
+    (sell, "Gamepad_DPad_Down", lambda o: []),
 ]
 
 mappings = []
@@ -116,7 +133,7 @@ data = imc.get_editor_property("default_key_mappings")
 data.set_editor_property("mappings", mappings)
 imc.set_editor_property("default_key_mappings", data)
 
-for asset in (move, look, jump, sprint, crouch, aim, imc):
+for asset in (move, look, jump, sprint, crouch, aim, build, sell, imc):
     if not lib.save_loaded_asset(asset, only_if_is_dirty=False):
         fail("could not save " + asset.get_path_name())
 

@@ -11,6 +11,7 @@ class ADFEventRelay;
 class ADFPlayerState;
 class ADFWaveDirector;
 class ADFEnemy;
+class UDFEconomyStateComponent;
 class UDFLaneGraphAsset;
 struct FDFLaneRouting;
 struct FDFSpawnEntry;
@@ -41,8 +42,9 @@ struct DFMATCH_API FDFMatchSettings
  *
  * WS-28's own replicated fields: phase, wave index, total waves, lobby, endless, threat, lap, enemies
  * remaining and when the intermission clock runs out. Every other match-wide field is a component its
- * domain writes and attaches here (ADR-0024): money, lives, team scrap and bounty (WS-06), lane and
- * mutable edge states (WS-09). Lives are read through IDFMatchLivesSource (DFCore) and never written.
+ * domain writes and attaches here (ADR-0024): money, lives, team scrap and bounty (WS-06's
+ * UDFEconomyStateComponent, attached as "Economy"), lane and mutable edge states (WS-09). Lives are
+ * read through IDFMatchLivesSource (DFCore) and never written.
  */
 UCLASS()
 class DFMATCH_API ADFMatchState : public AGameStateBase
@@ -86,6 +88,8 @@ public:
 	void UseWaveDirector(ADFWaveDirector* InDirector);
 	ADFWaveDirector* GetWaveDirector() const { return Director; }
 	ADFEventRelay* GetEventRelay() const { return Relay; }
+	/** WS-06's money and lives (every machine; the host writes it). */
+	UDFEconomyStateComponent* GetEconomy() const { return Economy; }
 
 	/** Command.Launch from Seat: only the lowest connected seat may leave the lobby (World.cs LaunchSeat). */
 	bool ServerLaunch(int32 Seat);
@@ -145,6 +149,7 @@ private:
 	TSharedPtr<FDFLaneRouting> Routing;
 	FDelegateHandle SpawnHandle;
 	UPROPERTY(Transient) TObjectPtr<ADFEventRelay> Relay;
+	UPROPERTY(VisibleAnywhere, Category = "DF|Match") TObjectPtr<UDFEconomyStateComponent> Economy;
 
 	UPROPERTY(ReplicatedUsing = OnRep_Match) EDFMatchPhase Phase = EDFMatchPhase::Intermission;
 	UPROPERTY(ReplicatedUsing = OnRep_Match) int32 WaveIndex = -1;

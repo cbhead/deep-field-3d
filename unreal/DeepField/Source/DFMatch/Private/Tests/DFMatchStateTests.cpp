@@ -1,6 +1,6 @@
 #include "DFGameplayTags.h"
 #include "DFMatchState.h"
-#include "DFMatchTestLives.h"
+#include "Economy/DFEconomyStateComponent.h"
 #include "Misc/AutomationTest.h"
 #include "Testing/DFTestUtils.h"
 #include "Waves/DFWaveDirector.h"
@@ -153,9 +153,12 @@ bool FDFMatchStateLastLeakIsDefeatTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
-	// WS-06's economy component stands in here: lives the test sets by hand (IDFMatchLivesSource).
-	UDFMatchTestLives* Lives = NewObject<UDFMatchTestLives>(F.Match);
-	Lives->RegisterComponent();
+	// WS-06's economy component answers the lives (IDFMatchLivesSource); the test takes them by hand.
+	UDFEconomyStateComponent* Economy = F.Match->GetEconomy();
+	if (!TestNotNull(TEXT("the match state carries the economy"), Economy))
+	{
+		return false;
+	}
 	FDFMessageCapture Seen(F.World.MessageBus(), DFTags::Message);
 
 	F.Match->AdvanceMatch(2.1f);
@@ -166,7 +169,7 @@ bool FDFMatchStateLastLeakIsDefeatTest::RunTest(const FString& Parameters)
 
 	// The leak takes its lives first, then the body is reported gone (the order DFMatchSeams.h asks of
 	// the economy): the report clears the wave with the core already at zero.
-	Lives->Lives = 0;
+	Economy->TakeLives(Economy->GetLives());
 	F.Director->NotifyEnemyRemoved(F.Director->GetAliveCount());
 	TestEqual(TEXT("a last enemy that leaks the core to zero is a defeat"), F.Match->GetPhase(), EDFMatchPhase::Defeat);
 
@@ -191,11 +194,14 @@ bool FDFMatchStateDefeatStopsWaveTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
-	UDFMatchTestLives* Lives = NewObject<UDFMatchTestLives>(F.Match);
-	Lives->RegisterComponent();
+	UDFEconomyStateComponent* Economy = F.Match->GetEconomy();
+	if (!TestNotNull(TEXT("the match state carries the economy"), Economy))
+	{
+		return false;
+	}
 	F.Match->AdvanceMatch(2.1f);
 	TestTrue(TEXT("wave 0 running"), F.Director->IsWaveActive());
-	Lives->Lives = 0;
+	Economy->TakeLives(Economy->GetLives());
 	F.Match->AdvanceMatch(0.016f);
 	TestEqual(TEXT("the core fell mid-wave: defeat"), F.Match->GetPhase(), EDFMatchPhase::Defeat);
 	TestFalse(TEXT("and the director stopped releasing"), F.Director->IsWaveActive());

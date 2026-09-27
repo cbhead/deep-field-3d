@@ -2,13 +2,129 @@
 
 #include "DFMatchState.h"
 #include "DFPlayerState.h"
+#include "DFWorldCollision.h"
+#include "EnhancedInputComponent.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "DFGameplayTags.h"
+#include "InputAction.h"
+#include "UObject/ConstructorHelpers.h"
+#include "World/DFSocket.h"
 #include "Messages/DFMessageBus.h"
 #include "Towers/DFBuildSubsystem.h"
 #include "Towers/DFTower.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DFPlayerController)
+
+DEFINE_LOG_CATEGORY_STATIC(LogDFPlayerController, Log, All);
+
+ADFPlayerController::ADFPlayerController()
+{
+	// C16 assets (unreal/Build/make-default-input.py writes them); the mapping context the hero adds
+	// on possession maps E and X to them.
+	static ConstructorHelpers::FObjectFinder<UInputAction> Build(TEXT("/Game/DF/Core/Input/IA_Build.IA_Build"));
+	static ConstructorHelpers::FObjectFinder<UInputAction> Sell(TEXT("/Game/DF/Core/Input/IA_Sell.IA_Sell"));
+	BuildAction = Build.Object;
+	SellAction = Sell.Object;
+}
+
+void ADFPlayerController::SetupInputComponent()
+{
+	Super::SetupInputComponent();
+	UEnhancedInputComponent* Input = Cast<UEnhancedInputComponent>(InputComponent);
+	if (!Input)
+	{
+		return;
+	}
+	if (BuildAction)
+	{
+		Input->BindAction(BuildAction, ETriggerEvent::Triggered, this, &ADFPlayerController::HandleBuildInput);
+	}
+	if (SellAction)
+	{
+		Input->BindAction(SellAction, ETriggerEvent::Triggered, this, &ADFPlayerController::HandleSellInput);
+	}
+}
+
+ADFSocket* ADFPlayerController::FindAimedSocket() const
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return nullptr;
+	}
+	FVector ViewLocation;
+	FRotator ViewRotation;
+	GetPlayerViewPoint(ViewLocation, ViewRotation);
+	const FVector End = ViewLocation + ViewRotation.Vector() * QuickBuildRangeCm;
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(DFQuickBuildAim), /*bTraceComplex*/ false, GetPawn());
+
+	// A pad blocks DF_Build: the crosshair on a pad means that pad.
+	FHitResult Hit;
+	if (World->LineTraceSingleByChannel(Hit, ViewLocation, End, DFCollision::Build, Params))
+	{
+		if (ADFSocket* Socket = Cast<ADFSocket>(Hit.GetActor()))
+		{
+			return Socket;
+		}
+	}
+	// Otherwise where the crosshair lands on the world, and the nearest pad to it.
+	if (!Hit.bBlockingHit && !World->LineTraceSingleByChannel(Hit, ViewLocation, End, ECC_Visibility, Params))
+	{
+		return nullptr;
+	}
+	ADFSocket* Nearest = nullptr;
+	double NearestDistSq = FMath::Square(static_cast<double>(QuickBuildReachCm));
+	for (TActorIterator<ADFSocket> It(World); It; ++It)
+	{
+		const double DistSq = FVector::DistSquared2D(It->GetPadTop(), Hit.ImpactPoint);
+		if (DistSq <= NearestDistSq)
+		{
+			NearestDistSq = DistSq;
+			Nearest = *It;
+		}
+	}
+	return Nearest;
+}
+
+ADFTower* ADFPlayerController::FindTowerOn(FName SocketId) const
+{
+	if (SocketId.IsNone() || !GetWorld())
+	{
+		return nullptr;
+	}
+	for (TActorIterator<ADFTower> It(GetWorld()); It; ++It)
+	{
+		if (It->GetSocketId() == SocketId && !It->IsActorBeingDestroyed())
+		{
+			return *It;
+		}
+	}
+	return nullptr;
+}
+
+void ADFPlayerController::HandleBuildInput()
+{
+	const ADFSocket* Socket = FindAimedSocket();
+	if (!Socket)
+	{
+		return;
+	}
+	UE_LOG(LogDFPlayerController, Log, TEXT("build %s on %s"), *QuickBuildTowerId.ToString(), *Socket->SocketId.ToString());
+	Server_PlaceTower(QuickBuildTowerId, Socket->SocketId);
+}
+
+void ADFPlayerController::HandleSellInput()
+{
+	const ADFSocket* Socket = FindAimedSocket();
+	const ADFTower* Tower = Socket ? FindTowerOn(Socket->SocketId) : nullptr;
+	if (!Tower)
+	{
+		return;
+	}
+	UE_LOG(LogDFPlayerController, Log, TEXT("sell %s (%d) on %s"), *Tower->GetDefId().ToString(), Tower->GetStructureId(), *Socket->SocketId.ToString());
+	Server_SellTower(Tower->GetStructureId());
+}
 
 int32 ADFPlayerController::GetSeat() const
 {

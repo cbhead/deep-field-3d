@@ -7,6 +7,7 @@
 #include "DFTowerRigComponent.generated.h"
 
 class UDFTowerDefinition;
+class UMaterialInstanceDynamic;
 class UStaticMesh;
 class UStaticMeshComponent;
 
@@ -28,7 +29,11 @@ enum class EDFTowerRigStyle : uint8
  *
  * The component chain (Foot, Yaw, Pitch, Muzzle; or Foot, Spin) is built from the tower's
  * UDFTowerDefinition when it has one. Without one (no DA_Tower_<id> has been imported yet) the rig
- * still keeps its angles, so aim, settle and the tests work; there is just nothing to draw.
+ * draws a placeholder from the engine's basic shapes until WS-33's meshes land: a steel foot, and a
+ * turret block with a barrel (Turret) or a turning block (Spin), in the same Foot / Yaw / Pitch / Spin
+ * chain, so it aims exactly as the real parts will. The placeholder's Yaw pivot sits where the sim's
+ * muzzle is (1.5 m up) and it has no Muzzle, so pivot, muzzle and every shot are where they are
+ * without meshes.
  */
 UCLASS(ClassGroup = (DF), meta = (BlueprintSpawnableComponent))
 class DFTOWERS_API UDFTowerRigComponent : public USceneComponent
@@ -71,6 +76,9 @@ public:
 private:
 	void DestroyParts();
 	UStaticMeshComponent* MakePart(FName Name, const TSoftObjectPtr<UStaticMesh>& Mesh, USceneComponent* Parent, FName Socket);
+	/** The basic-shapes stand-in for a tower with no definition (see the class comment). */
+	void MakePlaceholderParts(FName TowerId);
+	UStaticMeshComponent* MakeShapePart(FName Name, UStaticMesh* Mesh, USceneComponent* Parent, const FTransform& Relative, const FLinearColor& Colour);
 	USceneComponent* PartByName(FName Part) const;
 	void ApplyAngles();
 
@@ -91,4 +99,6 @@ private:
 	UPROPERTY(Transient) TObjectPtr<USceneComponent> Muzzle;
 	/** Attached stage modules per path id. */
 	TMap<FName, TArray<TObjectPtr<UStaticMeshComponent>>> StageParts;
+	/** Placeholder pieces that are not rig parts (the barrel under Pitch). */
+	UPROPERTY(Transient) TArray<TObjectPtr<UStaticMeshComponent>> PlaceholderExtras;
 };

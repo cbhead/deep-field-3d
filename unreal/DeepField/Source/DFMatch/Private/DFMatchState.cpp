@@ -5,6 +5,7 @@
 #include "DFGameplayTags.h"
 #include "DFPlayerState.h"
 #include "DFWorldSubsystem.h"
+#include "Economy/DFEconomyStateComponent.h"
 #include "Enemies/DFEnemy.h"
 #include "Movement/DFLaneWalker.h"
 #include "Engine/World.h"
@@ -22,6 +23,9 @@ ADFMatchState::ADFMatchState()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
+	// ADR-0024: WS-06's state rides on the game state. It keeps the books itself on the host (leaks
+	// and kills arrive as messages) and answers the phase machine's lives through IDFMatchLivesSource.
+	Economy = CreateDefaultSubobject<UDFEconomyStateComponent>(TEXT("Economy"));
 }
 
 void ADFMatchState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -214,8 +218,8 @@ void ADFMatchState::HandleSpawnRequested(const FDFSpawnEntry& Entry)
 
 void ADFMatchState::HandleEnemyLeaked(ADFEnemy* Enemy)
 {
-	// Lives belong to WS-06's economy (read here through IDFMatchLivesSource, never written); until it
-	// exists a leak costs nothing and only the log sees it.
+	// The lives are already gone: the body sent DF.Message.EnemyLeaked before this, and WS-06's economy
+	// took them (read here through IDFMatchLivesSource, never written).
 	UE_LOG(LogDFMatchState, Log, TEXT("leak: %s reached the core in wave %d"), Enemy ? *Enemy->GetEntry().DefId.ToString() : TEXT("?"), Machine.WaveIndex + 1);
 }
 

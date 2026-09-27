@@ -23,6 +23,7 @@ public class DFMatch : ModuleRules
 			"GameplayTags",
 			"GameplayAbilities",
 			"NetCore",
+			"EnhancedInput",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {

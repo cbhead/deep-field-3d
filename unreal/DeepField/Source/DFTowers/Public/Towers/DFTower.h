@@ -9,6 +9,7 @@
 
 class UDFTargetingComponent;
 class UDFTowerRigComponent;
+class UInstancedStaticMeshComponent;
 struct FDFConditionRow;
 struct FDFTowerRow;
 
@@ -130,9 +131,13 @@ private:
 	void ConfigureRig();
 	/** Every machine that draws: turn toward the replicated target, or idle. */
 	void TickRig(float DeltaSeconds);
+	/** A listen host that draws: one small sphere per round in flight, until WS-14's projectile VFX
+	 *  (which will hear DF.Message.TowerFired / ProjectileLanded on every machine). */
+	void DrawRounds();
 
 	UPROPERTY(VisibleAnywhere, Category = "DF|Tower") TObjectPtr<UDFTargetingComponent> Targeting;
 	UPROPERTY(VisibleAnywhere, Category = "DF|Tower") TObjectPtr<UDFTowerRigComponent> Rig;
+	UPROPERTY(Transient) TObjectPtr<UInstancedStaticMeshComponent> RoundsView;
 
 	UPROPERTY(ReplicatedUsing = OnRep_DefId) FName DefId;
 	UPROPERTY(Replicated) FName SocketId;

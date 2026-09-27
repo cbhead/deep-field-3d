@@ -9,10 +9,13 @@
 #include "DFGameplayTags.h"
 #include "Damage/DFDamageContext.h"
 #include "Effects/DFGE_Damage.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Components/SceneComponent.h"
 #include "Engine/AssetManager.h"
+#include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "Messages/DFMessageBus.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "Messages/DFMessages.h"
 #include "Net/UnrealNetwork.h"
 #include "Status/DFStatusComponent.h"
@@ -285,6 +288,46 @@ void ADFTower::Tick(float DeltaSeconds)
 	if (GetNetMode() != NM_DedicatedServer)
 	{
 		TickRig(DeltaSeconds);
+		if (HasAuthority())
+		{
+			DrawRounds();
+		}
+	}
+}
+
+void ADFTower::DrawRounds()
+{
+	if (!RoundsView)
+	{
+		if (Shots.Num() == 0)
+		{
+			return;
+		}
+		UStaticMesh* Sphere = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Sphere.Sphere"));
+		if (!Sphere)
+		{
+			return;
+		}
+		RoundsView = NewObject<UInstancedStaticMeshComponent>(this, TEXT("RoundsView"));
+		RoundsView->SetStaticMesh(Sphere);
+		RoundsView->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		RoundsView->SetCastShadow(false);
+		RoundsView->SetUsingAbsoluteLocation(true);
+		RoundsView->SetUsingAbsoluteRotation(true);
+		RoundsView->SetupAttachment(RootComponent);
+		RoundsView->RegisterComponent();
+		RoundsView->SetWorldTransform(FTransform::Identity);
+		if (UMaterialInstanceDynamic* Mid = RoundsView->CreateDynamicMaterialInstance(0))
+		{
+			Mid->SetVectorParameterValue(TEXT("Color"), FLinearColor(1.f, 0.62f, 0.2f));   // hazard amber
+		}
+	}
+	// Rebuild the few instances every frame: rounds live a fraction of a second and there are only a handful.
+	constexpr float RoundScale = 0.14f;   // a 14 cm ball on a 1 m sphere
+	RoundsView->ClearInstances();
+	for (const FShotInFlight& Shot : Shots)
+	{
+		RoundsView->AddInstance(FTransform(FRotator::ZeroRotator, Shot.Shot.PositionCm, FVector(RoundScale)), /*bWorldSpace*/ true);
 	}
 }
 

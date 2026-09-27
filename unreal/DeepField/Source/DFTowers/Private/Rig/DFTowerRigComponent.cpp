@@ -3,6 +3,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "GameFramework/Actor.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "Rig/DFTowerDefinition.h"
 #include "Towers/DFTowerMath.h"
 
@@ -18,6 +19,12 @@ namespace
 
 	/** The search sweep's half-width, degrees: enough to read as looking, small enough not to swing wide. */
 	constexpr float WobbleAmplitudeDeg = 6.f;
+
+	/** The placeholder (no DA_Tower_<id>): steel_plate foot, steel_hull head, per-tower energy on the barrel. */
+	const FLinearColor PlaceholderFoot(0.33f, 0.38f, 0.47f);   // #9AA6B7 in linear
+	const FLinearColor PlaceholderHead(0.12f, 0.14f, 0.19f);   // #606A7C in linear
+	constexpr float PlaceholderFootHeightCm = 120.f;
+	constexpr float PlaceholderFootWidthCm = 90.f;
 }
 
 UDFTowerRigComponent::UDFTowerRigComponent()
@@ -69,6 +76,10 @@ void UDFTowerRigComponent::Configure(FName TowerId, EDFTowerKind Kind, const UDF
 			Spin = MakePart(TEXT("Spin"), InDefinition->SpinMesh, Foot ? static_cast<USceneComponent*>(Foot) : this, SocketSpin);
 		}
 	}
+	else if (Style != EDFTowerRigStyle::None && GetOwner() && GetWorld() && !GetWorld()->IsNetMode(NM_DedicatedServer))
+	{
+		MakePlaceholderParts(TowerId);
+	}
 	ApplyAngles();
 }
 
@@ -93,8 +104,70 @@ UStaticMeshComponent* UDFTowerRigComponent::MakePart(FName Name, const TSoftObje
 	return Part;
 }
 
+UStaticMeshComponent* UDFTowerRigComponent::MakeShapePart(FName Name, UStaticMesh* Mesh, USceneComponent* Parent, const FTransform& Relative, const FLinearColor& Colour)
+{
+	AActor* Owner = GetOwner();
+	UStaticMeshComponent* Part = NewObject<UStaticMeshComponent>(Owner, MakeUniqueObjectName(Owner, UStaticMeshComponent::StaticClass(), Name));
+	Part->SetStaticMesh(Mesh);   // null: an empty joint (the placeholder's Pitch)
+	Part->SetMobility(EComponentMobility::Movable);
+	Part->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Part->SetupAttachment(Parent);
+	Part->SetUsingAbsoluteScale(true);   // a scaled block never stretches the pieces hung off it
+	Part->SetRelativeTransform(Relative);
+	Part->RegisterComponent();
+	if (Mesh)
+	{
+		if (UMaterialInstanceDynamic* Mid = Part->CreateDynamicMaterialInstance(0))
+		{
+			Mid->SetVectorParameterValue(TEXT("Color"), Colour);
+		}
+	}
+	return Part;
+}
+
+void UDFTowerRigComponent::MakePlaceholderParts(FName TowerId)
+{
+	UStaticMesh* Cylinder = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
+	UStaticMesh* Cube = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube"));
+	if (!Cylinder || !Cube)
+	{
+		return;
+	}
+	// One stable energy colour per tower id, so two kinds side by side read apart.
+	const uint32 Hash = GetTypeHash(TowerId.ToString());
+	const FLinearColor Energy = FLinearColor::MakeFromHSV8(static_cast<uint8>(Hash & 0xFF), 190, 255);
+
+	// Engine basic shapes are 1 m with the pivot at their centre.
+	const float FootScale = PlaceholderFootWidthCm / 100.f;
+	Foot = MakeShapePart(TEXT("Foot"), Cylinder, this,
+		FTransform(FRotator::ZeroRotator, FVector(0.f, 0.f, PlaceholderFootHeightCm * 0.5f), FVector(FootScale, FootScale, PlaceholderFootHeightCm / 100.f)),
+		PlaceholderFoot);
+	// The head turns about the sim's muzzle point, 1.5 m up (attached to the rig, not the scaled foot).
+	const FVector Pivot(0.f, 0.f, DFTowerMath::ShotMuzzleHeightCm);
+	if (Style == EDFTowerRigStyle::Turret)
+	{
+		Yaw = MakeShapePart(TEXT("Yaw"), Cube, this, FTransform(FRotator::ZeroRotator, Pivot, FVector(0.6f, 0.6f, 0.35f)), PlaceholderHead);
+		Pitch = MakeShapePart(TEXT("Pitch"), nullptr, Yaw, FTransform::Identity, PlaceholderHead);
+		// The barrel lies along +X (a cylinder stands on Z; pitch it over), reaching out of the block.
+		PlaceholderExtras.Add(MakeShapePart(TEXT("Barrel"), Cylinder, Pitch,
+			FTransform(FRotator(-90.f, 0.f, 0.f), FVector(55.f, 0.f, 0.f), FVector(0.16f, 0.16f, 0.8f)), Energy));
+	}
+	else
+	{
+		Spin = MakeShapePart(TEXT("Spin"), Cube, this, FTransform(FRotator(0.f, 45.f, 0.f), Pivot, FVector(0.7f, 0.7f, 0.25f)), Energy);
+	}
+}
+
 void UDFTowerRigComponent::DestroyParts()
 {
+	for (UStaticMeshComponent* Extra : PlaceholderExtras)
+	{
+		if (Extra)
+		{
+			Extra->DestroyComponent();
+		}
+	}
+	PlaceholderExtras.Reset();
 	for (TPair<FName, TArray<TObjectPtr<UStaticMeshComponent>>>& Pair : StageParts)
 	{
 		for (UStaticMeshComponent* Module : Pair.Value)
