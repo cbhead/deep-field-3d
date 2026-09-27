@@ -5,6 +5,8 @@
 #include "DFGameplayTags.h"
 #include "DFPlayerState.h"
 #include "DFWorldSubsystem.h"
+#include "Enemies/DFEnemy.h"
+#include "Movement/DFLaneWalker.h"
 #include "Engine/World.h"
 #include "Hero/DFHeroStateComponent.h"
 #include "LaneGraph/DFLaneGraphAsset.h"
@@ -170,9 +172,51 @@ void ADFMatchState::EnsureDirector()
 	Director = Spawned;
 	bOwnsDirector = true;
 	BindDirector();
+	BindEnemySpawner();
 	UE_LOG(LogDFMatchState, Log, TEXT("match on '%s', seed %u, %d authored wave(s)%s%s"), *MapId.ToString(), Settings.Seed,
 		Director->IsConfigured() ? Director->GetTables().Waves.Num() : 0,
 		Settings.bEndless ? TEXT(", endless") : TEXT(""), Settings.bLobby ? TEXT(", lobby") : TEXT(""));
+}
+
+void ADFMatchState::BindEnemySpawner()
+{
+	// Only a director this match made: a test hands in its own with UseWaveDirector and counts the
+	// released entries itself.
+	if (!Director || !bOwnsDirector || !HasAuthority() || SpawnHandle.IsValid())
+	{
+		return;
+	}
+	UDFWorldSubsystem* WorldSubsystem = GetWorld()->GetSubsystem<UDFWorldSubsystem>();
+	const UDFLaneGraphAsset* Graph = WorldSubsystem ? WorldSubsystem->FindLaneGraph() : nullptr;
+	if (!Graph)
+	{
+		return;
+	}
+	LaneGraph = Graph;
+	// The routing tables are shared by every body on the map (C6); every edge starts open.
+	TSharedRef<FDFLaneRouting> Tables = MakeShared<FDFLaneRouting>();
+	Tables->Rebuild(*Graph);
+	Routing = Tables;
+	SpawnHandle = Director->OnSpawnRequested.AddUObject(this, &ADFMatchState::HandleSpawnRequested);
+}
+
+void ADFMatchState::HandleSpawnRequested(const FDFSpawnEntry& Entry)
+{
+	FString Error;
+	ADFEnemy* Enemy = ADFEnemy::SpawnFromEntry(GetWorld(), Entry, LaneGraph.Get(), Routing, Director, Error);
+	if (!Enemy)
+	{
+		UE_LOG(LogDFMatchState, Warning, TEXT("could not spawn '%s' on route '%s': %s"), *Entry.DefId.ToString(), *Entry.RouteId.ToString(), *Error);
+		return;
+	}
+	Enemy->OnLeaked.AddUObject(this, &ADFMatchState::HandleEnemyLeaked);
+}
+
+void ADFMatchState::HandleEnemyLeaked(ADFEnemy* Enemy)
+{
+	// Lives belong to WS-06's economy (read here through IDFMatchLivesSource, never written); until it
+	// exists a leak costs nothing and only the log sees it.
+	UE_LOG(LogDFMatchState, Log, TEXT("leak: %s reached the core in wave %d"), Enemy ? *Enemy->GetEntry().DefId.ToString() : TEXT("?"), Machine.WaveIndex + 1);
 }
 
 void ADFMatchState::BindDirector()

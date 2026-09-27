@@ -10,6 +10,10 @@
 class ADFEventRelay;
 class ADFPlayerState;
 class ADFWaveDirector;
+class ADFEnemy;
+class UDFLaneGraphAsset;
+struct FDFLaneRouting;
+struct FDFSpawnEntry;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FDFOnMatchStateChanged, class ADFMatchState* /*MatchState*/);
 DECLARE_MULTICAST_DELEGATE_OneParam(FDFOnWaveBoundary, int32 /*WaveIndex about to begin*/);
@@ -118,6 +122,10 @@ private:
 
 	void EnsureDirector();
 	void BindDirector();
+	/** Host, own director only: answer OnSpawnRequested with ADFEnemy bodies on the map's lane graph. */
+	void BindEnemySpawner();
+	void HandleSpawnRequested(const FDFSpawnEntry& Entry);
+	void HandleEnemyLeaked(ADFEnemy* Enemy);
 	void HandleWaveCleared(int32 ClearedWave);
 	void ApplyStep(EDFMatchStep Step);
 	TOptional<int32> ReadLives() const;
@@ -133,6 +141,9 @@ private:
 	FDelegateHandle ClearedHandle;
 
 	UPROPERTY(Transient) TObjectPtr<ADFWaveDirector> Director;
+	TWeakObjectPtr<const UDFLaneGraphAsset> LaneGraph;
+	TSharedPtr<FDFLaneRouting> Routing;
+	FDelegateHandle SpawnHandle;
 	UPROPERTY(Transient) TObjectPtr<ADFEventRelay> Relay;
 
 	UPROPERTY(ReplicatedUsing = OnRep_Match) EDFMatchPhase Phase = EDFMatchPhase::Intermission;
