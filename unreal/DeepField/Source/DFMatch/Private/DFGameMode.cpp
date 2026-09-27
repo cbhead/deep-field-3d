@@ -8,6 +8,8 @@
 #include "Messages/DFMessageBus.h"
 #include "Messages/DFMessages.h"
 #include "Engine/GameInstance.h"
+#include "Engine/World.h"
+#include "GameFramework/GameSession.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerState.h"
 #include "Kismet/GameplayStatics.h"
@@ -44,6 +46,11 @@ void ADFGameMode::InitGame(const FString& MapName, const FString& Options, FStri
 	{
 		MatchSettings.IntermissionSeconds = FMath::Max(0.f, FCString::Atof(*Intermission));
 	}
+	const FString Restart = UGameplayStatics::ParseOption(Options, TEXT("restart"));
+	if (!Restart.IsEmpty())
+	{
+		MatchSettings.RestartSeconds = FMath::Max(0.f, FCString::Atof(*Restart));
+	}
 }
 
 void ADFGameMode::InitGameState()
@@ -52,7 +59,32 @@ void ADFGameMode::InitGameState()
 	if (ADFMatchState* Match = GetGameState<ADFMatchState>())
 	{
 		Match->ConfigureMatch(MatchSettings);
+		Match->OnRestartRequested.AddUObject(this, &ADFGameMode::HandleRestartRequested);
 	}
+}
+
+void ADFGameMode::HandleRestartRequested(ADFMatchState* /*Match*/)
+{
+	RestartMatch();
+}
+
+bool ADFGameMode::RestartMatch()
+{
+	UWorld* World = GetWorld();
+	if (bRestarting || !World)
+	{
+		return false;
+	}
+	if (GameSession && !GameSession->CanRestartGame())
+	{
+		UE_LOG(LogDFMatch, Log, TEXT("restart refused by the game session"));
+		return false;
+	}
+	// Relative travel to "?Restart": the map and options of the last URL, the way AGameMode::RestartGame
+	// does it. The engine refuses a second travel while one is pending (NextURL is set), and so does bRestarting.
+	bRestarting = World->ServerTravel(TEXT("?Restart"), /*bAbsolute*/ false);
+	UE_LOG(LogDFMatch, Log, TEXT("new match: reloading %s%s"), *World->GetMapName(), bRestarting ? TEXT("") : TEXT(" refused by the engine"));
+	return bRestarting;
 }
 
 int32 ADFGameMode::FindFreeSeat() const

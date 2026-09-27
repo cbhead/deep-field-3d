@@ -35,6 +35,11 @@ struct FGameplayEffectSpec;
  * it is killed at the end of the frame, not inside the hit: Step.cs flags death after a tower's Applies
  * loop, so the statuses of a lethal hit still land and IsTargetDead does not turn true mid-hit.
  *
+ * On the host every hit is announced as DF.Message.EnemyDamaged (Step.cs Damage() emits it per hit) and
+ * the death as DF.Message.EnemyKilled. Both name who did it: a tower or trap by its structure id
+ * (IDFStructure), a hero by its seat (IDFSeatHolder, read through the hit's instigator: the hero's pawn),
+ * which is how ADFMatchState credits a player's kills and damage without this module seeing DFMatch.
+ *
  * The body is a placeholder until WS-34's enemy art: an engine cylinder the size of the sim's enemy,
  * tinted per enemy id, so a wave reads as a line of shapes walking the lane.
  */
@@ -102,6 +107,8 @@ private:
 	void InitAttributes(const FDFEnemyRow& Row);
 	const FDFEnemyRow* FindRow() const;
 	void HandleHealthDepleted(AActor* HitInstigator, AActor* Causer, const FGameplayEffectSpec* Spec, float Magnitude, float OldValue, float NewValue);
+	/** Host, every hit on a live body: DF.Message.EnemyDamaged (local: it fires per hit, like StructureDamaged). */
+	void HandleDamaged(AActor* HitInstigator, AActor* Causer, const FGameplayEffectSpec* Spec, float Magnitude, float OldValue, float NewValue);
 	/** Host, the frame after the lethal hit: OnKilled, then the body goes. */
 	void Die();
 	/** Every machine: the placeholder darkens toward red as health falls. */
@@ -147,6 +154,8 @@ private:
 
 	TWeakObjectPtr<ADFWaveDirector> Director;
 	TWeakObjectPtr<AActor> Killer;
+	/** The seat behind the lethal hit (IDFSeatHolder::SeatOf), read when it landed: the hero's pawn may be gone by Die. */
+	int32 KillerSeat = 0;
 	int32 Bounty = 0;
 	bool bReportedGone = false;
 	/** Health ran out; Die runs next frame. IsTargetDead reads it. */

@@ -7,12 +7,15 @@
 #include "Components/StaticMeshComponent.h"
 #include "Content/DFContentRows.h"
 #include "Content/DFContentSubsystem.h"
+#include "Damage/DFDamageContext.h"
 #include "DFGameplayTags.h"
 #include "DFWorldCollision.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
+#include "GameplayEffect.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Look/DFShapeLook.h"
+#include "Match/DFSeatHolder.h"
 #include "Materials/MaterialInterface.h"
 #include "Messages/DFMessageBus.h"
 #include "Messages/DFMessages.h"
@@ -36,8 +39,25 @@ namespace DFEnemyLook
 	constexpr float WoundWeight = 0.75f;
 	const FLinearColor Wound(0.79f, 0.23f, 0.16f);   // #C93B28, M_Enemy's HpFrac colour
 
-	/** Host-wide target ids, from 1 (0 = unknown in every C15 message). */
+	/**
+	 * Host-wide target ids, from 1 (0 = unknown in every C15 message). Never reset, on purpose: a new
+	 * match (ADFGameMode's restart) reloads the map, not the process, and the ids keep counting, so an id
+	 * names one body for the life of the process. Nothing that outlives a map (a reliable multicast still
+	 * in flight, the game instance's view models, a log) can then mistake a new match's body for an old
+	 * one. The sim restarts w.NextId per World; here ids are only matched for equality (targeting, messages),
+	 * never ordered, so where the count starts changes nothing.
+	 */
 	int32 NextTargetId = 1;
+}
+
+namespace DFEnemyCredit
+{
+	/** A hit's or a kill's structure (a tower, a trap), 0 for anything else; the seat is IDFSeatHolder::SeatOf's. */
+	int32 StructureIdOf(const AActor* Who)
+	{
+		const IDFStructure* Structure = Cast<IDFStructure>(Who);
+		return Structure ? Structure->GetStructureId() : 0;
+	}
 }
 
 ADFEnemy::ADFEnemy()
@@ -99,6 +119,7 @@ void ADFEnemy::BeginPlay()
 		[this](const FOnAttributeChangeData&) { RefreshHealthTint(); });
 	if (HasAuthority())
 	{
+		HealthSet->OnDamaged.AddUObject(this, &ADFEnemy::HandleDamaged);
 		HealthSet->OnHealthDepleted.AddUObject(this, &ADFEnemy::HandleHealthDepleted);
 		if (UDFTargetRegistry* Registry = UDFTargetRegistry::Get(this))
 		{
@@ -191,11 +212,41 @@ void ADFEnemy::HandleHealthDepleted(AActor* HitInstigator, AActor* Causer, const
 	// still applies its statuses, which do not ask). The body leaves next frame, outside the hit.
 	bKilled = true;
 	Killer = HitInstigator ? HitInstigator : Causer;
+	KillerSeat = IDFSeatHolder::SeatOf(Killer.Get());
 	if (Movement)
 	{
 		Movement->SetComponentTickEnabled(false);   // a corpse does not walk into the core
 	}
 	GetWorldTimerManager().SetTimerForNextTick(FTimerDelegate::CreateUObject(this, &ADFEnemy::Die));
+}
+
+void ADFEnemy::HandleDamaged(AActor* HitInstigator, AActor* Causer, const FGameplayEffectSpec* Spec, float Magnitude, float OldValue, float NewValue)
+{
+	// Step.cs Damage() returns at once for a dead body; the lethal hit itself still counts (OnDamaged
+	// fires before OnHealthDepleted in the same execution).
+	UDFMessageBus* Bus = UDFMessageBus::Get(this);
+	if (bKilled || !Bus || Magnitude <= 0.f)
+	{
+		return;
+	}
+	const AActor* Source = HitInstigator ? HitInstigator : Causer;
+	FDFMsg_Damage Msg;
+	Msg.TargetId = TargetId;
+	Msg.SourcePlayerId = IDFSeatHolder::SeatOf(Source);
+	Msg.SourceStructureId = DFEnemyCredit::StructureIdOf(Source);
+	if (const UDFDamageContext* Damage = Spec ? UDFDamageContext::FromContext(Spec->GetEffectContext()) : nullptr)
+	{
+		Msg.DamageType = Damage->DamageType;
+		Msg.DamageSource = Damage->DamageSource;
+		Msg.Zone = Damage->Zone;
+	}
+	// The sim's `total`: after armor and vulnerability, before the shield soaks its share.
+	Msg.Amount = Magnitude;
+	Msg.RemainingFraction = GetHealthFraction();
+	Msg.Location = GetActorLocation();
+	// Every hit of every tower and hero, so it stays on the host's bus (as StructureDamaged does): the
+	// match credits a hero's damage from it, and clients read health from the replicated attributes.
+	Bus->Broadcast(DFTags::Message_EnemyDamaged, Msg);
 }
 
 void ADFEnemy::Die()
@@ -212,10 +263,9 @@ void ADFEnemy::Die()
 		Msg.DefId = Entry.DefId;
 		Msg.Bounty = Bounty;
 		Msg.Location = GetActorLocation();
-		if (const IDFStructure* Structure = Cast<IDFStructure>(Killer.Get()))
-		{
-			Msg.KillerStructureId = Structure->GetStructureId();
-		}
+		Msg.KillerStructureId = DFEnemyCredit::StructureIdOf(Killer.Get());
+		// A hero's kill (Step.cs:2090 credits `playerId`): the seat read when the lethal hit landed.
+		Msg.KillerPlayerId = KillerSeat;
 		Bus->BroadcastTeam(DFTags::Message_EnemyKilled, Msg);
 	}
 	OnKilled.Broadcast(this, Killer.Get());

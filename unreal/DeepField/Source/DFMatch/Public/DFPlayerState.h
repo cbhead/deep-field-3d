@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
 #include "Hero/DFHeroStateComponent.h"
+#include "Match/DFSeatHolder.h"
 #include "DFPlayerState.generated.h"
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FDFOnPlayerStateChanged, class ADFPlayerState* /*PlayerState*/);
@@ -18,12 +19,17 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FDFOnPlayerStateChanged, class ADFPlayerStat
  * the reviver is credited a revive and ReviveMatchXp), Respawned → PlayerRespawned, after the pawn is
  * moved to a player start (Step.cs RespawnPlayer puts the hero at the map's hero spawn).
  *
+ * The seat answers IDFSeatHolder (DFCore), so a lower module can name the player behind a pawn: an
+ * enemy killed by a hero's shot sends DF.Message.EnemyKilled with KillerPlayerId = this seat, and
+ * ADFMatchState credits the kill here (and the damage, from DF.Message.EnemyDamaged).
+ *
  * CopyProperties carries the seat and stats across a seamless travel. Holding them for a player who
  * disconnects and rejoins (World.cs holds the seat) arrives with WS-11's rejoin flow: AGameModeBase
- * keeps no inactive player states.
+ * keeps no inactive player states. A new match (ADFGameMode's restart) is a hard reload, not a
+ * seamless travel, so every seat starts it with a fresh record.
  */
 UCLASS()
-class DFMATCH_API ADFPlayerState : public APlayerState
+class DFMATCH_API ADFPlayerState : public APlayerState, public IDFSeatHolder
 {
 	GENERATED_BODY()
 
@@ -32,6 +38,8 @@ public:
 
 	/** Match XP a reviver earns per revive (Step.cs:931). */
 	static constexpr int32 ReviveMatchXp = 5;
+	/** Match XP a hero earns per kill (Step.cs:2092: "kills bank into the profile at match end"). */
+	static constexpr int32 KillMatchXp = 1;
 
 	virtual void PostInitializeComponents() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -39,6 +47,8 @@ public:
 
 	/** 1-based seat (World.cs Player.Id); 0 until the game mode seats this player. */
 	int32 GetSeat() const { return Seat; }
+	// ---- IDFSeatHolder
+	virtual int32 GetMatchSeat() const override { return Seat; }
 	int32 GetKills() const { return Kills; }
 	float GetDamageDealt() const { return DamageDealt; }
 	int32 GetTowersBuilt() const { return TowersBuilt; }

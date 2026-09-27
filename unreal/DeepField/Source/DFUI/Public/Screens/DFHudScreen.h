@@ -17,7 +17,8 @@ struct FDFMsg_Rejected;
  *
  * It reads the match view model and nothing else (C12): the wave, its phase and the intermission
  * countdown, enemies remaining, money and lives (top corners), the local hero's hp (bottom left), its
- * gun's magazine (bottom right), and a victory / defeat banner. Refusals are discrete, so they arrive as DF.Message.*Rejected on this
+ * gun's magazine (bottom right), and a victory / defeat banner with the countdown to the next match under
+ * it (DFHudText::RestartLine). Refusals are discrete, so they arrive as DF.Message.*Rejected on this
  * client's bus (ADFPlayerController::Client_Refused) and show as a short toast over the prompt.
  *
  * It never takes focus or sets an input mode: play keeps the keyboard and mouse while it is up.
@@ -76,6 +77,7 @@ private:
 	UPROPERTY(Transient) TObjectPtr<UWidget> BannerPanel;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> BannerTitle;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> BannerDetail;
+	UPROPERTY(Transient) TObjectPtr<UTextBlock> BannerRestart;
 
 	TArray<FDFMessageHandle> RefusalHandles;
 	/** Seconds since the toast appeared; negative while none is showing. */

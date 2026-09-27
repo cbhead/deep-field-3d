@@ -4,6 +4,7 @@
 #include "DFMatchPhaseMachine.h"
 #include "GameFramework/GameStateBase.h"
 #include "Match/DFMatchTypes.h"
+#include "Messages/DFMessageBus.h"
 #include "Messages/DFMessages.h"
 #include "DFMatchState.generated.h"
 
@@ -20,6 +21,7 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FDFOnMatchStateChanged, class ADFMatchState*
 DECLARE_MULTICAST_DELEGATE_OneParam(FDFOnWaveBoundary, int32 /*WaveIndex about to begin*/);
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FDFOnEarlyCalled, int32 /*Seat*/);
+DECLARE_MULTICAST_DELEGATE_OneParam(FDFOnRestartRequested, class ADFMatchState* /*MatchState*/);
 
 /** How a match starts. The game mode fills it from the travel URL and hands it over in InitGameState. */
 struct DFMATCH_API FDFMatchSettings
@@ -33,6 +35,8 @@ struct DFMATCH_API FDFMatchSettings
 	bool bWaitForPlayers = false;
 	/** < 0: the balance dial intermissionSeconds (8 in the sim). */
 	float IntermissionSeconds = -1.f;
+	/** Seconds from Victory / Defeat to a new match. < 0: the match state's RestartDelaySeconds; 0 = never. */
+	float RestartSeconds = -1.f;
 };
 
 /**
@@ -45,6 +49,16 @@ struct DFMATCH_API FDFMatchSettings
  * domain writes and attaches here (ADR-0024): money, lives, team scrap and bounty (WS-06's
  * UDFEconomyStateComponent, attached as "Economy"), lane and mutable edge states (WS-09). Lives are
  * read through IDFMatchLivesSource (DFCore) and never written.
+ *
+ * The host keeps each seat's record (ADFPlayerState): a DF.Message.EnemyKilled with a KillerPlayerId
+ * is that seat's kill (and match XP, Step.cs:2090), a DF.Message.EnemyDamaged with a SourcePlayerId
+ * its damage (Step.cs:2071). ADFEnemy names the seat through IDFSeatHolder (DFCore).
+ *
+ * Play-again: after Victory or Defeat the host runs a restart clock (RestartDelaySeconds, or the URL's
+ * ?restart=) and, when it runs out, broadcasts OnRestartRequested once. ADFGameMode binds it and reloads
+ * the map with the same options, so the economy, the seats' records and everything else start fresh;
+ * a test binds it instead and nothing travels. The clock's end replicates as PhaseEndsAtServerTime, the
+ * same field the intermission uses, so every HUD counts down "New match in 12s" under the banner.
  */
 UCLASS()
 class DFMATCH_API ADFMatchState : public AGameStateBase
@@ -72,10 +86,14 @@ public:
 	int32 GetLap() const { return Lap; }
 	/** Bodies alive plus bodies the director has yet to release this wave. */
 	int32 GetEnemiesRemaining() const { return EnemiesRemaining; }
-	/** Whether the intermission clock is counting down (the HUD shows a countdown only then). */
+	/** Whether the phase's clock is counting down: the intermission's, or once the match is over the
+	 *  restart's (the HUD shows a countdown only then). */
 	bool IsPhaseClockRunning() const { return PhaseEndsAtServerTime >= 0.f; }
-	/** Seconds until the next wave, from the replicated end time and the shared server clock; 0 when the clock is not running. */
+	/** Seconds until the next wave, or until the new match once this one is over, from the replicated
+	 *  end time and the shared server clock; 0 when the clock is not running. */
 	float GetPhaseSecondsLeft() const;
+	/** The match is over and the host will start a new one when the phase clock runs out. */
+	bool IsRestartPending() const { return IsOver() && IsPhaseClockRunning(); }
 
 	/** Fired when a replicated field changes: on the host when it is written, on clients on receipt. */
 	FDFOnMatchStateChanged OnMatchStateChanged;
@@ -115,14 +133,32 @@ public:
 	FDFOnWaveBoundary OnWaveBoundary;
 	/** Host: a seat called the next wave early (WS-06 pays the early-call bonus, B§1.8). */
 	FDFOnEarlyCalled OnEarlyCalled;
+	/**
+	 * Host: the restart clock of a finished match ran out; start a new match. Broadcast once per match
+	 * (FDFMatchPhaseMachine sends Restart once). ADFGameMode binds it and reloads the map; unbound (a
+	 * test world, a game mode of its own), nothing happens and the match stays on its banner.
+	 */
+	FDFOnRestartRequested OnRestartRequested;
 	const FDFMatchSettings& GetSettings() const { return Settings; }
 
 	/** The phase machine itself, host only (tests read it). */
 	const FDFMatchPhaseMachine& GetPhaseMachine() const { return Machine; }
 
+	/** Seconds from Victory / Defeat to a new match when the URL does not say (?restart=<seconds>); 0 = never. */
+	UPROPERTY(EditDefaultsOnly, Category = "DF|Match", meta = (ClampMin = "0"))
+	float RestartDelaySeconds = 15.f;
+
 private:
 	UFUNCTION()
 	void OnRep_Match();
+
+	/** Host: follow the bus for the seats' records (EnemyKilled, EnemyDamaged); EndPlay stops. */
+	void SubscribeCredit();
+	void UnsubscribeCredit();
+	void HandleEnemyKilled(const FDFMsg_Kill& Kill);
+	void HandleEnemyDamaged(const FDFMsg_Damage& Damage);
+	/** The seated player state on Seat, or null (the seat has left, or it is 0: a tower's). */
+	ADFPlayerState* FindSeat(int32 Seat) const;
 
 	void EnsureDirector();
 	void BindDirector();
@@ -150,6 +186,8 @@ private:
 	FDelegateHandle SpawnHandle;
 	UPROPERTY(Transient) TObjectPtr<ADFEventRelay> Relay;
 	UPROPERTY(VisibleAnywhere, Category = "DF|Match") TObjectPtr<UDFEconomyStateComponent> Economy;
+	FDFMessageHandle KilledHandle;
+	FDFMessageHandle DamagedHandle;
 
 	UPROPERTY(ReplicatedUsing = OnRep_Match) EDFMatchPhase Phase = EDFMatchPhase::Intermission;
 	UPROPERTY(ReplicatedUsing = OnRep_Match) int32 WaveIndex = -1;
@@ -159,6 +197,7 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_Match) float Threat = 1.f;
 	UPROPERTY(ReplicatedUsing = OnRep_Match) int32 Lap = 0;
 	UPROPERTY(ReplicatedUsing = OnRep_Match) int32 EnemiesRemaining = 0;
-	/** Server-clock time the intermission clock reaches zero; -1 when it is not running. */
+	/** Server-clock time the phase clock reaches zero (the intermission's, or after Victory / Defeat the
+	 *  restart's); -1 when it is not running. */
 	UPROPERTY(ReplicatedUsing = OnRep_Match) float PhaseEndsAtServerTime = -1.f;
 };

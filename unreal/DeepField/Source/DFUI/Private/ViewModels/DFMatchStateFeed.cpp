@@ -22,6 +22,7 @@ void FDFMatchStateFeed::Fill(UDFMatchViewModel& Match, const ADFMatchState& Stat
 	Match.SetPhase(State.GetPhase());
 	// The clock replicates as the server time it runs out; the seconds left are this machine's reading of
 	// it. When it is not running (a wave, the lobby, waiting for players) there is no countdown to show.
+	// After Victory / Defeat it is the host's restart clock: the seconds until the new match.
 	Match.SetPhaseSecondsLeft(State.IsPhaseClockRunning() ? State.GetPhaseSecondsLeft() : 0.f);
 	Match.SetThreat(State.GetThreat());
 	Match.SetEnemiesRemaining(State.GetEnemiesRemaining());

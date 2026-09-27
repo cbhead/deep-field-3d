@@ -59,6 +59,7 @@ void ADFMatchState::BeginPlay()
 	EnsureDirector();
 	// Again, now that the director (and so the arc's length) is known. Nothing has started yet.
 	ConfigureMatch(Settings);
+	SubscribeCredit();
 	// -DFDemo (dev builds): the match plays itself for a recording.
 	if (ADFDemoDirector::IsRequested() && GetWorld()->IsGameWorld())
 	{
@@ -70,6 +71,9 @@ void ADFMatchState::BeginPlay()
 
 void ADFMatchState::EndPlay(const EEndPlayReason::Type Reason)
 {
+	// The bus is the game instance's and outlives this map (a restart reloads it): nothing of this
+	// match may still be listening in the next one.
+	UnsubscribeCredit();
 	if (Director && ClearedHandle.IsValid())
 	{
 		Director->OnWaveCleared.Remove(ClearedHandle);
@@ -113,10 +117,84 @@ void ADFMatchState::ConfigureMatch(const FDFMatchSettings& InSettings)
 	const float Intermission = Settings.IntermissionSeconds >= 0.f
 		? Settings.IntermissionSeconds
 		: DFBalance::Dial(this, TEXT("intermissionSeconds"), 8.f);
+	const float Restart = Settings.RestartSeconds >= 0.f ? Settings.RestartSeconds : RestartDelaySeconds;
 	const int32 Arc = (Director && Director->IsConfigured()) ? Director->GetTables().Waves.Num() : 0;
-	Machine.Reset(Intermission, Arc, Settings.bLobby, Settings.bEndless, Settings.bWaitForPlayers);
+	Machine.Reset(Intermission, Arc, Settings.bLobby, Settings.bEndless, Settings.bWaitForPlayers, Restart);
 	bConfigured = true;
 	Publish();
+}
+
+void ADFMatchState::SubscribeCredit()
+{
+	UDFMessageBus* Bus = HasAuthority() ? UDFMessageBus::Get(this) : nullptr;
+	if (!Bus || KilledHandle.IsValid())
+	{
+		return;
+	}
+	// Host only: clients hear the relay's copy of EnemyKilled too, but the record replicates from here.
+	TWeakObjectPtr<ADFMatchState> WeakThis(this);
+	KilledHandle = Bus->Subscribe<FDFMsg_Kill>(DFTags::Message_EnemyKilled, [WeakThis](const FGameplayTag&, const FDFMsg_Kill& Kill)
+	{
+		if (ADFMatchState* Self = WeakThis.Get())
+		{
+			Self->HandleEnemyKilled(Kill);
+		}
+	}, /*bIncludeChildren*/ false);
+	DamagedHandle = Bus->Subscribe<FDFMsg_Damage>(DFTags::Message_EnemyDamaged, [WeakThis](const FGameplayTag&, const FDFMsg_Damage& Damage)
+	{
+		if (ADFMatchState* Self = WeakThis.Get())
+		{
+			Self->HandleEnemyDamaged(Damage);
+		}
+	}, /*bIncludeChildren*/ false);
+}
+
+void ADFMatchState::UnsubscribeCredit()
+{
+	if (UDFMessageBus* Bus = UDFMessageBus::Get(this))
+	{
+		Bus->Unsubscribe(KilledHandle);
+		Bus->Unsubscribe(DamagedHandle);
+	}
+	KilledHandle = FDFMessageHandle();
+	DamagedHandle = FDFMessageHandle();
+}
+
+ADFPlayerState* ADFMatchState::FindSeat(int32 Seat) const
+{
+	if (Seat <= 0)
+	{
+		return nullptr;
+	}
+	for (APlayerState* PlayerState : PlayerArray)
+	{
+		ADFPlayerState* Seated = Cast<ADFPlayerState>(PlayerState);
+		if (Seated && Seated->GetSeat() == Seat)
+		{
+			return Seated;
+		}
+	}
+	return nullptr;
+}
+
+void ADFMatchState::HandleEnemyKilled(const FDFMsg_Kill& Kill)
+{
+	// Step.cs:2090: a player's kill is one kill and one match XP on that player; a tower's (seat 0) is
+	// the tower's own record (ADFTower::GetKills).
+	if (ADFPlayerState* Seated = FindSeat(Kill.KillerPlayerId))
+	{
+		Seated->AddKill();
+		Seated->AddMatchXp(ADFPlayerState::KillMatchXp);
+	}
+}
+
+void ADFMatchState::HandleEnemyDamaged(const FDFMsg_Damage& Damage)
+{
+	// Step.cs:2071 `dealerState.DamageDealt += total`: the hit's whole amount, shield share included.
+	if (ADFPlayerState* Seated = FindSeat(Damage.SourcePlayerId))
+	{
+		Seated->AddDamageDealt(Damage.Amount);
+	}
 }
 
 void ADFMatchState::UseWaveDirector(ADFWaveDirector* InDirector)
@@ -372,6 +450,14 @@ void ADFMatchState::ApplyStep(EDFMatchStep Step)
 		}
 		ADFEventRelay::Publish(this, DFTags::Message_Defeat, Describe(FMath::Max(0, Machine.WaveIndex)));
 		return;
+
+	case EDFMatchStep::Restart:
+		// Once per match (the machine sends Restart once); the game mode reloads the map.
+		UE_LOG(LogDFMatchState, Log, TEXT("restart: the match ended in %s %.0f s ago; asking for a new one%s"),
+			Machine.Phase == EDFMatchPhase::Victory ? TEXT("victory") : TEXT("defeat"), Machine.RestartSeconds,
+			OnRestartRequested.IsBound() ? TEXT("") : TEXT(" (nobody is listening: the match stays over)"));
+		OnRestartRequested.Broadcast(this);
+		return;
 	}
 }
 
@@ -420,11 +506,16 @@ void ADFMatchState::Publish()
 	Set(EnemiesRemaining, bWaveRunning ? Director->GetAliveCount() + Director->GetSchedule().NumRemaining() : 0);
 
 	// The clock replicates as the server time it runs out, so a client counts down on its own and the
-	// field changes only when the clock starts, stops or jumps (an early call), never every frame.
+	// field changes only when the clock starts, stops or jumps (an early call), never every frame. Once
+	// the match is over the same field carries the restart clock: the phase ends when the new match starts.
 	float EndsAt = -1.f;
 	if (Machine.IsClockRunning(GetConnectedPlayerCount()))
 	{
 		EndsAt = static_cast<float>(GetServerWorldTimeSeconds()) + Machine.PhaseTimer;
+	}
+	else if (Machine.IsRestartClockRunning())
+	{
+		EndsAt = static_cast<float>(GetServerWorldTimeSeconds()) + Machine.RestartTimer;
 	}
 	if ((EndsAt < 0.f) != (PhaseEndsAtServerTime < 0.f) || FMath::Abs(EndsAt - PhaseEndsAtServerTime) > 0.05f)
 	{

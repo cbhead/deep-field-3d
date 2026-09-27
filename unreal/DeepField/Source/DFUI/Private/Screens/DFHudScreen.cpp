@@ -259,8 +259,12 @@ void UDFHudScreen::BuildTree()
 		BannerTitle->SetJustification(ETextJustify::Center);
 		BannerDetail = Text(TEXT("BannerDetail"), Style.SizeToast, Style.TextSecondary);
 		BannerDetail->SetJustification(ETextJustify::Center);
+		BannerRestart = Text(TEXT("BannerRestart"), Style.SizeToast, Style.Accent);
+		BannerRestart->SetJustification(ETextJustify::Center);
 		Box->AddChildToVerticalBox(BannerTitle)->SetHorizontalAlignment(HAlign_Center);
 		Box->AddChildToVerticalBox(BannerDetail)->SetHorizontalAlignment(HAlign_Center);
+		Box->AddChildToVerticalBox(Gap(0.f, Style.Gap));
+		Box->AddChildToVerticalBox(BannerRestart)->SetHorizontalAlignment(HAlign_Center);
 		UBorder* Border = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("BannerPanel"));
 		Border->SetBrush(Style.PanelBrush(Style.Scrim, Style.PanelEdge));
 		Border->SetPadding(FMargin(Style.PadPanel * 4.f, Style.PadPanel * 1.5f));
@@ -427,6 +431,9 @@ void UDFHudScreen::Refresh(const UDFMatchViewModel* Match)
 		SetTextIfChanged(BannerTitle, DFHudText::Banner(Phase));
 		SetColorIfChanged(BannerTitle, Phase == EDFMatchPhase::Victory ? Style.Accent : Style.Danger);
 		SetTextIfChanged(BannerDetail, DFHudText::BannerDetail(*Match));
+		const FText Restart = DFHudText::RestartLine(*Match);
+		SetShown(BannerRestart, !Restart.IsEmpty());
+		SetTextIfChanged(BannerRestart, Restart);
 	}
 }
 

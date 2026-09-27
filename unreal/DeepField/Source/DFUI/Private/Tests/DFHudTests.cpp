@@ -138,6 +138,13 @@ bool FDFUIFeedMatchStateTest::RunTest(const FString&)
 	TestEqual(TEXT("no lives"), Match->GetLives(), 0);
 	TestEqual(TEXT("banner"), Str(DFHudText::Banner(Match->GetPhase())), FString(TEXT("DEFEAT")));
 	TestEqual(TEXT("banner detail"), Str(DFHudText::BannerDetail(*Match)), FString(TEXT("The core fell on wave 2")));
+
+	// Play-again: the restart clock rides the same replicated end time, so the countdown reaches the model.
+	TestEqual(TEXT("the restart countdown is the replicated end time read now"), Match->GetPhaseSecondsLeft(), State->RestartDelaySeconds, 0.01f);
+	TestEqual(TEXT("under the banner"), Str(DFHudText::RestartLine(*Match)), FString(TEXT("New match in 15s")));
+	State->AdvanceMatch(3.5f);
+	FDFMatchStateFeed::Fill(*Match, *State, nullptr);
+	TestEqual(TEXT("it counts down"), Str(DFHudText::RestartLine(*Match)), FString(TEXT("New match in 12s")));
 	return true;
 }
 
@@ -289,6 +296,19 @@ bool FDFUIHudTextTest::RunTest(const FString&)
 	TestEqual(TEXT("victory banner"), Str(DFHudText::Banner(EDFMatchPhase::Victory)), FString(TEXT("VICTORY")));
 	TestEqual(TEXT("victory detail"), Str(DFHudText::BannerDetail(*Match)), FString(TEXT("All 10 waves held")));
 	TestTrue(TEXT("no banner while the match runs"), DFHudText::Banner(EDFMatchPhase::Wave).IsEmpty() && DFHudText::Banner(EDFMatchPhase::Intermission).IsEmpty());
+
+	// Play-again: once the match is over, the phase's seconds are the restart clock's.
+	TestTrue(TEXT("no restart line with the clock stopped (restart off, or already travelling)"), DFHudText::RestartLine(*Match).IsEmpty());
+	Match->SetPhaseSecondsLeft(11.2f);
+	TestEqual(TEXT("new match, rounded up"), Str(DFHudText::RestartLine(*Match)), FString(TEXT("New match in 12s")));
+	Match->SetPhaseSecondsLeft(0.3f);
+	TestEqual(TEXT("never 0s while it has not happened"), Str(DFHudText::RestartLine(*Match)), FString(TEXT("New match in 1s")));
+	Match->SetPhase(EDFMatchPhase::Defeat);
+	TestEqual(TEXT("after a defeat too"), Str(DFHudText::RestartLine(*Match)), FString(TEXT("New match in 1s")));
+	TestEqual(TEXT("the phase line keeps the verdict"), Str(DFHudText::PhaseLine(*Match)), FString(TEXT("Defeat")));
+	Match->SetPhase(EDFMatchPhase::Intermission);
+	Match->SetPhaseSecondsLeft(5.f);
+	TestTrue(TEXT("an intermission countdown is not a new match"), DFHudText::RestartLine(*Match).IsEmpty());
 	return true;
 }
 

@@ -83,6 +83,17 @@ FText DFHudText::BannerDetail(const UDFMatchViewModel& Match)
 	}
 }
 
+FText DFHudText::RestartLine(const UDFMatchViewModel& Match)
+{
+	const bool bOver = Match.GetPhase() == EDFMatchPhase::Victory || Match.GetPhase() == EDFMatchPhase::Defeat;
+	if (!bOver || Match.GetPhaseSecondsLeft() <= 0.f)
+	{
+		return FText::GetEmpty();
+	}
+	// Rounded up, as the wave countdown: "1s" until the host travels, never "0s" while it has not.
+	return FText::Format(LOCTEXT("NewMatchIn", "New match in {0}s"), FMath::CeilToInt(Match.GetPhaseSecondsLeft()));
+}
+
 FText DFHudText::Refusal(FName Reason)
 {
 	if (Reason == InsufficientFunds)
