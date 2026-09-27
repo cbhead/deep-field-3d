@@ -1,6 +1,6 @@
 # Workstream status
 
-Generated 2026-09-26T23:47:17Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-27T00:15:42Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
 active: 7 · claimed: 1 · paused: 5 · review: 1 · unclaimed: 36
 
@@ -26,7 +26,7 @@ active: 7 · claimed: 1 · paused: 5 · review: 1 · unclaimed: 36
 | WS-12 | UI (Common UI + MVVM) | P2-P5 | CP | active (lease expired) | session-fae2d0c5 | 2026-09-26T02:11:40Z | 042f7d7 | yes | — |
 | WS-13 | Audio (MetaSounds) | P2-P5 |  | unclaimed | — | — | — | yes | — |
 | WS-14 | VFX (Niagara) | P2-P5 |  | unclaimed | — | — | — | yes | — |
-| WS-15 | Automation, CI, packaging, store | P1+ |  | claimed | session-gpu-box-2026-09-26 | 2026-09-27T23:47:06Z | 2ec9e62 |  | — |
+| WS-15 | Automation, CI, packaging, store | P1+ |  | claimed | session-gpu-box-2026-09-26 | 2026-09-27T23:47:06Z | 8e0e623 |  | — |
 | WS-16 | Overclock tower + grid | P4 |  | unclaimed | — | — | — |  | — |
 | WS-17 | Elite modifiers | P4 |  | unclaimed | — | — | — |  | — |
 | WS-18 | Weak points + Specter passive | P4 |  | unclaimed | — | — | — |  | — |

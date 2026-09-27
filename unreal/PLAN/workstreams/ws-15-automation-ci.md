@@ -7,7 +7,7 @@ owner: session-gpu-box-2026-09-26
 claimed_at: 2026-09-26T23:47:06Z
 lease_expires: 2026-09-27T23:47:06Z
 branch: ws/15-automation-ci/int-merge
-last_commit: 2ec9e62
+last_commit: 8e0e623
 editor_heavy: false
 phase: P1+
 size: M
