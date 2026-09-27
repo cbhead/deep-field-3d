@@ -1,8 +1,8 @@
 # Workstream status
 
-Generated 2026-09-27T07:16:47Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-27T07:17:05Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
-active: 6 · claimed: 1 · paused: 6 · review: 1 · unclaimed: 36
+active: 7 · claimed: 1 · paused: 6 · review: 1 · unclaimed: 35
 
 | WS | Title | Phase | CP | State | Owner | Lease expires | Last commit | Editor-heavy | Blocked on |
 |---|---|---|---|---|---|---|---|---|---|
@@ -12,7 +12,7 @@ active: 6 · claimed: 1 · paused: 6 · review: 1 · unclaimed: 36
 | WS-03 | Player | P2 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T06:30:33Z | 19ded62 | yes | — |
 | WS-04 | Towers & build | P2-P3 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T07:08:36Z | 3efb3ce | yes | — |
 | WS-05 | Enemies & AI | P2-P3 | CP | claimed | session-gpu-box-2026-09-26 | 2026-09-28T06:47:31Z | 19ded62 | yes | — |
-| WS-06 | Economy, scrap, gunsmith | P3 |  | unclaimed | — | — | — |  | — |
+| WS-06 | Economy, scrap, gunsmith | P3 |  | active | session-gpu-box-2026-09-26 | 2026-09-28T07:17:05Z | — |  | — |
 | WS-07 | Factions & abilities | P2-P4 | CP | unclaimed | — | — | — |  | — |
 | WS-08 | Vehicles | P3-P4 |  | unclaimed | — | — | — | yes | — |
 | WS-09 | World: lanes, sockets, traversal, conditions, terrain import | P1-P4 | CP | paused | — | — | b98c25c | yes | — |
