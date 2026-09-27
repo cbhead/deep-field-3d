@@ -75,6 +75,7 @@ param(
   [string]$Dir = '',
   # The engine folder (the one containing Engine\). Default: found through the launcher's records.
   [string]$EngineDir = '',
+  # The map smoke, ci-local and join tests use; play and host default to the first playable (Testlane) instead.
   [string]$Map = '/Game/DF/Dev/L_Dev_Empty',
   # setup: the branch to clone (default main, the trunk), e.g. a PR branch to try before it merges.
   [string]$Branch = '',
@@ -108,6 +109,8 @@ param(
   [switch]$Mcp,
   # editor -Mcp: the port the MCP server listens on (localhost only).
   [int]$McpPort = 8000,
+  # play: the match plays itself (towers built from the economy, an orbiting camera): -DFDemo.
+  [switch]$Demo,
   # Keep the window open at the end (the .cmd passes this when the script was double-clicked).
   [switch]$Pause
 )
@@ -1773,6 +1776,8 @@ try {
     }
   }
 
+  # play and host start the first playable unless -Map names another map.
+  $playMap = if ($PSBoundParameters.ContainsKey('Map')) { $Map } else { '/Game/DF/Maps/Testlane/L_Testlane' }
   # The smoke's own port, so it never collides with a `deepfield host` on 7777; -Port overrides it.
   $smokePort = 7788; if ($PSBoundParameters.ContainsKey('Port')) { $smokePort = $Port }
   switch ($Command) {
@@ -1817,10 +1822,10 @@ try {
         if ($Mcp) { Write-Info "Unreal MCP server: http://localhost:$McpPort/mcp once the editor has loaded (toolsets: $(($McpPlugins | Select-Object -Skip 1) -join ', '))" }
       }
     }
-    'play'     { if (Invoke-Build) { Start-Game @($Map) 'play' } }
+    'play'     { if (Invoke-Build) { Start-Game (@($playMap) + $(if ($Demo) { @('-DFDemo') } else { @() })) 'play' } }
     'host'     {
       if (Invoke-Build) {
-        Start-Game @("$Map`?listen", "-port=$Port") 'host'
+        Start-Game @("$playMap`?listen", "-port=$Port") 'host'
         $ips = @(Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.IPAddress -notmatch '^(127\.|169\.254\.)' } | ForEach-Object { $_.IPAddress })
         Write-Info "Others join with: deepfield join $(if ($ips.Count) { $ips[0] } else { '<this machine''s IP>' })$(if ($Port -ne 7777) { " -Port $Port" })"
         Write-Info 'Windows Firewall may ask to allow UnrealEditor on private networks: allow it.'

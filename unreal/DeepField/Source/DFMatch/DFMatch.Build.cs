@@ -29,5 +29,11 @@ public class DFMatch : ModuleRules
 		PrivateDependencyModuleNames.AddRange(new string[] {
 			// (none)
 		});
+
+		if (Target.bBuildEditor)
+		{
+			// DF.Func.Tower.KillsTestlaneEnemies opens a map and runs it in PIE: FEndPlayMapCommand (Tests/AutomationEditorCommon.h).
+			PrivateDependencyModuleNames.Add("UnrealEd");
+		}
 	}
 }

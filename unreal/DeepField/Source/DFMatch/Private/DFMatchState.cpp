@@ -5,6 +5,7 @@
 #include "DFGameplayTags.h"
 #include "DFPlayerState.h"
 #include "DFWorldSubsystem.h"
+#include "Dev/DFDemoDirector.h"
 #include "Economy/DFEconomyStateComponent.h"
 #include "Enemies/DFEnemy.h"
 #include "Movement/DFLaneWalker.h"
@@ -58,6 +59,13 @@ void ADFMatchState::BeginPlay()
 	EnsureDirector();
 	// Again, now that the director (and so the arc's length) is known. Nothing has started yet.
 	ConfigureMatch(Settings);
+	// -DFDemo (dev builds): the match plays itself for a recording.
+	if (ADFDemoDirector::IsRequested() && GetWorld()->IsGameWorld())
+	{
+		FActorSpawnParameters Params;
+		Params.Owner = this;
+		GetWorld()->SpawnActor<ADFDemoDirector>(ADFDemoDirector::StaticClass(), FTransform::Identity, Params);
+	}
 }
 
 void ADFMatchState::EndPlay(const EEndPlayReason::Type Reason)

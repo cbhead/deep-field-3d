@@ -1,6 +1,8 @@
 #include "DFGameplayTags.h"
 #include "Economy/DFEconomyStateComponent.h"
+#include "Engine/World.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/WorldSettings.h"
 #include "Messages/DFMessageBus.h"
 #include "Messages/DFMessages.h"
 #include "Misc/AutomationTest.h"
@@ -16,6 +18,13 @@ namespace DFEconomyTest
 
 	UDFEconomyStateComponent* MakeEconomy(FDFTestWorld& World)
 	{
+		// A world with no GameMode never marks itself begun-play (the game state does that), so an actor
+		// spawned into it never begins play and its components never subscribe. NotifyBeginPlay is what
+		// the game state would call (DFStatusComponentTests does the same).
+		if (!World.GetWorld()->HasBegunPlay())
+		{
+			World.GetWorld()->GetWorldSettings()->NotifyBeginPlay();
+		}
 		AActor* Host = World.SpawnActor<AActor>();
 		if (!Host)
 		{
