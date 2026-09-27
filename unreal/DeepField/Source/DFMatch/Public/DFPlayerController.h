@@ -73,21 +73,29 @@ public:
 	/**
 	 * How far the tower the aim ring is about reaches, for the range ring round the pad (Highlight is
 	 * DecidePadHighlight's answer). Free: the choice as it would go up now, DFTowerMath::RangeMeters with no
-	 * purchases in Condition (the weather a tower built now fights in: GetBuildCondition). Occupied: Tower's
-	 * own GetRangeMeters(), from its replicated def, path levels and weather, so the ring grows with each
-	 * Range purchase and shrinks in fog exactly as the weapon's reach does. Either way the inner ring is the
-	 * row's MinRangeMeters, which neither upgrades nor weather move (DFTowerMath::PickTarget). Blocked or
-	 * None: no ring (a build the host would refuse has no reach to show).
+	 * purchases in Condition (the weather a tower placed now is given: GetBuildCondition, the current wave's,
+	 * or between waves the one just cleared). Occupied: Tower's own GetRangeMeters(), from its replicated
+	 * def, path levels and weather, so the ring grows with each Range purchase and shrinks in fog exactly as
+	 * the weapon's reach does. Either way the inner ring is the row's MinRangeMeters, which neither upgrades
+	 * nor weather move (DFTowerMath::PickTarget). Blocked or None: no ring (a build the host would refuse
+	 * has no reach to show). Both rings say what a tower reaches now, not in the next wave: see GetBuildCondition.
 	 */
 	static FDFRangePreview DecideRangePreview(EDFPadHighlight Highlight, const FDFTowerRow* Choice, FName ChoiceId, const FDFConditionRow* Condition, const ADFTower* Tower);
 
 	/**
-	 * The wave condition a tower built now would fight in (null for clear weather). The host's
-	 * UDFBuildSubsystem holds it and hands it to every tower it places; a client's never hears WaveStarted,
-	 * but every standing tower replicates the same condition, so a client reads it off one. A client with
-	 * no tower standing yet cannot know it and shows the clear-weather reach.
+	 * The wave condition a tower placed now is given (null for clear weather): the host's UDFBuildSubsystem
+	 * holds it and hands it to every tower it places. It changes only at DF.Message.WaveStarted, when every
+	 * standing tower is re-set to the new wave's; so mid-wave it is the wave being fought, and in the
+	 * intermission it is still the wave just cleared, not the one coming (Foundry's fog wave: a free pad
+	 * shows the clear reach until the fog wave starts, and the fog reach through the break after it). A
+	 * client never hears WaveStarted there, but every standing tower replicates the same condition, so a
+	 * client reads it off one (StandingTowersCondition); with no tower standing yet it shows clear weather.
 	 */
 	const FDFConditionRow* GetBuildCondition() const;
+
+	/** A client's GetBuildCondition: the condition a standing tower in World replicates (the host sets every
+	 *  tower's alike), null when none stands or the weather is clear. */
+	static const FDFConditionRow* StandingTowersCondition(const UWorld& World);
 
 	/** Command.Launch. Ignored unless this player holds the launch seat and the party is in the lobby (as the sim). */
 	UFUNCTION(Server, Reliable)

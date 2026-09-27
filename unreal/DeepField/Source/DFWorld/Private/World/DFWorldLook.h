@@ -4,7 +4,8 @@
 #include "Engine/EngineTypes.h"
 
 class AActor;
-class UInstancedStaticMeshComponent;
+class UMeshComponent;
+class UProceduralMeshComponent;
 class USceneComponent;
 class UStaticMeshComponent;
 
@@ -34,12 +35,14 @@ namespace DFWorldLook
 		const FVector& CentreCm, const FVector& SizeCm, EComponentMobility::Type Mobility);
 
 	/**
-	 * As CreatePart, for a look made of many copies of one shape (one draw however many): an instanced
-	 * part with no instances, at Parent's origin and unscaled, with the same collision settings. The owner
-	 * lays the instances at play.
+	 * As CreatePart, for a look laid at play from many copies of a shape (one draw however many): an empty
+	 * procedural mesh at Parent's origin, Movable, with the same collision settings; the owner builds its
+	 * one section. Not an instanced static mesh: those draw only with a material flagged for instancing,
+	 * and EmissiveMeshMaterial (Glow) is not, so in PIE, -game and a packaged build the renderer swaps it for
+	 * the grey DefaultMaterial (InstancedStaticMesh.cpp's SetupProxy). A procedural mesh draws with the
+	 * local vertex factory, which every static-mesh material compiles for.
 	 */
-	UInstancedStaticMeshComponent* CreateInstancedPart(AActor& Owner, USceneComponent* Parent, FName Name, EShape Shape,
-		EComponentMobility::Type Mobility);
+	UProceduralMeshComponent* CreateLaidPart(AActor& Owner, USceneComponent* Parent, FName Name);
 
 	/**
 	 * Tints a part: a dynamic instance of the shape's own material with "Color" set. Idempotent (a
@@ -49,8 +52,8 @@ namespace DFWorldLook
 	void Tint(UStaticMeshComponent* Part, const FLinearColor& Colour);
 
 	/** As Tint, but unlit and bright (DFShapeLook::Glow, EmissiveMeshMaterial): for a highlight that must
-	 *  read against any ground. Re-tinting keeps the instance. */
-	void Glow(UStaticMeshComponent* Part, const FLinearColor& Colour);
+	 *  read against any ground. Re-tinting keeps the instance. Never on an instanced part (see CreateLaidPart). */
+	void Glow(UMeshComponent* Part, const FLinearColor& Colour);
 
 	// Colours. PROGRAMME.md Appendix C§1 fixes two of them for every map: "core = cyan #22D3EE pool,
 	// spawn portal = crimson #FF2E4A" (portals and warp gates are the only crimson). palette.json has

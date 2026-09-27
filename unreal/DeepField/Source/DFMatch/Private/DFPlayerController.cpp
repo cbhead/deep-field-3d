@@ -216,7 +216,12 @@ const FDFConditionRow* ADFPlayerController::GetBuildCondition() const
 		const FName ConditionId = Build ? Build->GetWaveCondition() : NAME_None;
 		return ConditionId.IsNone() ? nullptr : Content->Condition(ConditionId);
 	}
-	for (TActorIterator<ADFTower> It(World); It; ++It)
+	return StandingTowersCondition(*World);
+}
+
+const FDFConditionRow* ADFPlayerController::StandingTowersCondition(const UWorld& World)
+{
+	for (TActorIterator<ADFTower> It(&World); It; ++It)
 	{
 		if (!It->IsActorBeingDestroyed() && !It->GetDefId().IsNone())
 		{

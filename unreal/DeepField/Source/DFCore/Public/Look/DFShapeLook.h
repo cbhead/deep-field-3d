@@ -23,7 +23,9 @@ namespace DFShapeLook
 	DFCORE_API UMaterialInstanceDynamic* Tint(UMeshComponent* Mesh, const FLinearColor& Colour, int32 Slot = 0);
 
 	/** The engine's EmissiveMeshMaterial (vector "Color", unlit and bright): for what should read as
-	 *  energy at a distance (rounds in flight, a muzzle flash). */
+	 *  energy at a distance (rounds in flight, a muzzle flash). Not flagged for instanced static meshes:
+	 *  on one, PIE, -game and a packaged build draw the grey DefaultMaterial instead ("missing usage flag
+	 *  InstancedStaticMeshes"), so glow a static or procedural mesh (ADFSocket's range ring), never an ISM. */
 	DFCORE_API UMaterialInterface* GlowMaterial();
 
 	/** As Tint, from GlowMaterial(). */

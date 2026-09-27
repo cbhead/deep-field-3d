@@ -1,6 +1,5 @@
 #include "World/DFWorldLook.h"
 
-#include "Components/InstancedStaticMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/CollisionProfile.h"
 #include "Engine/StaticMesh.h"
@@ -8,6 +7,7 @@
 #include "Look/DFShapeLook.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
+#include "ProceduralMeshComponent.h"
 #include "Tint/DFPaletteSettings.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -40,14 +40,10 @@ namespace DFWorldLook
 			}
 		}
 
-		void SetUpPart(UStaticMeshComponent& Part, USceneComponent* Parent, EShape Shape, EComponentMobility::Type Mobility)
+		void SetUpPart(UPrimitiveComponent& Part, USceneComponent* Parent, EComponentMobility::Type Mobility)
 		{
 			Part.SetupAttachment(Parent);
 			Part.SetMobility(Mobility);
-			if (UStaticMesh* Mesh = ShapeMesh(Shape))
-			{
-				Part.SetStaticMesh(Mesh);
-			}
 			Part.SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
 			Part.SetCollisionEnabled(ECollisionEnabled::NoCollision);
 			// The NoCollision profile names only the engine channels; the project's trace channels would keep their
@@ -62,17 +58,20 @@ namespace DFWorldLook
 		const FVector& CentreCm, const FVector& SizeCm, EComponentMobility::Type Mobility)
 	{
 		UStaticMeshComponent* Part = Owner.CreateDefaultSubobject<UStaticMeshComponent>(Name);
-		SetUpPart(*Part, Parent, Shape, Mobility);
+		SetUpPart(*Part, Parent, Mobility);
+		if (UStaticMesh* Mesh = ShapeMesh(Shape))
+		{
+			Part->SetStaticMesh(Mesh);
+		}
 		Part->SetRelativeLocation(CentreCm);
 		Part->SetRelativeScale3D(SizeCm / 100.f);
 		return Part;
 	}
 
-	UInstancedStaticMeshComponent* CreateInstancedPart(AActor& Owner, USceneComponent* Parent, FName Name, EShape Shape,
-		EComponentMobility::Type Mobility)
+	UProceduralMeshComponent* CreateLaidPart(AActor& Owner, USceneComponent* Parent, FName Name)
 	{
-		UInstancedStaticMeshComponent* Part = Owner.CreateDefaultSubobject<UInstancedStaticMeshComponent>(Name);
-		SetUpPart(*Part, Parent, Shape, Mobility);
+		UProceduralMeshComponent* Part = Owner.CreateDefaultSubobject<UProceduralMeshComponent>(Name);
+		SetUpPart(*Part, Parent, EComponentMobility::Movable);
 		return Part;
 	}
 
@@ -82,7 +81,7 @@ namespace DFWorldLook
 		DFShapeLook::Tint(Part, Colour);
 	}
 
-	void Glow(UStaticMeshComponent* Part, const FLinearColor& Colour)
+	void Glow(UMeshComponent* Part, const FLinearColor& Colour)
 	{
 		DFShapeLook::Glow(Part, Colour);
 	}

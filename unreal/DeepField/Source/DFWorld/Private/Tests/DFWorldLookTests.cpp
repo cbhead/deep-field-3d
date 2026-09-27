@@ -18,7 +18,9 @@
 #include "DFWorldCollision.h"
 #include "Engine/World.h"
 #include "LaneGraph/DFLaneGraphAsset.h"
+#include "Materials/Material.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "ProceduralMeshComponent.h"
 #include "Testing/DFTestUtils.h"
 #include "World/DFCore.h"
 #include "Look/DFShapeLook.h"
@@ -136,6 +138,50 @@ namespace DFWorldLookTest
 	{
 		UMaterialInstanceDynamic* Mid = Cast<UMaterialInstanceDynamic>(Part->GetMaterial(0));
 		return Mid && Mid->HasAnyFlags(RF_Transient) && Mid->K2_GetVectorParameterValue(TEXT("Color")).Equals(Expected, 1e-4f);
+	}
+
+	/**
+	 * Whether a game draws Part in its own material, not the grey default. An instanced static mesh draws
+	 * only with a material flagged for instancing and swaps any other for DefaultMaterial in PIE, -game and a
+	 * packaged build (InstancedStaticMesh.cpp, SetupProxy: "missing usage flag InstancedStaticMeshes");
+	 * every other mesh here draws with the local vertex factory, which needs the static-mesh usage. The
+	 * editor sets a missing flag by itself outside play, so a part can look right there and grey in the
+	 * game: this reads the flag the cook ships. No material at all draws grey too.
+	 */
+	bool DrawsWithItsMaterial(const UMeshComponent* Part)
+	{
+		const EMaterialUsage Needs = Part->IsA<UInstancedStaticMeshComponent>() ? MATUSAGE_InstancedStaticMeshes : MATUSAGE_StaticMesh;
+		for (int32 Slot = 0; Slot < FMath::Max(1, Part->GetNumMaterials()); ++Slot)
+		{
+			UMaterialInterface* Material = Part->GetMaterial(Slot);
+			const UMaterial* Base = Material ? Material->GetMaterial() : nullptr;
+			if (!Base || !Base->GetUsageByFlag(Needs))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/** Ground the lanes lie on: a floor, its top face centred at Top, that blocks DF_LaneSurface (the
+	 *  channel lanes are projected onto, and the range ring looks for ground on) and nothing else. */
+	void AddLaneSurface(FDFTestWorld& World, const FVector& Top, double HalfWidthCm)
+	{
+		AActor* Floor = World.SpawnActor<AActor>(FTransform(Top));
+		UBoxComponent* Surface = NewObject<UBoxComponent>(Floor);
+		Floor->SetRootComponent(Surface);
+		Surface->SetBoxExtent(FVector(HalfWidthCm, HalfWidthCm, 10.0));
+		Surface->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		Surface->SetCollisionResponseToAllChannels(ECR_Ignore);
+		Surface->SetCollisionResponseToChannel(DFCollision::LaneSurface, ECR_Block);
+		Surface->RegisterComponent();
+		Surface->SetWorldLocation(Top - FVector(0.0, 0.0, 10.0));
+	}
+
+	/** The ground point under a range-ring dash (its centre is lifted RangeRingLiftCm along the ground's up). */
+	FVector GroundUnderDash(const FTransform& Dash)
+	{
+		return Dash.GetLocation() - Dash.GetRotation().GetUpVector() * ADFSocket::RangeRingLiftCm;
 	}
 
 	/** Top and bottom (world Z) of a part made from a 1 m basic shape centred on its pivot. */
@@ -413,29 +459,34 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFWorldSocketRangeRingTest, "DF.Unit.World.Soc
 bool FDFWorldSocketRangeRingTest::RunTest(const FString& Parameters)
 {
 	// Before building, the player sees how far the chosen tower would reach from this pad (and on a built
-	// pad, how far the standing one does): a dashed ring on the ground at that radius, which the controller
-	// asks for every frame it aims, so it must cost nothing when nothing changed.
+	// pad, how far the standing one does): a dashed ring on the ground where the weapon's reach meets it,
+	// in the aim ring's colour, which the controller asks for every frame it aims, so it must cost nothing
+	// when nothing changed.
 	using namespace DFWorldLookTest;
 	FDFTestWorld World;
 	if (!QueriesWork(*this, World))
 	{
 		return false;
 	}
-	// Turned, and on a small rise: the ring is still a level circle round the pad, at the pad's ground.
+	// Turned, on a small rise, with ground all round at its own height: the ring is a level circle round
+	// the pad, on that ground.
 	const FVector At(2500.0, -1800.0, 60.0);
+	AddLaneSurface(World, At, 2000.0);
 	ADFSocket* Socket = World.SpawnActor<ADFSocket>(FTransform(FRotator(0.f, 37.f, 0.f), At));
 	if (!TestNotNull(TEXT("socket"), Socket))
 	{
 		return false;
 	}
-	UInstancedStaticMeshComponent* Ring = Socket->GetRangeRing();
-	if (!TestNotNull(TEXT("range ring"), Ring) || !TestTrue(TEXT("it is the socket's RangeRing part"), PartNamed(Socket, TEXT("RangeRing")) == Ring))
+	UProceduralMeshComponent* Ring = Socket->GetRangeRing();
+	if (!TestNotNull(TEXT("range ring"), Ring) || !TestEqual(TEXT("it is the socket's RangeRing part"), Ring->GetFName(), FName(TEXT("RangeRing")))
+		|| !TestTrue(TEXT("it hangs off the pad"), Ring->GetAttachParent() == Socket->GetRootComponent()))
 	{
 		return false;
 	}
-	TestNotNull(TEXT("range ring: has a shape"), Ring->GetStaticMesh().Get());
 	TestFalse(TEXT("hidden until aimed"), Ring->IsVisible());
-	TestEqual(TEXT("no segments until aimed"), Ring->GetInstanceCount(), 0);
+	TestFalse(TEXT("not shown until aimed"), Socket->IsRangePreviewShown());
+	TestEqual(TEXT("no dashes until aimed"), Socket->GetRangeRingDashes().Num(), 0);
+	TestEqual(TEXT("no mesh until aimed"), Ring->GetNumSections(), 0);
 	TestEqual(TEXT("no reach shown"), Socket->GetRangePreviewRadius(), 0.f);
 
 	// Enough segments to read as a circle at 20 m and more; clamped at both ends.
@@ -446,58 +497,79 @@ bool FDFWorldSocketRangeRingTest::RunTest(const FString& Parameters)
 
 	// A Lance's 12 m, as the controller asks for a free pad.
 	Socket->SetRangePreview(1200.f, EDFPadHighlight::Free);
-	TestTrue(TEXT("shown at 12 m"), Ring->IsVisible());
+	TestTrue(TEXT("shown at 12 m"), Ring->IsVisible() && Socket->IsRangePreviewShown());
 	TestEqual(TEXT("reach shown"), Socket->GetRangePreviewRadius(), 1200.f);
 	TestEqual(TEXT("no inner ring without a dead zone"), Socket->GetRangePreviewMinRadius(), 0.f);
-	TestEqual(TEXT("one circle of segments"), Ring->GetInstanceCount(), ADFSocket::RangeSegmentsFor(1200.f));
+	const TArray<FTransform>& Dashes = Socket->GetRangeRingDashes();
+	TestEqual(TEXT("one circle of dashes"), Dashes.Num(), ADFSocket::RangeSegmentsFor(1200.f));
 	TestEqual(TEXT("laid once"), Socket->GetRangeRingLayCount(), 1);
+
+	// Drawn in its own glow in a game, not the grey default: the reason the ring is not an instanced mesh
+	// (EmissiveMeshMaterial carries no instancing flag). Every other part of the pad is checked the same way.
 	UMaterialInstanceDynamic* Glow = Cast<UMaterialInstanceDynamic>(Ring->GetMaterial(0));
 	TestTrue(TEXT("the ring glows (EmissiveMeshMaterial)"), Glow && Glow->Parent == DFShapeLook::GlowMaterial());
 	TestTrue(TEXT("free: the aim ring's green"), Glow && Glow->K2_GetVectorParameterValue(TEXT("Color")).Equals(DFWorldLook::PadAimFree(), 1e-4f));
+	TestTrue(TEXT("the ring draws in its glow in a game (its material's usage fits its kind of mesh)"), DrawsWithItsMaterial(Ring));
+	// The control: the same glow on an instanced mesh (the ring as first written) is what a game draws grey,
+	// and the check says so; were the flag ever set in this process, this would say the check cannot tell.
+	UInstancedStaticMeshComponent* Instanced = NewObject<UInstancedStaticMeshComponent>(GetTransientPackage());
+	DFShapeLook::Glow(Instanced, DFWorldLook::PadAimFree());
+	TestFalse(TEXT("control: glow on an instanced mesh draws grey in a game (EmissiveMeshMaterial has no instancing flag)"), DrawsWithItsMaterial(Instanced));
+	Socket->SetAimHighlight(EDFPadHighlight::Free);
+	TArray<UMeshComponent*> Parts;
+	Socket->GetComponents(Parts);
+	for (const UMeshComponent* Part : Parts)
+	{
+		TestTrue(FString::Printf(TEXT("pad %s draws in its own material in a game"), *Part->GetName()), DrawsWithItsMaterial(Part));
+	}
+	Socket->SetAimHighlight(EDFPadHighlight::None);
+
+	// The mesh is the dashes: one engine box (GenerateBoxMesh's 24 vertices) round each, and no collision.
+	const FProcMeshSection* Section = Ring->GetProcMeshSection(0);
+	if (TestNotNull(TEXT("the ring has its mesh"), Section))
+	{
+		TestEqual(TEXT("one box per dash"), Section->ProcVertexBuffer.Num(), Dashes.Num() * 24);
+		TestFalse(TEXT("the mesh has no collision"), Section->bEnableCollision);
+		bool bBoxesOnDashes = Section->ProcVertexBuffer.Num() == Dashes.Num() * 24;
+		for (int32 d = 0; bBoxesOnDashes && d < Dashes.Num(); ++d)
+		{
+			FVector Centre = FVector::ZeroVector;
+			for (int32 v = 0; v < 24; ++v)
+			{
+				Centre += Ring->GetComponentTransform().TransformPosition(Section->ProcVertexBuffer[d * 24 + v].Position) / 24.0;
+			}
+			bBoxesOnDashes &= Centre.Equals(Dashes[d].GetLocation(), 0.1);
+		}
+		TestTrue(TEXT("each box sits on its dash, in the world (not turned with the pad)"), bBoxesOnDashes);
+	}
+
 	const double GroundZ = At.Z;
 	bool bAllOnCircle = true;
 	bool bAllOnGround = true;
 	bool bAllAlongIt = true;
-	for (int32 i = 0; i < Ring->GetInstanceCount(); ++i)
+	for (const FTransform& Dash : Dashes)
 	{
-		FTransform Segment;
-		Ring->GetInstanceTransform(i, Segment, /*bWorldSpace*/ true);
-		const FVector Out = (Segment.GetLocation() - At).GetSafeNormal2D();
-		bAllOnCircle &= FMath::IsNearlyEqual(FVector::Dist2D(Segment.GetLocation(), At), 1200.0, 1.0);
+		const FVector Out = (Dash.GetLocation() - At).GetSafeNormal2D();
+		bAllOnCircle &= FMath::IsNearlyEqual(FVector::Dist2D(Dash.GetLocation(), At), 1200.0, 1.0);
 		// Flat on the ground under the pad, top clear of the lane strip (3 cm) and low enough to walk over.
-		const double Bottom = Segment.GetLocation().Z - Segment.GetScale3D().Z * 50.0 - GroundZ;
-		const double Top = Segment.GetLocation().Z + Segment.GetScale3D().Z * 50.0 - GroundZ;
-		bAllOnGround &= Bottom >= 2.5 && Top <= 6.0 && FMath::Abs(Segment.GetRotation().GetUpVector().Z) > 0.9999;
+		const double Bottom = Dash.GetLocation().Z - Dash.GetScale3D().Z * 50.0 - GroundZ;
+		const double Top = Dash.GetLocation().Z + Dash.GetScale3D().Z * 50.0 - GroundZ;
+		bAllOnGround &= Bottom >= 2.5 && Top <= 6.0 && FMath::Abs(Dash.GetRotation().GetUpVector().Z) > 0.9999;
 		// A dash along the tangent: its long axis is across the radius.
-		bAllAlongIt &= FMath::Abs(FVector::DotProduct(Segment.GetRotation().GetForwardVector(), Out)) < 0.01
-			&& Segment.GetScale3D().X > Segment.GetScale3D().Y;
+		bAllAlongIt &= FMath::Abs(FVector::DotProduct(Dash.GetRotation().GetForwardVector(), Out)) < 0.01
+			&& Dash.GetScale3D().X > Dash.GetScale3D().Y;
 	}
-	TestTrue(TEXT("every segment is 12 m from the pad's centre (not turned or scaled with the actor)"), bAllOnCircle);
-	TestTrue(TEXT("every segment lies flat at the pad's ground, just above the lane strip"), bAllOnGround);
-	TestTrue(TEXT("every segment runs along the circle"), bAllAlongIt);
-	FTransform First;
-	FTransform Second;
-	if (Ring->GetInstanceTransform(0, First, true) && Ring->GetInstanceTransform(1, Second, true))
+	TestTrue(TEXT("every dash is 12 m from the pad's centre (not turned or scaled with the actor)"), bAllOnCircle);
+	TestTrue(TEXT("every dash lies flat on the ground, just above the lane strip"), bAllOnGround);
+	TestTrue(TEXT("every dash runs along the circle"), bAllAlongIt);
+	if (Dashes.Num() > 1)
 	{
-		const double Spacing = FVector::Dist(First.GetLocation(), Second.GetLocation());
-		TestTrue(FString::Printf(TEXT("dashed: a segment (%.0f cm) is shorter than the spacing (%.0f cm)"), First.GetScale3D().X * 100.0, Spacing),
-			First.GetScale3D().X * 100.0 < Spacing * 0.9);
+		const double Spacing = FVector::Dist(Dashes[0].GetLocation(), Dashes[1].GetLocation());
+		TestTrue(FString::Printf(TEXT("dashed: a dash (%.0f cm) is shorter than the spacing (%.0f cm)"), Dashes[0].GetScale3D().X * 100.0, Spacing),
+			Dashes[0].GetScale3D().X * 100.0 < Spacing * 0.9);
 	}
 
-	// Collision: the ring collides with nothing, checked through a segment (the component's own location is
-	// the pad's centre, 12 m from any of them).
-	ExpectInert(*this, World.GetWorld(), Ring, TEXT("range ring"));
-	FTransform Probe;
-	if (Ring->GetInstanceTransform(Ring->GetInstanceCount() / 3, Probe, true))
-	{
-		for (const FChannel& C : Channels)
-		{
-			TestEqual(FString::Printf(TEXT("range ring: a %s query through a segment finds nothing"), C.Name),
-				HitsOn(World.GetWorld(), Ring, Probe.GetLocation(), C.Channel), 0);
-		}
-	}
-
-	// Every frame of the same aim: nothing is laid again. A new tone re-colours; the segments stay.
+	// Every frame of the same aim: nothing is laid again. A new tone re-colours; the dashes stay.
 	Socket->SetRangePreview(1200.f, EDFPadHighlight::Free);
 	Socket->SetRangePreview(1200.2f, EDFPadHighlight::Free);
 	TestEqual(TEXT("an unchanged radius lays nothing"), Socket->GetRangeRingLayCount(), 1);
@@ -519,28 +591,117 @@ bool FDFWorldSocketRangeRingTest::RunTest(const FString& Parameters)
 	// A Range purchase (or fog) moves the reach: laid again, replacing, never doubling.
 	Socket->SetRangePreview(1344.f, EDFPadHighlight::Occupied);
 	TestEqual(TEXT("a new radius is laid"), Socket->GetRangeRingLayCount(), 2);
-	TestEqual(TEXT("replaced, not added"), Ring->GetInstanceCount(), ADFSocket::RangeSegmentsFor(1344.f));
+	TestEqual(TEXT("replaced, not added"), Dashes.Num(), ADFSocket::RangeSegmentsFor(1344.f));
+	TestTrue(TEXT("its mesh replaced too"), Ring->GetNumSections() == 1 && Ring->GetProcMeshSection(0)->ProcVertexBuffer.Num() == Dashes.Num() * 24);
 
 	// A mortar's dead zone: a second circle inside the first.
 	Socket->SetRangePreview(1600.f, EDFPadHighlight::Free, 500.f);
-	TestEqual(TEXT("mortar: both circles"), Ring->GetInstanceCount(), ADFSocket::RangeSegmentsFor(1600.f) + ADFSocket::RangeSegmentsFor(500.f));
+	TestEqual(TEXT("mortar: both circles"), Dashes.Num(), ADFSocket::RangeSegmentsFor(1600.f) + ADFSocket::RangeSegmentsFor(500.f));
 	TestEqual(TEXT("mortar: inner radius"), Socket->GetRangePreviewMinRadius(), 500.f);
 	int32 Inner = 0;
 	int32 Outer = 0;
-	for (int32 i = 0; i < Ring->GetInstanceCount(); ++i)
+	for (const FTransform& Dash : Dashes)
 	{
-		FTransform Segment;
-		Ring->GetInstanceTransform(i, Segment, true);
-		const double Dist = FVector::Dist2D(Segment.GetLocation(), At);
+		const double Dist = FVector::Dist2D(Dash.GetLocation(), At);
 		Inner += FMath::IsNearlyEqual(Dist, 500.0, 1.0) ? 1 : 0;
 		Outer += FMath::IsNearlyEqual(Dist, 1600.0, 1.0) ? 1 : 0;
 	}
 	TestEqual(TEXT("mortar: the inner circle at 5 m"), Inner, ADFSocket::RangeSegmentsFor(500.f));
 	TestEqual(TEXT("mortar: the outer circle at 16 m"), Outer, ADFSocket::RangeSegmentsFor(1600.f));
 	Socket->SetRangePreview(1600.f, EDFPadHighlight::Free, 0.f);
-	TestEqual(TEXT("the dead zone gone: the inner circle goes"), Ring->GetInstanceCount(), ADFSocket::RangeSegmentsFor(1600.f));
+	TestEqual(TEXT("the dead zone gone: the inner circle goes"), Dashes.Num(), ADFSocket::RangeSegmentsFor(1600.f));
 	Socket->SetRangePreview(400.f, EDFPadHighlight::Free, 500.f);
 	TestEqual(TEXT("a dead zone wider than the reach draws no inner ring"), Socket->GetRangePreviewMinRadius(), 0.f);
+
+	// A Wall pad high over the route (Foundry's w1..w11 stand ~6.6 m over the lane below them). The weapon
+	// measures from the pad top to a body on the ground, in 3D (DFTowerMath::PickTarget), so 12 m of reach
+	// meets the floor sqrt(12^2 - 6.8^2) = 9.9 m across, and that is where the ring lies: on the floor, not
+	// 12 m out in the air over a lane the tower cannot reach.
+	const FVector Pit(-8000.0, 2500.0, 0.0);
+	AddLaneSurface(World, Pit, 2000.0);
+	ADFSocket* High = World.SpawnActor<ADFSocket>(FTransform(Pit + FVector(0.0, 0.0, 660.0)));
+	if (!TestNotNull(TEXT("raised socket"), High))
+	{
+		return false;
+	}
+	High->Tag = EDFSocketTag::Wall;
+	High->SetRangePreview(1200.f, EDFPadHighlight::Free, 500.f);
+	const double Drop = High->GetPadTop().Z - Pit.Z;
+	const double Across = FMath::Sqrt(FMath::Square(1200.0) - FMath::Square(Drop));
+	int32 OnFloor = 0;
+	int32 AtReach = 0;
+	double NearestCm = TNumericLimits<double>::Max();
+	double FarthestCm = 0.0;
+	for (const FTransform& Dash : High->GetRangeRingDashes())
+	{
+		const FVector Ground = GroundUnderDash(Dash);
+		OnFloor += FMath::IsNearlyEqual(Ground.Z, Pit.Z, 0.5) ? 1 : 0;
+		// In reach, and no more than the bisection's step (12 m / 2^7 = 9.4 cm across) inside it.
+		const double Reach = FVector::Dist(High->GetPadTop(), Ground);
+		AtReach += Reach <= 1200.0 + 0.5 && Reach >= 1185.0 ? 1 : 0;
+		NearestCm = FMath::Min(NearestCm, FVector::Dist2D(Ground, Pit));
+		FarthestCm = FMath::Max(FarthestCm, FVector::Dist2D(Ground, Pit));
+	}
+	TestEqual(TEXT("raised: one circle, and no dead-zone circle (nothing on the floor is within 5 m of a pad 6.8 m above it)"),
+		High->GetRangeRingDashes().Num(), ADFSocket::RangeSegmentsFor(1200.f));
+	TestEqual(TEXT("raised: every dash lies on the floor below, not at the pad's height"), OnFloor, High->GetRangeRingDashes().Num());
+	TestEqual(TEXT("raised: every dash is where a body on the floor is 12 m from the pad top (3D)"), AtReach, High->GetRangeRingDashes().Num());
+	TestTrue(FString::Printf(TEXT("raised: the ring is %.0f-%.0f cm across, not 1200 (sqrt(1200^2 - %.0f^2) = %.0f)"), NearestCm, FarthestCm, Drop, Across),
+		NearestCm >= Across - 10.0 && FarthestCm <= Across + 0.5);
+	// A reach shorter than the drop reaches no ground at all: no ring promises what the tower cannot hit.
+	High->SetRangePreview(600.f, EDFPadHighlight::Free);
+	TestEqual(TEXT("raised: a 6 m reach from 6.8 m up draws nothing"), High->GetRangeRingDashes().Num(), 0);
+	TestEqual(TEXT("raised: and has no mesh"), High->GetRangeRing() ? High->GetRangeRing()->GetNumSections() : -1, 0);
+
+	// A pad in a hollow, the ground round it 3 m above its top: the ground is looked for from as high above
+	// the pad as reach allows, so the ring lies up on it, 11.6 m across, rather than missing it and lying
+	// level at the pad's height, under the rim.
+	const FVector Rim(-8000.0, -6000.0, 0.0);
+	AddLaneSurface(World, Rim, 2000.0);
+	ADFSocket* Low = World.SpawnActor<ADFSocket>(FTransform(Rim - FVector(0.0, 0.0, 320.0)));
+	if (!TestNotNull(TEXT("sunken socket"), Low))
+	{
+		return false;
+	}
+	Low->SetRangePreview(1200.f, EDFPadHighlight::Free);
+	const double Rise = Rim.Z - Low->GetPadTop().Z;
+	const double UpAcross = FMath::Sqrt(FMath::Square(1200.0) - FMath::Square(Rise));
+	bool bAllUpOnRim = Low->GetRangeRingDashes().Num() == ADFSocket::RangeSegmentsFor(1200.f);
+	for (const FTransform& Dash : Low->GetRangeRingDashes())
+	{
+		const FVector Ground = GroundUnderDash(Dash);
+		bAllUpOnRim &= FMath::IsNearlyEqual(Ground.Z, Rim.Z, 0.5) && FVector::Dist2D(Ground, Rim) >= UpAcross - 10.0
+			&& FVector::Dist2D(Ground, Rim) <= UpAcross + 0.5;
+	}
+	TestTrue(FString::Printf(TEXT("sunken: every dash lies on the ground %.0f cm above the pad top, %.0f cm across"), Rise, UpAcross), bAllUpOnRim);
+
+	// No ground under the ring at all (a world without any, or past the map's edge): level with the pad's
+	// own ground. Collision is checked here, where no floor stands in the queries' way: the ring collides
+	// with nothing, through a dash (the component's own location is the pad's centre, 12 m from any of them).
+	const FVector Void(12000.0, 6000.0, 60.0);
+	ADFSocket* Lone = World.SpawnActor<ADFSocket>(FTransform(Void));
+	if (!TestNotNull(TEXT("socket over nothing"), Lone))
+	{
+		return false;
+	}
+	Lone->SetRangePreview(1200.f, EDFPadHighlight::Free);
+	bool bAllLevel = Lone->GetRangeRingDashes().Num() == ADFSocket::RangeSegmentsFor(1200.f);
+	for (const FTransform& Dash : Lone->GetRangeRingDashes())
+	{
+		bAllLevel &= FMath::IsNearlyEqual(GroundUnderDash(Dash).Z, Void.Z, 0.01) && FMath::IsNearlyEqual(FVector::Dist2D(Dash.GetLocation(), Void), 1200.0, 1.0);
+	}
+	TestTrue(TEXT("no ground: a level circle at the pad's own ground, 12 m across"), bAllLevel);
+	UProceduralMeshComponent* LoneRing = Lone->GetRangeRing();
+	ExpectInert(*this, World.GetWorld(), LoneRing, TEXT("range ring"));
+	if (Lone->GetRangeRingDashes().Num() > 3)
+	{
+		const FVector Through = Lone->GetRangeRingDashes()[Lone->GetRangeRingDashes().Num() / 3].GetLocation();
+		for (const FChannel& C : Channels)
+		{
+			TestEqual(FString::Printf(TEXT("range ring: a %s query through a dash finds nothing"), C.Name),
+				HitsOn(World.GetWorld(), LoneRing, Through, C.Channel), 0);
+		}
+	}
 	return true;
 }
 
@@ -633,6 +794,7 @@ bool FDFWorldLaneStripTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("one flat piece per ground leg"), Strip->GetInstanceCount(), 2);
 	TestFalse(TEXT("the info is drawn (AInfo is hidden by default)"), Info->IsHidden());
 	TestTrue(TEXT("strip: steel"), TintedAs(Strip, DFWorldLook::LaneStrip()));
+	TestTrue(TEXT("strip: an instanced mesh on a material flagged for instancing, so a game draws it steel, not grey"), DrawsWithItsMaterial(Strip));
 	ExpectInert(*this, World.GetWorld(), Strip, TEXT("lane strip"));
 	// The one query that looks straight down at a lane: projecting onto DF_LaneSurface (importer,
 	// scrap settling) must still find the ground, not the strip.

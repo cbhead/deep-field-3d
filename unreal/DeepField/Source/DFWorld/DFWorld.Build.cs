@@ -24,6 +24,9 @@ public class DFWorld : ModuleRules
 		PrivateDependencyModuleNames.AddRange(new string[] {
 			"Json",
 			"JsonUtilities",
+			// ADFSocket's range ring: a mesh laid at play, drawn with the local vertex factory (an instanced
+			// mesh would need a material flagged for instancing, and EmissiveMeshMaterial is not).
+			"ProceduralMeshComponent",
 		});
 	}
 }

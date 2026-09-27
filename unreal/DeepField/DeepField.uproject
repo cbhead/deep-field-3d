@@ -37,6 +37,7 @@
 		{ "Name": "Landmass", "Enabled": true },
 		{ "Name": "Water", "Enabled": true },
 		{ "Name": "PCG", "Enabled": true },
+		{ "Name": "ProceduralMeshComponent", "Enabled": true },
 		{ "Name": "EOSShared", "Enabled": true },
 		{ "Name": "OnlineServicesEOSGS", "Enabled": true },
 		{ "Name": "SocketSubsystemEOS", "Enabled": true },
