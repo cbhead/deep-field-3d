@@ -1,8 +1,8 @@
 # Workstream status
 
-Generated 2026-09-27T00:31:58Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-27T01:36:03Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
-active: 7 · paused: 6 · review: 1 · unclaimed: 36
+active: 6 · paused: 7 · review: 1 · unclaimed: 36
 
 | WS | Title | Phase | CP | State | Owner | Lease expires | Last commit | Editor-heavy | Blocked on |
 |---|---|---|---|---|---|---|---|---|---|
@@ -11,12 +11,12 @@ active: 7 · paused: 6 · review: 1 · unclaimed: 36
 | WS-02 | Gameplay core (GAS) | P1-P2 | CP | paused | — | — | — |  | — |
 | WS-03 | Player | P2 | CP | active (lease expired) | session-01DTQRZ3-cloud | 2026-09-26T22:01:42Z | 25f8061 | yes | — |
 | WS-04 | Towers & build | P2-P3 | CP | active (lease expired) | session-01HszbJQ-cloud | 2026-09-26T02:29:31Z | — | yes | — |
-| WS-05 | Enemies & AI | P2-P3 | CP | active | session-851fd491 | 2026-09-27T23:41:35Z | 6809042 | yes | — |
+| WS-05 | Enemies & AI | P2-P3 | CP | paused | — | — | 22eec3c | yes | — |
 | WS-06 | Economy, scrap, gunsmith | P3 |  | unclaimed | — | — | — |  | — |
 | WS-07 | Factions & abilities | P2-P4 | CP | unclaimed | — | — | — |  | — |
 | WS-08 | Vehicles | P3-P4 |  | unclaimed | — | — | — | yes | — |
 | WS-09 | World: lanes, sockets, traversal, conditions, terrain import | P1-P4 | CP | paused | — | — | b98c25c | yes | — |
-| WS-10a | Map redesign: Foundry | P2 | CP | active | session-01Bqjmob-cloud | 2026-09-27T01:01:55Z | 788db74 | yes | — |
+| WS-10a | Map redesign: Foundry | P2 | CP | active (lease expired) | session-01Bqjmob-cloud | 2026-09-27T01:01:55Z | 788db74 | yes | — |
 | WS-10b | Map redesign: Switchyard | P3 |  | unclaimed | — | — | — | yes | — |
 | WS-10c | Map redesign: Spire | P3 |  | unclaimed | — | — | — | yes | — |
 | WS-10d | Map redesign: Toaster | P3 |  | unclaimed | — | — | — | yes | — |

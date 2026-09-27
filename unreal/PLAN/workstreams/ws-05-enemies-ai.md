@@ -2,12 +2,12 @@
 ws: 05
 slug: enemies-ai
 title: Enemies & AI
-state: active
-owner: session-851fd491
+state: paused
+owner: 
 claimed_at: 2026-09-26T23:41:35Z
-lease_expires: 2026-09-27T23:41:35Z
+lease_expires: 
 branch: ws/05-enemies-ai/walker-fp
-last_commit: 6809042
+last_commit: 22eec3c
 editor_heavy: true
 phase: P2-P3
 size: XL
