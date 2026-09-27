@@ -22,7 +22,7 @@ public class DFVfx : ModuleRules
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {
-			// (none)
+			"DFWorld",   // DFCollision: a Mortar's disc lies on the DF_LaneSurface
 		});
 	}
 }

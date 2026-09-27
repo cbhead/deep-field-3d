@@ -1,11 +1,14 @@
 #include "Cues/DFCombatCueSubsystem.h"
 
+#include "CollisionQueryParams.h"
 #include "Combat/DFTargetable.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Content/DFContentSubsystem.h"
 #include "DFGameplayTags.h"
+#include "DFWorldCollision.h"
 #include "Engine/CollisionProfile.h"
+#include "Engine/HitResult.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -50,7 +53,11 @@ namespace
 	constexpr float ArcThicknessCm = 7.f;
 	constexpr float ArcFlashCm = 35.f;
 	constexpr float BeamLockFlashCm = 45.f;
-	constexpr float SplashThicknessCm = 4.f;
+
+	// The lane surface a Mortar's disc lies on is looked for from this far above the landing (or the ground the
+	// body stood on, if higher) to this far below: a round can land on its flight line, above the body.
+	constexpr double SplashTraceUpCm = 150.0;
+	constexpr double SplashTraceDownCm = 450.0;
 
 	/** A lob's height at its middle for a flight of DistanceCm: a third of the distance, within reason. */
 	float LobApexCm(float DistanceCm)
@@ -163,6 +170,21 @@ void UDFCombatCueSubsystem::StartDrawing()
 			Self->OnBeamHeld(Shot);
 		}
 	}, /*bIncludeChildren*/ false);
+	// A body that died or reached the core: team messages too (ADFEnemy), relayed like the shots.
+	KilledHandle = MessageBus->Subscribe<FDFMsg_Kill>(DFTags::Message_EnemyKilled, [WeakThis](const FGameplayTag&, const FDFMsg_Kill& Kill)
+	{
+		if (UDFCombatCueSubsystem* Self = WeakThis.Get())
+		{
+			Self->OnBodyGone(Kill.EnemyId);
+		}
+	}, /*bIncludeChildren*/ false);
+	LeakedHandle = MessageBus->Subscribe<FDFMsg_Enemy>(DFTags::Message_EnemyLeaked, [WeakThis](const FGameplayTag&, const FDFMsg_Enemy& Leak)
+	{
+		if (UDFCombatCueSubsystem* Self = WeakThis.Get())
+		{
+			Self->OnBodyGone(Leak.EnemyId);
+		}
+	}, /*bIncludeChildren*/ false);
 
 	// The towers there are now, then each as it spawns: on a client that is when the host's tower replicates
 	// in, whenever that is relative to its TowerPlaced message. One iteration here, none per frame.
@@ -171,8 +193,17 @@ void UDFCombatCueSubsystem::StartDrawing()
 	{
 		Track(*It);
 	}
-	Jitter.GenerateNewSeed();
+	// A game's bolts differ from run to run; a test's are the same on every run.
+	if (GIsAutomationTesting)
+	{
+		Jitter.Initialize(DFCombatCue::TestJitterSeed);
+	}
+	else
+	{
+		Jitter.GenerateNewSeed();
+	}
 	Cues.Reserve(64);
+	Owed.Reserve(32);
 	Towers.Reserve(32);
 }
 
@@ -193,11 +224,15 @@ void UDFCombatCueSubsystem::Stop(bool bDestroyHolder)
 		MessageBus->Unsubscribe(FiredHandle);
 		MessageBus->Unsubscribe(LandedHandle);
 		MessageBus->Unsubscribe(BeamHandle);
+		MessageBus->Unsubscribe(KilledHandle);
+		MessageBus->Unsubscribe(LeakedHandle);
 	}
 	Bus.Reset();
 	FiredHandle = FDFMessageHandle();
 	LandedHandle = FDFMessageHandle();
 	BeamHandle = FDFMessageHandle();
+	KilledHandle = FDFMessageHandle();
+	LeakedHandle = FDFMessageHandle();
 	UWorld* World = GetWorld();
 	if (World)
 	{
@@ -216,6 +251,7 @@ void UDFCombatCueSubsystem::Stop(bool bDestroyHolder)
 	FreeCubes.Reset();
 	FreeCylinders.Reset();
 	Cues.Reset();
+	Owed.Reset();
 	Towers.Reset();
 }
 
@@ -259,9 +295,29 @@ void UDFCombatCueSubsystem::OnTowerFired(const FDFMsg_Shot& Shot)
 
 void UDFCombatCueSubsystem::OnProjectileLanded(const FDFMsg_Shot& Shot)
 {
-	// The host's round landed at Impact. The same tower's round at the same body still in the air here lands
-	// there now (its body walked toward it, so it arrived before the flight the cue was given). One that
-	// already arrived has shown its flash; a host round whose body died never lands, and its cue lands anyway.
+	// The host's round landed at Impact. Rounds from one tower at one body land in the order they were fired,
+	// on the host (same muzzle, same speed, homing on the same aim point) and here (the body cannot close on a
+	// round faster than it flies), so this landing is the oldest round's that the host has not landed yet.
+	// If that round's cue already landed on its own, this is its landing arriving late (its body walked away,
+	// so the host's round flew further than the cue): it has shown its flash, and a later round keeps flying.
+	int32 OldestOwed = INDEX_NONE;
+	for (int32 i = 0; i < Owed.Num(); ++i)
+	{
+		const FOwedLanding& Entry = Owed[i];
+		if (Entry.StructureId == Shot.StructureId && Entry.TargetId == Shot.TargetId
+			&& (OldestOwed == INDEX_NONE || Entry.Age > Owed[OldestOwed].Age))
+		{
+			OldestOwed = i;
+		}
+	}
+	if (OldestOwed != INDEX_NONE)
+	{
+		Owed.RemoveAtSwap(OldestOwed, EAllowShrinking::No);
+		return;
+	}
+
+	// Otherwise it is the oldest of that tower's rounds at that body still in the air here, which arrived early
+	// (its body walked toward it): it lands where the host's did, now.
 	int32 Oldest = INDEX_NONE;
 	for (int32 i = 0; i < Cues.Num(); ++i)
 	{
@@ -276,10 +332,44 @@ void UDFCombatCueSubsystem::OnProjectileLanded(const FDFMsg_Shot& Shot)
 	{
 		return;
 	}
-	const FCue Round = Cues[Oldest];
+	// Unless it cannot be: the host's round flew at least the straight line from the muzzle to where it landed.
+	// A cue much younger than that is a later round, and this landing is one of a round this machine never saw
+	// fly (it joined since) or whose owed record ran out: it draws nothing.
+	const FCue& Candidate = Cues[Oldest];
+	const float MinFlightSeconds = Candidate.SpeedCmPerSecond > 0.f
+		? static_cast<float>(FVector::Dist(Candidate.From, Shot.Impact)) / Candidate.SpeedCmPerSecond : 0.f;
+	if (Candidate.Age < DFCombatCue::LandingMinFlightFraction * MinFlightSeconds)
+	{
+		return;
+	}
+	const FCue Round = Candidate;
 	ReleaseCue(Cues[Oldest]);
 	Cues.RemoveAtSwap(Oldest, EAllowShrinking::No);
 	Land(Round, Shot.Impact);
+}
+
+void UDFCombatCueSubsystem::OnBodyGone(int32 TargetId)
+{
+	// The host drops a round whose body died or left, dealing nothing and saying nothing (ADFTower::StepShots:
+	// "it lands nowhere"), so a cue still flying at it vanishes where it is: no flash, and no disc claiming a
+	// splash that never happened. The round that killed it landed first (the host sends that landing in the
+	// frame of the hit and EnemyKilled the frame after, and the relay's one reliable multicast keeps the order).
+	for (int32 i = Cues.Num() - 1; i >= 0; --i)
+	{
+		if (Cues[i].Kind == EDFCombatCue::Round && Cues[i].TargetId == TargetId)
+		{
+			ReleaseCue(Cues[i]);
+			Cues.RemoveAtSwap(i, EAllowShrinking::No);
+		}
+	}
+	// And a landing owed at it will never come.
+	for (int32 i = Owed.Num() - 1; i >= 0; --i)
+	{
+		if (Owed[i].TargetId == TargetId)
+		{
+			Owed.RemoveAtSwap(i, EAllowShrinking::No);
+		}
+	}
 }
 
 void UDFCombatCueSubsystem::OnBeamHeld(const FDFMsg_Shot& Shot)
@@ -356,13 +446,14 @@ void UDFCombatCueSubsystem::SpawnRound(const FDFMsg_Shot& Shot, const FStyle& St
 	Round.From = Shot.Origin;
 	Round.To = End;
 	Round.ApexCm = (Style.bIndirect || Shot.bIndirect) ? LobApexCm(DistanceCm) : 0.f;
+	Round.SpeedCmPerSecond = Style.SpeedCmPerSecond;
 	Round.SizeCm = Style.Kind == EDFTowerKind::Mortar ? MortarRoundCm : (Style.Kind == EDFTowerKind::Flak ? FlakRoundCm : BoltRoundCm);
 	Round.SplashRadiusCm = Style.SplashRadiusCm;
 	Round.LandFlashCm = Style.SplashRadiusCm > 0.f ? MortarFlashCm : BoltFlashCm;
 	Round.Energy = Style.Energy;
 	if (Style.SpeedCmPerSecond <= 0.f || DistanceCm < 1.f)
 	{
-		Land(Round, End);   // nothing to fly: it lands at once
+		LandOnItsOwn(Round);   // nothing to fly: it lands at once, before the host's round can
 		return;
 	}
 	// The sim's rounds fly straight at their speed, so a lob takes the straight line's time too and lands
@@ -401,7 +492,7 @@ void UDFCombatCueSubsystem::SpawnFlash(const FVector& At, float SizeCm, const FL
 	Cues.Add(Flash);
 }
 
-void UDFCombatCueSubsystem::SpawnSplash(const FVector& At, float RadiusCm, const FLinearColor& Energy)
+void UDFCombatCueSubsystem::SpawnSplash(const FVector& At, double GroundZ, float RadiusCm, const FLinearColor& Energy)
 {
 	const int32 Part = AcquirePart(AsByte(EShape::Cylinder), EDFCombatCue::Splash, Energy * SplashGlow);
 	UStaticMeshComponent* Mesh = PartMesh(Part);
@@ -409,13 +500,33 @@ void UDFCombatCueSubsystem::SpawnSplash(const FVector& At, float RadiusCm, const
 	{
 		return;
 	}
-	// A disc the splash's size, lying flat: everything inside it took damage (Step.cs splashes every body within the radius).
+	// A disc the splash's size: everything inside it took damage (Step.cs splashes every body within the radius
+	// of the struck body's position on the lane). It lies on the lane surface under the landing, along it, found
+	// the way ADFSocket::AlignToLaneSurface finds an in-lane pad's: Foundry's lanes climb 13-25 %, where a level
+	// 6.4 m disc would hang 0.8 m over the lane at its downhill rim and sink as far into it uphill. With no lane
+	// surface there (or one steeper than 60 degrees), it lies level on the ground the body stood on.
+	FVector Surface(At.X, At.Y, GroundZ);
+	FVector Normal = FVector::UpVector;
+	if (UWorld* World = GetWorld())
+	{
+		const FCollisionQueryParams Params(SCENE_QUERY_STAT(DFCueSplashSurface), /*bTraceComplex*/ true);
+		const FVector Top(At.X, At.Y, FMath::Max(At.Z, GroundZ) + SplashTraceUpCm);
+		const FVector Bottom(At.X, At.Y, FMath::Min(At.Z, GroundZ) - SplashTraceDownCm);
+		FHitResult Hit;
+		if (World->LineTraceSingleByChannel(Hit, Top, Bottom, DFCollision::LaneSurface, Params) && Hit.ImpactNormal.Z >= 0.5)
+		{
+			Surface = Hit.ImpactPoint;
+			Normal = Hit.ImpactNormal;
+		}
+	}
 	const double Across = 2.0 * RadiusCm / 100.0;
-	Mesh->SetWorldTransform(FTransform(FQuat::Identity, At, FVector(Across, Across, SplashThicknessCm / 100.0)));
+	const FVector Centre = Surface + Normal * (DFCombatCue::SplashLiftCm + DFCombatCue::SplashThicknessCm * 0.5);
+	Mesh->SetWorldTransform(FTransform(FQuat::FindBetweenNormals(FVector::UpVector, Normal), Centre,
+		FVector(Across, Across, DFCombatCue::SplashThicknessCm / 100.0)));
 	FCue Splash;
 	Splash.Kind = EDFCombatCue::Splash;
-	Splash.From = At;
-	Splash.To = At;
+	Splash.From = Centre;
+	Splash.To = Centre;
 	Splash.SizeCm = 2.f * RadiusCm;
 	Splash.Lifetime = DFCombatCue::SplashSeconds;
 	Splash.Energy = Energy;
@@ -453,15 +564,17 @@ void UDFCombatCueSubsystem::SpawnArc(const FVector& From, const FVector& To, con
 
 void UDFCombatCueSubsystem::ShapeArc(const FCue& Arc)
 {
-	// A bolt's kinks: the inner points leave the straight line by up to 15 % of its length (60 cm at most),
-	// in a random direction across it; the ends stay on the muzzle (or the body it hops from) and the body.
+	// A bolt's kinks: each inner point leaves the straight line in a random direction across it, by a quarter
+	// of Reach to all of it (DFCombatCue::ArcReachCm: 15 % of its length, 60 cm at most). The direction is an
+	// angle round the line, so no kink strays past Reach (two independent side and up offsets would reach a
+	// square's corner, Reach x 1.41). The ends stay on the muzzle (or the body it hops from) and the body.
 	const FVector Delta = Arc.To - Arc.From;
 	const double Length = Delta.Size();
 	const FVector Direction = Length > UE_KINDA_SMALL_NUMBER ? Delta / Length : FVector::UpVector;
 	FVector Side;
 	FVector Up;
-	Direction.FindBestAxisVectors(Side, Up);
-	const double Reach = FMath::Min(Length * 0.15, 60.0);
+	Direction.FindBestAxisVectors(Side, Up);   // unit, and square to Direction and each other
+	const double Reach = DFCombatCue::ArcReachCm(static_cast<float>(Length));
 	FVector Previous = Arc.From;
 	for (int32 i = 0; i < Arc.NumParts; ++i)
 	{
@@ -469,7 +582,9 @@ void UDFCombatCueSubsystem::ShapeArc(const FCue& Arc)
 		if (i < Arc.NumParts - 1)
 		{
 			const double Alpha = static_cast<double>(i + 1) / Arc.NumParts;
-			Next = FMath::Lerp(Arc.From, Arc.To, Alpha) + (Side * Jitter.FRandRange(-1.f, 1.f) + Up * Jitter.FRandRange(-1.f, 1.f)) * Reach;
+			const float Angle = Jitter.FRandRange(0.f, 2.f * UE_PI);
+			const double Offset = Reach * Jitter.FRandRange(DFCombatCue::ArcMinKinkFraction, 1.f);
+			Next = FMath::Lerp(Arc.From, Arc.To, Alpha) + (Side * FMath::Cos(Angle) + Up * FMath::Sin(Angle)) * Offset;
 		}
 		if (UStaticMeshComponent* Mesh = PartMesh(Arc.PartIndices[i]))
 		{
@@ -483,14 +598,39 @@ void UDFCombatCueSubsystem::Land(const FCue& Round, const FVector& At)
 {
 	if (Round.SplashRadiusCm > 0.f)
 	{
-		// On the ground under the landing point: At is the aim point, 0.8 m above the body's position.
-		SpawnSplash(At - FVector(0.f, 0.f, DFTowerMath::ShotAimHeightCm), Round.SplashRadiusCm, Round.Energy);
+		// Under the landing point. At is the round's end (the body's aim point, 0.8 m up) or the host's round's
+		// last position, short of the body on its flight line and so higher when the tower stands above it: the
+		// ground to fall back to is where the body stood when the round was fired, 0.8 m under Round.To.
+		SpawnSplash(At, Round.To.Z - DFTowerMath::ShotAimHeightCm, Round.SplashRadiusCm, Round.Energy);
 	}
 	SpawnFlash(At, Round.LandFlashCm, Round.Energy);
 }
 
+void UDFCombatCueSubsystem::LandOnItsOwn(const FCue& Round)
+{
+	// The host's round is still flying after a body that walked away, and its ProjectileLanded is this round's,
+	// not the next one's. If it never comes (its body died or left, or its tower went), EnemyKilled/EnemyLeaked
+	// or the wait clears the record.
+	FOwedLanding& Entry = Owed.AddDefaulted_GetRef();
+	Entry.StructureId = Round.StructureId;
+	Entry.TargetId = Round.TargetId;
+	Entry.Wait = Round.Lifetime + DFCombatCue::LandingGraceSeconds;
+	Land(Round, Round.To);
+}
+
 void UDFCombatCueSubsystem::StepCues(float DeltaSeconds)
 {
+	// Owed landings first, so one a round adds below starts its wait next frame. One whose wait ran out was
+	// never coming: its round went with its tower.
+	for (int32 i = Owed.Num() - 1; i >= 0; --i)
+	{
+		Owed[i].Age += DeltaSeconds;
+		if (Owed[i].Age >= Owed[i].Wait)
+		{
+			Owed.RemoveAtSwap(i, EAllowShrinking::No);
+		}
+	}
+
 	// Backwards: a finished cue is swapped for the last one, which has then been visited already, and a cue
 	// a landing adds (appended) waits for the next frame.
 	for (int32 i = Cues.Num() - 1; i >= 0; --i)
@@ -504,21 +644,23 @@ void UDFCombatCueSubsystem::StepCues(float DeltaSeconds)
 			Cues.RemoveAtSwap(i, EAllowShrinking::No);
 			if (Done.Kind == EDFCombatCue::Round)
 			{
-				Land(Done, Done.To);   // after the release: the flash takes the round's own ball
+				LandOnItsOwn(Done);   // after the release: the flash takes the round's own ball
 			}
 			continue;
 		}
 		const float Alpha = Cue.Age / Cue.Lifetime;
+		// None once ForgetParts took them (the cue runs out unseen): its old index may be another cue's part now.
+		UStaticMeshComponent* Mesh = Cue.NumParts > 0 ? PartMesh(Cue.PartIndices[0]) : nullptr;
 		switch (Cue.Kind)
 		{
 		case EDFCombatCue::Round:
-			if (UStaticMeshComponent* Mesh = PartMesh(Cue.PartIndices[0]))
+			if (Mesh)
 			{
 				Mesh->SetWorldLocation(RoundPosition(Cue.From, Cue.To, Cue.ApexCm, Alpha));
 			}
 			break;
 		case EDFCombatCue::Flash:
-			if (UStaticMeshComponent* Mesh = PartMesh(Cue.PartIndices[0]))
+			if (Mesh)
 			{
 				Mesh->SetWorldScale3D(FVector(FMath::Max(1.f, Cue.SizeCm * (1.f - Alpha)) / 100.f));   // shrinks away
 			}

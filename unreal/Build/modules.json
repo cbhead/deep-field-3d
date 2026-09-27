@@ -227,6 +227,7 @@
       "df": [
         "DFCore",
         "DFGameplay",
+        "DFWorld",
         "DFTowers"
       ],
       "public": [
