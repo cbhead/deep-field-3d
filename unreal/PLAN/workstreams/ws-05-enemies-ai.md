@@ -3,10 +3,10 @@ ws: 05
 slug: enemies-ai
 title: Enemies & AI
 state: active
-owner: session-62767025
-claimed_at: 2026-09-19T23:20:27Z
-lease_expires: 2026-09-26T02:05:59Z
-branch: ws/05-enemies-ai/waveplan
+owner: session-851fd491
+claimed_at: 2026-09-26T23:41:35Z
+lease_expires: 2026-09-27T23:41:35Z
+branch: ws/05-enemies-ai/walker-fp
 last_commit: 6809042
 editor_heavy: true
 phase: P2-P3
