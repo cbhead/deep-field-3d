@@ -12,6 +12,9 @@
  * it on its own bus on receipt. UI, audio and VFX subscribe to the bus and never know which machine
  * they are on. A refusal is not relayed — it goes to the issuing client only (ADFPlayerController).
  *
+ * On a networked host it registers itself as the bus's team relay (UDFMessageBus::SetTeamRelay), so
+ * UDFMessageBus::BroadcastTeam from any module, towers and enemies included, reaches every client.
+ *
  * Spawned by ADFMatchState on the host; always relevant, so a client that joins mid-match receives
  * every message sent after its channel opens (continuous state it missed is on the replicated actors).
  */
@@ -35,7 +38,12 @@ public:
 		Publish(WorldContext, Tag, FInstancedStruct::Make<T>(Payload));
 	}
 
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
+
 private:
+	bool bRegisteredWithBus = false;
+
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_Event(FGameplayTag Tag, const FInstancedStruct& Payload);
 };

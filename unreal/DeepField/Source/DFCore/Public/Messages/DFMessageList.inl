@@ -118,3 +118,7 @@ DF_MSG(JoinApproved,        "DF.Message.JoinApproved",        FDFMsg_Player)
 DF_MSG(Kicked,              "DF.Message.Kicked",              FDFMsg_Player)
 DF_MSG(HostMigrationOffered,"DF.Message.HostMigrationOffered",FDFMsg_Player)
 DF_MSG(SaveResumed,         "DF.Message.SaveResumed",         FDFMsg_Wave)
+
+// Appended 2026-09-25 (WS-04, contract-append): Step.cs ApplyPlayerMelee emits StructureRepaired; the
+// inventory had no entry for it. Payload: StructureId, PlayerId (the mender), DefId, SocketId, HpFraction.
+DF_MSG(StructureRepaired,   "DF.Message.StructureRepaired",   FDFMsg_Structure)

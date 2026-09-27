@@ -243,6 +243,12 @@ namespace DFTowerMath
 
 	int32 PickTarget(const FDFTowerRow& Row, const FVector& TowerPositionCm, float Range, TConstArrayView<FDFTargetCandidate> Candidates)
 	{
+		return PickTarget(Row, TowerPositionCm, Range, Candidates, [Candidates](int32 Index) { return Candidates[Index].bSightBlocked; });
+	}
+
+	int32 PickTarget(const FDFTowerRow& Row, const FVector& TowerPositionCm, float Range, TConstArrayView<FDFTargetCandidate> Candidates,
+		TFunctionRef<bool(int32)> IsSightBlocked)
+	{
 		int32 Best = INDEX_NONE;
 		float BestRemaining = TNumericLimits<float>::Max();
 		for (int32 i = 0; i < Candidates.Num(); ++i)
@@ -257,16 +263,23 @@ namespace DFTowerMath
 				continue;   // towers need stealth revealed; heroes are unaffected
 			}
 			const float DistanceMeters = static_cast<float>(FVector::Dist(TowerPositionCm, Enemy.PositionCm)) / 100.f;
-			if (DistanceMeters > Range || DistanceMeters < Row.MinRangeMeters || Enemy.bSightBlocked)
+			if (DistanceMeters > Range || DistanceMeters < Row.MinRangeMeters)
+			{
+				continue;
+			}
+			// A candidate that cannot win is not worth a trace: the sim checks sight before comparing, but
+			// skipping the trace for a loser changes nothing it returns.
+			if (!(Enemy.RemainingToCore < BestRemaining))
+			{
+				continue;
+			}
+			if (IsSightBlocked(i))
 			{
 				continue;
 			}
 			// Strict '<' as the sim: a stranded walker (float max) never beats anything, and ties keep the first.
-			if (Enemy.RemainingToCore < BestRemaining)
-			{
-				BestRemaining = Enemy.RemainingToCore;
-				Best = i;
-			}
+			BestRemaining = Enemy.RemainingToCore;
+			Best = i;
 		}
 		return Best;
 	}
@@ -328,6 +341,29 @@ namespace DFTowerMath
 			return 0.f;
 		}
 		return Condition->AcquisitionDelaySeconds;
+	}
+
+	bool AdvanceShot(FDFTowerShot& Shot, const FVector& AimPointCm, float DeltaSeconds, float HitRadiusMeters)
+	{
+		DF_DET_FP_SCOPE
+		const float StepCm = Shot.SpeedMetersPerSecond * DeltaSeconds * 100.f;
+		const float DistanceCm = static_cast<float>(FVector::Dist(Shot.PositionCm, AimPointCm));
+		if (DistanceCm <= StepCm + HitRadiusMeters * 100.f)
+		{
+			return true;
+		}
+		Shot.PositionCm += (AimPointCm - Shot.PositionCm).GetSafeNormal() * StepCm;
+		return false;
+	}
+
+	float SplashFactor(float DistanceMeters, float SplashRadiusMeters, float SplashFalloff)
+	{
+		DF_DET_FP_SCOPE
+		if (SplashRadiusMeters <= 0.f || DistanceMeters > SplashRadiusMeters)
+		{
+			return 0.f;
+		}
+		return 1.f - (1.f - SplashFalloff) * (DistanceMeters / SplashRadiusMeters);
 	}
 }
 

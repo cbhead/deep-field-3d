@@ -15,6 +15,15 @@ UDFMessageBus* UDFMessageBus::Get(const UObject* WorldContext)
 	return nullptr;
 }
 
+void UDFMessageBus::BroadcastTeam(const FGameplayTag& Tag, const FInstancedStruct& Payload)
+{
+	Broadcast(Tag, Payload);
+	if (TeamRelay)
+	{
+		TeamRelay(Tag, Payload);
+	}
+}
+
 void UDFMessageBus::Broadcast(const FGameplayTag& Tag, const FInstancedStruct& Payload)
 {
 	++BroadcastCount;
