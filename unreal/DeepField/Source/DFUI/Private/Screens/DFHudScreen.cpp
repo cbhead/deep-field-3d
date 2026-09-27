@@ -221,6 +221,17 @@ void UDFHudScreen::BuildTree()
 		Place(Canvas, VitalsPanel, FVector2D(0.f, 1.f), FVector2D(0.f, 1.f), FVector2D(Style.Edge, -Style.Edge));
 	}
 
+	// ---- bottom right: the local hero's magazine
+	{
+		UVerticalBox* Box = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("AmmoBox"));
+		Box->AddChildToVerticalBox(Label(TEXT("AmmoLabel"), LOCTEXT("AmmoLabel", "AMMO")))->SetHorizontalAlignment(HAlign_Right);
+		AmmoValue = Text(TEXT("AmmoValue"), Style.SizeValue, Style.Text);
+		AmmoValue->SetJustification(ETextJustify::Right);
+		Box->AddChildToVerticalBox(AmmoValue)->SetHorizontalAlignment(HAlign_Right);
+		AmmoPanel = Panel(TEXT("AmmoPanel"), Box, Style.PanelEdge);
+		Place(Canvas, AmmoPanel, FVector2D(1.f, 1.f), FVector2D(1.f, 1.f), FVector2D(-Style.Edge, -Style.Edge));
+	}
+
 	// ---- centre: the crosshair part
 	{
 		UDFCrosshairPart* Crosshair = WidgetTree->ConstructWidget<UDFCrosshairPart>(UDFCrosshairPart::StaticClass(), TEXT("Part_Crosshairs"));
@@ -348,6 +359,7 @@ void UDFHudScreen::Refresh(const UDFMatchViewModel* Match)
 	if (!bValid)
 	{
 		SetShown(VitalsPanel, false);
+		SetShown(AmmoPanel, false);
 		SetShown(BannerPanel, false);
 		return;
 	}
@@ -369,6 +381,13 @@ void UDFHudScreen::Refresh(const UDFMatchViewModel* Match)
 	// ---- the local hero
 	const UDFPlayerViewModel* Local = Match->Local();
 	SetShown(VitalsPanel, Local != nullptr);
+	SetShown(AmmoPanel, Local != nullptr && Local->GetMagazineSize() > 0);
+	if (Local && Local->GetMagazineSize() > 0)
+	{
+		SetTextIfChanged(AmmoValue, DFHudText::Ammo(Local->GetAmmoInMagazine(), Local->GetMagazineSize(), Local->IsReloading(), Local->GetReloadFrac()));
+		const bool bLow = !Local->IsReloading() && Local->GetAmmoInMagazine() * 4 <= Local->GetMagazineSize();
+		SetColorIfChanged(AmmoValue, Local->IsReloading() ? Style.Accent : bLow ? Style.Danger : Style.Text);
+	}
 	if (Local)
 	{
 		const float Fraction = Local->HpFrac();

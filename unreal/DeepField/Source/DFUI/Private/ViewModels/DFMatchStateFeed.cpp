@@ -2,6 +2,7 @@
 
 #include "Attributes/DFHealthSet.h"
 #include "DFHeroCharacter.h"
+#include "Weapons/DFHeroWeaponComponent.h"
 #include "DFMatchState.h"
 #include "DFPlayerState.h"
 #include "Economy/DFEconomyStateComponent.h"
@@ -81,6 +82,13 @@ void FDFMatchStateFeed::FillPlayer(UDFPlayerViewModel& Player, const ADFPlayerSt
 		{
 			Player.SetMaxHp(Health->GetMaxHealth());
 			Player.SetHp(Health->GetHealth());
+		}
+		if (const UDFHeroWeaponComponent* Gun = Pawn->GetWeapon())
+		{
+			Player.SetAmmoInMagazine(Gun->GetAmmoInMagazine());
+			Player.SetMagazineSize(Gun->GetMagazineSize());
+			Player.SetReloading(Gun->IsReloading());
+			Player.SetReloadFrac(Gun->IsReloading() ? Gun->GetReloadFraction() : 0.f);
 		}
 	}
 }

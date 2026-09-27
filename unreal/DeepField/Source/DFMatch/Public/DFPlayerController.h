@@ -21,8 +21,8 @@ class UInputAction;
  * Build (WS-04): PlaceTower, UpgradeTower, SellTower, forwarded to UDFBuildSubsystem.
  *
  * Until WS-12's build wheel exists, the controller also binds C16's hold-to-build pair itself:
- * IA_Build (hold E) on a free socket builds QuickBuildTowerId there, IA_Sell (hold X) on a built
- * socket sells its tower. "On a socket" is the pad under the crosshair (a DF_Build trace from the view)
+ * IA_Build (hold E) on a free socket builds QuickBuildTowerId there, IA_Upgrade (hold U) on a built
+ * socket buys one level on its tower's least-bought path, IA_Sell (hold X) sells it. "On a socket" is the pad under the crosshair (a DF_Build trace from the view)
  * or, when the crosshair is on the ground, the nearest pad within QuickBuildReachCm of where it lands.
  */
 UCLASS()
@@ -77,6 +77,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "DF|Input")
 	TObjectPtr<UInputAction> SellAction;
 
+	/** C16 IA_Upgrade: hold U. One purchase on the tower's least-bought path. */
+	UPROPERTY(EditDefaultsOnly, Category = "DF|Input")
+	TObjectPtr<UInputAction> UpgradeAction;
+
 	/** What hold-E builds until the build wheel lets the player choose (a towers.json id). */
 	UPROPERTY(EditDefaultsOnly, Category = "DF|Build")
 	FName QuickBuildTowerId = TEXT("lance");
@@ -92,4 +96,5 @@ private:
 	int32 GetSeat() const;
 	void HandleBuildInput();
 	void HandleSellInput();
+	void HandleUpgradeInput();
 };

@@ -16,6 +16,31 @@ frozen. Only the branch facts were revised ("Branches", the build-state note in 
 25th's; PRs #44, #49, #56–#60 and #62 landed after it was written and are listed in
 `digests/2026-09-26.md`, not yet folded in here._
 
+_**Update 2026-09-27 (session-gpu-box-2026-09-26): there is a game.** On `L_Testlane` a solo match now
+plays end to end, landed on `main` through `int-merge` (gate 197/197 plus the listen smoke):_
+
+- _the hero spawns facing the pads (WASD, mouse, jump, sprint, crouch, aim), with a rifle (hold LMB,
+  R to reload), server-checked hitscan (WS-03);_
+- _waves spawn from a crimson portal and walk a visible lane to a cyan core (WS-05, WS-09);_
+- _hold E on a pad builds a Lance, hold U upgrades, hold X sells, all paid from the real economy
+  (money, lives, bounty; WS-04, WS-06);_
+- _towers aim and shoot glowing rounds; enemies take damage, tint toward red, and die; leaks cost
+  lives; Victory and Defeat (WS-04, WS-05, WS-28);_
+- _a HUD shows wave, countdown, enemies, money, lives, health, ammo, a crosshair, refusals and the
+  banner (WS-12)._
+
+_Everything is placeholder shapes (DFShapeLook) until WS-33/34's art. `DF.Func.Tower.KillsTestlaneEnemies` and
+`DF.Func.Weapon.RifleKillsTestlaneEnemy` prove the loop in PIE. `deepfield play` starts Testlane;
+`deepfield play -Demo` (or `-DFDemo`) lets the match play itself, and `unreal/Build/record-demo.ps1`
+records it. A packaged Development build is in `C:\Users\Cbhea\packages\playable` on the box._
+
+_**Hazard, new:** Windows Smart App Control switched itself from evaluation to enforcement on the box
+at 03:59 local on 2026-09-27 and has since refused some freshly built project DLLs (CodeIntegrity
+event 3077, `GetLastError=4551` when the editor loads a module); `int-verify`'s DFGameplay/DFWorld
+builds were refused. Whether to turn it off is the owner's call (Windows Security > App & browser
+control); until then a landing can use `-VerifyDir` on a worktree whose DLLs load. The sections below
+predate all of this._
+
 ## The shape of the thing
 
 P0 and P1 are done: the project exists, the contracts are frozen in code, and content is text that a

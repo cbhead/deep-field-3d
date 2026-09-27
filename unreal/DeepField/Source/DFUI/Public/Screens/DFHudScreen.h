@@ -16,8 +16,8 @@ struct FDFMsg_Rejected;
  * parts (UDFCrosshairPart, UDFPromptPart) are its children, as DFUIPartList.inl describes.
  *
  * It reads the match view model and nothing else (C12): the wave, its phase and the intermission
- * countdown, enemies remaining, money and lives (top corners), the local hero's hp (bottom left), and a
- * victory / defeat banner. Refusals are discrete, so they arrive as DF.Message.*Rejected on this
+ * countdown, enemies remaining, money and lives (top corners), the local hero's hp (bottom left), its
+ * gun's magazine (bottom right), and a victory / defeat banner. Refusals are discrete, so they arrive as DF.Message.*Rejected on this
  * client's bus (ADFPlayerController::Client_Refused) and show as a short toast over the prompt.
  *
  * It never takes focus or sets an input mode: play keeps the keyboard and mouse while it is up.
@@ -67,6 +67,8 @@ private:
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> HpLabel;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> HpValue;
 	UPROPERTY(Transient) TObjectPtr<UProgressBar> HpBar;
+	UPROPERTY(Transient) TObjectPtr<UWidget> AmmoPanel;
+	UPROPERTY(Transient) TObjectPtr<UTextBlock> AmmoValue;
 
 	UPROPERTY(Transient) TObjectPtr<UWidget> Toast;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> ToastText;

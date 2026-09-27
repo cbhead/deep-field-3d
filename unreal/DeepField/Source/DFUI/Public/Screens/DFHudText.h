@@ -31,7 +31,11 @@ namespace DFHudText
 	 *  money" for insufficientFunds, otherwise the reason exactly as the host sent it. */
 	DFUI_API FText Refusal(FName Reason);
 
-	/** The Prompts part's line until the build wheel exists: "Hold E on a pad: build Lance (75)   Hold X on
-	 *  a tower: sell". TowerId is the towers.json id hold-E builds; its display name is the id, capitalised. */
+	/** The Prompts part's line until the build wheel exists: "Hold E on a pad: build Lance (75)   Hold U on
+	 *  a tower: upgrade   Hold X: sell". TowerId is the towers.json id hold-E builds; its display name is
+	 *  the id, capitalised. */
 	DFUI_API FText BuildHint(FName TowerId, int32 Cost);
+
+	/** The ammo readout: "18 / 24"; "RELOADING 40%" (whole percent) during a reload. */
+	DFUI_API FText Ammo(int32 InMagazine, int32 MagazineSize, bool bReloading, float ReloadFrac);
 }

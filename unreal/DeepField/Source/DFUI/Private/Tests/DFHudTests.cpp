@@ -246,7 +246,12 @@ bool FDFUIHudTextTest::RunTest(const FString&)
 	TestEqual(TEXT("wouldSeal is raw"), Str(DFHudText::Refusal(TEXT("wouldSeal"))), FString(TEXT("wouldSeal")));
 	TestEqual(TEXT("no reason"), Str(DFHudText::Refusal(NAME_None)), FString(TEXT("Refused")));
 
-	TestEqual(TEXT("the build hint"), Str(DFHudText::BuildHint(TEXT("lance"), 75)), FString(TEXT("Hold E on a pad: build Lance (75)   Hold X on a tower: sell")));
+	TestEqual(TEXT("the build hint"), Str(DFHudText::BuildHint(TEXT("lance"), 75)), FString(TEXT("Hold E on a pad: build Lance (75)   Hold U on a tower: upgrade   Hold X: sell")));
+
+	TestEqual(TEXT("ammo"), Str(DFHudText::Ammo(18, 24, false, 0.f)), FString(TEXT("18 / 24")));
+	TestEqual(TEXT("empty"), Str(DFHudText::Ammo(0, 24, false, 0.f)), FString(TEXT("0 / 24")));
+	TestEqual(TEXT("reloading, whole percent down"), Str(DFHudText::Ammo(0, 24, true, 0.406f)), FString(TEXT("RELOADING 40%")));
+	TestEqual(TEXT("reloading never reads 100%"), Str(DFHudText::Ammo(0, 24, true, 1.f)), FString(TEXT("RELOADING 99%")));
 
 	UDFMatchViewModel* Match = NewObject<UDFMatchViewModel>();
 	Match->SetTotalWaves(10);

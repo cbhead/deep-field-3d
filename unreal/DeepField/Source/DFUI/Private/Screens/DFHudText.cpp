@@ -105,8 +105,17 @@ FText DFHudText::BuildHint(FName TowerId, int32 Cost)
 	{
 		Name[0] = FChar::ToUpper(Name[0]);
 	}
-	return FText::Format(LOCTEXT("BuildHint", "Hold E on a pad: build {0} ({1})   Hold X on a tower: sell"),
+	return FText::Format(LOCTEXT("BuildHint", "Hold E on a pad: build {0} ({1})   Hold U on a tower: upgrade   Hold X: sell"),
 		FText::AsCultureInvariant(Name), FText::AsNumber(Cost));
+}
+
+FText DFHudText::Ammo(int32 InMagazine, int32 MagazineSize, bool bReloading, float ReloadFrac)
+{
+	if (bReloading)
+	{
+		return FText::Format(LOCTEXT("AmmoReloading", "RELOADING {0}%"), FMath::Clamp(FMath::FloorToInt(ReloadFrac * 100.f), 0, 99));
+	}
+	return FText::Format(LOCTEXT("AmmoOf", "{0} / {1}"), FMath::Max(0, InMagazine), FMath::Max(0, MagazineSize));
 }
 
 #undef LOCTEXT_NAMESPACE

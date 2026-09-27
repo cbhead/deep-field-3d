@@ -45,6 +45,19 @@ private:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "DF|Player", meta = (AllowPrivateAccess = "true")) float BleedoutSecondsLeft = 0.f;
 	DF_VM_ACCESSORS(float, BleedoutSecondsLeft)
 
+	// ---- the gun in hand (appended 2026-09-27, rule A): WS-03's UDFHeroWeaponComponent. The owner
+	// predicts its magazine, so these are exact for the local hero and the last known for anyone else.
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "DF|Player", meta = (AllowPrivateAccess = "true")) int32 AmmoInMagazine = 0;
+	DF_VM_ACCESSORS(int32, AmmoInMagazine)
+	/** 0 = no gun (the ammo readout hides). */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "DF|Player", meta = (AllowPrivateAccess = "true")) int32 MagazineSize = 0;
+	DF_VM_ACCESSORS(int32, MagazineSize)
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "DF|Player", meta = (AllowPrivateAccess = "true")) bool bReloading = false;
+	DF_VM_BOOL_ACCESSORS(Reloading)
+	/** 0..1 through the reload. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "DF|Player", meta = (AllowPrivateAccess = "true")) float ReloadFrac = 0.f;
+	DF_VM_ACCESSORS(float, ReloadFrac)
+
 	// ---- loadout
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "DF|Player", meta = (AllowPrivateAccess = "true")) FName Weapon = TEXT("sidearm");
 	DF_VM_ACCESSORS(FName, Weapon)

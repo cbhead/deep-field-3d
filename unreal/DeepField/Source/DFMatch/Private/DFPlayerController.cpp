@@ -7,6 +7,7 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "DFGameplayTags.h"
+#include "Content/DFContentRows.h"
 #include "InputAction.h"
 #include "UObject/ConstructorHelpers.h"
 #include "World/DFSocket.h"
@@ -24,8 +25,10 @@ ADFPlayerController::ADFPlayerController()
 	// on possession maps E and X to them.
 	static ConstructorHelpers::FObjectFinder<UInputAction> Build(TEXT("/Game/DF/Core/Input/IA_Build.IA_Build"));
 	static ConstructorHelpers::FObjectFinder<UInputAction> Sell(TEXT("/Game/DF/Core/Input/IA_Sell.IA_Sell"));
+	static ConstructorHelpers::FObjectFinder<UInputAction> Upgrade(TEXT("/Game/DF/Core/Input/IA_Upgrade.IA_Upgrade"));
 	BuildAction = Build.Object;
 	SellAction = Sell.Object;
+	UpgradeAction = Upgrade.Object;
 }
 
 void ADFPlayerController::SetupInputComponent()
@@ -43,6 +46,10 @@ void ADFPlayerController::SetupInputComponent()
 	if (SellAction)
 	{
 		Input->BindAction(SellAction, ETriggerEvent::Triggered, this, &ADFPlayerController::HandleSellInput);
+	}
+	if (UpgradeAction)
+	{
+		Input->BindAction(UpgradeAction, ETriggerEvent::Triggered, this, &ADFPlayerController::HandleUpgradeInput);
 	}
 }
 
@@ -112,6 +119,33 @@ void ADFPlayerController::HandleBuildInput()
 	}
 	UE_LOG(LogDFPlayerController, Log, TEXT("build %s on %s"), *QuickBuildTowerId.ToString(), *Socket->SocketId.ToString());
 	Server_PlaceTower(QuickBuildTowerId, Socket->SocketId);
+}
+
+void ADFPlayerController::HandleUpgradeInput()
+{
+	const ADFSocket* Socket = FindAimedSocket();
+	const ADFTower* Tower = Socket ? FindTowerOn(Socket->SocketId) : nullptr;
+	const FDFTowerRow* Row = Tower ? Tower->GetRow() : nullptr;
+	if (!Row || Row->UpgradePaths.Num() == 0)
+	{
+		return;
+	}
+	// The least-bought path (the first on a tie), so repeated holds raise every path in turn. A maxed or
+	// unaffordable path comes back as DF.Message.UpgradeRejected, which the HUD shows.
+	const TArray<int32>& Levels = Tower->GetPathLevels();
+	int32 Path = 0;
+	for (int32 i = 1; i < Row->UpgradePaths.Num(); ++i)
+	{
+		const int32 Level = Levels.IsValidIndex(i) ? Levels[i] : 0;
+		const int32 Best = Levels.IsValidIndex(Path) ? Levels[Path] : 0;
+		if (Level < Best)
+		{
+			Path = i;
+		}
+	}
+	UE_LOG(LogDFPlayerController, Log, TEXT("upgrade %s (%d) path %s on %s"), *Tower->GetDefId().ToString(), Tower->GetStructureId(),
+		*Row->UpgradePaths[Path].Id.ToString(), *Socket->SocketId.ToString());
+	Server_UpgradeTower(Tower->GetStructureId(), Path);
 }
 
 void ADFPlayerController::HandleSellInput()
