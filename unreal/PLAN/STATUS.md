@@ -1,6 +1,6 @@
 # Workstream status
 
-Generated 2026-09-27T06:30:34Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-27T06:43:28Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
 active: 6 · paused: 7 · review: 1 · unclaimed: 36
 
@@ -9,7 +9,7 @@ active: 6 · paused: 7 · review: 1 · unclaimed: 36
 | WS-00 | Foundation & contracts | P1 | CP | review | — | — | ff379ca | yes | WS-15 for CI |
 | WS-01 | Content pipeline | P1 | CP | paused | — | — | 7f7b9b8 |  | — |
 | WS-02 | Gameplay core (GAS) | P1-P2 | CP | paused | — | — | — |  | — |
-| WS-03 | Player | P2 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T06:30:33Z | 25f8061 | yes | — |
+| WS-03 | Player | P2 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T06:30:33Z | 19f36a7 | yes | — |
 | WS-04 | Towers & build | P2-P3 | CP | active (lease expired) | session-01HszbJQ-cloud | 2026-09-26T02:29:31Z | — | yes | — |
 | WS-05 | Enemies & AI | P2-P3 | CP | paused | — | — | 22eec3c | yes | — |
 | WS-06 | Economy, scrap, gunsmith | P3 |  | unclaimed | — | — | — |  | — |
@@ -39,7 +39,7 @@ active: 6 · paused: 7 · review: 1 · unclaimed: 36
 | WS-25 | Physics layer | P4 |  | unclaimed | — | — | — | yes | — |
 | WS-26 | Co-op verbs & security rules | P4 |  | unclaimed | — | — | — |  | — |
 | WS-27 | Waves, tiers, endless, balance | P4 (last) |  | unclaimed | — | — | — |  | — |
-| WS-28 | Match flow (DFMatch) | P2-P3 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T06:30:33Z | ea6a1d4 |  | — |
+| WS-28 | Match flow (DFMatch) | P2-P3 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T06:30:33Z | 19f36a7 |  | — |
 | WS-30 | Art pipeline (Claude Design → Unreal, terrain lane, validators) | P1+ |  | paused | — | — | aa379d0 | yes | — |
 | WS-31 | Materials & palette | P1+ |  | unclaimed | — | — | — | yes | — |
 | WS-32 | Skeletons & animation contract | P2+ |  | unclaimed | — | — | — | yes | — |
