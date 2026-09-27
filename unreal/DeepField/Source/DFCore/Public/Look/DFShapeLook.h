@@ -11,8 +11,8 @@ class UMeshComponent;
 // those meshes carry /Engine/EngineMaterials/DefaultMaterial, which has no parameters, so a dynamic
 // instance of the mesh's own material takes no colour and everything renders grey. The tintable
 // material is BasicShapeMaterial (vector "Color", scalar "Roughness"); Tint puts it on the slot first.
-// The project cooks /Engine/BasicShapes (DefaultGame.ini DirectoriesToAlwaysCook), so a packaged
-// build finds it too.
+// The project cooks /Engine/BasicShapes and /Engine/EngineMaterials/EmissiveMeshMaterial
+// (DefaultGame.ini), so a packaged build finds them too.
 namespace DFShapeLook
 {
 	/** The engine material whose "Color" parameter tints a placeholder. Loaded once. */
@@ -21,4 +21,11 @@ namespace DFShapeLook
 	/** Make Slot a dynamic instance of Material() (unless it already is one) and set its Color.
 	 *  Returns the instance, or null without a mesh or the material. Every machine that draws. */
 	DFCORE_API UMaterialInstanceDynamic* Tint(UMeshComponent* Mesh, const FLinearColor& Colour, int32 Slot = 0);
+
+	/** The engine's EmissiveMeshMaterial (vector "Color", unlit and bright): for what should read as
+	 *  energy at a distance (rounds in flight, a muzzle flash). */
+	DFCORE_API UMaterialInterface* GlowMaterial();
+
+	/** As Tint, from GlowMaterial(). */
+	DFCORE_API UMaterialInstanceDynamic* Glow(UMeshComponent* Mesh, const FLinearColor& Colour, int32 Slot = 0);
 }

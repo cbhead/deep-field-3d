@@ -317,10 +317,10 @@ void ADFTower::DrawRounds()
 		RoundsView->SetupAttachment(RootComponent);
 		RoundsView->RegisterComponent();
 		RoundsView->SetWorldTransform(FTransform::Identity);
-		DFShapeLook::Tint(RoundsView, FLinearColor(1.f, 0.62f, 0.2f));   // hazard amber
+		DFShapeLook::Glow(RoundsView, FLinearColor(4.f, 2.2f, 0.6f));   // hazard amber, bright enough to read as a round
 	}
 	// Rebuild the few instances every frame: rounds live a fraction of a second and there are only a handful.
-	constexpr float RoundScale = 0.14f;   // a 14 cm ball on a 1 m sphere
+	constexpr float RoundScale = 0.3f;   // a 30 cm glowing ball on a 1 m sphere: readable from the demo's orbit
 	RoundsView->ClearInstances();
 	for (const FShotInFlight& Shot : Shots)
 	{
