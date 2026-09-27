@@ -75,6 +75,10 @@ try {
     if ((Get-Date) -gt $deadline) { throw "only $n of $frames frames before the deadline" }
   }
 } finally {
+  # A packaged DeepField.exe is a bootstrap that starts Binaries\Win64\DeepField.exe as its child:
+  # stop the children this run started first, then the process itself (nothing else is touched).
+  Get-CimInstance Win32_Process -Filter "ParentProcessId=$($proc.Id)" -ErrorAction SilentlyContinue |
+    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
   if (-not $proc.HasExited) { Stop-Process -Id $proc.Id -Force }
 }
 
