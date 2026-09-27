@@ -22,6 +22,7 @@
 #include "InputMappingContext.h"
 #include "Movement/DFHeroMovementComponent.h"
 #include "Movement/DFHeroMoveRules.h"
+#include "UObject/ConstructorHelpers.h"
 
 ADFHeroCharacter::ADFHeroCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UDFHeroMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -51,6 +52,23 @@ ADFHeroCharacter::ADFHeroCharacter(const FObjectInitializer& ObjectInitializer)
 	HeroSet = CreateDefaultSubobject<UDFHeroSet>(TEXT("HeroSet"));
 
 	PrimaryActorTick.bCanEverTick = true;   // the host's regen
+
+	// The default input (C16: Content/DF/Core/Input). Hard references, so the cook takes them with the
+	// hero; a subclass or a later DA_InputConfig can still replace any of them.
+	static ConstructorHelpers::FObjectFinder<UInputMappingContext> DefaultContextAsset(TEXT("/Game/DF/Core/Input/IMC_DF_Default"));
+	static ConstructorHelpers::FObjectFinder<UInputAction> MoveAsset(TEXT("/Game/DF/Core/Input/IA_Move"));
+	static ConstructorHelpers::FObjectFinder<UInputAction> LookAsset(TEXT("/Game/DF/Core/Input/IA_Look"));
+	static ConstructorHelpers::FObjectFinder<UInputAction> JumpAsset(TEXT("/Game/DF/Core/Input/IA_Jump"));
+	static ConstructorHelpers::FObjectFinder<UInputAction> SprintAsset(TEXT("/Game/DF/Core/Input/IA_Sprint"));
+	static ConstructorHelpers::FObjectFinder<UInputAction> CrouchAsset(TEXT("/Game/DF/Core/Input/IA_Crouch"));
+	static ConstructorHelpers::FObjectFinder<UInputAction> AimAsset(TEXT("/Game/DF/Core/Input/IA_Aim"));
+	DefaultMappingContext = DefaultContextAsset.Object;
+	MoveAction = MoveAsset.Object;
+	LookAction = LookAsset.Object;
+	JumpAction = JumpAsset.Object;
+	SprintAction = SprintAsset.Object;
+	CrouchAction = CrouchAsset.Object;
+	AimAction = AimAsset.Object;
 }
 
 UDFHeroMovementComponent* ADFHeroCharacter::GetHeroMovement() const
@@ -122,9 +140,44 @@ void ADFHeroCharacter::OnRep_PlayerState()
 	BindHeroState();
 }
 
+void ADFHeroCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+{
+	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
+	// The capsule (and the camera on it) just dropped by ScaledHalfHeightAdjust in one frame: hold the
+	// eye where it was and let it glide down, rather than snapping.
+	CrouchEyeOffsetCm += ScaledHalfHeightAdjust;
+}
+
+void ADFHeroCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+{
+	Super::OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
+	CrouchEyeOffsetCm -= ScaledHalfHeightAdjust;
+}
+
+void ADFHeroCharacter::UpdateCameraEasing(float DeltaSeconds)
+{
+	if (FirstPersonCamera == nullptr)
+	{
+		return;
+	}
+	CrouchEyeOffsetCm = FMath::FInterpTo(CrouchEyeOffsetCm, 0.f, DeltaSeconds, DFHeroMove::CrouchEyeEaseRate);
+	const float EyeAboveCentreCm = DFHeroMove::EyeHeightAboveFeetCm - DFHeroMove::CapsuleHalfHeightCm;
+	FirstPersonCamera->SetRelativeLocation(FVector(0.f, 0.f, EyeAboveCentreCm + CrouchEyeOffsetCm));
+
+	const UDFHeroMovementComponent* HeroMove = GetHeroMovement();
+	const bool bAiming = HeroMove != nullptr && HeroMove->WantsToAim();
+	const float TargetFov = bAiming ? DFHeroMove::AimFieldOfViewDegrees : DFHeroMove::FieldOfViewDegrees;
+	FirstPersonCamera->SetFieldOfView(FMath::FInterpTo(FirstPersonCamera->FieldOfView, TargetFov, DeltaSeconds, DFHeroMove::AimFovEaseRate));
+}
+
 void ADFHeroCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
+	if (IsLocallyControlled())
+	{
+		UpdateCameraEasing(DeltaSeconds);
+	}
 
 	if (!HasAuthority())
 	{

@@ -2,6 +2,7 @@
 
 #include "DFEventRelay.h"
 #include "DFGameplayTags.h"
+#include "DFHeroCharacter.h"
 #include "DFPlayerController.h"
 #include "DFPlayerState.h"
 #include "Messages/DFMessageBus.h"
@@ -21,6 +22,8 @@ ADFGameMode::ADFGameMode()
 	GameStateClass = ADFMatchState::StaticClass();
 	PlayerStateClass = ADFPlayerState::StaticClass();
 	PlayerControllerClass = ADFPlayerController::StaticClass();
+	// Every player is a hero (WS-03). Until 2026-09-27 this was the engine's flying ADefaultPawn.
+	DefaultPawnClass = ADFHeroCharacter::StaticClass();
 }
 
 void ADFGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)

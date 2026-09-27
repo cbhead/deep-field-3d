@@ -51,6 +51,12 @@ namespace DFHeroMove
 	constexpr float EyeHeightAboveFeetCm = 160.f;
 	constexpr float FieldOfViewDegrees   = 80.f;
 
+	/** Aiming narrows the view to this. A placeholder until weapons carry their own ADS field of view (WS-03 weapons). */
+	constexpr float AimFieldOfViewDegrees = 65.f;
+	/** Cosmetic, local only: how fast the view eases into aim and the eye into a crouch (1/s; ~0.1 s to settle). */
+	constexpr float AimFovEaseRate    = 18.f;
+	constexpr float CrouchEyeEaseRate = 14.f;
+
 	/** Godot clamps pitch to ±1.5 rad. */
 	constexpr float PitchLimitDegrees = 85.943669f;
 

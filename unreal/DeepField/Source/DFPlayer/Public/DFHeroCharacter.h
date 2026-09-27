@@ -57,6 +57,8 @@ public:
 	virtual void PawnClientRestart() override;
 	virtual void BecomeViewTarget(APlayerController* PC) override;
 	virtual void Tick(float DeltaSeconds) override;
+	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
+	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 
 protected:
 	virtual void BeginPlay() override;
@@ -101,6 +103,10 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UDFHeroSet> HeroSet;
+
+	/** Cosmetic camera easing, local only: the eye's lag behind a crouch's capsule snap (cm, decays to 0). */
+	float CrouchEyeOffsetCm = 0.f;
+	void UpdateCameraEasing(float DeltaSeconds);
 
 	/** Host: playerMaxHp, playerRegenPerSecond, playerRegenDelaySeconds, bleedoutSeconds. */
 	void InitHeroAttributes();
