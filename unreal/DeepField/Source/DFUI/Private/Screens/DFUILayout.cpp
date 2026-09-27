@@ -1,10 +1,48 @@
 #include "Screens/DFUILayout.h"
 
+#include "Blueprint/WidgetTree.h"
+#include "Components/Overlay.h"
+#include "Components/OverlaySlot.h"
 #include "Screens/DFActivatableScreen.h"
 #include "Screens/DFUITags.h"
 #include "Widgets/CommonActivatableWidgetContainer.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogDFUILayout, Log, All);
+
+void UDFUILayout::NativeOnInitialized()
+{
+	Super::NativeOnInitialized();
+	// A WBP_Layout arrives with its designer tree already in place and registers its own stacks on
+	// construct. Only this class on its own has no tree: then it lays the stacks out itself.
+	if (WidgetTree && !WidgetTree->RootWidget)
+	{
+		BuildDefaultLayers();
+	}
+}
+
+void UDFUILayout::BuildDefaultLayers()
+{
+	UOverlay* Root = WidgetTree->ConstructWidget<UOverlay>(UOverlay::StaticClass(), TEXT("Layers"));
+	// The layout itself never takes a click; the screens on it decide for themselves.
+	Root->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+	const FDFUITags& Tags = FDFUITags::Get();
+	for (const FGameplayTag& Layer : Tags.Layers())   // bottom to top, so later slots draw over earlier ones
+	{
+		UCommonActivatableWidgetStack* Stack = WidgetTree->ConstructWidget<UCommonActivatableWidgetStack>(
+			UCommonActivatableWidgetStack::StaticClass(), FName(*Layer.ToString().Replace(TEXT("."), TEXT("_"))));
+		Stack->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+		if (Layer == Tags.Layer_Game)
+		{
+			// The HUD is there from the first frame, not faded in; menus keep the stack's default transition.
+			Stack->SetTransitionDuration(0.f);
+		}
+		UOverlaySlot* LayerSlot = Root->AddChildToOverlay(Stack);
+		LayerSlot->SetHorizontalAlignment(HAlign_Fill);
+		LayerSlot->SetVerticalAlignment(VAlign_Fill);
+		RegisterLayer(Layer, Stack);
+	}
+	WidgetTree->RootWidget = Root;
+}
 
 bool UDFUILayout::RegisterLayer(FGameplayTag LayerTag, UCommonActivatableWidgetContainerBase* Container)
 {

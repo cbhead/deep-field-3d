@@ -26,8 +26,14 @@ public class DFUI : ModuleRules
 			"InputCore",
 		});
 
+		// The real feed (ViewModels/DFMatchStateFeed) reads WS-06's economy component and the hero's
+		// attribute set (DFGameplay, GAS) and the hero pawn (DFPlayer); its tests drive a real wave
+		// director (DFEnemies), as DFMatch's own do. All are lower layers.
 		PrivateDependencyModuleNames.AddRange(new string[] {
-			// (none)
+			"DFGameplay",
+			"DFPlayer",
+			"DFEnemies",
+			"GameplayAbilities",
 		});
 	}
 }

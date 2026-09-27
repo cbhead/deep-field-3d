@@ -66,7 +66,28 @@ and are shown and hidden by it, never pushed to a layer. `DF.UI.Screens.LayersAn
 - `WBP_Layout` registers its stacks with `RegisterLayer(Tag, Stack)` on construct; `HasAllLayers()`
   is what `L_Test_UI` asserts first.
 
+## 4. The real feed and the first HUD (code only, no asset)
+- **Feed.** `FDFMatchStateFeed` (`Public/ViewModels/`) copies `ADFMatchState`, its economy component, the
+  seated `ADFPlayerState`s and their hero pawns into the view models; `UDFMatchFeedSubsystem` runs it every
+  frame in Game and PIE worlds whose game state is an `ADFMatchState`, and resets the model when the world
+  goes. Same code on host and client. C12 "As implemented" lists what it writes and what is still default.
+- **On screen.** `UDFUIRootSubsystem` (a local-player subsystem, so never on a dedicated server or in a
+  unit-test world) puts a `UDFUILayout` on the player's screen whenever the player gets a controller in a
+  game world, and pushes `UDFHudScreen` onto `DF.UI.Layer.Game`. Not under `-nullrhi` and not during an
+  automation run (`ShouldShowUI`), so the gate's PIE tests never grow a HUD. One layout per controller;
+  map travel replaces it. `UDFUILayout` created from its own class (no `WBP_Layout` yet) builds the four
+  stacks in code.
+- **The HUD.** `UDFHudScreen` builds its widget tree in C++: wave / phase / countdown / enemies (top left),
+  money and lives (top right), the local hero's hp (bottom left), the crosshair and prompt **parts**
+  (`UDFCrosshairPart`, `UDFPromptPart`), a toast for `DF.Message.{Build,Upgrade,Sell}Rejected`, and a
+  victory / defeat banner. Wording is `DFHudText` (pure, tested); the look is `FDFHudStyle`, which reads
+  `DA_UITokens` when it exists, else parses `docs/design-system` in place, else uses its built-in copy of
+  the same values (`DF.UI.Hud.StyleFromTokens` keeps that copy equal to the CSS). It never logs a missing
+  token. `WBP_HudLayout` replaces it when WS-12's asset PR lands; the parts become `WBP_Part_*`.
+
 ## Tests
 `unreal\deepfield test DF.UI` (`unreal/README.md` §5.1; `Build/test.sh` was the Mac wrapper and has no machine — ADR-0028) — `ViewModel.*`, `NoNetBranching`, `Tokens.NamesMatchDesignSystem`,
-`Tokens.ParserAndFallbacks`, `Screens.TagsResolve`, `Screens.LayersAndInput`. All run with `-nullrhi`
-and need no asset. Pushing real widgets through the stacks is `L_Test_UI`'s job.
+`Tokens.ParserAndFallbacks`, `Screens.TagsResolve`, `Screens.LayersAndInput`, `Feed.*` (a real
+`ADFMatchState` in a test world), `Hud.Text`, `Hud.StyleFromTokens`, `Hud.NoHudInTestWorlds`. All run with
+`-nullrhi` and need no asset. Pushing real widgets through the stacks is `L_Test_UI`'s job; the code HUD
+is checked in the running game (`deepfield play`, or `-game` on L_Testlane).

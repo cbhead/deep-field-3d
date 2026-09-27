@@ -11,11 +11,18 @@ class UDFActivatableScreen;
 /** The root widget of a player's UI: four stacks, one per DF.UI.Layer.*, bottom to top. The
  *  `WBP_Layout` subclass places the stacks and registers each in its construction graph; screens
  *  are pushed by class and land on the layer their ScreenTag names, so no caller picks a layer.
- *  Refusals (an unregistered layer, a screen with no tag) are logged errors and a null return. */
+ *  Refusals (an unregistered layer, a screen with no tag) are logged errors and a null return.
+ *
+ *  Created from this class itself (no WBP_, no designer tree), it builds the same four stacks in
+ *  code, full-screen and bottom to top, so the game has a working layout before WBP_Layout exists
+ *  (UDFUIRootSubsystem puts one on screen per local player). */
 UCLASS(Blueprintable)
 class DFUI_API UDFUILayout : public UCommonUserWidget
 {
 	GENERATED_BODY()
+
+protected:
+	virtual void NativeOnInitialized() override;
 
 public:
 	/** One container per layer tag; registering a second for the same layer is refused. */
@@ -52,6 +59,9 @@ public:
 	UDFActivatableScreen* FindOpenScreen(UPARAM(meta = (Categories = "DF.UI.Screen")) FGameplayTag ScreenTag) const;
 
 private:
+	/** The code-only layout: an overlay of four activatable stacks, registered as the four layers. */
+	void BuildDefaultLayers();
+
 	UPROPERTY(Transient)
 	TMap<FGameplayTag, TObjectPtr<UCommonActivatableWidgetContainerBase>> Layers;
 };
