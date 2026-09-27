@@ -3,10 +3,10 @@ ws: 12
 slug: ui
 title: UI (Common UI + MVVM)
 state: active
-owner: session-fae2d0c5
-claimed_at: 2026-09-25T02:11:40Z
-lease_expires: 2026-09-26T02:11:40Z
-branch: ws/12-ui/tokens-screens
+owner: session-gpu-box-2026-09-26
+claimed_at: 2026-09-27T07:23:21Z
+lease_expires: 2026-09-28T07:23:21Z
+branch: ws/12-ui/first-hud
 last_commit: 042f7d7
 editor_heavy: true
 phase: P2-P5
@@ -61,3 +61,4 @@ blocked_on:
 - 2026-09-25 · session-fae2d0c5 · **re-claim** — the same session that opened PR #44; the lease expired on the 20th and INT's sweep paused the workstream, so this re-claims it rather than continuing a dead lease. Read the cycle-3 digest, NEXT.md and INT's rulings above. Taking NEXT.md item 2: fix PR #44's three confirmed findings and land it. Still code-only, no editor slot.
 - 2026-09-25 · session-fae2d0c5 · **PR #44 rebased and its three findings fixed.** The conflict was `ws-12-ui.md` only (INT's rulings and the stale-lease sweep against this branch's session-end entry); resolved as a dated union, and no source file changed in the rebase. The findings: (1) **the design error** — `Layer.Game` held six screens, but a layer is one activatable container and shows one widget at a time, so the HUD would have been hidden by the crosshair. Crosshairs, overheads, prompts, revive and endless are now **parts** (`DF.UI.Part.*`, `DFUIPartList.inl`, new `UDFUIPart` base) that live inside the HUD layout; `Layer.Game` holds the HUD alone and a test asserts it. (2) `PushScreen` now refuses a duplicate and returns the open instance. (3) `FindOpenScreen` searches from the top down. **Next:** the follow-up above (`DefTag` from R10), then PR 3 — `WBP_Layout`, `WBP_HudLayout` + its parts, `L_Test_UI`, the kit widgets — which needs an editor slot and `DA_UITokens`.
 
+- 2026-09-27 · session-gpu-box-2026-09-26 · **Taken over** (session-fae2d0c5's lease expired 2026-09-26; step 4 of the first playable, at the owner's request): the first real HUD readout on the existing tokens/layer stack, fed by the real `ADFMatchState` (wave, phase, countdown, enemies left), WS-06's `UDFEconomyStateComponent` (money, lives) and the hero's `UDFHealthSet`, plus a crosshair and build refusals, on `ws/12-ui/first-hud`.

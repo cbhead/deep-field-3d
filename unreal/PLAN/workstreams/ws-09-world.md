@@ -2,11 +2,11 @@
 ws: 09
 slug: world
 title: World: lanes, sockets, traversal, conditions, terrain import
-state: paused
-owner: 
-claimed_at: 2026-09-19T15:16:34Z
-lease_expires: 
-branch: ws/09-world/lanegraph-importer
+state: active
+owner: session-gpu-box-2026-09-26
+claimed_at: 2026-09-27T07:23:21Z
+lease_expires: 2026-09-28T07:23:21Z
+branch: ws/09-world/portal-core-look
 last_commit: b98c25c
 editor_heavy: true
 phase: P1-P4
@@ -68,3 +68,4 @@ Every `Content/**/*.uasset` and `*.umap` is `lockable`: git-lfs checks them out 
 
 - 2026-09-25 · INT · Rulings for WS-09: **R5 / ADR-0025** — your `bUseExternalActors=false` for `L_<Map>_Gameplay` is the rule for generated sublevels; nothing to change. **R6 / ADR-0027** — the re-save byte churn is expected; the determinism check diffs the actor set by stable id, not the bytes. **R7** — `tools/ue-bridge/terrain/**` is WS-30's alone (you change it by PR to them); `OWNERSHIP.md`'s header now says what the checker does (any matching row). **R9 / RFC-0003** — `ClosableBy` + `ClosableById` and your listed appends are recorded as landed-as-built; `lanegraph.md` now matches the code. **ADR-0024** — lane and mutable edge states replicate from a **`UDFLaneStateComponent`** you write in DFWorld and WS-28 attaches to `ADFMatchState`. The DFEditor commandlet OWNERSHIP row and the `@`/routeIds work are on `claude/happy-babbage-t6qrhw` for review.
 - 2026-09-26 · cloud session with the owner at the GPU box · **First full `-run=DFMapValidate -all`, on Windows.** Foundry passes with the numbers WS-10a recorded on the Mac (54 segments, 0 dead, 379 traces, corridor SKIP). The legacy maps failed rules the baseline did not list, because it was seeded from the briefs, not an actual run: spire coverage, switchyard coverage, toaster spawnApron + coverage, and the testlane fixture's coverage. Every dead segment had 0 blocked traces (too few sockets in range, not occlusion), and toaster's apron distances match the level JSON to the decimetre, so these are content, not platform. On the owner's call they are now in `map-validation-baseline.tsv` with measured reasons (spire spawnApron's reason corrected from the brief's 4 m to the measured 6.7 m), so `-all` exits 0. Each WS-10x redesign removes its map's lines.
+- 2026-09-27 · session-gpu-box-2026-09-26 · **Claimed for the first playable** (the owner asked for it to be seen): placeholder looks for `ADFSpawnPortal` and `ADFCore` so a player on Testlane can see where the wave comes from and what it walks to (engine basic shapes until WS-33/WS-34's art), on `ws/09-world/portal-core-look`.

@@ -1,8 +1,8 @@
 # Workstream status
 
-Generated 2026-09-27T07:17:05Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-27T07:23:21Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
-active: 7 · claimed: 1 · paused: 6 · review: 1 · unclaimed: 35
+active: 8 · claimed: 1 · paused: 5 · review: 1 · unclaimed: 35
 
 | WS | Title | Phase | CP | State | Owner | Lease expires | Last commit | Editor-heavy | Blocked on |
 |---|---|---|---|---|---|---|---|---|---|
@@ -15,7 +15,7 @@ active: 7 · claimed: 1 · paused: 6 · review: 1 · unclaimed: 35
 | WS-06 | Economy, scrap, gunsmith | P3 |  | active | session-gpu-box-2026-09-26 | 2026-09-28T07:17:05Z | — |  | — |
 | WS-07 | Factions & abilities | P2-P4 | CP | unclaimed | — | — | — |  | — |
 | WS-08 | Vehicles | P3-P4 |  | unclaimed | — | — | — | yes | — |
-| WS-09 | World: lanes, sockets, traversal, conditions, terrain import | P1-P4 | CP | paused | — | — | b98c25c | yes | — |
+| WS-09 | World: lanes, sockets, traversal, conditions, terrain import | P1-P4 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T07:23:21Z | b98c25c | yes | — |
 | WS-10a | Map redesign: Foundry | P2 | CP | active (lease expired) | session-01Bqjmob-cloud | 2026-09-27T01:01:55Z | 788db74 | yes | — |
 | WS-10b | Map redesign: Switchyard | P3 |  | unclaimed | — | — | — | yes | — |
 | WS-10c | Map redesign: Spire | P3 |  | unclaimed | — | — | — | yes | — |
@@ -23,7 +23,7 @@ active: 7 · claimed: 1 · paused: 6 · review: 1 · unclaimed: 35
 | WS-10e | Map design: Sluice (new) | P4 |  | unclaimed | — | — | — | yes | — |
 | WS-10f | Map design: Crown (new) | P4 |  | unclaimed | — | — | — | yes | — |
 | WS-11 | Online, lobby, profile (EOS) | P1-P3 | CP | paused | — | — | b957b16 |  | — |
-| WS-12 | UI (Common UI + MVVM) | P2-P5 | CP | active (lease expired) | session-fae2d0c5 | 2026-09-26T02:11:40Z | 042f7d7 | yes | — |
+| WS-12 | UI (Common UI + MVVM) | P2-P5 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T07:23:21Z | 042f7d7 | yes | — |
 | WS-13 | Audio (MetaSounds) | P2-P5 |  | unclaimed | — | — | — | yes | — |
 | WS-14 | VFX (Niagara) | P2-P5 |  | unclaimed | — | — | — | yes | — |
 | WS-15 | Automation, CI, packaging, store | P1+ |  | paused | — | — | 8e0e623 |  | — |
