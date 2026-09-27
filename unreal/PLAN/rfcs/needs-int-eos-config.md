@@ -187,21 +187,73 @@ The owner read the EOS Developer Agreement (v4, 2024-02-15) and the Standard Ser
 - **Never commit EOS SDK files** (4.1(c), 3.1(c)): the SDK is licensed under Epic's terms. The repository's
   MIT license does not pull it under other terms only because the SDK is not in the repository.
 
+## 9. Device-ID login until the domain is verified (2026-09-27)
+
+**What happened.** With the client and the Epic Account Services application set up, an Epic-account
+login (Dev Auth Tool, account portal) reached Epic and came back `corrective_action_required` (18206):
+the account has to approve the application once, in Epic's own UI. That UI never appeared, because
+the portal does not fully enable Epic Account Services until the organization has a **verified
+domain** ("No verified domains. To fully use Epic Account Services, you need to verify your domain
+first."). The owner has no domain yet.
+
+**What we did instead (the owner's decision).** EOS Connect with a **device id**: an anonymous product
+user per machine, no Epic account, no Epic Account Services, no consent step.
+
+- `DeepField.uproject` enables **`OnlineServicesEOSGS`** (Epic Game Services) instead of
+  `OnlineServicesEOS`. Both register the `Epic` provider and the full plugin wins on priority, and the
+  full plugin's login always logs in an Epic account first (`FAuthEOS::Login`, "Step 2: Login EAS").
+  `FAuthEOSGS` skips that while `[OnlineServices.EOS.Auth.Login] EASAuthEnabled` is false (its default)
+  and goes straight to a Connect login, creating the product user on first login.
+- `EDFLoginMethod::DeviceId` logs in with an `ExternalAuth` token of type `DeviceIdAccessToken`. The
+  engine never calls `EOS_Connect_CreateDeviceId`, so `UDFOnlineSubsystem` does, the first time a
+  DeviceId login fails on a machine. `-DFDeviceId` puts it first in the `Auto` ladder, and
+  `DF.Online.Login device` runs it from the console (development builds).
+- **Proven on the box:** a device id, a Connect login to ProductUserId `00025851356a4b5aa0d796765ca2bdad`,
+  and `DF.Online.NullSession` green against a real EOS lobby (the lobby socket to the Live
+  deployment, the `DFLobby` attributes, every join rule).
+- **What it gives:** Connect, Lobbies, Sessions, P2P over the relays, join codes with host approval.
+  **What it does not:** Epic friends, presence, overlay invites, Epic display names. The lobby logs
+  "user lacks permission to advertise presence", which is expected without an Epic account.
+- **The tests stay on Null.** `deepfield test` passes `-ini:Engine:[OnlineServices]:DefaultServices=Null`
+  unless `DF_TEST_ONLINE_SERVICES` says otherwise, so the untracked file never changes a verdict.
+  Against EOS on purpose: `DF_TEST_ONLINE_SERVICES=Epic` and `DF_TEST_EXTRA_ARGS=-DFDeviceId`.
+
+## Before go-live (a release requirement, owner, 2026-09-27)
+
+Device-ID login is the **development** login. It must not ship as the release login. Before any public
+release, and before G2 is called met ("EOS login ... friend joins over relay"):
+
+- [ ] A **domain** the organization owns, **verified** in the portal (a DNS TXT record).
+- [ ] The Epic Account Services application's **brand settings** complete: name, website, and a
+      **privacy policy** hosted on that domain (the agreement review of 2026-09-27 already listed a
+      privacy policy before release), then Epic's **brand review** passed.
+- [ ] **Epic-account login back on:** `OnlineServicesEOS` re-enabled in `DeepField.uproject` (friends,
+      presence, overlay invites), the `Auto` ladder's Epic-account steps as the release path, and the
+      one-time consent working (the Dev Auth login succeeds after an account portal login).
+- [ ] `DeviceId` kept only where it belongs: automated tests, CI and development. Decide explicitly
+      whether a release build may still offer it (for example as a guest login), and record that decision.
+- [ ] The rest of section 8: a EULA in every build given to anyone, and `BuildIdOverride` set so
+      different builds stay out of each other's lobbies.
+
 ## Checklist for INT when applying
 
-- [x] Organization and product created in the portal (the owner, 2026-09-27).
-- [ ] The Live sandbox's deployment; a GameClient **policy** and a client using it; an Epic Account Services
+- [x] Organization and product created in the portal (the owner, 2026-09-27); Live deployment, a Peer2Peer
+      client policy and the client "DeepField GameClient", an EAS application linked to it (2026-09-27).
+- [x] The Live sandbox's deployment; a GameClient **policy** and a client using it; an Epic Account Services
       application with BasicProfile + FriendsList + Presence, linked to that client; Epic Games enabled
       under *Identity Providers* for the Live sandbox.
-- [ ] `git check-ignore` names the rule for `Config/Windows/WindowsEngine.ini`, **then** the owner creates the
+- [x] `git check-ignore` names the rule for `Config/Windows/WindowsEngine.ini`, **then** the owner creates the
       file from section 2 and types the values in.
-- [ ] `git status` shows nothing new, and the `git grep` in section 1 finds only placeholders.
-- [ ] The Dev Auth Tool from the portal's SDK download, running, with a credential named (for example `df1`).
-- [ ] `unreal\deepfield smoke`: the listen-host smoke still passes with the file present (the Ip passthrough of section 4).
-- [ ] `unreal\deepfield test DF.Online`: with the file present, the tests run against Epic, and
-      `DF.Online.NullLogin` needs a Dev Auth Tool session. To keep them on Null on the box, run
-      `UnrealEditor-Cmd` directly with `-ini:Engine:[OnlineServices]:DefaultServices=Null`
-      (`unreal/README.md` §5.1 has the full line); CI and the runner are on Null anyway (no file).
+- [x] `git status` shows nothing new, and the `git grep` in section 1 finds only placeholders.
+- [x] The Dev Auth Tool from the portal's SDK download, running, with a credential named (for example `df1`).
+- [x] `unreal\deepfield smoke`: the listen-host smoke still passes with the file present (the Ip passthrough of section 4). *(2026-09-27: green; the host still listened on `IpNetDriver`, so
+      whether `NetDriverEOS` loads and passes through, or falls back, is open until the two-machine test.)*
+- [x] `unreal\deepfield test DF.Online`: the tests stay on Null even with the file present (`deepfield test`
+      pins `DefaultServices=Null`; section 9). Against EOS on purpose: `DF_TEST_ONLINE_SERVICES=Epic`,
+      `DF_TEST_EXTRA_ARGS=-DFDeviceId` (`DF.Online.NullSession` green on 2026-09-27).
+- [x] Device-ID login to a ProductUserId and an EOS lobby with the `DFLobby` attributes (section 9, 2026-09-27).
+- [ ] The "Before go-live" list above.
 - [ ] Then WS-11's EOS checklist (`workstreams/ws-11-online.md`): Dev Auth login to a ProductUserId, an
       invite-only EOSGS lobby with the `DFLobby` attributes, and then two machines over the relay (a second
-      person, a second Epic account, and a EULA in the package they are given).
+      machine and a EULA in the package it is given; with device-ID login each machine is its own product
+      user, so no second Epic account until "Before go-live").
