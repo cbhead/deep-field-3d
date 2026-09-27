@@ -1,6 +1,6 @@
 # Workstream status
 
-Generated 2026-09-27T17:38:22Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-27T17:49:20Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
 active: 8 · claimed: 1 · paused: 5 · review: 1 · unclaimed: 35
 
@@ -15,7 +15,7 @@ active: 8 · claimed: 1 · paused: 5 · review: 1 · unclaimed: 35
 | WS-06 | Economy, scrap, gunsmith | P3 |  | active | session-gpu-box-2026-09-26 | 2026-09-28T07:17:05Z | cdbf76a |  | — |
 | WS-07 | Factions & abilities | P2-P4 | CP | unclaimed | — | — | — |  | — |
 | WS-08 | Vehicles | P3-P4 |  | unclaimed | — | — | — | yes | — |
-| WS-09 | World: lanes, sockets, traversal, conditions, terrain import | P1-P4 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T07:23:21Z | 0228420 | yes | — |
+| WS-09 | World: lanes, sockets, traversal, conditions, terrain import | P1-P4 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T07:23:21Z | ff7fcb4 | yes | — |
 | WS-10a | Map redesign: Foundry | P2 | CP | active (lease expired) | session-01Bqjmob-cloud | 2026-09-27T01:01:55Z | 788db74 | yes | — |
 | WS-10b | Map redesign: Switchyard | P3 |  | unclaimed | — | — | — | yes | — |
 | WS-10c | Map redesign: Spire | P3 |  | unclaimed | — | — | — | yes | — |
