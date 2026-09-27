@@ -1,8 +1,8 @@
 # Workstream status
 
-Generated 2026-09-27T01:36:03Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-27T05:40:36Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
-active: 6 · paused: 7 · review: 1 · unclaimed: 36
+active: 6 · claimed: 1 · paused: 6 · review: 1 · unclaimed: 36
 
 | WS | Title | Phase | CP | State | Owner | Lease expires | Last commit | Editor-heavy | Blocked on |
 |---|---|---|---|---|---|---|---|---|---|
@@ -22,7 +22,7 @@ active: 6 · paused: 7 · review: 1 · unclaimed: 36
 | WS-10d | Map redesign: Toaster | P3 |  | unclaimed | — | — | — | yes | — |
 | WS-10e | Map design: Sluice (new) | P4 |  | unclaimed | — | — | — | yes | — |
 | WS-10f | Map design: Crown (new) | P4 |  | unclaimed | — | — | — | yes | — |
-| WS-11 | Online, lobby, profile (EOS) | P1-P3 | CP | paused | — | — | 71f39fe |  | — |
+| WS-11 | Online, lobby, profile (EOS) | P1-P3 | CP | claimed | session-gpu-box-2026-09-26 | 2026-09-28T05:40:35Z | 71f39fe |  | — |
 | WS-12 | UI (Common UI + MVVM) | P2-P5 | CP | active (lease expired) | session-fae2d0c5 | 2026-09-26T02:11:40Z | 042f7d7 | yes | — |
 | WS-13 | Audio (MetaSounds) | P2-P5 |  | unclaimed | — | — | — | yes | — |
 | WS-14 | VFX (Niagara) | P2-P5 |  | unclaimed | — | — | — | yes | — |
