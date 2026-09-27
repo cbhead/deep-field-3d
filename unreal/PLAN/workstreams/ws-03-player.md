@@ -3,10 +3,10 @@ ws: 03
 slug: player
 title: Player
 state: active
-owner: session-01DTQRZ3-cloud
-claimed_at: 2026-09-25T04:59:33Z
-lease_expires: 2026-09-26T22:01:42Z
-branch: ws/03-player/hero-health
+owner: session-gpu-box-2026-09-26
+claimed_at: 2026-09-27T06:30:33Z
+lease_expires: 2026-09-28T06:30:33Z
+branch: ws/03-player/first-playable
 last_commit: 25f8061
 editor_heavy: true
 phase: P2

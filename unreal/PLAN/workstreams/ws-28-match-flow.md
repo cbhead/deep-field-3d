@@ -3,10 +3,10 @@ ws: 28
 slug: match-flow
 title: Match flow (DFMatch)
 state: active
-owner: session-01DTQRZ3-cloud
-claimed_at: 2026-09-25T22:58:32Z
-lease_expires: 2026-09-26T22:58:32Z
-branch: ws/28-match-flow/hero-state
+owner: session-gpu-box-2026-09-26
+claimed_at: 2026-09-27T06:30:33Z
+lease_expires: 2026-09-28T06:30:33Z
+branch: ws/03-player/first-playable
 last_commit: ea6a1d4
 editor_heavy: false
 phase: P2-P3
