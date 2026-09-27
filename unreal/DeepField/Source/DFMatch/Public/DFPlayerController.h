@@ -9,11 +9,20 @@
 class ADFSocket;
 class ADFTower;
 class ADFTrap;
+struct FDFConditionRow;
 struct FDFTowerRow;
 enum class EDFPadHighlight : uint8;
 enum class EDFSocketTag : uint8;
 class UInputAction;
 struct FInputActionValue;
+
+/** The reach the range ring round the aimed pad shows, in metres (0: no ring). */
+struct FDFRangePreview
+{
+	float RangeMeters = 0.f;
+	/** The dead zone inside it (a mortar's MinRangeMeters): an inner ring, 0 for none. */
+	float MinRangeMeters = 0.f;
+};
 
 /**
  * The Server RPC surface (WS-28, ADR-0024; PROGRAMME.md §3.3): every mutation a player asks for is a
@@ -29,6 +38,8 @@ struct FInputActionValue;
  * IA_Wheel picks a tower from QuickBuildChoices, IA_Build (hold E) on a free socket builds it there, IA_Upgrade (hold U) on a built
  * socket buys one level on its tower's least-bought path, IA_Sell (hold X) sells it. "On a socket" is the pad under the crosshair (a DF_Build trace from the view)
  * or, when the crosshair is on the ground, the nearest pad within QuickBuildReachCm of where it lands.
+ * That pad shows it (locally, every frame): its aim ring, and round it a range ring at the reach of what
+ * hold E would build there, or of the tower standing there (DecidePadHighlight, DecideRangePreview).
  */
 UCLASS()
 class DFMATCH_API ADFPlayerController : public APlayerController
@@ -58,6 +69,25 @@ public:
 	 * Free otherwise. Money is left to the refusal toast: the ring says where, not whether you can afford it.
 	 */
 	static EDFPadHighlight DecidePadHighlight(EDFSocketTag PadTag, const FDFTowerRow* Choice, bool bTowerOn, bool bTrapOn);
+
+	/**
+	 * How far the tower the aim ring is about reaches, for the range ring round the pad (Highlight is
+	 * DecidePadHighlight's answer). Free: the choice as it would go up now, DFTowerMath::RangeMeters with no
+	 * purchases in Condition (the weather a tower built now fights in: GetBuildCondition). Occupied: Tower's
+	 * own GetRangeMeters(), from its replicated def, path levels and weather, so the ring grows with each
+	 * Range purchase and shrinks in fog exactly as the weapon's reach does. Either way the inner ring is the
+	 * row's MinRangeMeters, which neither upgrades nor weather move (DFTowerMath::PickTarget). Blocked or
+	 * None: no ring (a build the host would refuse has no reach to show).
+	 */
+	static FDFRangePreview DecideRangePreview(EDFPadHighlight Highlight, const FDFTowerRow* Choice, FName ChoiceId, const FDFConditionRow* Condition, const ADFTower* Tower);
+
+	/**
+	 * The wave condition a tower built now would fight in (null for clear weather). The host's
+	 * UDFBuildSubsystem holds it and hands it to every tower it places; a client's never hears WaveStarted,
+	 * but every standing tower replicates the same condition, so a client reads it off one. A client with
+	 * no tower standing yet cannot know it and shows the clear-weather reach.
+	 */
+	const FDFConditionRow* GetBuildCondition() const;
 
 	/** Command.Launch. Ignored unless this player holds the launch seat and the party is in the lobby (as the sim). */
 	UFUNCTION(Server, Reliable)
@@ -127,8 +157,10 @@ private:
 	void HandleSellInput();
 	void HandleUpgradeInput();
 	void HandleWheelInput(const FInputActionValue& Value);
-	/** Local: ring the pad hold E/U/X would act on (free: green, a tower on it: gold); unring the last one. */
+	/** Local: ring the pad hold E/U/X would act on (free: green, a tower on it: gold) and show the reach
+	 *  of what would stand there; unring the last one. */
 	void UpdatePadHighlight();
+	static void ClearPadHighlight(ADFSocket& Socket);
 	TWeakObjectPtr<ADFSocket> HighlightedSocket;
 	int32 QuickBuildIndex = 0;
 };

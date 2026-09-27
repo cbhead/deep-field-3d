@@ -147,10 +147,16 @@ void ADFPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	if (ADFSocket* Old = HighlightedSocket.Get())
 	{
-		Old->SetAimHighlight(EDFPadHighlight::None);
+		ClearPadHighlight(*Old);
 	}
 	HighlightedSocket.Reset();
 	Super::EndPlay(EndPlayReason);
+}
+
+void ADFPlayerController::ClearPadHighlight(ADFSocket& Socket)
+{
+	Socket.SetAimHighlight(EDFPadHighlight::None);
+	Socket.SetRangePreview(0.f, EDFPadHighlight::None);
 }
 
 void ADFPlayerController::UpdatePadHighlight()
@@ -160,15 +166,64 @@ void ADFPlayerController::UpdatePadHighlight()
 	ADFSocket* Old = HighlightedSocket.Get();
 	if (Old && Old != Aimed)
 	{
-		Old->SetAimHighlight(EDFPadHighlight::None);
+		ClearPadHighlight(*Old);
 	}
 	HighlightedSocket = Aimed;
 	if (Aimed)
 	{
 		const UDFContentSubsystem* Content = UDFContentSubsystem::Get(this);
-		const FDFTowerRow* Choice = Content ? Content->Tower(GetQuickBuildTowerId()) : nullptr;
-		Aimed->SetAimHighlight(DecidePadHighlight(Aimed->Tag, Choice, FindTowerOn(Aimed->SocketId) != nullptr, FindTrapOn(Aimed->SocketId) != nullptr));
+		const FName ChoiceId = GetQuickBuildTowerId();
+		const FDFTowerRow* Choice = Content ? Content->Tower(ChoiceId) : nullptr;
+		const ADFTower* Tower = FindTowerOn(Aimed->SocketId);
+		const EDFPadHighlight Highlight = DecidePadHighlight(Aimed->Tag, Choice, Tower != nullptr, FindTrapOn(Aimed->SocketId) != nullptr);
+		Aimed->SetAimHighlight(Highlight);
+		// Both setters ignore a frame that changes nothing, so asking every frame costs a table lookup.
+		const FDFRangePreview Reach = DecideRangePreview(Highlight, Choice, ChoiceId,
+			Highlight == EDFPadHighlight::Free ? GetBuildCondition() : nullptr, Tower);
+		Aimed->SetRangePreview(Reach.RangeMeters * 100.f, Highlight, Reach.MinRangeMeters * 100.f);
 	}
+}
+
+FDFRangePreview ADFPlayerController::DecideRangePreview(EDFPadHighlight Highlight, const FDFTowerRow* Choice, FName ChoiceId,
+	const FDFConditionRow* Condition, const ADFTower* Tower)
+{
+	FDFRangePreview Reach;
+	if (Highlight == EDFPadHighlight::Free && Choice)
+	{
+		Reach.RangeMeters = DFTowerMath::RangeMeters(*Choice, ChoiceId, /*PathLevels*/ {}, Condition);
+		Reach.MinRangeMeters = Choice->MinRangeMeters;
+	}
+	else if (Highlight == EDFPadHighlight::Occupied && Tower)
+	{
+		const FDFTowerRow* Row = Tower->GetRow();
+		Reach.RangeMeters = Tower->GetRangeMeters();
+		Reach.MinRangeMeters = Row ? Row->MinRangeMeters : 0.f;
+	}
+	return Reach;
+}
+
+const FDFConditionRow* ADFPlayerController::GetBuildCondition() const
+{
+	UWorld* World = GetWorld();
+	const UDFContentSubsystem* Content = UDFContentSubsystem::Get(this);
+	if (!World || !Content)
+	{
+		return nullptr;
+	}
+	if (GetNetMode() != NM_Client)
+	{
+		const UDFBuildSubsystem* Build = UDFBuildSubsystem::Get(this);
+		const FName ConditionId = Build ? Build->GetWaveCondition() : NAME_None;
+		return ConditionId.IsNone() ? nullptr : Content->Condition(ConditionId);
+	}
+	for (TActorIterator<ADFTower> It(World); It; ++It)
+	{
+		if (!It->IsActorBeingDestroyed() && !It->GetDefId().IsNone())
+		{
+			return It->GetActiveCondition();
+		}
+	}
+	return nullptr;
 }
 
 EDFPadHighlight ADFPlayerController::DecidePadHighlight(EDFSocketTag PadTag, const FDFTowerRow* Choice, bool bTowerOn, bool bTrapOn)

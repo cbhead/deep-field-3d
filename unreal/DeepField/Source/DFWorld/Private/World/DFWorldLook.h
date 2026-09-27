@@ -4,6 +4,7 @@
 #include "Engine/EngineTypes.h"
 
 class AActor;
+class UInstancedStaticMeshComponent;
 class USceneComponent;
 class UStaticMeshComponent;
 
@@ -31,6 +32,14 @@ namespace DFWorldLook
 	 */
 	UStaticMeshComponent* CreatePart(AActor& Owner, USceneComponent* Parent, FName Name, EShape Shape,
 		const FVector& CentreCm, const FVector& SizeCm, EComponentMobility::Type Mobility);
+
+	/**
+	 * As CreatePart, for a look made of many copies of one shape (one draw however many): an instanced
+	 * part with no instances, at Parent's origin and unscaled, with the same collision settings. The owner
+	 * lays the instances at play.
+	 */
+	UInstancedStaticMeshComponent* CreateInstancedPart(AActor& Owner, USceneComponent* Parent, FName Name, EShape Shape,
+		EComponentMobility::Type Mobility);
 
 	/**
 	 * Tints a part: a dynamic instance of the shape's own material with "Color" set. Idempotent (a

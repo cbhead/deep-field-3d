@@ -1,6 +1,7 @@
 #include "World/DFSocket.h"
 
 #include "Components/BoxComponent.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "DFGameplayTags.h"
 #include "DFWorldCollision.h"
@@ -41,6 +42,13 @@ ADFSocket::ADFSocket()
 		FVector(0.f, 0.f, AimRingHeightCm * 0.5f), FVector(RingDiameterCm, RingDiameterCm, AimRingHeightCm), EComponentMobility::Movable);
 	AimRing->SetVisibility(false);
 	AimRing->SetCastShadow(false);
+	// The range ring hangs off the root for its position only: a circle drawn level and to scale in the
+	// world, not turned or tilted with the pad.
+	RangeRing = DFWorldLook::CreateInstancedPart(*this, RootComponent, TEXT("RangeRing"), EShape::Cube, EComponentMobility::Movable);
+	RangeRing->SetUsingAbsoluteRotation(true);
+	RangeRing->SetUsingAbsoluteScale(true);
+	RangeRing->SetVisibility(false);
+	RangeRing->SetCastShadow(false);
 }
 
 void ADFSocket::OnConstruction(const FTransform& Transform)
@@ -109,6 +117,17 @@ void ADFSocket::RefreshLook()
 	const EDFPadHighlight Current = AimHighlight;
 	AimHighlight = EDFPadHighlight::None;   // force the ring to be re-applied
 	SetAimHighlight(Current);
+	if (RangeRing && RangeTone != EDFPadHighlight::None)   // its glow instance is transient too
+	{
+		DFWorldLook::Glow(RangeRing.Get(), AimColourFor(RangeTone));
+	}
+}
+
+FLinearColor ADFSocket::AimColourFor(EDFPadHighlight Highlight)
+{
+	return Highlight == EDFPadHighlight::Free ? DFWorldLook::PadAimFree()
+		: Highlight == EDFPadHighlight::Occupied ? DFWorldLook::PadAimOccupied()
+		: DFWorldLook::PadAimBlocked();
 }
 
 void ADFSocket::SetAimHighlight(EDFPadHighlight Highlight)
@@ -121,11 +140,78 @@ void ADFSocket::SetAimHighlight(EDFPadHighlight Highlight)
 	const bool bShow = Highlight != EDFPadHighlight::None;
 	if (bShow)
 	{
-		DFWorldLook::Glow(AimRing, Highlight == EDFPadHighlight::Free ? DFWorldLook::PadAimFree()
-			: Highlight == EDFPadHighlight::Occupied ? DFWorldLook::PadAimOccupied()
-			: DFWorldLook::PadAimBlocked());
+		DFWorldLook::Glow(AimRing, AimColourFor(Highlight));
 	}
 	AimRing->SetVisibility(bShow);
+}
+
+int32 ADFSocket::RangeSegmentsFor(float RadiusCm)
+{
+	return FMath::Clamp(FMath::CeilToInt32(UE_TWO_PI * FMath::Max(RadiusCm, 0.f) / RangeSegmentSpacingCm), MinRangeSegments, MaxRangeSegments);
+}
+
+void ADFSocket::SetRangePreview(float RadiusCm, EDFPadHighlight Tone, float MinRadiusCm)
+{
+	if (!RangeRing)
+	{
+		return;
+	}
+	if (RadiusCm <= 0.f || Tone == EDFPadHighlight::None)
+	{
+		if (RangeTone != EDFPadHighlight::None)
+		{
+			RangeTone = EDFPadHighlight::None;
+			RangeRing->SetVisibility(false);   // the segments stay: aiming back at the pad shows them again
+		}
+		return;
+	}
+	// An inner ring only inside the outer one (a row whose dead zone swallowed its reach would fire at nothing).
+	MinRadiusCm = MinRadiusCm < RadiusCm ? FMath::Max(MinRadiusCm, 0.f) : 0.f;
+	// Half a centimetre is nothing to see: a reach recomputed each frame with float noise lays nothing new.
+	constexpr float SameCm = 0.5f;
+	if (RangeRingLays == 0 || !FMath::IsNearlyEqual(RadiusCm, RangeRingRadiusCm, SameCm) || !FMath::IsNearlyEqual(MinRadiusCm, RangeRingMinRadiusCm, SameCm))
+	{
+		LayRangeRing(RadiusCm, MinRadiusCm);
+	}
+	if (Tone != RangeTone)
+	{
+		DFWorldLook::Glow(RangeRing.Get(), AimColourFor(Tone));
+		if (RangeTone == EDFPadHighlight::None)
+		{
+			RangeRing->SetVisibility(true);
+		}
+		RangeTone = Tone;
+	}
+}
+
+void ADFSocket::LayRangeRing(float RadiusCm, float MinRadiusCm)
+{
+	TArray<FTransform> Segments;
+	Segments.Reserve(RangeSegmentsFor(RadiusCm) + (MinRadiusCm > 0.f ? RangeSegmentsFor(MinRadiusCm) : 0));
+	for (const float Radius : { RadiusCm, MinRadiusCm })
+	{
+		if (Radius <= 0.f)
+		{
+			continue;
+		}
+		// Each segment is a flat bar along the circle's tangent, centred on it; the dash is a share of the
+		// chord its step spans, so the gaps are even all the way round.
+		const int32 Count = RangeSegmentsFor(Radius);
+		const double Step = UE_DOUBLE_TWO_PI / Count;
+		const double DashCm = 2.0 * Radius * FMath::Sin(Step * 0.5) * RangeDashFraction;
+		const FVector Size(DashCm / 100.0, RangeRingWidthCm / 100.0, RangeRingHeightCm / 100.0);
+		for (int32 i = 0; i < Count; ++i)
+		{
+			const double Angle = Step * i;
+			const FVector At(Radius * FMath::Cos(Angle), Radius * FMath::Sin(Angle), RangeRingLiftCm);
+			Segments.Emplace(FRotator(0.0, FMath::RadiansToDegrees(Angle) + 90.0, 0.0), At, Size);
+		}
+	}
+	RangeRing->ClearInstances();
+	RangeRing->AddInstances(Segments, /*bShouldReturnIndices*/ false, /*bWorldSpace*/ false, /*bUpdateNavigation*/ false);
+	RangeRingRadiusCm = RadiusCm;
+	RangeRingMinRadiusCm = MinRadiusCm;
+	++RangeRingLays;
 }
 
 FGameplayTag ADFSocket::GetSocketTag() const

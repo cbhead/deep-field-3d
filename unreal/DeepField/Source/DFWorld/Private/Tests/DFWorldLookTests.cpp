@@ -409,6 +409,141 @@ bool FDFWorldSocketLookTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFWorldSocketRangeRingTest, "DF.Unit.World.SocketRangeRing", DFWorldLookTest::Flags)
+bool FDFWorldSocketRangeRingTest::RunTest(const FString& Parameters)
+{
+	// Before building, the player sees how far the chosen tower would reach from this pad (and on a built
+	// pad, how far the standing one does): a dashed ring on the ground at that radius, which the controller
+	// asks for every frame it aims, so it must cost nothing when nothing changed.
+	using namespace DFWorldLookTest;
+	FDFTestWorld World;
+	if (!QueriesWork(*this, World))
+	{
+		return false;
+	}
+	// Turned, and on a small rise: the ring is still a level circle round the pad, at the pad's ground.
+	const FVector At(2500.0, -1800.0, 60.0);
+	ADFSocket* Socket = World.SpawnActor<ADFSocket>(FTransform(FRotator(0.f, 37.f, 0.f), At));
+	if (!TestNotNull(TEXT("socket"), Socket))
+	{
+		return false;
+	}
+	UInstancedStaticMeshComponent* Ring = Socket->GetRangeRing();
+	if (!TestNotNull(TEXT("range ring"), Ring) || !TestTrue(TEXT("it is the socket's RangeRing part"), PartNamed(Socket, TEXT("RangeRing")) == Ring))
+	{
+		return false;
+	}
+	TestNotNull(TEXT("range ring: has a shape"), Ring->GetStaticMesh().Get());
+	TestFalse(TEXT("hidden until aimed"), Ring->IsVisible());
+	TestEqual(TEXT("no segments until aimed"), Ring->GetInstanceCount(), 0);
+	TestEqual(TEXT("no reach shown"), Socket->GetRangePreviewRadius(), 0.f);
+
+	// Enough segments to read as a circle at 20 m and more; clamped at both ends.
+	TestEqual(TEXT("12 m: one segment per 0.75 m of circumference"), ADFSocket::RangeSegmentsFor(1200.f), 101);
+	TestTrue(TEXT("20 m: at least 160 segments"), ADFSocket::RangeSegmentsFor(2000.f) >= 160);
+	TestEqual(TEXT("a small ring stays round"), ADFSocket::RangeSegmentsFor(100.f), ADFSocket::MinRangeSegments);
+	TestEqual(TEXT("a huge ring stays cheap"), ADFSocket::RangeSegmentsFor(100000.f), ADFSocket::MaxRangeSegments);
+
+	// A Lance's 12 m, as the controller asks for a free pad.
+	Socket->SetRangePreview(1200.f, EDFPadHighlight::Free);
+	TestTrue(TEXT("shown at 12 m"), Ring->IsVisible());
+	TestEqual(TEXT("reach shown"), Socket->GetRangePreviewRadius(), 1200.f);
+	TestEqual(TEXT("no inner ring without a dead zone"), Socket->GetRangePreviewMinRadius(), 0.f);
+	TestEqual(TEXT("one circle of segments"), Ring->GetInstanceCount(), ADFSocket::RangeSegmentsFor(1200.f));
+	TestEqual(TEXT("laid once"), Socket->GetRangeRingLayCount(), 1);
+	UMaterialInstanceDynamic* Glow = Cast<UMaterialInstanceDynamic>(Ring->GetMaterial(0));
+	TestTrue(TEXT("the ring glows (EmissiveMeshMaterial)"), Glow && Glow->Parent == DFShapeLook::GlowMaterial());
+	TestTrue(TEXT("free: the aim ring's green"), Glow && Glow->K2_GetVectorParameterValue(TEXT("Color")).Equals(DFWorldLook::PadAimFree(), 1e-4f));
+	const double GroundZ = At.Z;
+	bool bAllOnCircle = true;
+	bool bAllOnGround = true;
+	bool bAllAlongIt = true;
+	for (int32 i = 0; i < Ring->GetInstanceCount(); ++i)
+	{
+		FTransform Segment;
+		Ring->GetInstanceTransform(i, Segment, /*bWorldSpace*/ true);
+		const FVector Out = (Segment.GetLocation() - At).GetSafeNormal2D();
+		bAllOnCircle &= FMath::IsNearlyEqual(FVector::Dist2D(Segment.GetLocation(), At), 1200.0, 1.0);
+		// Flat on the ground under the pad, top clear of the lane strip (3 cm) and low enough to walk over.
+		const double Bottom = Segment.GetLocation().Z - Segment.GetScale3D().Z * 50.0 - GroundZ;
+		const double Top = Segment.GetLocation().Z + Segment.GetScale3D().Z * 50.0 - GroundZ;
+		bAllOnGround &= Bottom >= 2.5 && Top <= 6.0 && FMath::Abs(Segment.GetRotation().GetUpVector().Z) > 0.9999;
+		// A dash along the tangent: its long axis is across the radius.
+		bAllAlongIt &= FMath::Abs(FVector::DotProduct(Segment.GetRotation().GetForwardVector(), Out)) < 0.01
+			&& Segment.GetScale3D().X > Segment.GetScale3D().Y;
+	}
+	TestTrue(TEXT("every segment is 12 m from the pad's centre (not turned or scaled with the actor)"), bAllOnCircle);
+	TestTrue(TEXT("every segment lies flat at the pad's ground, just above the lane strip"), bAllOnGround);
+	TestTrue(TEXT("every segment runs along the circle"), bAllAlongIt);
+	FTransform First;
+	FTransform Second;
+	if (Ring->GetInstanceTransform(0, First, true) && Ring->GetInstanceTransform(1, Second, true))
+	{
+		const double Spacing = FVector::Dist(First.GetLocation(), Second.GetLocation());
+		TestTrue(FString::Printf(TEXT("dashed: a segment (%.0f cm) is shorter than the spacing (%.0f cm)"), First.GetScale3D().X * 100.0, Spacing),
+			First.GetScale3D().X * 100.0 < Spacing * 0.9);
+	}
+
+	// Collision: the ring collides with nothing, checked through a segment (the component's own location is
+	// the pad's centre, 12 m from any of them).
+	ExpectInert(*this, World.GetWorld(), Ring, TEXT("range ring"));
+	FTransform Probe;
+	if (Ring->GetInstanceTransform(Ring->GetInstanceCount() / 3, Probe, true))
+	{
+		for (const FChannel& C : Channels)
+		{
+			TestEqual(FString::Printf(TEXT("range ring: a %s query through a segment finds nothing"), C.Name),
+				HitsOn(World.GetWorld(), Ring, Probe.GetLocation(), C.Channel), 0);
+		}
+	}
+
+	// Every frame of the same aim: nothing is laid again. A new tone re-colours; the segments stay.
+	Socket->SetRangePreview(1200.f, EDFPadHighlight::Free);
+	Socket->SetRangePreview(1200.2f, EDFPadHighlight::Free);
+	TestEqual(TEXT("an unchanged radius lays nothing"), Socket->GetRangeRingLayCount(), 1);
+	Socket->SetRangePreview(1200.f, EDFPadHighlight::Occupied);
+	TestEqual(TEXT("a new tone lays nothing"), Socket->GetRangeRingLayCount(), 1);
+	TestTrue(TEXT("occupied: gold"), Glow && Glow->K2_GetVectorParameterValue(TEXT("Color")).Equals(DFWorldLook::PadAimOccupied(), 1e-4f));
+	TestTrue(TEXT("re-colouring keeps the instance"), Ring->GetMaterial(0) == Glow);
+
+	// 0 hides it; aiming back at the pad at the same reach shows the same segments.
+	Socket->SetRangePreview(0.f, EDFPadHighlight::Free);
+	TestFalse(TEXT("0: hidden"), Ring->IsVisible());
+	TestEqual(TEXT("0: no reach shown"), Socket->GetRangePreviewRadius(), 0.f);
+	Socket->SetRangePreview(1200.f, EDFPadHighlight::None);
+	TestFalse(TEXT("no tone: hidden"), Ring->IsVisible());
+	Socket->SetRangePreview(1200.f, EDFPadHighlight::Free);
+	TestTrue(TEXT("shown again"), Ring->IsVisible());
+	TestEqual(TEXT("shown again at the same reach: nothing laid"), Socket->GetRangeRingLayCount(), 1);
+
+	// A Range purchase (or fog) moves the reach: laid again, replacing, never doubling.
+	Socket->SetRangePreview(1344.f, EDFPadHighlight::Occupied);
+	TestEqual(TEXT("a new radius is laid"), Socket->GetRangeRingLayCount(), 2);
+	TestEqual(TEXT("replaced, not added"), Ring->GetInstanceCount(), ADFSocket::RangeSegmentsFor(1344.f));
+
+	// A mortar's dead zone: a second circle inside the first.
+	Socket->SetRangePreview(1600.f, EDFPadHighlight::Free, 500.f);
+	TestEqual(TEXT("mortar: both circles"), Ring->GetInstanceCount(), ADFSocket::RangeSegmentsFor(1600.f) + ADFSocket::RangeSegmentsFor(500.f));
+	TestEqual(TEXT("mortar: inner radius"), Socket->GetRangePreviewMinRadius(), 500.f);
+	int32 Inner = 0;
+	int32 Outer = 0;
+	for (int32 i = 0; i < Ring->GetInstanceCount(); ++i)
+	{
+		FTransform Segment;
+		Ring->GetInstanceTransform(i, Segment, true);
+		const double Dist = FVector::Dist2D(Segment.GetLocation(), At);
+		Inner += FMath::IsNearlyEqual(Dist, 500.0, 1.0) ? 1 : 0;
+		Outer += FMath::IsNearlyEqual(Dist, 1600.0, 1.0) ? 1 : 0;
+	}
+	TestEqual(TEXT("mortar: the inner circle at 5 m"), Inner, ADFSocket::RangeSegmentsFor(500.f));
+	TestEqual(TEXT("mortar: the outer circle at 16 m"), Outer, ADFSocket::RangeSegmentsFor(1600.f));
+	Socket->SetRangePreview(1600.f, EDFPadHighlight::Free, 0.f);
+	TestEqual(TEXT("the dead zone gone: the inner circle goes"), Ring->GetInstanceCount(), ADFSocket::RangeSegmentsFor(1600.f));
+	Socket->SetRangePreview(400.f, EDFPadHighlight::Free, 500.f);
+	TestEqual(TEXT("a dead zone wider than the reach draws no inner ring"), Socket->GetRangePreviewMinRadius(), 0.f);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFWorldLanePadSlopeTest, "DF.Unit.World.LanePadFollowsSlope", DFWorldLookTest::Flags)
 bool FDFWorldLanePadSlopeTest::RunTest(const FString& Parameters)
 {

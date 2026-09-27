@@ -1,3 +1,4 @@
+#include "Components/InstancedStaticMeshComponent.h"
 #include "DFGameplayTags.h"
 #include "DFMatchState.h"
 #include "DFPlayerController.h"
@@ -194,10 +195,12 @@ bool FDFTowerKillsTestlaneEnemiesTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-// DF.Func.Build.PadHighlightFollowsAim: the player can see where hold E builds. On L_Testlane the local
-// controller aims its hero at a pad: the pad's ring turns green (free); a tower goes up on it: gold
-// (hold U / hold X act on it); the hero looks at the sky: the ring goes away. PlayerTick drives it, as
-// in play; the test only turns the view.
+// DF.Func.Build.PadHighlightFollowsAim: the player can see where hold E builds, and how far it would
+// reach. On L_Testlane the local controller aims its hero at a pad: the pad's ring turns green (free)
+// with a range ring at the chosen Lance's 12 m (towers.json; Testlane's waves carry no weather); the
+// wheel picks a Nova: 16 m with its 5 m dead zone inside; a Lance goes up on it: gold, and the range ring
+// is the standing Lance's reach, not the choice's; a Range purchase grows it; the hero looks at the sky:
+// both rings go away. PlayerTick drives it, as in play; the test only turns the view and the wheel.
 namespace DFTestlaneFunc
 {
 	class FWaitForPadHighlight : public IAutomationLatentCommand
@@ -207,7 +210,7 @@ namespace DFTestlaneFunc
 		virtual bool Update() override;
 
 	private:
-		enum class EStep : uint8 { Aim, ExpectFree, ExpectOccupied, ExpectNone };
+		enum class EStep : uint8 { Aim, ExpectFree, ExpectNovaReach, ExpectOccupied, ExpectUpgradedReach, ExpectNone };
 		bool Fail(const FString& Why) { Test->AddError(Why); return true; }
 
 		FAutomationTestBase* Test;
@@ -216,7 +219,24 @@ namespace DFTestlaneFunc
 		EStep Step = EStep::Aim;
 		int32 FramesInStep = 0;
 		TWeakObjectPtr<ADFSocket> Target;
+		TWeakObjectPtr<ADFTower> Built;
 	};
+
+	/** The range ring shows RadiusCm (and MinRadiusCm inside it) in Tone, drawn: what the player sees. */
+	bool ShowsReach(const ADFSocket& Pad, float RadiusCm, float MinRadiusCm, EDFPadHighlight Tone)
+	{
+		const UInstancedStaticMeshComponent* Ring = Pad.GetRangeRing();
+		const int32 Segments = ADFSocket::RangeSegmentsFor(RadiusCm) + (MinRadiusCm > 0.f ? ADFSocket::RangeSegmentsFor(MinRadiusCm) : 0);
+		return Ring && Ring->IsVisible() && Ring->GetInstanceCount() == Segments && Pad.GetRangePreviewTone() == Tone
+			&& FMath::IsNearlyEqual(Pad.GetRangePreviewRadius(), RadiusCm, 1.f) && FMath::IsNearlyEqual(Pad.GetRangePreviewMinRadius(), MinRadiusCm, 1.f);
+	}
+
+	FString DescribeReach(const ADFSocket& Pad)
+	{
+		const UInstancedStaticMeshComponent* Ring = Pad.GetRangeRing();
+		return FString::Printf(TEXT("%.0f cm, inner %.0f cm, tone %d, %s, %d segments"), Pad.GetRangePreviewRadius(), Pad.GetRangePreviewMinRadius(),
+			static_cast<int32>(Pad.GetRangePreviewTone()), Ring && Ring->IsVisible() ? TEXT("shown") : TEXT("hidden"), Ring ? Ring->GetInstanceCount() : -1);
+	}
 
 	bool FWaitForPadHighlight::Update()
 	{
@@ -269,22 +289,76 @@ namespace DFTestlaneFunc
 			if (Pad && Pad->GetAimHighlight() == EDFPadHighlight::Free)
 			{
 				Test->TestTrue(TEXT("the controller's build target is the pad it looks at"), Controller->FindAimedSocket() == Pad);
+				Test->TestEqual(TEXT("hold E builds a Lance"), Controller->GetQuickBuildTowerId(), Lance);
+				// Set in the same frame as the ring: the chosen Lance's reach, in clear weather.
+				Test->TestTrue(*FString::Printf(TEXT("free: the range ring is the Lance's 12 m (towers.json), green (%s)"), *DescribeReach(*Pad)),
+					ShowsReach(*Pad, 1200.f, 0.f, EDFPadHighlight::Free));
+				Controller->CycleQuickBuild(1);   // the wheel: Nova
+				Step = EStep::ExpectNovaReach;
+				FramesInStep = 0;
+			}
+			return false;
+		}
+		case EStep::ExpectNovaReach:
+		{
+			ADFSocket* Pad = Target.Get();
+			if (Pad && ShowsReach(*Pad, 1600.f, 500.f, EDFPadHighlight::Free))
+			{
+				Test->AddInfo(TEXT("the wheel's Nova: 16 m, with its 5 m dead zone as an inner ring"));
 				const FDFBuildResult Result = UDFBuildSubsystem::Get(World)->PlaceTower(/*PlayerId*/ 1, Lance, Pad->SocketId);
 				Test->TestTrue(*FString::Printf(TEXT("a Lance goes up on the aimed pad (%s)"), *Result.Reason.ToString()), Result.Succeeded());
+				Built = Result.Tower;
 				Step = EStep::ExpectOccupied;
 				FramesInStep = 0;
+			}
+			else if (FramesInStep > 30)
+			{
+				return Fail(FString::Printf(TEXT("the range ring did not follow the wheel to the Nova's 16 m / 5 m (%s)"), Pad ? *DescribeReach(*Pad) : TEXT("no pad")));
 			}
 			return false;
 		}
 		case EStep::ExpectOccupied:
 		{
 			ADFSocket* Pad = Target.Get();
-			if (Pad && Pad->GetAimHighlight() == EDFPadHighlight::Occupied)
+			ADFTower* Tower = Built.Get();
+			if (Pad && Tower && Pad->GetAimHighlight() == EDFPadHighlight::Occupied)
 			{
-				Test->AddInfo(FString::Printf(TEXT("pad %s: free (green) when aimed, occupied (gold) once built on"), *Pad->SocketId.ToString()));
+				// The standing Lance's reach, although hold E would now build a Nova.
+				Test->TestEqual(TEXT("the standing Lance reaches 12 m"), Tower->GetRangeMeters(), 12.f, 1e-3f);
+				Test->TestTrue(*FString::Printf(TEXT("occupied: the range ring is the standing tower's reach, gold, no inner ring (%s)"), *DescribeReach(*Pad)),
+					ShowsReach(*Pad, Tower->GetRangeMeters() * 100.f, 0.f, EDFPadHighlight::Occupied));
+				const FDFTowerRow* Row = Tower->GetRow();
+				const int32 RangePath = Row ? DFTowerMath::RangePathIndex(*Row) : INDEX_NONE;
+				if (!Test->TestTrue(TEXT("a Lance has a Range path"), RangePath != INDEX_NONE))
+				{
+					return true;
+				}
+				Tower->ApplyUpgrade(RangePath, /*MoneyCost*/ 0);   // as hold U would, once paid for
+				Step = EStep::ExpectUpgradedReach;
+				FramesInStep = 0;
+			}
+			else if (Pad && FramesInStep > 30)
+			{
+				return Fail(FString::Printf(TEXT("the pad never read occupied after the build (%s)"), *DescribeReach(*Pad)));
+			}
+			return false;
+		}
+		case EStep::ExpectUpgradedReach:
+		{
+			ADFSocket* Pad = Target.Get();
+			const ADFTower* Tower = Built.Get();
+			if (Pad && Tower && Tower->GetRangeMeters() > 12.f && ShowsReach(*Pad, Tower->GetRangeMeters() * 100.f, 0.f, EDFPadHighlight::Occupied))
+			{
+				Test->AddInfo(FString::Printf(TEXT("pad %s: free (green, 12 m) when aimed, occupied (gold) once built on, %.2f m after a Range purchase"),
+					*Pad->SocketId.ToString(), Tower->GetRangeMeters()));
 				Controller->SetControlRotation(FRotator(80.f, 0.f, 0.f));   // at the sky
 				Step = EStep::ExpectNone;
 				FramesInStep = 0;
+			}
+			else if (FramesInStep > 30)
+			{
+				return Fail(FString::Printf(TEXT("the range ring did not grow with the Range purchase (%.2f m; %s)"),
+					Tower ? Tower->GetRangeMeters() : -1.f, Pad ? *DescribeReach(*Pad) : TEXT("no pad")));
 			}
 			return false;
 		}
@@ -294,6 +368,8 @@ namespace DFTestlaneFunc
 			if (Pad && Pad->GetAimHighlight() == EDFPadHighlight::None && FramesInStep > 1)
 			{
 				Test->TestNull(TEXT("looking at the sky there is no build target"), Controller->FindAimedSocket());
+				Test->TestEqual(TEXT("aimed away: no reach shown"), Pad->GetRangePreviewRadius(), 0.f);
+				Test->TestFalse(TEXT("aimed away: the range ring is hidden"), Pad->GetRangeRing() && Pad->GetRangeRing()->IsVisible());
 				return true;
 			}
 			return false;

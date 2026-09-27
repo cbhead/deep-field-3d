@@ -1,5 +1,6 @@
 #include "World/DFWorldLook.h"
 
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/CollisionProfile.h"
 #include "Engine/StaticMesh.h"
@@ -38,27 +39,40 @@ namespace DFWorldLook
 			}
 			}
 		}
+
+		void SetUpPart(UStaticMeshComponent& Part, USceneComponent* Parent, EShape Shape, EComponentMobility::Type Mobility)
+		{
+			Part.SetupAttachment(Parent);
+			Part.SetMobility(Mobility);
+			if (UStaticMesh* Mesh = ShapeMesh(Shape))
+			{
+				Part.SetStaticMesh(Mesh);
+			}
+			Part.SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
+			Part.SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			// The NoCollision profile names only the engine channels; the project's trace channels would keep their
+			// ini default (Block). Say it for every channel, so no query can ever be told this part is there.
+			Part.SetCollisionResponseToAllChannels(ECR_Ignore);
+			Part.SetGenerateOverlapEvents(false);
+			Part.SetCanEverAffectNavigation(false);
+		}
 	}
 
 	UStaticMeshComponent* CreatePart(AActor& Owner, USceneComponent* Parent, FName Name, EShape Shape,
 		const FVector& CentreCm, const FVector& SizeCm, EComponentMobility::Type Mobility)
 	{
 		UStaticMeshComponent* Part = Owner.CreateDefaultSubobject<UStaticMeshComponent>(Name);
-		Part->SetupAttachment(Parent);
-		Part->SetMobility(Mobility);
-		if (UStaticMesh* Mesh = ShapeMesh(Shape))
-		{
-			Part->SetStaticMesh(Mesh);
-		}
+		SetUpPart(*Part, Parent, Shape, Mobility);
 		Part->SetRelativeLocation(CentreCm);
 		Part->SetRelativeScale3D(SizeCm / 100.f);
-		Part->SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
-		Part->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		// The NoCollision profile names only the engine channels; the project's trace channels would keep their
-		// ini default (Block). Say it for every channel, so no query can ever be told this part is there.
-		Part->SetCollisionResponseToAllChannels(ECR_Ignore);
-		Part->SetGenerateOverlapEvents(false);
-		Part->SetCanEverAffectNavigation(false);
+		return Part;
+	}
+
+	UInstancedStaticMeshComponent* CreateInstancedPart(AActor& Owner, USceneComponent* Parent, FName Name, EShape Shape,
+		EComponentMobility::Type Mobility)
+	{
+		UInstancedStaticMeshComponent* Part = Owner.CreateDefaultSubobject<UInstancedStaticMeshComponent>(Name);
+		SetUpPart(*Part, Parent, Shape, Mobility);
 		return Part;
 	}
 
