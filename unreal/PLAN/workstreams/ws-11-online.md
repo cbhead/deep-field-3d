@@ -2,12 +2,12 @@
 ws: 11
 slug: online
 title: Online, lobby, profile (EOS)
-state: claimed
+state: active
 owner: session-gpu-box-2026-09-26
 claimed_at: 2026-09-27T05:40:35Z
 lease_expires: 2026-09-28T05:40:35Z
 branch: ws/11-online/dev-login
-last_commit: 71f39fe
+last_commit: b957b16
 editor_heavy: false
 phase: P1-P3
 size: L
