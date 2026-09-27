@@ -54,6 +54,9 @@ private:
 	DF_VM_BOOL_ACCESSORS(Lobby)
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "DF|Match", meta = (AllowPrivateAccess = "true")) bool bEndless = false;
 	DF_VM_BOOL_ACCESSORS(Endless)
+	/** Endless: how many times the arc has wrapped (0 during the first pass; ADFMatchState::GetLap). */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "DF|Match", meta = (AllowPrivateAccess = "true")) int32 Lap = 0;
+	DF_VM_ACCESSORS(int32, Lap)
 	/** The hp multiplier the current wave spawned with — the wave plan's own number. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "DF|Match", meta = (AllowPrivateAccess = "true")) float Threat = 1.f;
 	DF_VM_ACCESSORS(float, Threat)

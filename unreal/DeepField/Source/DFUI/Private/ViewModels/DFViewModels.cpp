@@ -214,6 +214,7 @@ void UDFMatchViewModel::Reset()
 	SetPhaseSecondsLeft(Fresh->PhaseSecondsLeft);
 	SetLobby(Fresh->bLobby);
 	SetEndless(Fresh->bEndless);
+	SetLap(Fresh->Lap);
 	SetThreat(Fresh->Threat);
 	SetEnemiesRemaining(Fresh->EnemiesRemaining);
 	SetTeamScrap(Fresh->TeamScrap);
