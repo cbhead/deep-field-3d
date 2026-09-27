@@ -2,10 +2,10 @@
 ws: 15
 slug: automation-ci
 title: Automation, CI, packaging, store
-state: claimed
-owner: session-gpu-box-2026-09-26
+state: paused
+owner: 
 claimed_at: 2026-09-26T23:47:06Z
-lease_expires: 2026-09-27T23:47:06Z
+lease_expires: 
 branch: ws/15-automation-ci/int-merge
 last_commit: 8e0e623
 editor_heavy: false
