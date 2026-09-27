@@ -9,6 +9,7 @@
 #include "DFGameplayTags.h"
 #include "Content/DFContentRows.h"
 #include "InputAction.h"
+#include "InputActionValue.h"
 #include "UObject/ConstructorHelpers.h"
 #include "World/DFSocket.h"
 #include "Messages/DFMessageBus.h"
@@ -29,6 +30,8 @@ ADFPlayerController::ADFPlayerController()
 	BuildAction = Build.Object;
 	SellAction = Sell.Object;
 	UpgradeAction = Upgrade.Object;
+	static ConstructorHelpers::FObjectFinder<UInputAction> Wheel(TEXT("/Game/DF/Core/Input/IA_Wheel.IA_Wheel"));
+	WheelAction = Wheel.Object;
 }
 
 void ADFPlayerController::SetupInputComponent()
@@ -50,6 +53,11 @@ void ADFPlayerController::SetupInputComponent()
 	if (UpgradeAction)
 	{
 		Input->BindAction(UpgradeAction, ETriggerEvent::Triggered, this, &ADFPlayerController::HandleUpgradeInput);
+	}
+	if (WheelAction)
+	{
+		// Started: one step per notch or press, however long the axis stays non-zero.
+		Input->BindAction(WheelAction, ETriggerEvent::Started, this, &ADFPlayerController::HandleWheelInput);
 	}
 }
 
@@ -117,8 +125,36 @@ void ADFPlayerController::HandleBuildInput()
 	{
 		return;
 	}
-	UE_LOG(LogDFPlayerController, Log, TEXT("build %s on %s"), *QuickBuildTowerId.ToString(), *Socket->SocketId.ToString());
-	Server_PlaceTower(QuickBuildTowerId, Socket->SocketId);
+	const FName TowerId = GetQuickBuildTowerId();
+	if (TowerId.IsNone())
+	{
+		return;
+	}
+	UE_LOG(LogDFPlayerController, Log, TEXT("build %s on %s"), *TowerId.ToString(), *Socket->SocketId.ToString());
+	Server_PlaceTower(TowerId, Socket->SocketId);
+}
+
+FName ADFPlayerController::GetQuickBuildTowerId() const
+{
+	return QuickBuildChoices.IsValidIndex(QuickBuildIndex) ? QuickBuildChoices[QuickBuildIndex] : NAME_None;
+}
+
+void ADFPlayerController::CycleQuickBuild(int32 Steps)
+{
+	const int32 Count = QuickBuildChoices.Num();
+	if (Count == 0 || Steps == 0)
+	{
+		return;
+	}
+	QuickBuildIndex = ((QuickBuildIndex + Steps) % Count + Count) % Count;
+	UE_LOG(LogDFPlayerController, Log, TEXT("hold E builds %s"), *GetQuickBuildTowerId().ToString());
+}
+
+void ADFPlayerController::HandleWheelInput(const FInputActionValue& Value)
+{
+	// Wheel up / D-pad right is the next tower (the list reads left to right).
+	const float Axis = Value.Get<float>();
+	CycleQuickBuild(Axis > 0.f ? 1 : Axis < 0.f ? -1 : 0);
 }
 
 void ADFPlayerController::HandleUpgradeInput()

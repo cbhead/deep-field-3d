@@ -105,7 +105,7 @@ FText DFHudText::BuildHint(FName TowerId, int32 Cost)
 	{
 		Name[0] = FChar::ToUpper(Name[0]);
 	}
-	return FText::Format(LOCTEXT("BuildHint", "Hold E on a pad: build {0} ({1})   Hold U on a tower: upgrade   Hold X: sell"),
+	return FText::Format(LOCTEXT("BuildHint", "Wheel: {0} ({1})   Hold E on a pad: build   Hold U on a tower: upgrade   Hold X: sell"),
 		FText::AsCultureInvariant(Name), FText::AsNumber(Cost));
 }
 

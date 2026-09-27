@@ -246,7 +246,8 @@ bool FDFUIHudTextTest::RunTest(const FString&)
 	TestEqual(TEXT("wouldSeal is raw"), Str(DFHudText::Refusal(TEXT("wouldSeal"))), FString(TEXT("wouldSeal")));
 	TestEqual(TEXT("no reason"), Str(DFHudText::Refusal(NAME_None)), FString(TEXT("Refused")));
 
-	TestEqual(TEXT("the build hint"), Str(DFHudText::BuildHint(TEXT("lance"), 75)), FString(TEXT("Hold E on a pad: build Lance (75)   Hold U on a tower: upgrade   Hold X: sell")));
+	TestEqual(TEXT("the build hint"), Str(DFHudText::BuildHint(TEXT("lance"), 75)), FString(TEXT("Wheel: Lance (75)   Hold E on a pad: build   Hold U on a tower: upgrade   Hold X: sell")));
+	TestEqual(TEXT("the hint follows the choice"), Str(DFHudText::BuildHint(TEXT("nova"), 115)), FString(TEXT("Wheel: Nova (115)   Hold E on a pad: build   Hold U on a tower: upgrade   Hold X: sell")));
 
 	TestEqual(TEXT("ammo"), Str(DFHudText::Ammo(18, 24, false, 0.f)), FString(TEXT("18 / 24")));
 	TestEqual(TEXT("empty"), Str(DFHudText::Ammo(0, 24, false, 0.f)), FString(TEXT("0 / 24")));

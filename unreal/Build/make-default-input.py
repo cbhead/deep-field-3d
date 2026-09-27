@@ -4,7 +4,7 @@
 
 Writes Content/DF/Core/Input/IMC_DF_Default and the actions ADFHeroCharacter binds (IA_Move, IA_Look,
 IA_Jump, IA_Sprint, IA_Crouch, IA_Aim, IA_Fire, IA_Reload) and ADFPlayerController binds (IA_Build:
-hold E on a socket; IA_Upgrade: hold U on a tower; IA_Sell: hold X 0.7 s on a tower), with C16's defaults: the Godot bindings (WASD
+hold E on a socket; IA_Upgrade: hold U on a tower; IA_Sell: hold X 0.7 s on a tower; IA_Wheel: the mouse wheel picks the tower), with C16's defaults: the Godot bindings (WASD
 and the arrow keys, Space, Shift, mouse, LMB / RMB, R, hold E / X) and a gamepad from day one. Safe to
 re-run: existing assets are updated in place, and the mapping context's keys are rewritten from the
 table below, so the table is the source of truth. The rest of C16's actions (IA_Melee, IA_Upgrade,
@@ -78,6 +78,7 @@ def hold(ia, seconds):
     return ia
 
 
+AXIS1D = unreal.InputActionValueType.AXIS1D
 AXIS2D = unreal.InputActionValueType.AXIS2D
 BOOL = unreal.InputActionValueType.BOOLEAN
 
@@ -92,6 +93,7 @@ reload = action("IA_Reload", BOOL, "Reload the gun in hand")
 build = hold(action("IA_Build", BOOL, "Hold on a free socket: build there"), 0.25)
 sell = hold(action("IA_Sell", BOOL, "Hold on a tower: sell it"), 0.7)
 upgrade = hold(action("IA_Upgrade", BOOL, "Hold on a tower: buy one level on its least-bought path"), 0.3)
+wheel = action("IA_Wheel", AXIS1D, "Pick what hold-E builds: + next, - previous (until the radial build wheel)")
 
 imc = load_or_create("IMC_DF_Default", unreal.InputMappingContext, unreal.InputMappingContext_Factory())
 imc.set_editor_property("context_description", "On foot (C16 defaults: the Godot bindings plus a gamepad)")
@@ -128,6 +130,9 @@ TABLE = [
     (sell, "Gamepad_DPad_Down", lambda o: []),
     (upgrade, "U", lambda o: []),
     (upgrade, "Gamepad_DPad_Up", lambda o: []),
+    (wheel, "MouseWheelAxis", lambda o: []),
+    (wheel, "Gamepad_DPad_Right", lambda o: []),
+    (wheel, "Gamepad_DPad_Left", lambda o: [negate(o)]),
 ]
 
 mappings = []
@@ -142,7 +147,7 @@ data = imc.get_editor_property("default_key_mappings")
 data.set_editor_property("mappings", mappings)
 imc.set_editor_property("default_key_mappings", data)
 
-for asset in (move, look, jump, sprint, crouch, aim, fire, reload, build, sell, upgrade, imc):
+for asset in (move, look, jump, sprint, crouch, aim, fire, reload, build, sell, upgrade, wheel, imc):
     if not lib.save_loaded_asset(asset, only_if_is_dirty=False):
         fail("could not save " + asset.get_path_name())
 

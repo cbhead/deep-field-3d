@@ -31,8 +31,8 @@ namespace DFHudText
 	 *  money" for insufficientFunds, otherwise the reason exactly as the host sent it. */
 	DFUI_API FText Refusal(FName Reason);
 
-	/** The Prompts part's line until the build wheel exists: "Hold E on a pad: build Lance (75)   Hold U on
-	 *  a tower: upgrade   Hold X: sell". TowerId is the towers.json id hold-E builds; its display name is
+	/** The Prompts part's line until the build wheel exists: "Wheel: Lance (75)   Hold E on a pad: build   Hold U
+	 *  on a tower: upgrade   Hold X: sell". TowerId is the towers.json id hold-E builds; its display name is
 	 *  the id, capitalised. */
 	DFUI_API FText BuildHint(FName TowerId, int32 Cost);
 

@@ -2,6 +2,7 @@
 
 #include "Attributes/DFHealthSet.h"
 #include "DFHeroCharacter.h"
+#include "DFPlayerController.h"
 #include "Weapons/DFHeroWeaponComponent.h"
 #include "DFMatchState.h"
 #include "DFPlayerState.h"
@@ -49,6 +50,17 @@ void FDFMatchStateFeed::Fill(UDFMatchViewModel& Match, const ADFMatchState& Stat
 
 	const ADFPlayerState* Local = Cast<ADFPlayerState>(LocalPlayer);
 	Match.SetLocalPlayerId(Local ? Local->GetSeat() : 0);
+	// The build choice lives on this machine's own controller (it is sent with each build request).
+	if (Local)
+	{
+		if (UDFPlayerViewModel* Me = Match.FindPlayer(Local->GetSeat()))
+		{
+			if (const ADFPlayerController* Controller = Cast<ADFPlayerController>(Local->GetOwningController()))
+			{
+				Me->SetBuildChoice(Controller->GetQuickBuildTowerId());
+			}
+		}
+	}
 	Match.SetValid(true);
 }
 

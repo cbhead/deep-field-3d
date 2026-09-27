@@ -9,6 +9,7 @@
 class ADFSocket;
 class ADFTower;
 class UInputAction;
+struct FInputActionValue;
 
 /**
  * The Server RPC surface (WS-28, ADR-0024; PROGRAMME.md §3.3): every mutation a player asks for is a
@@ -21,7 +22,7 @@ class UInputAction;
  * Build (WS-04): PlaceTower, UpgradeTower, SellTower, forwarded to UDFBuildSubsystem.
  *
  * Until WS-12's build wheel exists, the controller also binds C16's hold-to-build pair itself:
- * IA_Build (hold E) on a free socket builds QuickBuildTowerId there, IA_Upgrade (hold U) on a built
+ * IA_Wheel picks a tower from QuickBuildChoices, IA_Build (hold E) on a free socket builds it there, IA_Upgrade (hold U) on a built
  * socket buys one level on its tower's least-bought path, IA_Sell (hold X) sells it. "On a socket" is the pad under the crosshair (a DF_Build trace from the view)
  * or, when the crosshair is on the ground, the nearest pad within QuickBuildReachCm of where it lands.
  */
@@ -37,6 +38,11 @@ public:
 	ADFSocket* FindAimedSocket() const;
 	/** The standing tower on SocketId, as this machine sees it (towers replicate their socket), or null. */
 	ADFTower* FindTowerOn(FName SocketId) const;
+
+	/** What hold-E builds now (a towers.json id): QuickBuildChoices at the wheel's index. Local. */
+	FName GetQuickBuildTowerId() const;
+	/** Step the choice by Steps (wraps). The mouse wheel and the D-pad call it through IA_Wheel. */
+	void CycleQuickBuild(int32 Steps);
 
 	/** Command.Launch. Ignored unless this player holds the launch seat and the party is in the lobby (as the sim). */
 	UFUNCTION(Server, Reliable)
@@ -81,9 +87,14 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "DF|Input")
 	TObjectPtr<UInputAction> UpgradeAction;
 
-	/** What hold-E builds until the build wheel lets the player choose (a towers.json id). */
+	/** C16 IA_Wheel: the mouse wheel (or the D-pad left/right) picks what hold-E builds. */
+	UPROPERTY(EditDefaultsOnly, Category = "DF|Input")
+	TObjectPtr<UInputAction> WheelAction;
+
+	/** What the wheel steps through, until WS-12's radial build wheel (towers.json ids that fight on the
+	 *  ground: the first playable's maps have no air waves yet). */
 	UPROPERTY(EditDefaultsOnly, Category = "DF|Build")
-	FName QuickBuildTowerId = TEXT("lance");
+	TArray<FName> QuickBuildChoices = { TEXT("lance"), TEXT("nova"), TEXT("arc"), TEXT("filament") };
 
 	/** How far the crosshair reaches for a pad, and how near its landing point a pad must be. */
 	UPROPERTY(EditDefaultsOnly, Category = "DF|Build")
@@ -97,4 +108,6 @@ private:
 	void HandleBuildInput();
 	void HandleSellInput();
 	void HandleUpgradeInput();
+	void HandleWheelInput(const FInputActionValue& Value);
+	int32 QuickBuildIndex = 0;
 };

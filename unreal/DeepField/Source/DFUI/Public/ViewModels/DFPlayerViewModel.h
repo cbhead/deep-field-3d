@@ -58,6 +58,10 @@ private:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "DF|Player", meta = (AllowPrivateAccess = "true")) float ReloadFrac = 0.f;
 	DF_VM_ACCESSORS(float, ReloadFrac)
 
+	/** What hold-E builds (a towers.json id; appended 2026-09-27). The local player's only: None for others. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "DF|Player", meta = (AllowPrivateAccess = "true")) FName BuildChoice;
+	DF_VM_ACCESSORS(FName, BuildChoice)
+
 	// ---- loadout
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "DF|Player", meta = (AllowPrivateAccess = "true")) FName Weapon = TEXT("sidearm");
 	DF_VM_ACCESSORS(FName, Weapon)

@@ -12,6 +12,7 @@
 #include "Screens/DFHudText.h"
 #include "Screens/DFUITags.h"
 #include "ViewModels/DFMatchViewModel.h"
+#include "ViewModels/DFPlayerViewModel.h"
 
 // ---------------------------------------------------------------------- crosshair
 
@@ -79,19 +80,11 @@ void UDFPromptPart::NativeOnInitialized()
 	}
 	const FDFHudStyle& Style = FDFHudStyle::Get();
 
-	int32 Cost = FallbackCost;
-	if (const UDFContentSubsystem* Content = UDFContentSubsystem::Get(this); Content && Content->IsReady())
-	{
-		if (const FDFTowerRow* Row = Content->Tower(QuickBuildTowerId))
-		{
-			Cost = Row->Cost;
-		}
-	}
 	Line = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("PromptLine"));
 	Line->SetFont(FDFHudStyle::Font(Style.SizeToast));
 	Line->SetColorAndOpacity(FSlateColor(Style.Text));
 	Line->SetJustification(ETextJustify::Center);
-	Line->SetText(DFHudText::BuildHint(QuickBuildTowerId, Cost));
+	ShowChoice(QuickBuildTowerId);
 	// On glass: bare text at the bottom of the screen sits on whatever the ground is, often pale.
 	UBorder* Panel = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("PromptPanel"));
 	Panel->SetBrush(Style.PanelBrush(Style.Panel, Style.PanelEdge));
@@ -101,11 +94,32 @@ void UDFPromptPart::NativeOnInitialized()
 	SetVisibility(ESlateVisibility::HitTestInvisible);
 }
 
+void UDFPromptPart::ShowChoice(FName TowerId)
+{
+	ShownChoice = TowerId;
+	int32 Cost = FallbackCost;
+	if (const UDFContentSubsystem* Content = UDFContentSubsystem::Get(this); Content && Content->IsReady())
+	{
+		if (const FDFTowerRow* Row = Content->Tower(TowerId))
+		{
+			Cost = Row->Cost;
+		}
+	}
+	if (Line)
+	{
+		Line->SetText(DFHudText::BuildHint(TowerId, Cost));
+	}
+}
+
 void UDFPromptPart::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
 	// Building is for a running match; over the victory or defeat banner the line would only be noise.
 	const UDFMatchViewModel* Match = GetMatch();
+	if (const UDFPlayerViewModel* Me = Match ? Match->Local() : nullptr; Me && !Me->GetBuildChoice().IsNone() && Me->GetBuildChoice() != ShownChoice)
+	{
+		ShowChoice(Me->GetBuildChoice());
+	}
 	const bool bShow = Match && Match->IsValid() && !Match->IsLobby()
 		&& Match->GetPhase() != EDFMatchPhase::Victory && Match->GetPhase() != EDFMatchPhase::Defeat;
 	UWidget* Root = WidgetTree ? WidgetTree->RootWidget.Get() : nullptr;

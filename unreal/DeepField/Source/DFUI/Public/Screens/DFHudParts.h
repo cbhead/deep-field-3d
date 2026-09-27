@@ -32,8 +32,8 @@ class DFUI_API UDFPromptPart : public UDFUIPart
 	GENERATED_BODY()
 
 public:
-	/** The towers.json id hold-E builds: ADFPlayerController::QuickBuildTowerId's default (DFMatch keeps it
-	 *  protected, and it becomes the wheel's choice once the wheel exists). */
+	/** What the line names before the feed has written the local player's BuildChoice (the first of
+	 *  ADFPlayerController::QuickBuildChoices); after that the line follows BuildChoice. */
 	static const FName QuickBuildTowerId;
 	/** Its cost when content has not loaded (towers.json lance.cost). */
 	static constexpr int32 FallbackCost = 75;
@@ -45,4 +45,8 @@ protected:
 private:
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> Line;
+
+	/** The tower the line was last written for (the local player's BuildChoice). */
+	FName ShownChoice;
+	void ShowChoice(FName TowerId);
 };
