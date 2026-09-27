@@ -7,7 +7,7 @@ owner: session-gpu-box-2026-09-26
 claimed_at: 2026-09-27T07:23:21Z
 lease_expires: 2026-09-28T07:23:21Z
 branch: ws/09-world/portal-core-look
-last_commit: ff7fcb4
+last_commit: f9659cd
 editor_heavy: true
 phase: P1-P4
 size: L

@@ -7,7 +7,7 @@ owner: session-gpu-box-2026-09-26
 claimed_at: 2026-09-27T18:35:07Z
 lease_expires: 2026-09-28T18:35:07Z
 branch: ws/14-vfx/placeholder-combat-cues
-last_commit: 
+last_commit: 6d45758
 editor_heavy: true
 phase: P2-P5
 size: XL
