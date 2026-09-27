@@ -25,5 +25,11 @@ public class DFPlayer : ModuleRules
 		PrivateDependencyModuleNames.AddRange(new string[] {
 			"ModularGameplay",
 		});
+
+		if (Target.bBuildEditor)
+		{
+			// DF.Func.Weapon.RifleKillsTestlaneEnemy opens a map and runs it in PIE: FEndPlayMapCommand (Tests/AutomationEditorCommon.h).
+			PrivateDependencyModuleNames.Add("UnrealEd");
+		}
 	}
 }

@@ -8,6 +8,7 @@
 #include "Content/DFContentRows.h"
 #include "Content/DFContentSubsystem.h"
 #include "DFGameplayTags.h"
+#include "DFWorldCollision.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -59,10 +60,12 @@ ADFEnemy::ADFEnemy()
 	Body->SetRelativeLocation(FVector(0.f, 0.f, DFEnemyLook::HeightCm * 0.5f));
 	Body->SetRelativeScale3D(FVector(DFEnemyLook::WidthCm / 100.f, DFEnemyLook::WidthCm / 100.f, DFEnemyLook::HeightCm / 100.f));
 	// Walking bodies do not shove the hero or each other around. Towers find them through the target
-	// registry, not collision; Visibility still blocks so the hero's aim and traces see them.
+	// registry, not collision; Visibility still blocks so the hero's aim and traces see them, and
+	// DF_Weapon (C16) so the hero's shots hit them.
 	Body->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	Body->SetCollisionResponseToAllChannels(ECR_Ignore);
 	Body->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+	Body->SetCollisionResponseToChannel(DFCollision::Weapon, ECR_Block);
 
 	Movement = CreateDefaultSubobject<UDFEnemyMovement>(TEXT("Movement"));
 

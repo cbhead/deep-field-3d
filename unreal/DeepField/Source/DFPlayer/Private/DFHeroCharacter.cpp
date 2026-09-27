@@ -6,9 +6,11 @@
 #include "Camera/CameraComponent.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "DFHeroCollision.h"
 #include "DFPlayerModule.h"
 #include "Engine/LocalPlayer.h"
+#include "Engine/StaticMesh.h"
 #include "EnhancedInputComponent.h"
 #include "DFBalanceDial.h"
 #include "Engine/World.h"
@@ -20,9 +22,44 @@
 #include "InputAction.h"
 #include "InputActionValue.h"
 #include "InputMappingContext.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Materials/MaterialInterface.h"
 #include "Movement/DFHeroMovementComponent.h"
 #include "Movement/DFHeroMoveRules.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Weapons/DFHeroWeaponComponent.h"
+
+namespace DFHeroGun
+{
+	// The placeholder gun (cm, relative to the camera: +X ahead, +Y right, +Z up), until WS-35's arms and
+	// weapon art. The engine's basic shapes are 100 cm across with the pivot at the centre.
+	// A half-size gun at half the distance looks the same as a full-size one (perspective), and this one
+	// ends about 40 cm ahead of the eye, the capsule's radius, so it hardly pokes through a wall the hero
+	// stands against. Full size it would be a 20 cm receiver 45 cm ahead, 18 cm right and 16 cm down,
+	// with a 26 cm barrel.
+	const FVector HipOffset(22.5f, 9.f, -8.f);
+	/** Aiming brings it under the crosshair. */
+	const FVector AimOffset(20.f, 0.f, -4.5f);
+	const FVector BodyScale(0.10f, 0.02f, 0.03f);           // 10 × 2 × 3 cm
+	const FVector BarrelScale(0.012f, 0.012f, 0.13f);       // 1.2 cm across, 13 cm long
+	const FVector BarrelOffset(5.f + 6.5f, 0.f, 0.6f);      // from the block's front face
+	const FVector MuzzleOffset(5.f + 13.f, 0.f, 0.6f);
+	const FLinearColor BodyColour(0.045f, 0.047f, 0.055f);  // gunmetal
+	const FLinearColor BarrelColour(0.1f, 0.1f, 0.11f);
+
+	void MakeViewModelPart(UStaticMeshComponent* Mesh)
+	{
+		// Only the owner sees it (a first-person prop), it casts no shadow, and it never blocks anything:
+		// not the hero's own shots, not movement, not another player's trace.
+		Mesh->SetOnlyOwnerSee(true);
+		Mesh->SetCastShadow(false);
+		Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Mesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+		Mesh->SetGenerateOverlapEvents(false);
+		Mesh->SetCanEverAffectNavigation(false);
+		Mesh->bReceivesDecals = false;
+	}
+}
 
 ADFHeroCharacter::ADFHeroCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UDFHeroMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -51,6 +88,43 @@ ADFHeroCharacter::ADFHeroCharacter(const FObjectInitializer& ObjectInitializer)
 	HealthSet = CreateDefaultSubobject<UDFHealthSet>(TEXT("HealthSet"));
 	HeroSet = CreateDefaultSubobject<UDFHeroSet>(TEXT("HeroSet"));
 
+	Weapon = CreateDefaultSubobject<UDFHeroWeaponComponent>(TEXT("Weapon"));
+
+	// The placeholder gun rides on the camera, so it follows the view's pitch and the crouch easing.
+	ViewModel = CreateDefaultSubobject<USceneComponent>(TEXT("ViewModel"));
+	ViewModel->SetupAttachment(FirstPersonCamera);
+	ViewModel->SetRelativeLocation(DFHeroGun::HipOffset);
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeMesh(TEXT("/Engine/BasicShapes/Cube"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> CylinderMesh(TEXT("/Engine/BasicShapes/Cylinder"));
+	// The basic shapes carry DefaultMaterial, which has no parameters; BasicShapeMaterial has "Color".
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> ShapeMaterial(TEXT("/Engine/BasicShapes/BasicShapeMaterial"));
+	GunBody = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("GunBody"));
+	GunBody->SetupAttachment(ViewModel);
+	GunBody->SetRelativeScale3D(DFHeroGun::BodyScale);
+	GunBarrel = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("GunBarrel"));
+	GunBarrel->SetupAttachment(ViewModel);
+	GunBarrel->SetRelativeLocation(DFHeroGun::BarrelOffset);
+	GunBarrel->SetRelativeRotation(FRotator(-90.f, 0.f, 0.f));   // the cylinder's axis (Z) along the view
+	GunBarrel->SetRelativeScale3D(DFHeroGun::BarrelScale);
+	if (CubeMesh.Succeeded())
+	{
+		GunBody->SetStaticMesh(CubeMesh.Object);
+	}
+	if (CylinderMesh.Succeeded())
+	{
+		GunBarrel->SetStaticMesh(CylinderMesh.Object);
+	}
+	if (ShapeMaterial.Succeeded())
+	{
+		GunBody->SetMaterial(0, ShapeMaterial.Object);
+		GunBarrel->SetMaterial(0, ShapeMaterial.Object);
+	}
+	DFHeroGun::MakeViewModelPart(GunBody);
+	DFHeroGun::MakeViewModelPart(GunBarrel);
+	Muzzle = CreateDefaultSubobject<USceneComponent>(TEXT("Muzzle"));
+	Muzzle->SetupAttachment(ViewModel);
+	Muzzle->SetRelativeLocation(DFHeroGun::MuzzleOffset);
+
 	PrimaryActorTick.bCanEverTick = true;   // the host's regen
 
 	// The default input (C16: Content/DF/Core/Input). Hard references, so the cook takes them with the
@@ -62,6 +136,8 @@ ADFHeroCharacter::ADFHeroCharacter(const FObjectInitializer& ObjectInitializer)
 	static ConstructorHelpers::FObjectFinder<UInputAction> SprintAsset(TEXT("/Game/DF/Core/Input/IA_Sprint"));
 	static ConstructorHelpers::FObjectFinder<UInputAction> CrouchAsset(TEXT("/Game/DF/Core/Input/IA_Crouch"));
 	static ConstructorHelpers::FObjectFinder<UInputAction> AimAsset(TEXT("/Game/DF/Core/Input/IA_Aim"));
+	static ConstructorHelpers::FObjectFinder<UInputAction> FireAsset(TEXT("/Game/DF/Core/Input/IA_Fire"));
+	static ConstructorHelpers::FObjectFinder<UInputAction> ReloadAsset(TEXT("/Game/DF/Core/Input/IA_Reload"));
 	DefaultMappingContext = DefaultContextAsset.Object;
 	MoveAction = MoveAsset.Object;
 	LookAction = LookAsset.Object;
@@ -69,6 +145,8 @@ ADFHeroCharacter::ADFHeroCharacter(const FObjectInitializer& ObjectInitializer)
 	SprintAction = SprintAsset.Object;
 	CrouchAction = CrouchAsset.Object;
 	AimAction = AimAsset.Object;
+	FireAction = FireAsset.Object;
+	ReloadAction = ReloadAsset.Object;
 }
 
 UDFHeroMovementComponent* ADFHeroCharacter::GetHeroMovement() const
@@ -96,6 +174,26 @@ UDFHeroSet* ADFHeroCharacter::GetHeroSet() const
 	return HeroSet;
 }
 
+UDFHeroWeaponComponent* ADFHeroCharacter::GetWeapon() const
+{
+	return Weapon;
+}
+
+int32 ADFHeroCharacter::GetAmmoInMagazine() const
+{
+	return Weapon != nullptr ? Weapon->GetAmmoInMagazine() : 0;
+}
+
+int32 ADFHeroCharacter::GetMagazineSize() const
+{
+	return Weapon != nullptr ? Weapon->GetMagazineSize() : 0;
+}
+
+bool ADFHeroCharacter::IsReloading() const
+{
+	return Weapon != nullptr && Weapon->IsReloading();
+}
+
 UAbilitySystemComponent* ADFHeroCharacter::GetAbilitySystemComponent() const
 {
 	return AbilitySystem;
@@ -113,6 +211,25 @@ void ADFHeroCharacter::BeginPlay()
 		HealthSet->OnDamaged.AddUObject(this, &ADFHeroCharacter::HandleDamaged);
 	}
 	BindHeroState();
+	Weapon->SetMuzzle(Muzzle);
+	ApplyGunLook();
+}
+
+void ADFHeroCharacter::ApplyGunLook()
+{
+	auto Tint = [](UStaticMeshComponent* Part, const FLinearColor& Colour)
+	{
+		if (Part == nullptr || Part->GetStaticMesh() == nullptr)
+		{
+			return;
+		}
+		if (UMaterialInstanceDynamic* Material = Part->CreateDynamicMaterialInstance(0))
+		{
+			Material->SetVectorParameterValue(TEXT("Color"), Colour);   // BasicShapeMaterial's colour (set on the slot in the constructor)
+		}
+	};
+	Tint(GunBody, DFHeroGun::BodyColour);
+	Tint(GunBarrel, DFHeroGun::BarrelColour);
 }
 
 void ADFHeroCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -131,6 +248,7 @@ void ADFHeroCharacter::PossessedBy(AController* NewController)
 void ADFHeroCharacter::UnPossessed()
 {
 	UnbindHeroState();
+	Weapon->SetTriggerHeld(false);   // a trigger held as control left is not held by nobody
 	Super::UnPossessed();
 }
 
@@ -168,6 +286,13 @@ void ADFHeroCharacter::UpdateCameraEasing(float DeltaSeconds)
 	const bool bAiming = HeroMove != nullptr && HeroMove->WantsToAim();
 	const float TargetFov = bAiming ? DFHeroMove::AimFieldOfViewDegrees : DFHeroMove::FieldOfViewDegrees;
 	FirstPersonCamera->SetFieldOfView(FMath::FInterpTo(FirstPersonCamera->FieldOfView, TargetFov, DeltaSeconds, DFHeroMove::AimFovEaseRate));
+
+	// The placeholder gun comes under the crosshair while aiming, at the field of view's pace.
+	if (ViewModel != nullptr)
+	{
+		const FVector TargetGun = bAiming ? DFHeroGun::AimOffset : DFHeroGun::HipOffset;
+		ViewModel->SetRelativeLocation(FMath::VInterpTo(ViewModel->GetRelativeLocation(), TargetGun, DeltaSeconds, DFHeroMove::AimFovEaseRate));
+	}
 }
 
 void ADFHeroCharacter::Tick(float DeltaSeconds)
@@ -360,6 +485,16 @@ void ADFHeroCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		Input->BindAction(AimAction, ETriggerEvent::Started, this, &ADFHeroCharacter::StartAim);
 		Input->BindAction(AimAction, ETriggerEvent::Completed, this, &ADFHeroCharacter::StopAim);
 	}
+	if (FireAction != nullptr)
+	{
+		Input->BindAction(FireAction, ETriggerEvent::Started, this, &ADFHeroCharacter::StartFire);
+		Input->BindAction(FireAction, ETriggerEvent::Completed, this, &ADFHeroCharacter::StopFire);
+		Input->BindAction(FireAction, ETriggerEvent::Canceled, this, &ADFHeroCharacter::StopFire);
+	}
+	if (ReloadAction != nullptr)
+	{
+		Input->BindAction(ReloadAction, ETriggerEvent::Started, this, &ADFHeroCharacter::Reload);
+	}
 }
 
 void ADFHeroCharacter::Move(const FInputActionValue& Value)
@@ -423,4 +558,19 @@ void ADFHeroCharacter::StopAim()
 	{
 		HeroMove->SetWantsToAim(false);
 	}
+}
+
+void ADFHeroCharacter::StartFire()
+{
+	Weapon->SetTriggerHeld(true);
+}
+
+void ADFHeroCharacter::StopFire()
+{
+	Weapon->SetTriggerHeld(false);
+}
+
+void ADFHeroCharacter::Reload()
+{
+	Weapon->RequestReload();
 }

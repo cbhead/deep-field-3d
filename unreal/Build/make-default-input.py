@@ -3,12 +3,12 @@
     UnrealEditor-Cmd <DeepField.uproject> -run=pythonscript -script=<this file> -unattended -nullrhi
 
 Writes Content/DF/Core/Input/IMC_DF_Default and the actions ADFHeroCharacter binds (IA_Move, IA_Look,
-IA_Jump, IA_Sprint, IA_Crouch, IA_Aim) and ADFPlayerController binds (IA_Build: hold E on a socket;
-IA_Sell: hold X 0.7 s on a tower), with C16's defaults: the Godot bindings (WASD and the arrow keys,
-Space, Shift, mouse, hold E / X) and a gamepad from day one. Safe to re-run: existing assets are
-updated in place, and the mapping context's keys are rewritten from the table below, so the table is
-the source of truth. The rest of C16's actions (IA_Fire, IA_Upgrade, ...) arrive with the features
-that use them.
+IA_Jump, IA_Sprint, IA_Crouch, IA_Aim, IA_Fire, IA_Reload) and ADFPlayerController binds (IA_Build:
+hold E on a socket; IA_Sell: hold X 0.7 s on a tower), with C16's defaults: the Godot bindings (WASD
+and the arrow keys, Space, Shift, mouse, LMB / RMB, R, hold E / X) and a gamepad from day one. Safe to
+re-run: existing assets are updated in place, and the mapping context's keys are rewritten from the
+table below, so the table is the source of truth. The rest of C16's actions (IA_Melee, IA_Upgrade,
+...) arrive with the features that use them.
 
 ADFHeroCharacter::Move reads X as strafe and Y as forward; Look adds X to yaw and Y to pitch.
 """
@@ -87,7 +87,9 @@ jump = action("IA_Jump", BOOL, "Jump")
 sprint = action("IA_Sprint", BOOL, "Sprint while held")
 crouch = action("IA_Crouch", BOOL, "Crouch while held")
 aim = action("IA_Aim", BOOL, "Aim down sights while held")
-build = hold(action("IA_Build", BOOL, "Hold on a free socket: build there"), 0.25)
+fire = action("IA_Fire", BOOL, "Fire: an automatic gun fires while held, a semi-automatic once per pull")
+reload = action("IA_Reload", BOOL, "Reload the gun in hand")
+build =hold(action("IA_Build", BOOL, "Hold on a free socket: build there"), 0.25)
 sell = hold(action("IA_Sell", BOOL, "Hold on a tower: sell it"), 0.7)
 
 imc = load_or_create("IMC_DF_Default", unreal.InputMappingContext, unreal.InputMappingContext_Factory())
@@ -115,6 +117,10 @@ TABLE = [
     (crouch, "Gamepad_FaceButton_Right", lambda o: []),
     (aim, "RightMouseButton", lambda o: []),
     (aim, "Gamepad_LeftTrigger", lambda o: []),
+    (fire, "LeftMouseButton", lambda o: []),
+    (fire, "Gamepad_RightTrigger", lambda o: []),
+    (reload, "R", lambda o: []),
+    (reload, "Gamepad_FaceButton_Top", lambda o: []),   # face-left is build's
     (build, "E", lambda o: []),
     (build, "Gamepad_FaceButton_Left", lambda o: []),
     (sell, "X", lambda o: []),
@@ -133,7 +139,7 @@ data = imc.get_editor_property("default_key_mappings")
 data.set_editor_property("mappings", mappings)
 imc.set_editor_property("default_key_mappings", data)
 
-for asset in (move, look, jump, sprint, crouch, aim, build, sell, imc):
+for asset in (move, look, jump, sprint, crouch, aim, fire, reload, build, sell, imc):
     if not lib.save_loaded_asset(asset, only_if_is_dirty=False):
         fail("could not save " + asset.get_path_name())
 

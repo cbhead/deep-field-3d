@@ -13,8 +13,10 @@ class UDFAbilitySystemComponent;
 class UDFHealthSet;
 class UDFHeroMovementComponent;
 class UDFHeroSet;
+class UDFHeroWeaponComponent;
 class UInputAction;
 class UInputMappingContext;
+class UStaticMeshComponent;
 struct FGameplayEffectSpec;
 struct FInputActionValue;
 
@@ -33,7 +35,12 @@ struct FInputActionValue;
  * a standing hero regenerates after RegenDelay without damage (Step.cs). The hero follows its state
  * component on host and clients, which caps its movement while down.
  *
- * Weapons, melee, interaction, the build ghost and drag arrive in later PRs.
+ * The gun is UDFHeroWeaponComponent (the rifle, weapons.json): IA_Fire (LMB, held for an automatic)
+ * and IA_Reload (R). Until WS-35's first-person arms and weapon art, the player holds a placeholder:
+ * a dark block and a barrel from the engine's basic shapes on the camera, lower right, seen only by
+ * the owner and colliding with nothing; it comes to the centre while aiming.
+ *
+ * Melee, interaction, the build ghost and drag arrive in later PRs.
  */
 UCLASS()
 class DFPLAYER_API ADFHeroCharacter : public ACharacter, public IAbilitySystemInterface
@@ -48,6 +55,18 @@ public:
 	UDFAbilitySystemComponent* GetHeroAbilitySystem() const;
 	UDFHealthSet* GetHealthSet() const;
 	UDFHeroSet* GetHeroSet() const;
+	UDFHeroWeaponComponent* GetWeapon() const;
+
+	// ---- the gun, for the HUD (WS-12); UDFHeroWeaponComponent has the rest ----------------------
+	/** Rounds in the magazine (the owner's own, predicted). */
+	UFUNCTION(BlueprintPure, Category = "DF|Weapon")
+	int32 GetAmmoInMagazine() const;
+
+	UFUNCTION(BlueprintPure, Category = "DF|Weapon")
+	int32 GetMagazineSize() const;
+
+	UFUNCTION(BlueprintPure, Category = "DF|Weapon")
+	bool IsReloading() const;
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
@@ -90,9 +109,36 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "DF|Input")
 	TObjectPtr<UInputAction> AimAction;
 
+	/** Held (LMB): an automatic gun fires while it is down. */
+	UPROPERTY(EditDefaultsOnly, Category = "DF|Input")
+	TObjectPtr<UInputAction> FireAction;
+
+	/** Pressed (R). */
+	UPROPERTY(EditDefaultsOnly, Category = "DF|Input")
+	TObjectPtr<UInputAction> ReloadAction;
+
 private:
 	UPROPERTY(VisibleAnywhere, Category = "DF|Camera")
 	TObjectPtr<UCameraComponent> FirstPersonCamera;
+
+	UPROPERTY(VisibleAnywhere, Category = "DF|Weapon")
+	TObjectPtr<UDFHeroWeaponComponent> Weapon;
+
+	/** The placeholder gun on the camera: a pivot, the block, the barrel, and the point tracers start from. */
+	UPROPERTY(VisibleAnywhere, Category = "DF|Weapon")
+	TObjectPtr<USceneComponent> ViewModel;
+
+	UPROPERTY(VisibleAnywhere, Category = "DF|Weapon")
+	TObjectPtr<UStaticMeshComponent> GunBody;
+
+	UPROPERTY(VisibleAnywhere, Category = "DF|Weapon")
+	TObjectPtr<UStaticMeshComponent> GunBarrel;
+
+	UPROPERTY(VisibleAnywhere, Category = "DF|Weapon")
+	TObjectPtr<USceneComponent> Muzzle;
+
+	/** Tints the placeholder gun through BasicShapeMaterial's Color. */
+	void ApplyGunLook();
 
 	UPROPERTY(VisibleAnywhere, Category = "DF|Abilities")
 	TObjectPtr<UDFAbilitySystemComponent> AbilitySystem;
@@ -133,4 +179,7 @@ private:
 	void StopCrouch();
 	void StartAim();
 	void StopAim();
+	void StartFire();
+	void StopFire();
+	void Reload();
 };
