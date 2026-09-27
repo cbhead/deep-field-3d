@@ -1,6 +1,6 @@
 # Workstream status
 
-Generated 2026-09-27T08:42:35Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
+Generated 2026-09-27T08:52:07Z by `unreal/Build/plan-status.py` from `workstreams/*.md`. Do not edit by hand.
 
 active: 8 · claimed: 1 · paused: 5 · review: 1 · unclaimed: 35
 
@@ -23,7 +23,7 @@ active: 8 · claimed: 1 · paused: 5 · review: 1 · unclaimed: 35
 | WS-10e | Map design: Sluice (new) | P4 |  | unclaimed | — | — | — | yes | — |
 | WS-10f | Map design: Crown (new) | P4 |  | unclaimed | — | — | — | yes | — |
 | WS-11 | Online, lobby, profile (EOS) | P1-P3 | CP | paused | — | — | b957b16 |  | — |
-| WS-12 | UI (Common UI + MVVM) | P2-P5 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T07:23:21Z | e52dfbd | yes | — |
+| WS-12 | UI (Common UI + MVVM) | P2-P5 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T07:23:21Z | 61e141e | yes | — |
 | WS-13 | Audio (MetaSounds) | P2-P5 |  | unclaimed | — | — | — | yes | — |
 | WS-14 | VFX (Niagara) | P2-P5 |  | unclaimed | — | — | — | yes | — |
 | WS-15 | Automation, CI, packaging, store | P1+ |  | paused | — | — | 8e0e623 |  | — |
@@ -39,7 +39,7 @@ active: 8 · claimed: 1 · paused: 5 · review: 1 · unclaimed: 35
 | WS-25 | Physics layer | P4 |  | unclaimed | — | — | — | yes | — |
 | WS-26 | Co-op verbs & security rules | P4 |  | unclaimed | — | — | — |  | — |
 | WS-27 | Waves, tiers, endless, balance | P4 (last) |  | unclaimed | — | — | — |  | — |
-| WS-28 | Match flow (DFMatch) | P2-P3 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T06:30:33Z | abd0356 |  | — |
+| WS-28 | Match flow (DFMatch) | P2-P3 | CP | active | session-gpu-box-2026-09-26 | 2026-09-28T06:30:33Z | 61e141e |  | — |
 | WS-30 | Art pipeline (Claude Design → Unreal, terrain lane, validators) | P1+ |  | paused | — | — | aa379d0 | yes | — |
 | WS-31 | Materials & palette | P1+ |  | unclaimed | — | — | — | yes | — |
 | WS-32 | Skeletons & animation contract | P2+ |  | unclaimed | — | — | — | yes | — |
