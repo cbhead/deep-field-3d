@@ -14,7 +14,10 @@
 #include "World/DFSocket.h"
 #include "Messages/DFMessageBus.h"
 #include "Towers/DFBuildSubsystem.h"
+#include "Content/DFContentSubsystem.h"
 #include "Towers/DFTower.h"
+#include "Towers/DFTowerMath.h"
+#include "Towers/DFTrap.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DFPlayerController)
 
@@ -132,6 +135,73 @@ void ADFPlayerController::HandleBuildInput()
 	}
 	UE_LOG(LogDFPlayerController, Log, TEXT("build %s on %s"), *TowerId.ToString(), *Socket->SocketId.ToString());
 	Server_PlaceTower(TowerId, Socket->SocketId);
+}
+
+void ADFPlayerController::PlayerTick(float DeltaTime)
+{
+	Super::PlayerTick(DeltaTime);   // PlayerTick runs for local controllers only
+	UpdatePadHighlight();
+}
+
+void ADFPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (ADFSocket* Old = HighlightedSocket.Get())
+	{
+		Old->SetAimHighlight(EDFPadHighlight::None);
+	}
+	HighlightedSocket.Reset();
+	Super::EndPlay(EndPlayReason);
+}
+
+void ADFPlayerController::UpdatePadHighlight()
+{
+	// Only while the player looks through their hero: a spectator or demo camera is not aiming at a pad.
+	ADFSocket* Aimed = (GetPawn() && GetViewTarget() == GetPawn()) ? FindAimedSocket() : nullptr;
+	ADFSocket* Old = HighlightedSocket.Get();
+	if (Old && Old != Aimed)
+	{
+		Old->SetAimHighlight(EDFPadHighlight::None);
+	}
+	HighlightedSocket = Aimed;
+	if (Aimed)
+	{
+		const UDFContentSubsystem* Content = UDFContentSubsystem::Get(this);
+		const FDFTowerRow* Choice = Content ? Content->Tower(GetQuickBuildTowerId()) : nullptr;
+		Aimed->SetAimHighlight(DecidePadHighlight(Aimed->Tag, Choice, FindTowerOn(Aimed->SocketId) != nullptr, FindTrapOn(Aimed->SocketId) != nullptr));
+	}
+}
+
+EDFPadHighlight ADFPlayerController::DecidePadHighlight(EDFSocketTag PadTag, const FDFTowerRow* Choice, bool bTowerOn, bool bTrapOn)
+{
+	if (bTowerOn)
+	{
+		return EDFPadHighlight::Occupied;
+	}
+	if (bTrapOn || !Choice)
+	{
+		return EDFPadHighlight::Blocked;
+	}
+	// The host's rule, asked with everything but the tag out of the way: only a tag refusal comes back.
+	DFTowerMath::FDFPlacementFacts Facts;
+	Facts.SocketTag = PadTag;
+	Facts.Money = TNumericLimits<int32>::Max();
+	return DFTowerMath::CheckPlacement(*Choice, Facts, /*Cost*/ 0).IsNone() ? EDFPadHighlight::Free : EDFPadHighlight::Blocked;
+}
+
+ADFTrap* ADFPlayerController::FindTrapOn(FName SocketId) const
+{
+	if (SocketId.IsNone() || !GetWorld())
+	{
+		return nullptr;
+	}
+	for (TActorIterator<ADFTrap> It(GetWorld()); It; ++It)
+	{
+		if (It->GetSocketId() == SocketId && !It->IsActorBeingDestroyed())
+		{
+			return *It;
+		}
+	}
+	return nullptr;
 }
 
 FName ADFPlayerController::GetQuickBuildTowerId() const

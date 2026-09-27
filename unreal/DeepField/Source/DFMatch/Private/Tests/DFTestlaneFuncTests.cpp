@@ -1,5 +1,6 @@
 #include "DFGameplayTags.h"
 #include "DFMatchState.h"
+#include "DFPlayerController.h"
 #include "Economy/DFEconomyStateComponent.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -184,6 +185,134 @@ bool FDFTowerKillsTestlaneEnemiesTest::RunTest(const FString& Parameters)
 		return false;
 	}
 	ADD_LATENT_AUTOMATION_COMMAND(DFTestlaneFunc::FWaitForTowerKills(this, 90.0));
+#if WITH_EDITOR
+	if (GIsEditor)
+	{
+		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	}
+#endif
+	return true;
+}
+
+// DF.Func.Build.PadHighlightFollowsAim: the player can see where hold E builds. On L_Testlane the local
+// controller aims its hero at a pad: the pad's ring turns green (free); a tower goes up on it: gold
+// (hold U / hold X act on it); the hero looks at the sky: the ring goes away. PlayerTick drives it, as
+// in play; the test only turns the view.
+namespace DFTestlaneFunc
+{
+	class FWaitForPadHighlight : public IAutomationLatentCommand
+	{
+	public:
+		FWaitForPadHighlight(FAutomationTestBase* InTest, double InTimeoutSeconds) : Test(InTest), TimeoutSeconds(InTimeoutSeconds) {}
+		virtual bool Update() override;
+
+	private:
+		enum class EStep : uint8 { Aim, ExpectFree, ExpectOccupied, ExpectNone };
+		bool Fail(const FString& Why) { Test->AddError(Why); return true; }
+
+		FAutomationTestBase* Test;
+		double TimeoutSeconds;
+		double StartedAt = -1.0;
+		EStep Step = EStep::Aim;
+		int32 FramesInStep = 0;
+		TWeakObjectPtr<ADFSocket> Target;
+	};
+
+	bool FWaitForPadHighlight::Update()
+	{
+		const double Now = FPlatformTime::Seconds();
+		if (StartedAt < 0.0)
+		{
+			StartedAt = Now;
+		}
+		if (Now - StartedAt > TimeoutSeconds)
+		{
+			return Fail(FString::Printf(TEXT("the pad highlight did not follow the aim within %.0f s (step %d)"), TimeoutSeconds, static_cast<int32>(Step)));
+		}
+		UWorld* World = AutomationCommon::GetAnyGameWorld();
+		ADFPlayerController* Controller = World ? Cast<ADFPlayerController>(World->GetFirstPlayerController()) : nullptr;
+		APawn* Hero = Controller ? Controller->GetPawn() : nullptr;
+		if (!World || !World->HasBegunPlay() || !Hero)
+		{
+			return false;
+		}
+		++FramesInStep;
+		switch (Step)
+		{
+		case EStep::Aim:
+		{
+			// The nearest ground pad, looked at from the hero's eye.
+			ADFSocket* Nearest = nullptr;
+			for (TActorIterator<ADFSocket> It(World); It; ++It)
+			{
+				if (It->Tag == EDFSocketTag::Ground && (!Nearest || FVector::DistSquared(It->GetActorLocation(), Hero->GetActorLocation()) < FVector::DistSquared(Nearest->GetActorLocation(), Hero->GetActorLocation())))
+				{
+					Nearest = *It;
+				}
+			}
+			if (!Nearest)
+			{
+				return Fail(FString::Printf(TEXT("%s has no ground pad"), Map));
+			}
+			Target = Nearest;
+			FVector Eye;
+			FRotator Unused;
+			Controller->GetPlayerViewPoint(Eye, Unused);
+			Controller->SetControlRotation((Nearest->GetPadTop() - Eye).Rotation());
+			Step = EStep::ExpectFree;
+			FramesInStep = 0;
+			return false;
+		}
+		case EStep::ExpectFree:
+		{
+			ADFSocket* Pad = Target.Get();
+			if (Pad && Pad->GetAimHighlight() == EDFPadHighlight::Free)
+			{
+				Test->TestTrue(TEXT("the controller's build target is the pad it looks at"), Controller->FindAimedSocket() == Pad);
+				const FDFBuildResult Result = UDFBuildSubsystem::Get(World)->PlaceTower(/*PlayerId*/ 1, Lance, Pad->SocketId);
+				Test->TestTrue(*FString::Printf(TEXT("a Lance goes up on the aimed pad (%s)"), *Result.Reason.ToString()), Result.Succeeded());
+				Step = EStep::ExpectOccupied;
+				FramesInStep = 0;
+			}
+			return false;
+		}
+		case EStep::ExpectOccupied:
+		{
+			ADFSocket* Pad = Target.Get();
+			if (Pad && Pad->GetAimHighlight() == EDFPadHighlight::Occupied)
+			{
+				Test->AddInfo(FString::Printf(TEXT("pad %s: free (green) when aimed, occupied (gold) once built on"), *Pad->SocketId.ToString()));
+				Controller->SetControlRotation(FRotator(80.f, 0.f, 0.f));   // at the sky
+				Step = EStep::ExpectNone;
+				FramesInStep = 0;
+			}
+			return false;
+		}
+		case EStep::ExpectNone:
+		{
+			ADFSocket* Pad = Target.Get();
+			if (Pad && Pad->GetAimHighlight() == EDFPadHighlight::None && FramesInStep > 1)
+			{
+				Test->TestNull(TEXT("looking at the sky there is no build target"), Controller->FindAimedSocket());
+				return true;
+			}
+			return false;
+		}
+		}
+		return true;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFPadHighlightFollowsAimTest, "DF.Func.Build.PadHighlightFollowsAim",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ClientContext | EAutomationTestFlags::ProductFilter)
+bool FDFPadHighlightFollowsAimTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(DFTestlaneFunc::Map))
+	{
+		AddError(FString::Printf(TEXT("could not open %s"), DFTestlaneFunc::Map));
+		return false;
+	}
+	ADD_LATENT_AUTOMATION_COMMAND(DFTestlaneFunc::FWaitForPadHighlight(this, 60.0));
 #if WITH_EDITOR
 	if (GIsEditor)
 	{

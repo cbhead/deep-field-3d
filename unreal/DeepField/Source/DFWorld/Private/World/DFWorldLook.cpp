@@ -68,6 +68,19 @@ namespace DFWorldLook
 		DFShapeLook::Tint(Part, Colour);
 	}
 
+	void Glow(UStaticMeshComponent* Part, const FLinearColor& Colour)
+	{
+		DFShapeLook::Glow(Part, Colour);
+	}
+
+	FLinearColor PadGround()      { return UDFPaletteSettings::FromHex(TEXT("#B08A3E")); }
+	FLinearColor PadTrap()        { return UDFPaletteSettings::FromHex(TEXT("#D8A13A")); }
+	FLinearColor PadBarricade()   { return UDFPaletteSettings::FromHex(TEXT("#7A7F88")); }
+	FLinearColor PadWall()        { return UDFPaletteSettings::FromHex(TEXT("#9AA6B7")); }
+	FLinearColor PadAimFree()     { return UDFPaletteSettings::FromHex(TEXT("#7FE65A")) * 3.f; }
+	FLinearColor PadAimOccupied() { return UDFPaletteSettings::FromHex(TEXT("#E3BC66")) * 3.f; }
+	FLinearColor PadAimBlocked()  { return UDFPaletteSettings::FromHex(TEXT("#E9614C")) * 2.f; }
+
 	FLinearColor PortalFrame() { return UDFPaletteSettings::FromHex(TEXT("#FF2E4A")); }
 	FLinearColor CoreEnergy()  { return UDFPaletteSettings::FromHex(TEXT("#22D3EE")); }
 	FLinearColor CoreCap()     { return UDFPaletteSettings::FromHex(TEXT("#A8F0F4")); }

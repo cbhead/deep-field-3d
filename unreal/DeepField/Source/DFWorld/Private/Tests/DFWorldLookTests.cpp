@@ -21,7 +21,9 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Testing/DFTestUtils.h"
 #include "World/DFCore.h"
+#include "Look/DFShapeLook.h"
 #include "World/DFLaneGraphInfo.h"
+#include "World/DFSocket.h"
 #include "World/DFSpawnPortal.h"
 #include "World/DFWorldLook.h"
 
@@ -308,6 +310,98 @@ bool FDFWorldCoreLookTest::RunTest(const FString& Parameters)
 	UMaterialInterface* Before = Shaft->GetMaterial(0);
 	Core->RefreshLook();
 	TestTrue(TEXT("a second tint reuses the dynamic instance"), Shaft->GetMaterial(0) == Before);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFWorldSocketLookTest, "DF.Unit.World.SocketLook", DFWorldLookTest::Flags)
+bool FDFWorldSocketLookTest::RunTest(const FString& Parameters)
+{
+	using namespace DFWorldLookTest;
+	FDFTestWorld World;
+	if (!QueriesWork(*this, World))
+	{
+		return false;
+	}
+
+	ADFSocket* Socket = World.SpawnActor<ADFSocket>(FTransform(FVector(-1600.0, 500.0, 0.0)));
+	if (!TestNotNull(TEXT("socket"), Socket))
+	{
+		return false;
+	}
+	Socket->SocketId = TEXT("s1");
+	Socket->RefreshLook();
+	UStaticMeshComponent* Plate = PartNamed(Socket, TEXT("Plate"));
+	UStaticMeshComponent* Ring = PartNamed(Socket, TEXT("AimRing"));
+	if (!TestNotNull(TEXT("plate"), Plate) || !TestNotNull(TEXT("aim ring"), Ring))
+	{
+		return false;
+	}
+	TestNotNull(TEXT("plate: has a shape"), Plate->GetStaticMesh().Get());
+	TestTrue(TEXT("a ground pad is brass"), TintedAs(Plate, DFWorldLook::PadGround()));
+	ExpectInert(*this, World.GetWorld(), Plate, TEXT("pad plate"));
+	ExpectInert(*this, World.GetWorld(), Ring, TEXT("pad aim ring"));
+
+	// The plate is the pad box: a tower placed at GetPadTop stands on it, and the ring shows round it.
+	TestEqual(TEXT("the plate's top is the pad top"), TopOf(Plate), Socket->GetPadTop().Z, 1.0);
+	TestEqual(TEXT("the plate stands on the socket's origin"), BottomOf(Plate), Socket->GetActorLocation().Z, 1.0);
+	TestTrue(TEXT("the ring is wider than the plate"), Ring->GetComponentScale().X > Plate->GetComponentScale().X);
+	TestTrue(TEXT("the ring sits below the plate's top"), TopOf(Ring) < TopOf(Plate));
+
+	// The pad box still answers the build trace through the look (the plate collides with nothing).
+	FHitResult Hit;
+	const FVector Above = Socket->GetPadTop() + FVector(0.0, 0.0, 300.0);
+	TestTrue(TEXT("a DF_Build trace from above still finds the pad box"),
+		World.GetWorld()->LineTraceSingleByChannel(Hit, Above, Socket->GetActorLocation() - FVector(0.0, 0.0, 50.0), DFCollision::Build) && Hit.GetActor() == Socket
+		&& Hit.GetComponent() == Socket->GetPad());
+
+	// The aim ring: hidden until the local player aims at the pad; green when free, gold when a tower is on it.
+	TestFalse(TEXT("no ring until aimed"), Ring->IsVisible());
+	Socket->SetAimHighlight(EDFPadHighlight::Free);
+	TestTrue(TEXT("aimed at a free pad: ring shown"), Ring->IsVisible());
+	UMaterialInstanceDynamic* Glow = Cast<UMaterialInstanceDynamic>(Ring->GetMaterial(0));
+	TestTrue(TEXT("the ring glows (EmissiveMeshMaterial)"), Glow && Glow->Parent == DFShapeLook::GlowMaterial());
+	TestTrue(TEXT("free: green"), Glow && Glow->K2_GetVectorParameterValue(TEXT("Color")).Equals(DFWorldLook::PadAimFree(), 1e-4f));
+	Socket->SetAimHighlight(EDFPadHighlight::Occupied);
+	TestTrue(TEXT("occupied: gold"), Glow && Glow->K2_GetVectorParameterValue(TEXT("Color")).Equals(DFWorldLook::PadAimOccupied(), 1e-4f));
+	TestTrue(TEXT("re-colouring keeps the instance"), Ring->GetMaterial(0) == Glow);
+	Socket->SetAimHighlight(EDFPadHighlight::Blocked);
+	TestTrue(TEXT("blocked: red"), Glow && Glow->K2_GetVectorParameterValue(TEXT("Color")).Equals(DFWorldLook::PadAimBlocked(), 1e-4f));
+	Socket->SetAimHighlight(EDFPadHighlight::None);
+	TestFalse(TEXT("aimed away: ring hidden"), Ring->IsVisible());
+
+	// A ground pad shows its full plate; the flush one is for pads in the lane.
+	UStaticMeshComponent* Flush = PartNamed(Socket, TEXT("FlushPlate"));
+	if (!TestNotNull(TEXT("flush plate"), Flush))
+	{
+		return false;
+	}
+	ExpectInert(*this, World.GetWorld(), Flush, TEXT("pad flush plate"));
+	TestTrue(TEXT("a ground pad shows the full plate"), Plate->IsVisible() && !Flush->IsVisible());
+
+	// A trap pad lies in the lane: a flush, hazard-amber plate that a body walking the lane crosses
+	// rather than sinks into; a refresh keeps its instance.
+	ADFSocket* Trap = World.SpawnActor<ADFSocket>(FTransform(FVector(-1600.0, 1500.0, 0.0)));
+	Trap->Tag = EDFSocketTag::Trap;
+	Trap->RefreshLook();
+	UStaticMeshComponent* TrapPlate = PartNamed(Trap, TEXT("Plate"));
+	UStaticMeshComponent* TrapFlush = PartNamed(Trap, TEXT("FlushPlate"));
+	if (!TestNotNull(TEXT("trap plates"), TrapPlate) || !TestNotNull(TEXT("trap flush plate"), TrapFlush))
+	{
+		return false;
+	}
+	TestTrue(TEXT("a trap pad shows only the flush plate"), TrapFlush->IsVisible() && !TrapPlate->IsVisible());
+	TestTrue(TEXT("a trap pad is hazard amber"), TintedAs(TrapFlush, DFWorldLook::PadTrap()));
+	TestTrue(FString::Printf(TEXT("the flush plate is at most 3 cm high (%.1f)"), TopOf(TrapFlush) - Trap->GetActorLocation().Z), TopOf(TrapFlush) - Trap->GetActorLocation().Z <= 3.0);
+	UMaterialInterface* Before = TrapFlush->GetMaterial(0);
+	Trap->RefreshLook();
+	TestTrue(TEXT("a second tint reuses the dynamic instance"), TrapFlush->GetMaterial(0) == Before);
+
+	// A barricade pad lies in the lane too.
+	ADFSocket* Barricade = World.SpawnActor<ADFSocket>(FTransform(FVector(-1600.0, 2500.0, 0.0)));
+	Barricade->Tag = EDFSocketTag::Barricade;
+	Barricade->RefreshLook();
+	UStaticMeshComponent* BarricadeFlush = PartNamed(Barricade, TEXT("FlushPlate"));
+	TestTrue(TEXT("a barricade pad is flush concrete"), BarricadeFlush && BarricadeFlush->IsVisible() && TintedAs(BarricadeFlush, DFWorldLook::PadBarricade()));
 	return true;
 }
 

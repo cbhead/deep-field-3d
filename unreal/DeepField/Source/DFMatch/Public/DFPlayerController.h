@@ -8,6 +8,10 @@
 
 class ADFSocket;
 class ADFTower;
+class ADFTrap;
+struct FDFTowerRow;
+enum class EDFPadHighlight : uint8;
+enum class EDFSocketTag : uint8;
 class UInputAction;
 struct FInputActionValue;
 
@@ -44,6 +48,17 @@ public:
 	/** Step the choice by Steps (wraps). The mouse wheel and the D-pad call it through IA_Wheel. */
 	void CycleQuickBuild(int32 Steps);
 
+	/** The standing trap on SocketId, as this machine sees it, or null. */
+	ADFTrap* FindTrapOn(FName SocketId) const;
+
+	/**
+	 * The ring for a pad the crosshair is on: Occupied when a tower stands there (hold U / hold X act
+	 * on it); Blocked when a trap stands there, there is no choice, or the choice does not fit the pad's
+	 * tag by DFTowerMath::CheckPlacement's own rule (so the ring never promises what the host refuses);
+	 * Free otherwise. Money is left to the refusal toast: the ring says where, not whether you can afford it.
+	 */
+	static EDFPadHighlight DecidePadHighlight(EDFSocketTag PadTag, const FDFTowerRow* Choice, bool bTowerOn, bool bTrapOn);
+
 	/** Command.Launch. Ignored unless this player holds the launch seat and the party is in the lobby (as the sim). */
 	UFUNCTION(Server, Reliable)
 	void Server_Launch();
@@ -72,8 +87,11 @@ public:
 	UFUNCTION(Client, Reliable)
 	void Client_Refused(FGameplayTag Tag, const FDFMsg_Rejected& Payload);
 
+	virtual void PlayerTick(float DeltaTime) override;
+
 protected:
 	virtual void SetupInputComponent() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	/** C16 IA_Build: hold E. */
 	UPROPERTY(EditDefaultsOnly, Category = "DF|Input")
@@ -109,5 +127,8 @@ private:
 	void HandleSellInput();
 	void HandleUpgradeInput();
 	void HandleWheelInput(const FInputActionValue& Value);
+	/** Local: ring the pad hold E/U/X would act on (free: green, a tower on it: gold); unring the last one. */
+	void UpdatePadHighlight();
+	TWeakObjectPtr<ADFSocket> HighlightedSocket;
 	int32 QuickBuildIndex = 0;
 };
